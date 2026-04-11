@@ -1,0 +1,72 @@
+# Documentation Index
+
+## Purpose
+
+本文作为 `docs/` 目录入口，说明文档分层结构与推荐阅读顺序。
+
+## Directory Structure
+
+```text
+docs/
+├── README.md
+├── architecture/
+├── delivery/
+├── product/
+└── design/
+```
+
+目录职责如下：
+
+- `architecture/`
+  - 长期稳定的系统架构、领域模型与命名规则
+- `delivery/`
+  - 交付阶段、范围定义与实施计划
+- `product/`
+  - 稳定的产品流程、账号模型与页面职责
+- `design/`
+  - 页面线框、内容结构与模块规范
+
+## Recommended Reading Order
+
+首次了解项目时，建议按以下顺序阅读：
+
+1. [architecture/system.md](./architecture/system.md)
+2. [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
+3. [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
+4. [product/accounts/participant-account-system.md](./product/accounts/participant-account-system.md)
+5. [product/portal/skeleton.md](./product/portal/skeleton.md)
+6. [product/portal/data-api.md](./product/portal/data-api.md)
+7. [product/site/skeleton.md](./product/site/skeleton.md)
+
+设计或页面实现阶段可继续阅读：
+
+- [design/homepage-wireframe.md](./design/homepage-wireframe.md)
+- [design/apply-page-wireframe.md](./design/apply-page-wireframe.md)
+- [design/works-page-wireframe.md](./design/works-page-wireframe.md)
+- [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)
+
+## File Map
+
+架构：
+
+- [architecture/system.md](./architecture/system.md)
+- [architecture/time-segment-model.md](./architecture/time-segment-model.md)
+
+交付：
+
+- [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
+- [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
+
+产品：
+
+- [product/accounts/participant-account-system.md](./product/accounts/participant-account-system.md)
+- [product/portal/skeleton.md](./product/portal/skeleton.md)
+- [product/portal/data-api.md](./product/portal/data-api.md)
+- [product/site/skeleton.md](./product/site/skeleton.md)
+
+设计：
+
+- [design/homepage-wireframe.md](./design/homepage-wireframe.md)
+- [design/apply-page-wireframe.md](./design/apply-page-wireframe.md)
+- [design/works-page-wireframe.md](./design/works-page-wireframe.md)
+- [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)
