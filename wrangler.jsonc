@@ -1,0 +1,40 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "starward2026",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-04-10",
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  /**
+   * Set these when the actual Cloudflare resources are created:
+   * - D1 database binding
+   * - Better Auth secret
+   * - Resend API key and sender
+   * - Turnstile secret
+   * - Rate Limiting binding
+   */
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "starward2026",
+  //     "database_id": "replace-with-real-d1-database-id"
+  //   }
+  // ],
+  // "vars": {
+  //   "BETTER_AUTH_SECRET": "replace-with-32-plus-char-secret",
+  //   "RESEND_API_KEY": "re_xxxxxxxxx",
+  //   "RESEND_FROM_EMAIL": "noreply@example.com",
+  //   "RESEND_FROM_NAME": "Starward2026",
+  //   "TURNSTILE_SECRET_KEY": "replace-with-real-turnstile-secret"
+  // }
+}

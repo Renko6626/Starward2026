@@ -54,3 +54,5 @@ htmlcov/
 # === Misc ===
 *.local
 *.sqlite3
+.wrangler/
+.dev.vars
