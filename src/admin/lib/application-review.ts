@@ -1,4 +1,4 @@
-import type { ApplicationDetail } from "../../shared/applications";
+import type { ApplicationDetail, ApplicationStatus } from "../../shared/applications";
 
 type ReviewItemTone = "info" | "warn" | "success";
 
@@ -80,6 +80,10 @@ export function summarizeApplicationReviewState(
     }),
     inviteAction: resolveInviteAction(application),
   };
+}
+
+export function listAvailableApplicationReviewStatuses(currentStatus: ApplicationStatus) {
+  return (["approved", "rejected", "withdrawn"] as const).filter((status) => status !== currentStatus);
 }
 
 function resolveReviewStatusLabel(status: ApplicationDetail["status"]) {

@@ -16,7 +16,10 @@ import {
   adminParticipantStatusLabels,
   type AdminParticipantInviteResponse,
 } from "../../shared/admin";
-import { summarizeApplicationReviewState } from "../lib/application-review";
+import {
+  listAvailableApplicationReviewStatuses,
+  summarizeApplicationReviewState,
+} from "../lib/application-review";
 import { getReviewNoteTemplates } from "../lib/review-note";
 
 const applicationRouteApi = getRouteApi("/admin/applications/$applicationId");
@@ -26,6 +29,29 @@ const publicCreditModeLabels = {
   pseudonymous: "使用单独署名",
   anonymous: "匿名参与",
 } as const;
+
+type ActionNotice = {
+  tone: "success" | "error";
+  message: string;
+};
+
+const reviewActionConfigs = {
+  approved: {
+    label: "批准并开放参与资格",
+    tone: "success" as const,
+    Icon: CheckCircle2,
+  },
+  rejected: {
+    label: "拒绝申请",
+    tone: "error" as const,
+    Icon: XCircle,
+  },
+  withdrawn: {
+    label: "标记撤回",
+    tone: "neutral" as const,
+    Icon: Clock,
+  },
+};
 
 function resolvePublicCreditLabel(profile: NonNullable<AdminApplicationDetailResponse["application"]["portalProfile"]>) {
   if (profile.publicCreditMode === "anonymous") {
@@ -49,7 +75,7 @@ export function AdminApplicationDetailPage() {
   const [adminNote, setAdminNote] = useState("");
   const [submitting, setSubmitting] = useState<UpdateApplicationReviewInput["status"] | null>(null);
   const [sendingInvite, setSendingInvite] = useState(false);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<ActionNotice | null>(null);
 
   useEffect(() => {
     void loadDetail();
@@ -72,7 +98,7 @@ export function AdminApplicationDetailPage() {
 
   async function handleReview(status: UpdateApplicationReviewInput["status"]) {
     setSubmitting(status);
-    setActionMessage(null);
+    setActionNotice(null);
 
     try {
       const payload = await requestJson<AdminApplicationDetailResponse>(`/api/admin/applications/${applicationId}`, {
@@ -88,9 +114,22 @@ export function AdminApplicationDetailPage() {
 
       setState({ status: "ready", payload });
       setAdminNote(payload.application.adminNote ?? "");
-      setActionMessage(`已更新为${applicationStatusLabels[payload.application.status]}。`);
+      setActionNotice(
+        payload.notification
+          ? {
+              tone: payload.notification.status === "failed" ? "error" : "success",
+              message: payload.notification.message,
+            }
+          : {
+              tone: "success",
+              message: `已更新为${applicationStatusLabels[payload.application.status]}。`,
+            },
+      );
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "审核动作失败。");
+      setActionNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "审核动作失败。",
+      });
     } finally {
       setSubmitting(null);
     }
@@ -98,7 +137,7 @@ export function AdminApplicationDetailPage() {
 
   async function handleSendInvite(participantId: string) {
     setSendingInvite(true);
-    setActionMessage(null);
+    setActionNotice(null);
 
     try {
       const payload = await requestJson<AdminParticipantInviteResponse>(
@@ -107,9 +146,15 @@ export function AdminApplicationDetailPage() {
       );
 
       await loadDetail();
-      setActionMessage(payload.message);
+      setActionNotice({
+        tone: "success",
+        message: payload.message,
+      });
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "发送通过提醒邮件失败。");
+      setActionNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "发送通过提醒邮件失败。",
+      });
     } finally {
       setSendingInvite(false);
     }
@@ -126,6 +171,7 @@ export function AdminApplicationDetailPage() {
   const application = state.payload.application;
   const participant = application.participant;
   const summary = summarizeApplicationReviewState(application);
+  const availableReviewStatuses = listAvailableApplicationReviewStatuses(application.status);
 
   return (
     <div className="w-full max-w-5xl mx-auto relative z-10 py-6 space-y-6">
@@ -203,30 +249,21 @@ export function AdminApplicationDetailPage() {
           <section className="p-6 border border-outline-variant bg-surface-container-low/80 rounded-xl shadow-lg">
             <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">审核决议</h2>
             <div className="space-y-3">
-              <ActionButton
-                disabled={submitting !== null || sendingInvite}
-                onClick={() => void handleReview("approved")}
-                tone="success"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                {submitting === "approved" ? "处理中..." : "批准并开放参与资格"}
-              </ActionButton>
-              <ActionButton
-                disabled={submitting !== null || sendingInvite}
-                onClick={() => void handleReview("rejected")}
-                tone="error"
-              >
-                <XCircle className="w-4 h-4" />
-                {submitting === "rejected" ? "处理中..." : "拒绝申请"}
-              </ActionButton>
-              <ActionButton
-                disabled={submitting !== null || sendingInvite}
-                onClick={() => void handleReview("withdrawn")}
-                tone="neutral"
-              >
-                <Clock className="w-4 h-4" />
-                {submitting === "withdrawn" ? "处理中..." : "标记撤回"}
-              </ActionButton>
+              {availableReviewStatuses.map((status) => {
+                const config = reviewActionConfigs[status];
+
+                return (
+                  <ActionButton
+                    key={status}
+                    disabled={submitting !== null || sendingInvite}
+                    onClick={() => void handleReview(status)}
+                    tone={config.tone}
+                  >
+                    <config.Icon className="w-4 h-4" />
+                    {submitting === status ? "处理中..." : config.label}
+                  </ActionButton>
+                );
+              })}
             </div>
 
             <div className="mt-4 pt-4 border-t border-outline-variant space-y-4">
@@ -256,7 +293,7 @@ export function AdminApplicationDetailPage() {
               </div>
 
               <SidebarNotice>模板只会写入备注框，不会自动提交。可以先套用，再按实际沟通结果微调。</SidebarNotice>
-              {actionMessage ? <SidebarNotice tone="success">{actionMessage}</SidebarNotice> : null}
+              {actionNotice ? <SidebarNotice tone={actionNotice.tone}>{actionNotice.message}</SidebarNotice> : null}
 
               {participant ? (
                 <div className="space-y-3 border-t border-outline-variant pt-4">
@@ -410,7 +447,7 @@ function SidebarNotice({
   tone = "info",
 }: {
   children: ReactNode;
-  tone?: "info" | "success";
+  tone?: "info" | "success" | "error";
 }) {
   return (
     <div
@@ -418,6 +455,8 @@ function SidebarNotice({
         "rounded-md border px-3 py-2 text-xs leading-6",
         tone === "success"
           ? "border-tertiary/25 bg-tertiary/10 text-tertiary"
+          : tone === "error"
+            ? "border-error/25 bg-error/10 text-error"
           : "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
       )}
     >

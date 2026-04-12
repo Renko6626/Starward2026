@@ -118,8 +118,14 @@ export type AdminApplicationListResponse = {
   items: ApplicationListItem[];
 };
 
+export type AdminApplicationReviewNotification = {
+  status: "sent" | "failed";
+  message: string;
+};
+
 export type AdminApplicationDetailResponse = {
   application: ApplicationDetail;
+  notification?: AdminApplicationReviewNotification | null;
 };
 
 export const applicationInterestFormatLabels: Record<ApplicationInterestFormat, string> = {

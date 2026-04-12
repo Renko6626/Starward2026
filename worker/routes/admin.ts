@@ -1,6 +1,4 @@
 import { Hono } from "hono";
-import { HTTPException } from "hono/http-exception";
-import { Resend } from "resend";
 import type {
   AdminApplicationDetailResponse,
   AdminApplicationListResponse,
@@ -43,11 +41,14 @@ import {
 } from "../data/applications";
 import { isParticipantPortalEligible } from "../data/participants";
 import { listEventWindows, updateEventWindow } from "../data/event-windows";
+import {
+  maybeSendParticipantApprovalNotice,
+  sendParticipantPortalInviteEmail,
+} from "../lib/participant-admin";
 import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
 import { getAdminIdentity, requireAdminAccess } from "../lib/admin";
-import { buildParticipantPortalInviteEmail } from "../lib/participant-admin";
 import { getRequiredDb, jsonError } from "../lib/http";
-import type { AppBindings, AppRouteConfig } from "../lib/types";
+import type { AppRouteConfig } from "../lib/types";
 
 const adminApi = new Hono<AppRouteConfig>();
 
@@ -87,6 +88,8 @@ adminApi.get("/applications/:applicationId", async (c) => {
 });
 
 adminApi.patch("/applications/:applicationId", async (c) => {
+  const db = getRequiredDb(c);
+  const applicationId = c.req.param("applicationId");
   const body = await c.req.json().catch(() => null);
   const parsed = updateApplicationReviewInputSchema.safeParse(body);
 
@@ -103,11 +106,26 @@ adminApi.patch("/applications/:applicationId", async (c) => {
     );
   }
 
+  const existing = await getApplicationDetail(db, applicationId);
+
+  if (!existing) {
+    return c.json(
+      {
+        error: {
+          code: "not_found",
+          message: "未找到对应报名。",
+        },
+      },
+      404,
+    );
+  }
+
+  const adminIdentity = getAdminIdentity(c);
   const application = await reviewApplication(
-    getRequiredDb(c),
-    c.req.param("applicationId"),
+    db,
+    applicationId,
     parsed.data,
-    getAdminIdentity(c),
+    adminIdentity,
   );
 
   if (!application) {
@@ -122,8 +140,18 @@ adminApi.patch("/applications/:applicationId", async (c) => {
     );
   }
 
+  const notification = await maybeSendParticipantApprovalNotice({
+    env: c.env,
+    db,
+    actorId: adminIdentity,
+    requestUrl: c.req.url,
+    previousStatus: existing.status,
+    application,
+  });
+
   const response: AdminApplicationDetailResponse = {
     application,
+    notification,
   };
 
   return c.json(response);
@@ -370,43 +398,3 @@ adminApi.patch("/event-windows/:key", async (c) => {
 });
 
 export { adminApi };
-
-function getRequiredParticipantInviteMailEnv(env: AppBindings) {
-  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-    throw new HTTPException(503, {
-      message: "Resend mail sender is not configured yet.",
-    });
-  }
-
-  return {
-    resendApiKey: env.RESEND_API_KEY,
-    resendFromEmail: env.RESEND_FROM_EMAIL,
-    resendFromName: env.RESEND_FROM_NAME?.trim() || "Starward2026",
-  };
-}
-
-async function sendParticipantPortalInviteEmail(
-  env: AppBindings,
-  payload: {
-    displayName: string;
-    email: string;
-    portalLoginUrl: string;
-  },
-) {
-  const { resendApiKey, resendFromEmail, resendFromName } = getRequiredParticipantInviteMailEnv(env);
-  const resend = new Resend(resendApiKey);
-  const message = buildParticipantPortalInviteEmail({
-    displayName: payload.displayName,
-    portalLoginUrl: payload.portalLoginUrl,
-  });
-  const response = await resend.emails.send({
-    from: `${resendFromName} <${resendFromEmail}>`,
-    to: payload.email,
-    subject: message.subject,
-    text: message.text,
-  });
-
-  if (response.error) {
-    throw new Error(response.error.message || "Failed to send participant portal invite email.");
-  }
-}

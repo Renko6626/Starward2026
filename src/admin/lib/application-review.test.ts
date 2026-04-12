@@ -133,3 +133,23 @@ describe("summarizeApplicationReviewState", () => {
     });
   });
 });
+
+describe("listAvailableApplicationReviewStatuses", () => {
+  it("omits the current status from the admin review action list", async () => {
+    const { listAvailableApplicationReviewStatuses } = await import("./application-review");
+
+    expect(listAvailableApplicationReviewStatuses("pending")).toEqual([
+      "approved",
+      "rejected",
+      "withdrawn",
+    ]);
+    expect(listAvailableApplicationReviewStatuses("approved")).toEqual([
+      "rejected",
+      "withdrawn",
+    ]);
+    expect(listAvailableApplicationReviewStatuses("rejected")).toEqual([
+      "approved",
+      "withdrawn",
+    ]);
+  });
+});
