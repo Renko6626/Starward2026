@@ -156,7 +156,7 @@ export async function upsertPortalApplication(
   },
 ) {
   const existing = await getPortalApplicationByUserId(db, input.userId, input.authEmail);
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null);
+  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, true);
 
   if (!mutation.editable) {
     return {

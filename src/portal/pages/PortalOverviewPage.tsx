@@ -125,10 +125,16 @@ export function PortalOverviewPage() {
         {
           icon: <AlertCircle className="w-5 h-5" />,
           title: "填写正式报名",
-          description: dashboard.application ? "报名已提交，可继续修改至审核通过前。" : "补全报名正文、参加形式与作品链接。",
+          description: dashboard.application
+            ? windowFlags.applicationOpen
+              ? "报名已提交，可继续修改至审核通过前。"
+              : "报名已提交；当前报名窗口关闭，需等待主催重新开放后再修改。"
+            : windowFlags.applicationOpen
+              ? "补全报名正文、参加形式与作品链接。"
+              : "当前报名窗口关闭，可先补齐联系资料并等待主催开启。",
           actionLabel: "查看报名表",
           to: "/portal/application" as const,
-          urgent: !dashboard.application,
+          urgent: !dashboard.application && windowFlags.applicationOpen,
         },
       ];
 

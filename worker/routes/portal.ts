@@ -55,6 +55,7 @@ import {
   resolvePortalApplicationProfileRequirement,
 } from "../lib/portal-application";
 import type { AppContext, AppRouteConfig } from "../lib/types";
+import { getWindowOrFallback } from "../lib/windows";
 
 const portalApi = new Hono<AppRouteConfig>();
 
@@ -177,7 +178,9 @@ portalApi.get("/application", async (c) => {
     access.session.user.email,
   );
   const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
-  const mutation = resolvePortalApplicationMutation(application?.status ?? null);
+  const windows = await listEventWindows(access.db);
+  const applicationWindow = getWindowOrFallback(windows, "application_open");
+  const mutation = resolvePortalApplicationMutation(application?.status ?? null, applicationWindow.isOpen);
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
@@ -191,9 +194,7 @@ portalApi.get("/application", async (c) => {
     editState: mutation.mode,
     message: !profileRequirement.ok
       ? profileRequirement.message
-      : mutation.mode === "locked"
-        ? mutation.message
-        : null,
+      : mutation.message ?? null,
   };
 
   return c.json(response);
@@ -215,15 +216,26 @@ portalApi.post("/application", async (c) => {
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
+  const windows = await listEventWindows(access.db);
+  const applicationWindow = getWindowOrFallback(windows, "application_open");
 
   if (!profileRequirement.ok) {
     return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
   }
 
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null);
+  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, applicationWindow.isOpen);
 
   if (mutation.mode !== "create") {
     return jsonError(c, 409, "portal_application_exists", "当前账号已有报名记录，请使用更新操作。");
+  }
+
+  if (!mutation.editable) {
+    return jsonError(
+      c,
+      403,
+      "portal_application_closed",
+      mutation.message ?? "当前报名窗口未开放，请等待主催开启。",
+    );
   }
 
   const body = await c.req.json().catch(() => null);
@@ -268,12 +280,14 @@ portalApi.patch("/application", async (c) => {
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
+  const windows = await listEventWindows(access.db);
+  const applicationWindow = getWindowOrFallback(windows, "application_open");
 
   if (!profileRequirement.ok) {
     return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
   }
 
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null);
+  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, applicationWindow.isOpen);
 
   if (mutation.mode === "create") {
     return jsonError(c, 404, "portal_application_missing", "当前账号还没有报名记录。");
@@ -282,9 +296,9 @@ portalApi.patch("/application", async (c) => {
   if (!mutation.editable) {
     return jsonError(
       c,
-      409,
-      "portal_application_locked",
-      mutation.mode === "locked" ? mutation.message : "当前报名不可修改。",
+      mutation.reason === "window_closed" ? 403 : 409,
+      mutation.reason === "window_closed" ? "portal_application_closed" : "portal_application_locked",
+      mutation.message ?? "当前报名不可修改。",
     );
   }
 

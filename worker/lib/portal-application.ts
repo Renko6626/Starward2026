@@ -1,7 +1,19 @@
 import type { ApplicationStatus } from "../../src/shared/applications";
 
-export function resolvePortalApplicationMutation(status: ApplicationStatus | null) {
+export function resolvePortalApplicationMutation(
+  status: ApplicationStatus | null,
+  applicationWindowOpen: boolean,
+) {
   if (!status) {
+    if (!applicationWindowOpen) {
+      return {
+        mode: "create" as const,
+        editable: false,
+        reason: "window_closed" as const,
+        message: "当前报名窗口未开放，请等待主催开启。",
+      };
+    }
+
     return {
       mode: "create" as const,
       editable: true,
@@ -12,7 +24,17 @@ export function resolvePortalApplicationMutation(status: ApplicationStatus | nul
     return {
       mode: "locked" as const,
       editable: false,
+      reason: "approved" as const,
       message: "该报名已审核通过，当前不再允许通过参与者入口修改。",
+    };
+  }
+
+  if (!applicationWindowOpen) {
+    return {
+      mode: "update" as const,
+      editable: false,
+      reason: "window_closed" as const,
+      message: "当前报名窗口未开放，请等待主催开启。",
     };
   }
 
