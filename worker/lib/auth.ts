@@ -1,4 +1,4 @@
-import { betterAuth, APIError } from "better-auth";
+import { betterAuth } from "better-auth";
 import type { GenericEndpointContext } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
@@ -8,7 +8,6 @@ import type { AppContext, AppBindings } from "./types";
 import {
   getParticipantByInviteEmail,
   getParticipantByUserId,
-  isParticipantPortalEligible,
   linkParticipantToAuthUser,
   normalizeEmailAddress,
 } from "../data/participants";
@@ -37,17 +36,27 @@ function getRequiredAuthEnv(env: AppBindings) {
   return {
     db: env.DB,
     secret: env.BETTER_AUTH_SECRET,
+    baseUrl: normalizeBaseUrl(env.BETTER_AUTH_URL),
     resendApiKey: env.RESEND_API_KEY,
     resendFromEmail: env.RESEND_FROM_EMAIL,
     resendFromName: env.RESEND_FROM_NAME?.trim() || "Starward2026",
   };
 }
 
-function buildInviteOnlyParticipantPlugin(env: AppBindings) {
+function normalizeBaseUrl(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed.replace(/\/+$/, "");
+}
+
+function buildPortalEntryPlugin(env: AppBindings) {
   const { db } = getRequiredAuthEnv(env);
 
   return {
-    id: "participant-invite-gate",
+    id: "portal-entry",
     version: AUTH_PLUGIN_VERSION,
     init() {
       return {
@@ -111,31 +120,9 @@ function buildInviteOnlyParticipantPlugin(env: AppBindings) {
             const email = normalizeEmailAddress(rawEmail);
             const participant = await getParticipantByInviteEmail(db, email);
 
-            if (!participant) {
-              throw APIError.fromStatus("FORBIDDEN", {
-                message: "该邮箱尚未获得参与者门户资格，请先等待主催审核通过。",
-              });
-            }
-
-            if (!isParticipantPortalEligible(participant.status)) {
-              throw APIError.fromStatus("FORBIDDEN", {
-                message:
-                  participant.status === "withdrawn"
-                    ? "该邮箱的参与资格已撤回，如需恢复请联系主催。"
-                    : "该邮箱当前不可用于参与者门户登录。",
-              });
-            }
-
-            const existingUser = await ctx.context.internalAdapter.findUserByEmail(email);
-            if (participant.user_id && existingUser?.user.id !== participant.user_id) {
-              throw APIError.fromStatus("FORBIDDEN", {
-                message: "该邮箱的门户绑定状态异常，请联系主催处理。",
-              });
-            }
-
             ctx.body.email = email;
             if (ctx.path === "/sign-in/email-otp") {
-              ctx.body.name = participant.display_name;
+              ctx.body.name = participant?.display_name || email.split("@")[0] || "参与者";
             }
           }),
         },
@@ -186,14 +173,15 @@ async function sendPortalOtpEmail(
 }
 
 export function createAuth(env: AppBindings) {
-  const { db, secret } = getRequiredAuthEnv(env);
+  const { db, secret, baseUrl } = getRequiredAuthEnv(env);
 
   return betterAuth({
     secret,
     database: db,
+    baseURL: baseUrl,
     basePath: "/api/auth",
     plugins: [
-      buildInviteOnlyParticipantPlugin(env),
+      buildPortalEntryPlugin(env),
       emailOTP({
         disableSignUp: false,
         expiresIn: 60 * 5,

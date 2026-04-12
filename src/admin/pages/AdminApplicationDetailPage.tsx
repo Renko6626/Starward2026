@@ -1,17 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, getRouteApi } from "@tanstack/react-router";
+import { ArrowRight, CheckCircle2, Clock, XCircle } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
+import { formatDateTime } from "../../app/lib/format";
 import {
   applicationInterestFormatLabels,
   applicationStatusLabels,
   type AdminApplicationDetailResponse,
+  type ApplicationStatus,
   type UpdateApplicationReviewInput,
 } from "../../shared/applications";
-import { SectionCard } from "../../app/components/SectionCard";
-import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
-import { StatusBadge } from "../../app/components/StatusBadge";
+import { resolveApplicationDisplayName } from "../../shared/application-identity";
+import {
+  adminParticipantStatusLabels,
+  type AdminParticipantInviteResponse,
+} from "../../shared/admin";
+import { summarizeApplicationReviewState } from "../lib/application-review";
+import { getReviewNoteTemplates } from "../lib/review-note";
 
 const applicationRouteApi = getRouteApi("/admin/applications/$applicationId");
+
+const publicCreditModeLabels = {
+  named: "使用笔名公开",
+  pseudonymous: "使用单独署名",
+  anonymous: "匿名参与",
+} as const;
+
+function resolvePublicCreditLabel(profile: NonNullable<AdminApplicationDetailResponse["application"]["portalProfile"]>) {
+  if (profile.publicCreditMode === "anonymous") {
+    return "不公开";
+  }
+
+  if (profile.publicCreditMode === "pseudonymous") {
+    return profile.publicCreditName ?? "未填写";
+  }
+
+  return profile.penName ?? "未填写";
+}
 
 export function AdminApplicationDetailPage() {
   const { applicationId } = applicationRouteApi.useParams();
@@ -22,6 +48,7 @@ export function AdminApplicationDetailPage() {
   >({ status: "loading" });
   const [adminNote, setAdminNote] = useState("");
   const [submitting, setSubmitting] = useState<UpdateApplicationReviewInput["status"] | null>(null);
+  const [sendingInvite, setSendingInvite] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,9 +59,7 @@ export function AdminApplicationDetailPage() {
     setState({ status: "loading" });
 
     try {
-      const payload = await requestJson<AdminApplicationDetailResponse>(
-        `/api/admin/applications/${applicationId}`,
-      );
+      const payload = await requestJson<AdminApplicationDetailResponse>(`/api/admin/applications/${applicationId}`);
       setState({ status: "ready", payload });
       setAdminNote(payload.application.adminNote ?? "");
     } catch (error) {
@@ -50,19 +75,16 @@ export function AdminApplicationDetailPage() {
     setActionMessage(null);
 
     try {
-      const payload = await requestJson<AdminApplicationDetailResponse>(
-        `/api/admin/applications/${applicationId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            status,
-            adminNote: adminNote.trim() || undefined,
-          } satisfies UpdateApplicationReviewInput),
+      const payload = await requestJson<AdminApplicationDetailResponse>(`/api/admin/applications/${applicationId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          status,
+          adminNote: adminNote.trim() || undefined,
+        } satisfies UpdateApplicationReviewInput),
+      });
 
       setState({ status: "ready", payload });
       setAdminNote(payload.application.adminNote ?? "");
@@ -74,101 +96,332 @@ export function AdminApplicationDetailPage() {
     }
   }
 
+  async function handleSendInvite(participantId: string) {
+    setSendingInvite(true);
+    setActionMessage(null);
+
+    try {
+      const payload = await requestJson<AdminParticipantInviteResponse>(
+        `/api/admin/participants/${participantId}/invite`,
+        { method: "POST" },
+      );
+
+      await loadDetail();
+      setActionMessage(payload.message);
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "发送门户提醒邮件失败。");
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+
+  if (state.status === "loading") {
+    return <ApplicationDetailShell description="正在读取报名详情。" />;
+  }
+
+  if (state.status === "error") {
+    return <ApplicationDetailShell description={state.message} />;
+  }
+
+  const application = state.payload.application;
+  const participant = application.participant;
+  const summary = summarizeApplicationReviewState(application);
+
   return (
-    <div className="page-stack">
-      {state.status === "loading" ? <p>正在读取报名详情。</p> : null}
-      {state.status === "error" ? (
-        <p className="inline-message inline-message--error">{state.message}</p>
-      ) : null}
-      {state.status === "ready" ? (
-      <SectionCard
-        eyebrow="后台 / 报名详情"
-        title={`审核 ${state.payload.application.displayName}`}
-        description="批准后会自动创建或对齐 `participants` 记录，并预留门户登录资格。"
-      >
-        <div className="detail-grid">
-          <div className="mini-card mini-card--compact">
-            <StatusBadge label={applicationStatusLabels[state.payload.application.status]} />
-            <p>形式：{applicationInterestFormatLabels[state.payload.application.interestFormat]}</p>
-            <p>提交时间：{formatDateTime(state.payload.application.createdAt)}</p>
-            <p>审核时间：{formatDateTime(state.payload.application.reviewedAt)}</p>
+    <div className="max-w-5xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="mb-4">
+        <Link
+          className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-4"
+          to="/admin/applications"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" /> 返回队列
+        </Link>
+        <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+          <div>
+            <h1 className="text-2xl font-headline tracking-tight mb-1">报名详情</h1>
+            <p className="text-sm text-on-surface-variant font-mono">ID: {applicationId}</p>
           </div>
-          <div className="mini-card mini-card--compact">
-            <strong>联系邮箱</strong>
-            <p>{state.payload.application.contactEmail}</p>
-            <strong>联系方式备注</strong>
-            <p>{state.payload.application.contactHandle ?? "未填写"}</p>
-          </div>
-          <div className="mini-card mini-card--compact">
-            <strong>作品链接</strong>
-            <p>{state.payload.application.portfolioUrl ?? "未填写"}</p>
-            <strong>关联参与者</strong>
-            {state.payload.application.participant ? (
-              <p>
-                <Link
-                  className="button button--secondary"
-                  params={{ participantId: state.payload.application.participant.id }}
-                  to="/admin/participants/$participantId"
-                >
-                  {`${state.payload.application.participant.id} / ${state.payload.application.participant.status}`}
-                </Link>
-              </p>
+          <ApplicationStatusBadge status={application.status} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              基础信息
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <DetailItem label="社团 / 笔名" value={resolveApplicationDisplayName({
+                displayName: application.displayName,
+                contactHandle: application.contactHandle,
+                contactEmail: application.contactEmail,
+              })} />
+              <DetailItem label="联系方式备注" value={application.contactHandle ?? "未填写"} />
+              <DetailItem label="联系邮箱" value={application.contactEmail} />
+              <DetailItem label="提交时间" value={formatDateTime(application.createdAt)} />
+              <DetailItem label="报名方向" value={applicationInterestFormatLabels[application.interestFormat]} />
+              <DetailItem label="作品链接" value={application.portfolioUrl ?? "未填写"} />
+              <DetailItem label="门户账号" value={application.authUser?.email ?? "尚未建立入口"} />
+              <DetailItem label="审核时间" value={formatDateTime(application.reviewedAt)} />
+            </div>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              联系资料与公开署名
+            </h2>
+            {application.portalProfile ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <DetailItem label="笔名" value={application.portalProfile.penName ?? "未填写"} />
+                <DetailItem label="联系邮箱" value={application.portalProfile.contactEmail} />
+                <DetailItem
+                  label="主联系渠道"
+                  value={`${application.portalProfile.primaryContactChannel} / ${application.portalProfile.primaryContactHandle}`}
+                />
+                <DetailItem label="备用联系" value={application.portalProfile.backupContact ?? "未填写"} />
+                <DetailItem label="署名模式" value={publicCreditModeLabels[application.portalProfile.publicCreditMode]} />
+                <DetailItem label="公开署名" value={resolvePublicCreditLabel(application.portalProfile)} />
+              </div>
             ) : (
-              <p>尚未创建</p>
+              <EmptyBlock>该报名尚未补充门户联系资料。</EmptyBlock>
             )}
-          </div>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              参企问卷
+            </h2>
+            <div className="space-y-4">
+              <DetailBlock title="自我介绍 / 参加意向" value={application.introText ?? "未填写"} />
+              <DetailBlock title="给主催的话" value={application.messageToHosts ?? "未填写"} />
+            </div>
+          </section>
         </div>
 
-        <div className="grid-two">
-          <div className="mini-card mini-card--compact">
-            <strong>自我介绍 / 参加意向</strong>
-            <p>{state.payload.application.introText ?? "未填写"}</p>
-          </div>
-          <div className="mini-card mini-card--compact">
-            <strong>给主催的话</strong>
-            <p>{state.payload.application.messageToHosts ?? "未填写"}</p>
-          </div>
+        <div className="space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/80 rounded-xl shadow-lg">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">审核决议</h2>
+            <div className="space-y-3">
+              <ActionButton
+                disabled={submitting !== null || sendingInvite}
+                onClick={() => void handleReview("approved")}
+                tone="success"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {submitting === "approved" ? "处理中..." : "批准并转入参与者"}
+              </ActionButton>
+              <ActionButton
+                disabled={submitting !== null || sendingInvite}
+                onClick={() => void handleReview("rejected")}
+                tone="error"
+              >
+                <XCircle className="w-4 h-4" />
+                {submitting === "rejected" ? "处理中..." : "拒绝申请"}
+              </ActionButton>
+              <ActionButton
+                disabled={submitting !== null || sendingInvite}
+                onClick={() => void handleReview("withdrawn")}
+                tone="neutral"
+              >
+                <Clock className="w-4 h-4" />
+                {submitting === "withdrawn" ? "处理中..." : "标记撤回"}
+              </ActionButton>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-outline-variant space-y-4">
+              <label className="text-xs font-medium text-on-surface-variant block" htmlFor="application-admin-note">
+                内部备注
+              </label>
+              <textarea
+                className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-xs resize-y min-h-32"
+                id="application-admin-note"
+                onChange={(event) => setAdminNote(event.target.value)}
+                placeholder="添加审核意见..."
+                rows={6}
+                value={adminNote}
+              />
+
+              <div className="flex flex-wrap gap-2">
+                {getReviewNoteTemplates().map((template) => (
+                  <button
+                    key={template.id}
+                    className="px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-xs hover:bg-surface-bright transition-colors"
+                    onClick={() => setAdminNote(template.body)}
+                    type="button"
+                  >
+                    {template.label}
+                  </button>
+                ))}
+              </div>
+
+              <SidebarNotice>模板只会写入备注框，不会自动提交。可以先套用，再按实际沟通结果微调。</SidebarNotice>
+              {actionMessage ? <SidebarNotice tone="success">{actionMessage}</SidebarNotice> : null}
+
+              {participant ? (
+                <div className="space-y-3 border-t border-outline-variant pt-4">
+                  <ActionButton
+                    disabled={submitting !== null || sendingInvite || !summary.inviteAction.enabled}
+                    onClick={() => void handleSendInvite(participant.id)}
+                    tone="neutral"
+                  >
+                    {sendingInvite ? "发送中..." : summary.inviteAction.label}
+                  </ActionButton>
+                  <Link
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface-variant border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium"
+                    params={{ participantId: participant.id }}
+                    to="/admin/participants/$participantId"
+                  >
+                    查看参与者详情
+                  </Link>
+                  <p className="text-xs text-on-surface-variant">
+                    关联参与者: {participant.id} / {adminParticipantStatusLabels[participant.status]}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-4">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase">审核上下文</h2>
+            <div className="space-y-3">
+              {summary.items.map((item) => (
+                <div key={item.key} className="rounded-lg border border-outline-variant bg-surface-variant/30 p-4">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                      item.tone === "success" && "border-tertiary/20 bg-tertiary/10 text-tertiary",
+                      item.tone === "warn" && "border-primary/20 bg-primary/10 text-primary",
+                      item.tone === "info" && "border-outline-variant bg-surface-variant text-on-surface-variant",
+                    )}
+                  >
+                    {item.statusLabel}
+                  </span>
+                  <p className="mt-3 text-sm font-medium text-on-surface">{item.title}</p>
+                  <p className="mt-2 text-xs leading-6 text-on-surface-variant">{item.hint}</p>
+                </div>
+              ))}
+            </div>
+            <SidebarNotice>{summary.recommendation}</SidebarNotice>
+            <SidebarNotice>{summary.inviteAction.reason}</SidebarNotice>
+          </section>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <label className="field">
-          <span>内部备注</span>
-          <textarea
-            onChange={(event) => setAdminNote(event.target.value)}
-            rows={5}
-            value={adminNote}
-          />
-        </label>
-
-        {actionMessage ? <p className="inline-message">{actionMessage}</p> : null}
-
-        <div className="action-row">
-          <button
-            className="button button--primary"
-            disabled={submitting !== null}
-            onClick={() => void handleReview("approved")}
-            type="button"
-          >
-            {submitting === "approved" ? "处理中" : "批准并转入参与者"}
-          </button>
-          <button
-            className="button button--danger"
-            disabled={submitting !== null}
-            onClick={() => void handleReview("rejected")}
-            type="button"
-          >
-            {submitting === "rejected" ? "处理中" : "拒绝"}
-          </button>
-          <button
-            className="button button--secondary"
-            disabled={submitting !== null}
-            onClick={() => void handleReview("withdrawn")}
-            type="button"
-          >
-            {submitting === "withdrawn" ? "处理中" : "标记撤回"}
-          </button>
+function ApplicationDetailShell({ description }: { description: string }) {
+  return (
+    <div className="max-w-5xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">报名详情</h1>
+          <p className="text-sm text-on-surface-variant font-mono">{description}</p>
         </div>
-      </SectionCard>
-      ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
+  switch (status) {
+    case "approved":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-medium">
+          <CheckCircle2 className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
+        </span>
+      );
+    case "rejected":
+    case "withdrawn":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-xs font-medium">
+          <XCircle className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
+        </span>
+      );
+    case "pending":
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium">
+          <Clock className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
+        </span>
+      );
+  }
+}
+
+function ActionButton({
+  children,
+  onClick,
+  disabled,
+  tone,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+  tone: "success" | "error" | "neutral";
+}) {
+  return (
+    <button
+      className={cn(
+        "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors font-medium disabled:cursor-not-allowed disabled:opacity-60",
+        tone === "success" && "bg-tertiary/10 text-tertiary border border-tertiary/30 hover:bg-tertiary/20",
+        tone === "error" && "bg-error/10 text-error border border-error/30 hover:bg-error/20",
+        tone === "neutral" && "bg-surface-variant text-on-surface border border-outline-variant hover:bg-outline-variant",
+      )}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-on-surface-variant mb-1">{label}</div>
+      <div className="font-medium text-on-surface break-words">{value}</div>
+    </div>
+  );
+}
+
+function DetailBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
+      <p className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50 whitespace-pre-wrap">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function EmptyBlock({ children }: { children: ReactNode }) {
+  return (
+    <div className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50">
+      {children}
+    </div>
+  );
+}
+
+function SidebarNotice({
+  children,
+  tone = "info",
+}: {
+  children: ReactNode;
+  tone?: "info" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs leading-6",
+        tone === "success"
+          ? "border-tertiary/25 bg-tertiary/10 text-tertiary"
+          : "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
+      )}
+    >
+      {children}
     </div>
   );
 }

@@ -2,8 +2,12 @@ import type { Context } from "hono";
 
 export type AppBindings = Env & {
   DB?: D1Database;
+  APPLICATION_SUBMIT_IP_RATE_LIMITER?: RateLimit;
+  APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  CLOUDFLARE_ACCESS_TEAM_DOMAIN?: string;
+  CLOUDFLARE_ACCESS_POLICY_AUD?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_FROM_NAME?: string;
@@ -11,4 +15,13 @@ export type AppBindings = Env & {
   TURNSTILE_SECRET?: string;
 };
 
-export type AppContext = Context<{ Bindings: AppBindings }>;
+export type AppVariables = {
+  adminIdentity?: string;
+};
+
+export type AppRouteConfig = {
+  Bindings: AppBindings;
+  Variables: AppVariables;
+};
+
+export type AppContext = Context<AppRouteConfig>;

@@ -5,9 +5,9 @@ import { adminApi } from "./routes/admin";
 import { portalApi } from "./routes/portal";
 import { publicApi } from "./routes/public";
 import { jsonError } from "./lib/http";
-import type { AppBindings } from "./lib/types";
+import type { AppRouteConfig } from "./lib/types";
 
-const app = new Hono<{ Bindings: AppBindings }>();
+const app = new Hono<AppRouteConfig>();
 
 app.route("/api", publicApi);
 app.route("/api/admin", adminApi);

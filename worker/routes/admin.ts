@@ -44,12 +44,17 @@ import {
 import { isParticipantPortalEligible } from "../data/participants";
 import { listEventWindows, updateEventWindow } from "../data/event-windows";
 import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
-import { getAdminIdentity } from "../lib/admin";
+import { getAdminIdentity, requireAdminAccess } from "../lib/admin";
 import { buildParticipantPortalInviteEmail } from "../lib/participant-admin";
 import { getRequiredDb, jsonError } from "../lib/http";
-import type { AppBindings } from "../lib/types";
+import type { AppBindings, AppRouteConfig } from "../lib/types";
 
-const adminApi = new Hono<{ Bindings: AppBindings }>();
+const adminApi = new Hono<AppRouteConfig>();
+
+adminApi.use("*", async (c, next) => {
+  await requireAdminAccess(c);
+  await next();
+});
 
 adminApi.get("/applications", async (c) => {
   const response: AdminApplicationListResponse = {

@@ -1,32 +1,59 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SectionCard } from "../../app/components/SectionCard";
-import { StatusBadge } from "../../app/components/StatusBadge";
+import { ArrowRight, KeyRound, Mail } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import type { PortalMeResponse } from "../../shared/portal";
 import { authClient } from "../lib/auth-client";
+import { resolvePortalEntryDestination } from "../lib/onboarding";
 
 export function PortalLoginPage() {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [phase, setPhase] = useState<"idle" | "otp-sent" | "verifying">("idle");
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isResolvingDestination, setIsResolvingDestination] = useState(false);
 
   useEffect(() => {
-    if (sessionQuery.data) {
-      void navigate({ to: "/portal" });
+    if (!sessionQuery.data) {
+      return;
     }
+
+    let cancelled = false;
+    setIsResolvingDestination(true);
+
+    void requestJson<PortalMeResponse>("/api/portal/me")
+      .then((response) => {
+        if (!cancelled) {
+          void navigate({ to: resolvePortalEntryDestination(response) });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          void navigate({ to: "/portal" });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsResolvingDestination(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate, sessionQuery.data]);
 
-  async function handleSendOtp(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
-      setError("请先输入受邀邮箱。");
+      setError("请先输入邮箱。");
       return;
     }
 
@@ -46,11 +73,11 @@ export function PortalLoginPage() {
       return;
     }
 
-    setPhase("otp-sent");
+    setStep("otp");
     setMessage(`验证码已发送到 ${normalizedEmail}。`);
   }
 
-  async function handleSignIn(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedOtp = otp.trim();
@@ -61,7 +88,6 @@ export function PortalLoginPage() {
     }
 
     setIsSigningIn(true);
-    setPhase("verifying");
     setError(null);
     setMessage(null);
 
@@ -73,92 +99,100 @@ export function PortalLoginPage() {
     setIsSigningIn(false);
 
     if (response.error) {
-      setPhase("otp-sent");
       setError(response.error.message || "登录失败，请确认验证码是否正确。");
       return;
     }
 
-    void navigate({ to: "/portal" });
+    setIsResolvingDestination(true);
+    setMessage("验证通过，正在进入参与者入口。");
   }
 
   return (
-    <div className="page-stack">
-      <div className="page-heading">
-        <StatusBadge label="受控入口" tone="info" />
-        <h1>参与者登录</h1>
-        <p>第一期采用 Better Auth + Email OTP，不开放自由注册，只允许已审核参与者进入。</p>
+    <div className="max-w-md mx-auto mt-20 relative z-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-headline tracking-tight mb-2">创作者登录</h1>
+        <p className="text-on-surface-variant">参与接力企划需要验证您的身份。</p>
       </div>
 
-      <SectionCard
-        eyebrow="一期认证策略"
-        title="为什么不是注册账号"
-        description="这个活动规模只有三四十人，更适合受控邮箱登录，而不是做一个大型账号系统。"
-      >
-        <ul className="plain-list">
-          <li>已审核邮箱才能成为有效门户入口。</li>
-          <li>用户不需要记密码。</li>
-          <li>主催可以直接按邮箱识别参与者。</li>
-          <li>当前已接入 Better Auth Email OTP + Resend 邮件发送。</li>
-        </ul>
-      </SectionCard>
-
-      <SectionCard
-        eyebrow="登录流程"
-        title="输入受邀邮箱，收验证码后完成登录"
-        description="未通过审核或已撤回资格的邮箱不会成为有效门户入口。"
-        accent="blue"
-      >
-        <div className="grid-two portal-auth-grid">
-          <form className="form-grid" onSubmit={handleSendOtp}>
-            <label className="field">
-              <span>受邀邮箱</span>
-              <input
-                autoComplete="email"
-                disabled={isSending || isSigningIn}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="name@example.com"
-                type="email"
-                value={email}
-              />
-            </label>
-
-            <div className="action-row">
-              <button className="button button--primary" disabled={isSending || isSigningIn} type="submit">
-                {isSending ? "发送中" : "发送验证码"}
-              </button>
+      <div className="p-8 border border-outline-variant bg-surface-container-low/80 rounded-2xl backdrop-blur-md shadow-2xl">
+        {step === "email" ? (
+          <form className="space-y-6" onSubmit={handleSendOtp}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-on-surface-variant block">身份标识 (邮箱)</label>
+              <div className="relative">
+                <Mail className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
+                <input
+                  autoComplete="email"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono"
+                  disabled={isSending || isSigningIn}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="observer@example.com"
+                  type="email"
+                  value={email}
+                />
+              </div>
             </div>
+            <button
+              className="w-full bg-primary text-on-primary font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={isSending}
+              type="submit"
+            >
+              {isSending ? "发送中..." : "获取访问码"} <ArrowRight className="w-4 h-4" />
+            </button>
           </form>
-
-          <form className="form-grid" onSubmit={handleSignIn}>
-            <label className="field">
-              <span>验证码</span>
-              <input
-                autoComplete="one-time-code"
-                disabled={isSending || isSigningIn || phase === "idle"}
-                inputMode="numeric"
-                onChange={(event) => setOtp(event.target.value)}
-                placeholder="6 位验证码"
-                value={otp}
-              />
-            </label>
-
-            <div className="action-row">
-              <button
-                className="button button--primary"
-                disabled={isSending || isSigningIn || phase === "idle"}
-                type="submit"
-              >
-                {isSigningIn ? "登录中" : "确认登录"}
-              </button>
+        ) : (
+          <form className="space-y-6" onSubmit={handleSignIn}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-on-surface-variant block">访问码 (OTP)</label>
+              <div className="relative">
+                <KeyRound className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
+                <input
+                  autoComplete="one-time-code"
+                  className="w-full bg-surface-variant border border-outline-variant rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono tracking-widest text-center text-lg"
+                  disabled={isSigningIn}
+                  inputMode="numeric"
+                  onChange={(event) => setOtp(event.target.value)}
+                  placeholder="000000"
+                  type="text"
+                  value={otp}
+                />
+              </div>
+              <p className="text-xs text-on-surface-variant text-center mt-2">访问码已发送至您的邮箱，10分钟内有效。</p>
             </div>
+            <button
+              className="w-full bg-primary text-on-primary font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={isSigningIn}
+              type="submit"
+            >
+              {isSigningIn ? "验证中..." : "验证并进入"}
+            </button>
+            <button
+              className="w-full text-sm text-on-surface-variant hover:text-primary transition-colors"
+              onClick={() => setStep("email")}
+              type="button"
+            >
+              使用其他邮箱
+            </button>
           </form>
+        )}
+
+        <div className="space-y-3 mt-6">
+          {sessionQuery.isPending ? <Notice>正在检查当前登录状态。</Notice> : null}
+          {isResolvingDestination ? <Notice>正在为当前账号定位下一步入口。</Notice> : null}
+          {message ? <Notice tone="success">{message}</Notice> : null}
+          {error ? <Notice tone="error">{error}</Notice> : null}
         </div>
-
-        {sessionQuery.isPending ? <p className="inline-message">正在检查当前登录状态。</p> : null}
-        {message ? <p className="inline-message inline-message--success">{message}</p> : null}
-        {error ? <p className="inline-message inline-message--error">{error}</p> : null}
-        {phase === "verifying" ? <p className="inline-message">正在建立参与者会话。</p> : null}
-      </SectionCard>
+      </div>
     </div>
   );
+}
+
+function Notice({ children, tone = "muted" }: { children: string; tone?: "muted" | "success" | "error" }) {
+  const toneClass = {
+    muted: "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
+    success: "border-tertiary/20 bg-tertiary/10 text-tertiary",
+    error: "border-error/20 bg-error/10 text-error",
+  }[tone];
+
+  return <p className={`rounded-xl border px-4 py-3 text-sm leading-6 ${toneClass}`}>{children}</p>;
 }

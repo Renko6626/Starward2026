@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { EventWindowSummary } from "./windows";
+import type { ParticipantPortalStatus } from "./portal";
 
 export const applicationInterestFormatValues = [
   "novel",
@@ -19,17 +20,23 @@ export const applicationStatusSchema = z.enum(applicationStatusValues);
 
 const optionalShortTextSchema = z.string().trim().max(120).optional();
 const optionalBodyTextSchema = z.string().trim().max(1600).optional();
+const optionalDisplayNameSchema = z.string().trim().max(80).optional();
 
-export const createApplicationInputSchema = z.object({
-  displayName: z.string().trim().min(1).max(80),
+const applicationInputSchema = z.object({
+  displayName: optionalDisplayNameSchema,
   contactEmail: z.string().trim().email().max(320),
   contactHandle: optionalShortTextSchema,
   interestFormat: applicationInterestFormatSchema,
   introText: optionalBodyTextSchema,
   portfolioUrl: z.string().trim().url().max(500).optional(),
   messageToHosts: optionalBodyTextSchema,
+});
+
+export const createApplicationInputSchema = applicationInputSchema.extend({
   turnstileToken: z.string().trim().min(1).optional(),
 });
+
+export const upsertPortalApplicationInputSchema = applicationInputSchema;
 
 export const updateApplicationReviewInputSchema = z.object({
   status: applicationStatusSchema,
@@ -37,6 +44,7 @@ export const updateApplicationReviewInputSchema = z.object({
 });
 
 export type CreateApplicationInput = z.infer<typeof createApplicationInputSchema>;
+export type UpsertPortalApplicationInput = z.infer<typeof upsertPortalApplicationInputSchema>;
 export type UpdateApplicationReviewInput = z.infer<typeof updateApplicationReviewInputSchema>;
 
 export type ApplicationListItem = {
@@ -48,7 +56,10 @@ export type ApplicationListItem = {
   status: ApplicationStatus;
   createdAt: string;
   reviewedAt: string | null;
+  authUserEmail: string | null;
+  hasPortalProfile: boolean;
   participantId: string | null;
+  participantStatus: ParticipantPortalStatus | null;
 };
 
 export type ApplicationDetail = ApplicationListItem & {
@@ -58,6 +69,23 @@ export type ApplicationDetail = ApplicationListItem & {
   adminNote: string | null;
   reviewedBy: string | null;
   updatedAt: string;
+  authUser:
+    | {
+        id: string;
+        email: string;
+      }
+    | null;
+  portalProfile:
+    | {
+        penName: string | null;
+        contactEmail: string;
+        primaryContactChannel: string;
+        primaryContactHandle: string;
+        backupContact: string | null;
+        publicCreditMode: "named" | "pseudonymous" | "anonymous";
+        publicCreditName: string | null;
+      }
+    | null;
   participant:
     | {
         id: string;

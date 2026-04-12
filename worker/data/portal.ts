@@ -1,4 +1,6 @@
 import type {
+  PortalApplicationDetail,
+  PortalApplicationSummary,
   PortalAuthUserSummary,
   PortalDashboardResponse,
   PortalEventItem,
@@ -10,7 +12,9 @@ import type {
 } from "../../src/shared/portal";
 import type { EventWindowSummary } from "../../src/shared/windows";
 import { buildPortalEventActorLabel, buildPortalEventLabel } from "../lib/portal-history";
+import { getPortalApplicationByUserId } from "./applications";
 import type { ParticipantAuthRow } from "./participants";
+import { getPortalProfileByUserId } from "./portal-profiles";
 import { getCurrentSegmentForParticipant } from "./segments";
 
 type PortalDraftRow = {
@@ -59,12 +63,20 @@ export function mapPortalParticipant(participant: ParticipantAuthRow): PortalPar
 }
 
 export async function getPortalMe(
-  user: PortalAuthUserSummary,
-  participant: ParticipantAuthRow,
+  db: D1Database,
+  input: {
+    user: PortalAuthUserSummary;
+    participant: ParticipantAuthRow | null;
+  },
 ): Promise<PortalMeResponse> {
+  const profile = await getPortalProfileByUserId(db, input.user.id);
+  const application = await getPortalApplicationByUserId(db, input.user.id, input.user.email);
+
   return {
-    user,
-    participant: mapPortalParticipant(participant),
+    user: input.user,
+    participant: input.participant ? mapPortalParticipant(input.participant) : null,
+    profile,
+    application: application ? mapPortalApplicationSummary(application) : null,
   };
 }
 
@@ -72,10 +84,25 @@ export async function getPortalDashboard(
   db: D1Database,
   input: {
     user: PortalAuthUserSummary;
-    participant: ParticipantAuthRow;
+    participant: ParticipantAuthRow | null;
     windows: EventWindowSummary[];
   },
 ): Promise<PortalDashboardResponse> {
+  const base = await getPortalMe(db, {
+    user: input.user,
+    participant: input.participant,
+  });
+
+  if (!input.participant) {
+    return {
+      ...base,
+      currentSegment: null,
+      projectDraft: null,
+      windows: input.windows,
+      recentEvents: [],
+    };
+  }
+
   const projectDraft = await db
     .prepare(
       `SELECT
@@ -103,7 +130,7 @@ export async function getPortalDashboard(
   );
 
   return {
-    user: input.user,
+    ...base,
     participant: mapPortalParticipant(input.participant),
     currentSegment,
     projectDraft: projectDraft
@@ -128,15 +155,29 @@ export async function getPortalHistory(
     participant: ParticipantAuthRow;
   },
 ): Promise<PortalHistoryResponse> {
+  const base = await getPortalMe(db, input);
   const events = await db
     .prepare(participantEventSelectSql + " WHERE participant_id = ? ORDER BY created_at DESC LIMIT ?")
     .bind(input.participant.id, 50)
     .all<ParticipantEventRow>();
 
   return {
-    user: input.user,
+    ...base,
     participant: mapPortalParticipant(input.participant),
     items: mapPortalEvents(events.results ?? []),
+  };
+}
+
+function mapPortalApplicationSummary(application: PortalApplicationDetail): PortalApplicationSummary {
+  return {
+    id: application.id,
+    displayName: application.displayName,
+    contactEmail: application.contactEmail,
+    contactHandle: application.contactHandle,
+    interestFormat: application.interestFormat,
+    status: application.status,
+    updatedAt: application.updatedAt,
+    reviewedAt: application.reviewedAt,
   };
 }
 

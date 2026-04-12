@@ -1,18 +1,29 @@
 import { Hono } from "hono";
+import { upsertPortalApplicationInputSchema } from "../../src/shared/applications";
 import type {
+  PortalApplicationMutationResponse,
+  PortalApplicationResponse,
   PortalAvailableSegmentListResponse,
   PortalCurrentSegmentResponse,
   PortalDashboardResponse,
   PortalHistoryResponse,
   PortalMeResponse,
+  PortalProfileMutationResponse,
+  PortalProfileResponse,
   PortalProjectMutationResponse,
   PortalProjectResponse,
 } from "../../src/shared/portal";
 import {
   segmentMutationInputSchema,
+  updatePortalProfileInputSchema,
   updatePortalProjectPreviewInputSchema,
   updatePortalProjectReviewInputSchema,
 } from "../../src/shared/portal";
+import {
+  getPortalApplicationByUserId,
+  upsertPortalApplication,
+} from "../data/applications";
+import { listEventWindows } from "../data/event-windows";
 import {
   getPortalDashboard,
   getPortalHistory,
@@ -20,6 +31,7 @@ import {
   mapPortalAuthUser,
   mapPortalParticipant,
 } from "../data/portal";
+import { getPortalProfileByUserId, upsertPortalProfile } from "../data/portal-profiles";
 import {
   getPortalProjectDraftDetail,
   submitPortalProjectPreview,
@@ -27,7 +39,6 @@ import {
   updatePortalProjectPreview,
   updatePortalProjectReview,
 } from "../data/project-drafts";
-import { listEventWindows } from "../data/event-windows";
 import {
   changeParticipantSegment,
   claimParticipantSegment,
@@ -35,33 +46,57 @@ import {
   listAvailableSegments,
   releaseParticipantSegment,
 } from "../data/segments";
+import type { ParticipantAuthRow } from "../data/participants";
 import { requireParticipantSession } from "../lib/auth";
 import { getRequiredDb, jsonError } from "../lib/http";
-import type { AppBindings, AppContext } from "../lib/types";
+import { resolveParticipantActionEligibility } from "../lib/portal-access";
+import {
+  resolvePortalApplicationMutation,
+  resolvePortalApplicationProfileRequirement,
+} from "../lib/portal-application";
+import type { AppContext, AppRouteConfig } from "../lib/types";
 
-const portalApi = new Hono<{ Bindings: AppBindings }>();
+const portalApi = new Hono<AppRouteConfig>();
+
+type PortalSessionState = NonNullable<Awaited<ReturnType<typeof requireParticipantSession>>>;
+
+type PortalSessionAccess =
+  | {
+      response: ReturnType<typeof jsonError>;
+    }
+  | {
+      db: D1Database;
+      session: PortalSessionState["session"];
+      participant: ParticipantAuthRow | null;
+    };
+
+type ParticipantActionAccess =
+  | {
+      response: ReturnType<typeof jsonError>;
+    }
+  | {
+      db: D1Database;
+      session: PortalSessionState["session"];
+      participant: ParticipantAuthRow;
+    };
 
 portalApi.get("/me", async (c) => {
-  const sessionState = await requireParticipantSession(c);
+  const access = await getPortalSessionAccess(c);
 
-  if (!sessionState?.session) {
-    return jsonError(c, 401, "portal_not_authenticated", "请先完成参与者登录。");
+  if ("response" in access) {
+    return access.response;
   }
 
-  if (!sessionState.participant) {
-    return jsonError(c, 403, "portal_not_bound", "当前账号尚未绑定有效参与者身份，请联系主催处理。");
-  }
-
-  const response: PortalMeResponse = await getPortalMe(
-    mapPortalAuthUser(sessionState.session.user),
-    sessionState.participant,
-  );
+  const response: PortalMeResponse = await getPortalMe(access.db, {
+    user: mapPortalAuthUser(access.session.user),
+    participant: access.participant,
+  });
 
   return c.json(response);
 });
 
 portalApi.get("/dashboard", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getPortalSessionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -76,23 +111,211 @@ portalApi.get("/dashboard", async (c) => {
   return c.json(response);
 });
 
-portalApi.get("/history", async (c) => {
-  const access = await getPortalAccess(c);
+portalApi.get("/profile", async (c) => {
+  const access = await getPortalSessionAccess(c);
 
   if ("response" in access) {
     return access.response;
   }
 
-  const response: PortalHistoryResponse = await getPortalHistory(access.db, {
+  const response: PortalProfileResponse = {
     user: mapPortalAuthUser(access.session.user),
-    participant: access.participant,
+    participant: access.participant ? mapPortalParticipant(access.participant) : null,
+    profile: await getPortalProfileByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+      access.session.user.email,
+    ),
+  };
+
+  return c.json(response);
+});
+
+portalApi.patch("/profile", async (c) => {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access.response;
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = updatePortalProfileInputSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return jsonError(c, 422, "invalid_request", "资料参数不正确。", parsed.error.flatten());
+  }
+
+  const profile = await upsertPortalProfile(access.db, {
+    userId: access.session.user.id,
+    data: parsed.data,
   });
+
+  if (!profile) {
+    return jsonError(c, 500, "profile_missing", "资料已写入，但未能重新读取。");
+  }
+
+  const response: PortalProfileMutationResponse = {
+    ok: true,
+    message: "已更新联系资料与公开署名设置。",
+    profile,
+  };
+
+  return c.json(response);
+});
+
+portalApi.get("/application", async (c) => {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access.response;
+  }
+
+  const application = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+    access.session.user.email,
+  );
+  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const mutation = resolvePortalApplicationMutation(application?.status ?? null);
+  const profileRequirement = resolvePortalApplicationProfileRequirement(
+    profile ? { userId: access.session.user.id } : null,
+  );
+
+  const response: PortalApplicationResponse = {
+    user: mapPortalAuthUser(access.session.user),
+    participant: access.participant ? mapPortalParticipant(access.participant) : null,
+    profile,
+    application,
+    editable: mutation.editable,
+    editState: mutation.mode,
+    message: !profileRequirement.ok
+      ? profileRequirement.message
+      : mutation.mode === "locked"
+        ? mutation.message
+        : null,
+  };
+
+  return c.json(response);
+});
+
+portalApi.post("/application", async (c) => {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access.response;
+  }
+
+  const existing = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+    access.session.user.email,
+  );
+  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const profileRequirement = resolvePortalApplicationProfileRequirement(
+    profile ? { userId: access.session.user.id } : null,
+  );
+
+  if (!profileRequirement.ok) {
+    return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
+  }
+
+  const mutation = resolvePortalApplicationMutation(existing?.status ?? null);
+
+  if (mutation.mode !== "create") {
+    return jsonError(c, 409, "portal_application_exists", "当前账号已有报名记录，请使用更新操作。");
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = upsertPortalApplicationInputSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
+  }
+
+  const result = await upsertPortalApplication(access.db, {
+    userId: access.session.user.id,
+    authEmail: access.session.user.email,
+    data: parsed.data,
+  });
+
+  if (!result.ok) {
+    return jsonError(c, result.status, result.code, result.message);
+  }
+
+  const response: PortalApplicationMutationResponse = {
+    ok: true,
+    message: result.message,
+    application: result.application,
+  };
+
+  return c.json(response, 201);
+});
+
+portalApi.patch("/application", async (c) => {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access.response;
+  }
+
+  const existing = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+    access.session.user.email,
+  );
+  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const profileRequirement = resolvePortalApplicationProfileRequirement(
+    profile ? { userId: access.session.user.id } : null,
+  );
+
+  if (!profileRequirement.ok) {
+    return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
+  }
+
+  const mutation = resolvePortalApplicationMutation(existing?.status ?? null);
+
+  if (mutation.mode === "create") {
+    return jsonError(c, 404, "portal_application_missing", "当前账号还没有报名记录。");
+  }
+
+  if (!mutation.editable) {
+    return jsonError(
+      c,
+      409,
+      "portal_application_locked",
+      mutation.mode === "locked" ? mutation.message : "当前报名不可修改。",
+    );
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = upsertPortalApplicationInputSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
+  }
+
+  const result = await upsertPortalApplication(access.db, {
+    userId: access.session.user.id,
+    authEmail: access.session.user.email,
+    data: parsed.data,
+  });
+
+  if (!result.ok) {
+    return jsonError(c, result.status, result.code, result.message);
+  }
+
+  const response: PortalApplicationMutationResponse = {
+    ok: true,
+    message: result.message,
+    application: result.application,
+  };
 
   return c.json(response);
 });
 
 const getCurrentSegmentHandler = async (c: AppContext) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -106,6 +329,12 @@ const getCurrentSegmentHandler = async (c: AppContext) => {
   const response: PortalCurrentSegmentResponse = {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
+    profile: await getPortalProfileByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+      access.session.user.email,
+    ),
     currentSegment: segmentState.currentSegment,
     actions: segmentState.actions,
     windows: segmentState.windows,
@@ -115,7 +344,7 @@ const getCurrentSegmentHandler = async (c: AppContext) => {
 };
 
 const listAvailableSegmentsHandler = async (c: AppContext) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -129,7 +358,7 @@ const listAvailableSegmentsHandler = async (c: AppContext) => {
 };
 
 const claimSegmentHandler = async (c: AppContext) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -156,7 +385,7 @@ const claimSegmentHandler = async (c: AppContext) => {
 };
 
 const changeSegmentHandler = async (c: AppContext) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -183,7 +412,7 @@ const changeSegmentHandler = async (c: AppContext) => {
 };
 
 const releaseSegmentHandler = async (c: AppContext) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -202,17 +431,13 @@ const releaseSegmentHandler = async (c: AppContext) => {
 };
 
 portalApi.get("/segments/current", getCurrentSegmentHandler);
-
 portalApi.get("/segments/available", listAvailableSegmentsHandler);
-
 portalApi.post("/segments/claim", claimSegmentHandler);
-
 portalApi.post("/segments/change", changeSegmentHandler);
-
 portalApi.post("/segments/release", releaseSegmentHandler);
 
 portalApi.get("/project", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -228,6 +453,12 @@ portalApi.get("/project", async (c) => {
   const response: PortalProjectResponse = {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
+    profile: await getPortalProfileByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+      access.session.user.email,
+    ),
     draft,
     windows,
   };
@@ -236,7 +467,7 @@ portalApi.get("/project", async (c) => {
 });
 
 portalApi.patch("/project/preview", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -268,7 +499,7 @@ portalApi.patch("/project/preview", async (c) => {
 });
 
 portalApi.post("/project/preview/submit", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -293,7 +524,7 @@ portalApi.post("/project/preview/submit", async (c) => {
 });
 
 portalApi.patch("/project/review", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -325,7 +556,7 @@ portalApi.patch("/project/review", async (c) => {
 });
 
 portalApi.post("/project/review/submit", async (c) => {
-  const access = await getPortalAccess(c);
+  const access = await getParticipantActionAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -349,9 +580,24 @@ portalApi.post("/project/review/submit", async (c) => {
   return c.json(response);
 });
 
+portalApi.get("/history", async (c) => {
+  const access = await getParticipantActionAccess(c);
+
+  if ("response" in access) {
+    return access.response;
+  }
+
+  const response: PortalHistoryResponse = await getPortalHistory(access.db, {
+    user: mapPortalAuthUser(access.session.user),
+    participant: access.participant,
+  });
+
+  return c.json(response);
+});
+
 export { portalApi };
 
-async function getPortalAccess(c: AppContext) {
+async function getPortalSessionAccess(c: AppContext): Promise<PortalSessionAccess> {
   const sessionState = await requireParticipantSession(c);
 
   if (!sessionState?.session) {
@@ -360,15 +606,38 @@ async function getPortalAccess(c: AppContext) {
     };
   }
 
-  if (!sessionState.participant) {
-    return {
-      response: jsonError(c, 403, "portal_not_bound", "当前账号尚未绑定有效参与者身份，请联系主催处理。"),
-    };
-  }
-
   return {
     db: getRequiredDb(c),
     session: sessionState.session,
     participant: sessionState.participant,
+  };
+}
+
+async function getParticipantActionAccess(c: AppContext): Promise<ParticipantActionAccess> {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access;
+  }
+
+  const participant = access.participant;
+  const eligibility = resolveParticipantActionEligibility(participant);
+
+  if (!eligibility.ok) {
+    return {
+      response: jsonError(c, 403, eligibility.code, eligibility.message),
+    };
+  }
+
+  if (!participant) {
+    return {
+      response: jsonError(c, 403, "portal_pending_review", "当前账号已登录，但尚未获得参与资格。请先补充资料并等待主催审核。"),
+    };
+  }
+
+  return {
+    db: access.db,
+    session: access.session,
+    participant,
   };
 }

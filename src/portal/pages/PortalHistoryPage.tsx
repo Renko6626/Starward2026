@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { SectionCard } from "../../app/components/SectionCard";
-import { StatusBadge } from "../../app/components/StatusBadge";
 import { ApiError, requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
 import type { PortalHistoryResponse } from "../../shared/portal";
 import { authClient } from "../lib/auth-client";
@@ -51,11 +50,10 @@ export function PortalHistoryPage() {
 
   if (sessionQuery.isPending || state.status === "loading") {
     return (
-      <div className="page-stack">
-        <div className="page-heading">
-          <StatusBadge label="门户 / 历史记录" />
-          <h1>操作历史</h1>
-          <p>正在读取参与者历史记录。</p>
+      <div className="max-w-4xl mx-auto relative z-10 py-6 space-y-8">
+        <div className="border-b border-outline-variant pb-4">
+          <h1 className="text-2xl font-headline tracking-tight mb-1">审计历史</h1>
+          <p className="text-sm text-on-surface-variant">正在读取参与者历史记录。</p>
         </div>
       </div>
     );
@@ -63,54 +61,68 @@ export function PortalHistoryPage() {
 
   if (state.status === "error") {
     return (
-      <div className="page-stack">
-        <div className="page-heading">
-          <StatusBadge label="门户 / 历史记录" />
-          <h1>操作历史</h1>
-          <p>{state.message}</p>
+      <div className="max-w-4xl mx-auto relative z-10 py-6 space-y-8">
+        <div className="border-b border-outline-variant pb-4">
+          <h1 className="text-2xl font-headline tracking-tight mb-1">审计历史</h1>
+          <p className="text-sm text-on-surface-variant">{state.message}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-stack">
-      <div className="page-heading">
-        <StatusBadge label="门户 / 历史记录" />
-        <h1>操作历史</h1>
-        <p>
-          {state.history.participant.displayName}，这一页会把参与者可见的关键动作按时间倒序列出来，
-          方便你确认系统记录到了什么，也方便和主催对齐状态。
-        </p>
+    <div className="max-w-4xl mx-auto relative z-10 py-6 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-outline-variant pb-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">审计历史</h1>
+          <p className="text-sm text-on-surface-variant">
+            {state.history.participant.displayName}，这里会把参与者可见的关键动作按时间倒序列出来，方便你确认系统记录到了什么。
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant border border-outline-variant text-xs font-mono font-medium">
+          {state.history.items.length} 条记录
+        </span>
       </div>
 
-      <SectionCard
-        eyebrow="可见审计"
-        title="近期系统记录"
-        description="一期先保留参与者可见的轻量审计历史，不做复杂筛选。"
-      >
+      <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl">
         {state.history.items.length > 0 ? (
-          <div className="table-shell">
+          <div className="space-y-4 relative before:absolute before:inset-y-0 before:left-2 before:w-px before:bg-outline-variant">
             {state.history.items.map((item) => (
-              <div className="table-shell__row" key={item.id}>
-                <span>{item.label}</span>
-                <span>{item.actorLabel}</span>
-                <span>{formatDateTime(item.createdAt)}</span>
+              <div className="relative pl-6" key={item.id}>
+                <div className="absolute left-[5px] top-1.5 w-1.5 h-1.5 rounded-full bg-on-surface-variant ring-4 ring-surface-container-low" />
+                <time className="text-xs font-mono text-on-surface-variant block mb-0.5">{formatDateTime(item.createdAt)}</time>
+                <p className="text-sm text-on-surface">{item.label}</p>
+                <p className="text-xs text-on-surface-variant">{item.actorLabel}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="inline-message">当前还没有可显示的参与者历史记录。</p>
+          <Notice>当前还没有可显示的参与者历史记录。</Notice>
         )}
-        <div className="action-row">
-          <Link className="button button--secondary" to="/portal">
-            返回门户总览
-          </Link>
-          <Link className="button button--secondary" to="/portal/project">
-            前往资料补录
-          </Link>
-        </div>
-      </SectionCard>
+      </section>
+
+      <div className="flex flex-wrap gap-3">
+        <Link
+          className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors"
+          to="/portal"
+        >
+          返回门户总览
+        </Link>
+        <Link
+          className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors"
+          to="/portal/project"
+        >
+          前往资料补录
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <div className={cn("rounded-xl border border-outline-variant bg-surface-variant/30 px-4 py-3 text-sm leading-6 text-on-surface-variant")}>
+      {children}
     </div>
   );
 }

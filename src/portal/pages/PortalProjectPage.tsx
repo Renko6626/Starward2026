@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SectionCard } from "../../app/components/SectionCard";
-import { StatusBadge } from "../../app/components/StatusBadge";
 import { ApiError, requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
 import type {
   PortalProjectDraftDetail,
@@ -40,6 +39,12 @@ type PendingAction =
   | "review-save"
   | "review-submit"
   | null;
+
+const inputClassName =
+  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm disabled:opacity-50";
+
+const textareaClassName =
+  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm resize-none disabled:opacity-50";
 
 export function PortalProjectPage() {
   const navigate = useNavigate();
@@ -85,10 +90,7 @@ export function PortalProjectPage() {
   function applyLoadedProject(project: PortalProjectResponse) {
     setPreviewForm(buildPreviewForm(project.draft));
     setReviewForm(buildReviewForm(project.draft));
-    setState({
-      status: "ready",
-      project,
-    });
+    setState({ status: "ready", project });
   }
 
   function updateDraft(draft: PortalProjectDraftDetail) {
@@ -127,8 +129,6 @@ export function PortalProjectPage() {
     if (!quiet) {
       setNotice(response.message);
     }
-
-    return response.draft;
   }
 
   async function patchReview(quiet = false) {
@@ -149,8 +149,6 @@ export function PortalProjectPage() {
     if (!quiet) {
       setNotice(response.message);
     }
-
-    return response.draft;
   }
 
   async function handlePreviewSave() {
@@ -173,12 +171,9 @@ export function PortalProjectPage() {
     try {
       await patchPreview(true);
 
-      const response = await requestJson<PortalProjectMutationResponse>(
-        "/api/portal/project/preview/submit",
-        {
-          method: "POST",
-        },
-      );
+      const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/preview/submit", {
+        method: "POST",
+      });
 
       updateDraft(response.draft);
       setNotice(response.message);
@@ -209,12 +204,9 @@ export function PortalProjectPage() {
     try {
       await patchReview(true);
 
-      const response = await requestJson<PortalProjectMutationResponse>(
-        "/api/portal/project/review/submit",
-        {
-          method: "POST",
-        },
-      );
+      const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/review/submit", {
+        method: "POST",
+      });
 
       updateDraft(response.draft);
       setNotice(response.message);
@@ -227,11 +219,10 @@ export function PortalProjectPage() {
 
   if (sessionQuery.isPending || state.status === "loading") {
     return (
-      <div className="page-stack">
-        <div className="page-heading">
-          <StatusBadge label="门户 / 资料补录" />
-          <h1>预告信息与审查说明</h1>
-          <p>正在读取当前作品资料状态。</p>
+      <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-8">
+        <div className="border-b border-outline-variant pb-4">
+          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
+          <p className="text-sm text-on-surface-variant">正在读取当前作品资料状态。</p>
         </div>
       </div>
     );
@@ -239,11 +230,10 @@ export function PortalProjectPage() {
 
   if (state.status === "error") {
     return (
-      <div className="page-stack">
-        <div className="page-heading">
-          <StatusBadge label="门户 / 资料补录" />
-          <h1>预告信息与审查说明</h1>
-          <p>{state.message}</p>
+      <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-8">
+        <div className="border-b border-outline-variant pb-4">
+          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
+          <p className="text-sm text-on-surface-variant">{state.message}</p>
         </div>
       </div>
     );
@@ -252,283 +242,246 @@ export function PortalProjectPage() {
   const flags = buildWindowFlagMap(state.project.windows);
 
   return (
-    <div className="page-stack">
-      <div className="page-heading">
-        <StatusBadge label="门户 / 资料补录" />
-        <h1>预告信息与审查说明</h1>
-        <p>
-          {state.project.participant.displayName}，这里是你后续反复回来的资料工作台。
-          先把可公开预告和给主催看的审查说明分别补全，再在开放窗口内提交。
-        </p>
-      </div>
-
-      <div className="route-grid">
-        <div className="mini-card">
-          <strong>当前时间段</strong>
-          <p>
-            {state.project.participant.currentSegmentCode
-              ? `${state.project.participant.currentSegmentCode} · ${state.project.participant.currentSegmentName ?? "未命名"}`
-              : "尚未认领"}
+    <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-outline-variant pb-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
+          <p className="text-sm text-on-surface-variant">
+            {state.project.participant.displayName}，先把可公开预告和给主催看的审查说明分别补全，再在开放窗口内提交。
           </p>
         </div>
-        <div className="mini-card">
-          <strong>预告状态</strong>
-          <p>{projectDraftStatusLabels[state.project.draft.previewStatus]}</p>
-        </div>
-        <div className="mini-card">
-          <strong>审查状态</strong>
-          <p>{projectDraftStatusLabels[state.project.draft.reviewStatus]}</p>
-        </div>
-        <div className="mini-card">
-          <strong>最近更新时间</strong>
-          <p>{formatDateTime(state.project.draft.updatedAt)}</p>
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
+            预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}
+          </StatusBadge>
+          <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
+            审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
+          </StatusBadge>
         </div>
       </div>
 
-      <SectionCard
-        eyebrow="当前阶段"
-        title="我现在能做什么"
-        description="保存草稿始终可用；真正提交给主催要看窗口是否开放。"
-        accent="blue"
-      >
-        <div className="detail-grid">
-          <div className="mini-card mini-card--compact">
-            <strong>预告资料提交</strong>
-            <p>{flags.previewSubmitOpen ? "已开放" : "未开放"}</p>
-          </div>
-          <div className="mini-card mini-card--compact">
-            <strong>审查说明提交</strong>
-            <p>{flags.reviewSubmitOpen ? "已开放" : "未开放"}</p>
-          </div>
-          <div className="mini-card mini-card--compact">
-            <strong>预告上次提交</strong>
-            <p>{formatDateTime(state.project.draft.previewSubmittedAt)}</p>
-          </div>
-          <div className="mini-card mini-card--compact">
-            <strong>审查上次提交</strong>
-            <p>{formatDateTime(state.project.draft.reviewSubmittedAt)}</p>
-          </div>
-        </div>
-      </SectionCard>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <SummaryCard
+          label="当前时间段"
+          value={
+            state.project.participant.currentSegmentCode
+              ? `${state.project.participant.currentSegmentCode} · ${state.project.participant.currentSegmentName ?? "未命名"}`
+              : "尚未认领"
+          }
+        />
+        <SummaryCard label="预告提交" value={flags.previewSubmitOpen ? "已开放" : "未开放"} />
+        <SummaryCard label="审查提交" value={flags.reviewSubmitOpen ? "已开放" : "未开放"} />
+        <SummaryCard label="最近更新" value={formatDateTime(state.project.draft.updatedAt)} />
+      </div>
 
       {state.project.draft.adminFeedback ? (
-        <SectionCard
-          eyebrow="主催反馈"
-          title="这一条需要优先看"
-          description="如果资料被要求修改，请先根据这里的反馈调整，再重新提交。"
-          accent="amber"
-        >
-          <div className="mini-card mini-card--compact">
-            <strong>反馈内容</strong>
-            <p>{state.project.draft.adminFeedback}</p>
-            <p>最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}</p>
-          </div>
-        </SectionCard>
+        <Notice tone="warning">
+          <div className="font-medium">主催反馈</div>
+          <div className="mt-2">{state.project.draft.adminFeedback}</div>
+          <div className="mt-2 text-xs">最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}</div>
+        </Notice>
       ) : null}
 
-      <SectionCard
-        eyebrow="预告信息"
-        title="给公开页面和预热使用的内容"
-        description="这里填的是之后可能对外展示的标题、简介和署名。"
-      >
-        <div className="detail-grid">
-          <div className="mini-card mini-card--compact">
-            <StatusBadge
-              label={projectDraftStatusLabels[state.project.draft.previewStatus]}
-              tone={getStatusTone(state.project.draft.previewStatus)}
-            />
-            <p>公开作者名：{state.project.draft.publicAuthorName ?? "未填写"}</p>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-medium text-on-surface">预告信息</h2>
+              <p className="text-sm text-on-surface-variant mt-1">这里填写的是之后可能对外展示的标题、简介、作者名和标签。</p>
+            </div>
+            <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
+              {projectDraftStatusLabels[state.project.draft.previewStatus]}
+            </StatusBadge>
           </div>
-          <div className="mini-card mini-card--compact">
-            <strong>提交窗口</strong>
-            <p>{flags.previewSubmitOpen ? "当前可以提交预告资料。" : "当前只可先保存草稿。"}</p>
+
+          <div className="space-y-4">
+            <Field label="预告标题">
+              <input
+                className={inputClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setPreviewForm((current) => ({
+                    ...current,
+                    previewTitle: event.target.value,
+                  }))
+                }
+                placeholder="例如：边界面浮上试验"
+                type="text"
+                value={previewForm.previewTitle}
+              />
+            </Field>
+
+            <Field label="公开作者名">
+              <input
+                className={inputClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setPreviewForm((current) => ({
+                    ...current,
+                    publicAuthorName: event.target.value,
+                  }))
+                }
+                placeholder="对外展示时希望显示的名字"
+                type="text"
+                value={previewForm.publicAuthorName}
+              />
+            </Field>
+
+            <Field label="作品形式">
+              <input
+                className={inputClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setPreviewForm((current) => ({
+                    ...current,
+                    formatLabel: event.target.value,
+                  }))
+                }
+                placeholder="例如：小说 / 插画 / 漫画"
+                type="text"
+                value={previewForm.formatLabel}
+              />
+            </Field>
+
+            <Field label="公开标签" hint="用逗号、顿号或换行分隔。">
+              <input
+                className={inputClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setPreviewForm((current) => ({
+                    ...current,
+                    publicTagsText: event.target.value,
+                  }))
+                }
+                type="text"
+                value={previewForm.publicTagsText}
+              />
+            </Field>
+
+            <Field label="预告简介">
+              <textarea
+                className={textareaClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setPreviewForm((current) => ({
+                    ...current,
+                    previewSummary: event.target.value,
+                  }))
+                }
+                rows={7}
+                value={previewForm.previewSummary}
+              />
+            </Field>
           </div>
-        </div>
 
-        <div className="grid-two">
-          <label className="field">
-            <span>预告标题</span>
-            <input
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
+            <button
+              className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
               disabled={pendingAction !== null}
-              onChange={(event) =>
-                setPreviewForm((current) => ({
-                  ...current,
-                  previewTitle: event.target.value,
-                }))
-              }
-              placeholder="例如：边界面浮上试验"
-              value={previewForm.previewTitle}
-            />
-          </label>
-
-          <label className="field">
-            <span>公开作者名</span>
-            <input
-              disabled={pendingAction !== null}
-              onChange={(event) =>
-                setPreviewForm((current) => ({
-                  ...current,
-                  publicAuthorName: event.target.value,
-                }))
-              }
-              placeholder="对外展示时希望显示的名字"
-              value={previewForm.publicAuthorName}
-            />
-          </label>
-        </div>
-
-        <div className="grid-two">
-          <label className="field">
-            <span>作品形式</span>
-            <input
-              disabled={pendingAction !== null}
-              onChange={(event) =>
-                setPreviewForm((current) => ({
-                  ...current,
-                  formatLabel: event.target.value,
-                }))
-              }
-              placeholder="例如：小说 / 插画 / 漫画"
-              value={previewForm.formatLabel}
-            />
-          </label>
-
-          <label className="field">
-            <span>公开标签</span>
-            <input
-              disabled={pendingAction !== null}
-              onChange={(event) =>
-                setPreviewForm((current) => ({
-                  ...current,
-                  publicTagsText: event.target.value,
-                }))
-              }
-              placeholder="用逗号、顿号或换行分隔"
-              value={previewForm.publicTagsText}
-            />
-          </label>
-        </div>
-
-        <label className="field">
-          <span>预告简介</span>
-          <textarea
-            disabled={pendingAction !== null}
-            onChange={(event) =>
-              setPreviewForm((current) => ({
-                ...current,
-                previewSummary: event.target.value,
-              }))
-            }
-            rows={6}
-            value={previewForm.previewSummary}
-          />
-        </label>
-
-        <div className="action-row">
-          <button
-            className="button button--secondary"
-            disabled={pendingAction !== null}
-            onClick={() => void handlePreviewSave()}
-            type="button"
-          >
-            {pendingAction === "preview-save" ? "保存中" : "保存预告草稿"}
-          </button>
-          <button
-            className="button button--primary"
-            disabled={pendingAction !== null || !flags.previewSubmitOpen}
-            onClick={() => void handlePreviewSubmit()}
-            type="button"
-          >
-            {pendingAction === "preview-submit" ? "提交中" : "提交预告资料"}
-          </button>
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        eyebrow="审查说明"
-        title="给主催看的内容概述与警示"
-        description="这里不对外公开，重点是帮助主催提前了解题材、风险点和需要注意的部分。"
-      >
-        <div className="detail-grid">
-          <div className="mini-card mini-card--compact">
-            <StatusBadge
-              label={projectDraftStatusLabels[state.project.draft.reviewStatus]}
-              tone={getStatusTone(state.project.draft.reviewStatus)}
-            />
-            <p>最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}</p>
+              onClick={() => void handlePreviewSave()}
+              type="button"
+            >
+              {pendingAction === "preview-save" ? "保存中..." : "保存预告草稿"}
+            </button>
+            <button
+              className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              disabled={pendingAction !== null || !flags.previewSubmitOpen}
+              onClick={() => void handlePreviewSubmit()}
+              type="button"
+            >
+              {pendingAction === "preview-submit" ? "提交中..." : "提交预告资料"}
+            </button>
           </div>
-          <div className="mini-card mini-card--compact">
-            <strong>提交窗口</strong>
-            <p>{flags.reviewSubmitOpen ? "当前可以提交审查说明。" : "当前只可先保存草稿。"}</p>
+
+          <p className="text-xs text-on-surface-variant">
+            {flags.previewSubmitOpen ? "当前可以提交预告资料。" : "当前只可先保存草稿。"}
+          </p>
+        </section>
+
+        <section className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-medium text-on-surface">审查说明</h2>
+              <p className="text-sm text-on-surface-variant mt-1">这里不对外公开，重点是帮助主催提前了解题材、风险点和需要注意的部分。</p>
+            </div>
+            <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
+              {projectDraftStatusLabels[state.project.draft.reviewStatus]}
+            </StatusBadge>
           </div>
-        </div>
 
-        <label className="field">
-          <span>内容概述</span>
-          <textarea
-            disabled={pendingAction !== null}
-            onChange={(event) =>
-              setReviewForm((current) => ({
-                ...current,
-                contentNote: event.target.value,
-              }))
-            }
-            rows={6}
-            value={reviewForm.contentNote}
-          />
-        </label>
+          <div className="space-y-4">
+            <Field label="内容概述">
+              <textarea
+                className={textareaClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setReviewForm((current) => ({
+                    ...current,
+                    contentNote: event.target.value,
+                  }))
+                }
+                rows={6}
+                value={reviewForm.contentNote}
+              />
+            </Field>
 
-        <label className="field">
-          <span>内容警示</span>
-          <textarea
-            disabled={pendingAction !== null}
-            onChange={(event) =>
-              setReviewForm((current) => ({
-                ...current,
-                contentWarnings: event.target.value,
-              }))
-            }
-            rows={4}
-            value={reviewForm.contentWarnings}
-          />
-        </label>
+            <Field label="内容警示">
+              <textarea
+                className={textareaClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setReviewForm((current) => ({
+                    ...current,
+                    contentWarnings: event.target.value,
+                  }))
+                }
+                rows={4}
+                value={reviewForm.contentWarnings}
+              />
+            </Field>
 
-        <label className="field">
-          <span>给主催的补充说明</span>
-          <textarea
-            disabled={pendingAction !== null}
-            onChange={(event) =>
-              setReviewForm((current) => ({
-                ...current,
-                reviewNote: event.target.value,
-              }))
-            }
-            rows={5}
-            value={reviewForm.reviewNote}
-          />
-        </label>
+            <Field label="给主催的补充说明">
+              <textarea
+                className={textareaClassName}
+                disabled={pendingAction !== null}
+                onChange={(event) =>
+                  setReviewForm((current) => ({
+                    ...current,
+                    reviewNote: event.target.value,
+                  }))
+                }
+                rows={5}
+                value={reviewForm.reviewNote}
+              />
+            </Field>
+          </div>
 
-        <div className="action-row">
-          <button
-            className="button button--secondary"
-            disabled={pendingAction !== null}
-            onClick={() => void handleReviewSave()}
-            type="button"
-          >
-            {pendingAction === "review-save" ? "保存中" : "保存审查草稿"}
-          </button>
-          <button
-            className="button button--primary"
-            disabled={pendingAction !== null || !flags.reviewSubmitOpen}
-            onClick={() => void handleReviewSubmit()}
-            type="button"
-          >
-            {pendingAction === "review-submit" ? "提交中" : "提交审查说明"}
-          </button>
-        </div>
-      </SectionCard>
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
+            <button
+              className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
+              disabled={pendingAction !== null}
+              onClick={() => void handleReviewSave()}
+              type="button"
+            >
+              {pendingAction === "review-save" ? "保存中..." : "保存审查草稿"}
+            </button>
+            <button
+              className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              disabled={pendingAction !== null || !flags.reviewSubmitOpen}
+              onClick={() => void handleReviewSubmit()}
+              type="button"
+            >
+              {pendingAction === "review-submit" ? "提交中..." : "提交审查说明"}
+            </button>
+          </div>
 
-      {notice ? <p className="inline-message">{notice}</p> : null}
+          <p className="text-xs text-on-surface-variant">
+            {flags.reviewSubmitOpen ? "当前可以提交审查说明。" : "当前只可先保存草稿。"}
+          </p>
+        </section>
+      </div>
+
+      {notice ? <Notice tone="success">{notice}</Notice> : null}
     </div>
   );
 }
@@ -576,14 +529,83 @@ function parseTagsText(value: string) {
   );
 }
 
-function getStatusTone(status: PortalProjectDraftDetail["previewStatus"]): "info" | "warn" | "success" {
+function getStatusTone(status: PortalProjectDraftDetail["previewStatus"]): "muted" | "warning" | "success" {
   if (status === "approved") {
     return "success";
   }
 
-  if (status === "changes_requested") {
-    return "warn";
+  if (status === "changes_requested" || status === "submitted") {
+    return "warning";
   }
 
-  return "info";
+  return "muted";
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-4">
+      <p className="text-xs font-mono uppercase text-on-surface-variant">{label}</p>
+      <p className="mt-2 text-sm text-on-surface">{value}</p>
+    </div>
+  );
+}
+
+function Field({
+  children,
+  hint,
+  label,
+}: {
+  children: ReactNode;
+  hint?: string;
+  label: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-on-surface-variant">{label}</label>
+      {children}
+      {hint ? <p className="text-xs text-on-surface-variant">{hint}</p> : null}
+    </div>
+  );
+}
+
+function StatusBadge({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "muted" | "warning" | "success";
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono font-medium",
+        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
+        tone === "warning" && "bg-primary/10 text-primary border-primary/20",
+        tone === "muted" && "bg-surface-variant text-on-surface-variant border-outline-variant",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Notice({
+  children,
+  tone = "muted",
+}: {
+  children: ReactNode;
+  tone?: "muted" | "warning" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm leading-6",
+        tone === "muted" && "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
+        tone === "warning" && "border-primary/20 bg-primary/10 text-primary",
+        tone === "success" && "border-tertiary/20 bg-tertiary/10 text-tertiary",
+      )}
+    >
+      {children}
+    </div>
+  );
 }

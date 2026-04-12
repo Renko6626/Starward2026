@@ -1,5 +1,9 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, Clock, XCircle } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
+import { formatDateTime } from "../../app/lib/format";
 import {
   adminParticipantStatusLabels,
   adminProjectDraftStatusLabels,
@@ -7,10 +11,6 @@ import {
   type AdminProjectDraftMutationResponse,
   type UpdateProjectDraftInput,
 } from "../../shared/admin";
-import { SectionCard } from "../../app/components/SectionCard";
-import { StatusBadge } from "../../app/components/StatusBadge";
-import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
 
 const draftRouteApi = getRouteApi("/admin/project-drafts/$draftId");
 
@@ -40,9 +40,7 @@ export function AdminProjectDraftDetailPage() {
     setState({ status: "loading" });
 
     try {
-      const payload = await requestJson<AdminProjectDraftDetailResponse>(
-        `/api/admin/project-drafts/${draftId}`,
-      );
+      const payload = await requestJson<AdminProjectDraftDetailResponse>(`/api/admin/project-drafts/${draftId}`);
       setState({ status: "ready", payload });
       setForm({
         previewStatus: payload.draft.previewStatus,
@@ -62,20 +60,17 @@ export function AdminProjectDraftDetailPage() {
     setMessage(null);
 
     try {
-      const payload = await requestJson<AdminProjectDraftMutationResponse>(
-        `/api/admin/project-drafts/${draftId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            previewStatus: form.previewStatus,
-            reviewStatus: form.reviewStatus,
-            adminFeedback: form.adminFeedback?.trim() || null,
-          } satisfies UpdateProjectDraftInput),
+      const payload = await requestJson<AdminProjectDraftMutationResponse>(`/api/admin/project-drafts/${draftId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          previewStatus: form.previewStatus,
+          reviewStatus: form.reviewStatus,
+          adminFeedback: form.adminFeedback?.trim() || null,
+        } satisfies UpdateProjectDraftInput),
+      });
 
       setState({
         status: "ready",
@@ -96,160 +91,254 @@ export function AdminProjectDraftDetailPage() {
     }
   }
 
+  if (state.status === "loading") {
+    return <DraftDetailShell description="正在读取资料详情。" />;
+  }
+
+  if (state.status === "error") {
+    return <DraftDetailShell description={state.message} />;
+  }
+
+  const draft = state.payload.draft;
+
   return (
-    <div className="page-stack">
-      {state.status === "loading" ? <p>正在读取资料详情。</p> : null}
-      {state.status === "error" ? (
-        <p className="inline-message inline-message--error">{state.message}</p>
-      ) : null}
-      {state.status === "ready" ? (
-        <SectionCard
-          eyebrow="后台 / 资料详情"
-          title={`审阅 ${state.payload.draft.participantName} 的作品资料`}
-          description="一期先把作者填写内容和管理员反馈放在同一页，减少来回跳转。管理员只改审核状态与反馈，不直接覆盖作者原文。"
+    <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="mb-4">
+        <Link
+          className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-4"
+          to="/admin/project-drafts"
         >
-          <div className="detail-grid">
-            <div className="mini-card mini-card--compact">
-              <StatusBadge
-                label={`预告 ${adminProjectDraftStatusLabels[state.payload.draft.previewStatus]}`}
-                tone={getStatusTone(state.payload.draft.previewStatus)}
+          <ArrowRight className="w-4 h-4 rotate-180" /> 返回草案库
+        </Link>
+        <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+          <div>
+            <h1 className="text-2xl font-headline tracking-tight mb-1">项目草案详情</h1>
+            <p className="text-sm text-on-surface-variant font-mono">ID: {draft.id}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <DraftStatusBadge status={draft.previewStatus} label="预告" />
+            <DraftStatusBadge status={draft.reviewStatus} label="审查" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              参与者与关联信息
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <DetailItem label="参与者" value={draft.participantName} />
+              <DetailItem label="联系邮箱" value={draft.participantInviteEmail} />
+              <DetailItem label="参与状态" value={adminParticipantStatusLabels[draft.participantStatus]} />
+              <DetailItem label="联系方式备注" value={draft.participantContactHandle ?? "未填写"} />
+              <DetailItem
+                label="当前时间段"
+                value={draft.segmentCode ? `${draft.segmentCode} · ${draft.segmentName ?? "未命名"}` : "暂无"}
               />
-              <p>
-                <StatusBadge
-                  label={`审查 ${adminProjectDraftStatusLabels[state.payload.draft.reviewStatus]}`}
-                  tone={getStatusTone(state.payload.draft.reviewStatus)}
-                />
-              </p>
-              <p>最近更新时间：{formatDateTime(state.payload.draft.updatedAt)}</p>
-              <p>最近审核时间：{formatDateTime(state.payload.draft.reviewedAt)}</p>
+              <DetailItem label="最近更新" value={formatDateTime(draft.updatedAt)} />
             </div>
-
-            <div className="mini-card mini-card--compact">
-              <strong>参与者</strong>
-              <p>{state.payload.draft.participantName}</p>
-              <p>{state.payload.draft.participantInviteEmail}</p>
-              <p>{adminParticipantStatusLabels[state.payload.draft.participantStatus]}</p>
-              <p>{state.payload.draft.participantContactHandle ?? "未填写联系方式备注"}</p>
-            </div>
-
-            <div className="mini-card mini-card--compact">
-              <strong>当前时间段</strong>
-              <p>
-                {state.payload.draft.segmentCode
-                  ? `${state.payload.draft.segmentCode} · ${state.payload.draft.segmentName ?? "未命名"}`
-                  : "暂无"}
-              </p>
-              <strong>关联参与者页</strong>
-              <p>
-                <Link
-                  className="button button--secondary"
-                  params={{ participantId: state.payload.draft.participantId }}
-                  to="/admin/participants/$participantId"
-                >
-                  查看参与者详情
-                </Link>
-              </p>
-            </div>
-          </div>
-
-          <div className="grid-two">
-            <div className="mini-card mini-card--tall">
-              <strong>预告信息</strong>
-              <p>标题：{state.payload.draft.previewTitle ?? "未填写"}</p>
-              <p>公开作者名：{state.payload.draft.publicAuthorName ?? "未填写"}</p>
-              <p>作品形式：{state.payload.draft.formatLabel ?? "未填写"}</p>
-              <p>标签：{state.payload.draft.publicTags.length > 0 ? state.payload.draft.publicTags.join(" / ") : "未填写"}</p>
-              <p>提交时间：{formatDateTime(state.payload.draft.previewSubmittedAt)}</p>
-              <strong>预告简介</strong>
-              <p>{state.payload.draft.previewSummary ?? "未填写"}</p>
-            </div>
-
-            <div className="mini-card mini-card--tall">
-              <strong>审查说明</strong>
-              <p>提交时间：{formatDateTime(state.payload.draft.reviewSubmittedAt)}</p>
-              <strong>内容概述</strong>
-              <p>{state.payload.draft.contentNote ?? "未填写"}</p>
-              <strong>内容警示</strong>
-              <p>{state.payload.draft.contentWarnings ?? "未填写"}</p>
-              <strong>补充说明</strong>
-              <p>{state.payload.draft.reviewNote ?? "未填写"}</p>
-            </div>
-          </div>
-
-          <div className="grid-two">
-            <label className="field">
-              <span>预告审核状态</span>
-              <select
-                disabled={saving}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    previewStatus: event.target.value as UpdateProjectDraftInput["previewStatus"],
-                  }))
-                }
-                value={form.previewStatus}
-              >
-                {Object.entries(adminProjectDraftStatusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>审查审核状态</span>
-              <select
-                disabled={saving}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    reviewStatus: event.target.value as UpdateProjectDraftInput["reviewStatus"],
-                  }))
-                }
-                value={form.reviewStatus}
-              >
-                {Object.entries(adminProjectDraftStatusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className="field">
-            <span>管理员反馈</span>
-            <textarea
-              disabled={saving}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  adminFeedback: event.target.value,
-                }))
-              }
-              rows={6}
-              value={form.adminFeedback ?? ""}
-            />
-          </label>
-
-          <p className="inline-message">
-            这里的反馈会和审核状态一起落到 `project_drafts.admin_feedback`，供后续参与者门户直接读取。
-          </p>
-          {message ? <p className="inline-message">{message}</p> : null}
-
-          <div className="action-row">
-            <button
-              className="button button--primary"
-              disabled={saving}
-              onClick={() => void handleSave()}
-              type="button"
+            <Link
+              className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-surface-variant border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium"
+              params={{ participantId: draft.participantId }}
+              to="/admin/participants/$participantId"
             >
-              {saving ? "保存中" : "保存审核结果"}
-            </button>
-          </div>
-        </SectionCard>
-      ) : null}
+              查看参与者详情
+            </Link>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              预告信息
+            </h2>
+            <div className="space-y-4">
+              <DetailBlock title="标题" value={draft.previewTitle ?? "未填写"} />
+              <DetailBlock title="公开作者名" value={draft.publicAuthorName ?? "未填写"} />
+              <DetailBlock title="作品形式" value={draft.formatLabel ?? "未填写"} />
+              <DetailBlock title="标签" value={draft.publicTags.length > 0 ? draft.publicTags.join(" / ") : "未填写"} />
+              <DetailBlock title="提交时间" value={formatDateTime(draft.previewSubmittedAt)} />
+              <DetailBlock title="预告简介" value={draft.previewSummary ?? "未填写"} />
+            </div>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              审查说明
+            </h2>
+            <div className="space-y-4">
+              <DetailBlock title="提交时间" value={formatDateTime(draft.reviewSubmittedAt)} />
+              <DetailBlock title="内容概述" value={draft.contentNote ?? "未填写"} />
+              <DetailBlock title="内容警示" value={draft.contentWarnings ?? "未填写"} />
+              <DetailBlock title="补充说明" value={draft.reviewNote ?? "未填写"} />
+            </div>
+          </section>
+        </div>
+
+        <div className="space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/80 rounded-xl shadow-lg">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">审核设置</h2>
+            <div className="space-y-4">
+              <FormField label="预告审核状态">
+                <select
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  disabled={saving}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      previewStatus: event.target.value as UpdateProjectDraftInput["previewStatus"],
+                    }))
+                  }
+                  value={form.previewStatus}
+                >
+                  {Object.entries(adminProjectDraftStatusLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField label="审查审核状态">
+                <select
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  disabled={saving}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      reviewStatus: event.target.value as UpdateProjectDraftInput["reviewStatus"],
+                    }))
+                  }
+                  value={form.reviewStatus}
+                >
+                  {Object.entries(adminProjectDraftStatusLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField label="管理员反馈">
+                <textarea
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-32"
+                  disabled={saving}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      adminFeedback: event.target.value,
+                    }))
+                  }
+                  rows={6}
+                  value={form.adminFeedback ?? ""}
+                />
+              </FormField>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-outline-variant space-y-3">
+              <SidebarNotice>
+                这里的反馈会和审核状态一起写入 `project_drafts.admin_feedback`，供后续参与者门户直接读取。
+              </SidebarNotice>
+              {message ? <SidebarNotice tone="success">{message}</SidebarNotice> : null}
+              <button
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={saving}
+                onClick={() => void handleSave()}
+                type="button"
+              >
+                {saving ? "保存中..." : "保存审核结果"}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DraftDetailShell({ description }: { description: string }) {
+  return (
+    <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">项目草案详情</h1>
+          <p className="text-sm text-on-surface-variant font-mono">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-2">
+      <span className="text-xs font-medium text-on-surface-variant">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function DraftStatusBadge({
+  status,
+  label,
+}: {
+  status: UpdateProjectDraftInput["previewStatus"];
+  label: string;
+}) {
+  const tone = getStatusTone(status);
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-medium",
+        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
+        tone === "warn" && "bg-error/10 text-error border-error/20",
+        tone === "info" && "bg-primary/10 text-primary border-primary/20",
+      )}
+    >
+      {tone === "success" ? <CheckCircle2 className="w-3.5 h-3.5" /> : tone === "warn" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+      {label} {adminProjectDraftStatusLabels[status]}
+    </span>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-on-surface-variant mb-1">{label}</div>
+      <div className="font-medium text-on-surface break-words">{value}</div>
+    </div>
+  );
+}
+
+function DetailBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
+      <p className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50 whitespace-pre-wrap">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SidebarNotice({
+  children,
+  tone = "info",
+}: {
+  children: ReactNode;
+  tone?: "info" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs leading-6",
+        tone === "success"
+          ? "border-tertiary/25 bg-tertiary/10 text-tertiary"
+          : "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
+      )}
+    >
+      {children}
     </div>
   );
 }

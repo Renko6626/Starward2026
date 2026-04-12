@@ -19,7 +19,9 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PortalLoginRouteImport } from './routes/portal_/login'
 import { Route as PortalScheduleRouteImport } from './routes/portal/schedule'
 import { Route as PortalProjectRouteImport } from './routes/portal/project'
+import { Route as PortalProfileRouteImport } from './routes/portal/profile'
 import { Route as PortalHistoryRouteImport } from './routes/portal/history'
+import { Route as PortalApplicationRouteImport } from './routes/portal/application'
 import { Route as ApplySuccessRouteImport } from './routes/apply/success'
 import { Route as AdminScheduleRouteImport } from './routes/admin/schedule'
 import { Route as AdminProjectDraftsRouteRouteImport } from './routes/admin/project-drafts/route'
@@ -83,9 +85,19 @@ const PortalProjectRoute = PortalProjectRouteImport.update({
   path: '/project',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalProfileRoute = PortalProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalHistoryRoute = PortalHistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalApplicationRoute = PortalApplicationRouteImport.update({
+  id: '/application',
+  path: '/application',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const ApplySuccessRoute = ApplySuccessRouteImport.update({
@@ -162,7 +174,9 @@ export interface FileRoutesByFullPath {
   '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
   '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
+  '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
+  '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal/login': typeof PortalLoginRoute
@@ -181,7 +195,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
+  '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
+  '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal/login': typeof PortalLoginRoute
@@ -207,7 +223,9 @@ export interface FileRoutesById {
   '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
   '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
+  '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
+  '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal_/login': typeof PortalLoginRoute
@@ -234,7 +252,9 @@ export interface FileRouteTypes {
     | '/admin/project-drafts'
     | '/admin/schedule'
     | '/apply/success'
+    | '/portal/application'
     | '/portal/history'
+    | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
     | '/portal/login'
@@ -253,7 +273,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/schedule'
     | '/apply/success'
+    | '/portal/application'
     | '/portal/history'
+    | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
     | '/portal/login'
@@ -278,7 +300,9 @@ export interface FileRouteTypes {
     | '/admin/project-drafts'
     | '/admin/schedule'
     | '/apply/success'
+    | '/portal/application'
     | '/portal/history'
+    | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
     | '/portal_/login'
@@ -374,11 +398,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalProjectRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/profile': {
+      id: '/portal/profile'
+      path: '/profile'
+      fullPath: '/portal/profile'
+      preLoaderRoute: typeof PortalProfileRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/history': {
       id: '/portal/history'
       path: '/history'
       fullPath: '/portal/history'
       preLoaderRoute: typeof PortalHistoryRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/application': {
+      id: '/portal/application'
+      path: '/application'
+      fullPath: '/portal/application'
+      preLoaderRoute: typeof PortalApplicationRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/apply/success': {
@@ -553,14 +591,18 @@ const ApplyRouteRouteWithChildren = ApplyRouteRoute._addFileChildren(
 )
 
 interface PortalRouteRouteChildren {
+  PortalApplicationRoute: typeof PortalApplicationRoute
   PortalHistoryRoute: typeof PortalHistoryRoute
+  PortalProfileRoute: typeof PortalProfileRoute
   PortalProjectRoute: typeof PortalProjectRoute
   PortalScheduleRoute: typeof PortalScheduleRoute
   PortalIndexRoute: typeof PortalIndexRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalApplicationRoute: PortalApplicationRoute,
   PortalHistoryRoute: PortalHistoryRoute,
+  PortalProfileRoute: PortalProfileRoute,
   PortalProjectRoute: PortalProjectRoute,
   PortalScheduleRoute: PortalScheduleRoute,
   PortalIndexRoute: PortalIndexRoute,

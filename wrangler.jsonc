@@ -15,23 +15,91 @@
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
+  "ratelimits": [
+    {
+      "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
+      "namespace_id": "2026041101",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    },
+    {
+      "name": "APPLICATION_SUBMIT_EMAIL_RATE_LIMITER",
+      "namespace_id": "2026041102",
+      "simple": {
+        "limit": 2,
+        "period": 60
+      }
+    }
+  ],
   /**
    * Set these when the actual Cloudflare resources are created:
    * - D1 database binding
    * - Better Auth secret
+   * - Better Auth base URL
+   * - Cloudflare Access team domain and policy aud for /api/admin verification
    * - Resend API key and sender
    * - Turnstile secret
-   * - Rate Limiting binding
+   * - Replace the rate limit namespace ids if they collide with existing account-level values
    */
-  // "d1_databases": [
-  //   {
-  //     "binding": "DB",
-  //     "database_name": "starward2026",
-  //     "database_id": "replace-with-real-d1-database-id"
-  //   }
-  // ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "starward2026",
+      "database_id": "217b5fbf-1865-4b20-8551-85349f53b349"
+    }
+  ],
+  "env": {
+    "staging": {
+      "ratelimits": [
+        {
+          "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
+          "namespace_id": "2026041101",
+          "simple": {
+            "limit": 6,
+            "period": 60
+          }
+        },
+        {
+          "name": "APPLICATION_SUBMIT_EMAIL_RATE_LIMITER",
+          "namespace_id": "2026041102",
+          "simple": {
+            "limit": 2,
+            "period": 60
+          }
+        }
+      ],
+      "routes": [
+        {
+          "pattern": "hifuu-staging.ayafeed.com",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "starward2026",
+          "database_id": "217b5fbf-1865-4b20-8551-85349f53b349"
+        }
+      ],
+      "vars": {
+        "BETTER_AUTH_URL": "https://hifuu-staging.ayafeed.com"
+      }
+    },
+    "production": {
+      // Replace with the real production URL before the first production deploy.
+      "vars": {
+        "BETTER_AUTH_URL": "https://replace-with-production-domain.example.com"
+      }
+      // Add production routes and a production D1 binding before enabling deploy:production.
+    }
+  },
   // "vars": {
   //   "BETTER_AUTH_SECRET": "replace-with-32-plus-char-secret",
+  //   "BETTER_AUTH_URL": "https://your-app.example.com",
+  //   "CLOUDFLARE_ACCESS_TEAM_DOMAIN": "https://your-team.cloudflareaccess.com",
+  //   "CLOUDFLARE_ACCESS_POLICY_AUD": "replace-with-your-access-application-aud",
   //   "RESEND_API_KEY": "re_xxxxxxxxx",
   //   "RESEND_FROM_EMAIL": "noreply@example.com",
   //   "RESEND_FROM_NAME": "Starward2026",

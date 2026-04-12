@@ -1,7 +1,15 @@
 import { z } from "zod";
+import type { ApplicationInterestFormat, ApplicationStatus } from "./applications";
 import type { EventWindowSummary } from "./windows";
 
 export type ParticipantPortalStatus = "invited" | "active" | "withdrawn" | "completed";
+
+export const participantPortalStatusLabels: Record<ParticipantPortalStatus, string> = {
+  invited: "已放行",
+  active: "已激活",
+  withdrawn: "已撤回",
+  completed: "已完成",
+};
 
 export const projectDraftStatusValues = [
   "not_started",
@@ -40,6 +48,36 @@ export type PortalParticipantSummary = {
   currentSegmentCode: string | null;
   currentSegmentName: string | null;
   updatedAt: string;
+};
+
+export type PortalProfile = {
+  penName: string | null;
+  contactEmail: string;
+  primaryContactChannel: string;
+  primaryContactHandle: string;
+  backupContact: string | null;
+  publicCreditMode: PortalPublicCreditMode;
+  publicCreditName: string | null;
+  updatedAt: string;
+};
+
+export type PortalApplicationSummary = {
+  id: string;
+  displayName: string;
+  contactEmail: string;
+  contactHandle: string | null;
+  interestFormat: ApplicationInterestFormat;
+  status: ApplicationStatus;
+  updatedAt: string;
+  reviewedAt: string | null;
+};
+
+export type PortalApplicationDetail = PortalApplicationSummary & {
+  introText: string | null;
+  portfolioUrl: string | null;
+  messageToHosts: string | null;
+  adminNote: string | null;
+  reviewedBy: string | null;
 };
 
 export const portalSegmentStatusSchema = z.enum(["open", "held", "locked", "released", "completed"]);
@@ -88,12 +126,20 @@ export type PortalEventItem = {
   createdAt: string;
 };
 
-export type PortalMeResponse = {
+export type PortalSessionSummary = {
   user: PortalAuthUserSummary;
+  participant: PortalParticipantSummary | null;
+  profile: PortalProfile | null;
+  application: PortalApplicationSummary | null;
+};
+
+export type PortalApprovedParticipantSummary = Omit<PortalSessionSummary, "participant"> & {
   participant: PortalParticipantSummary;
 };
 
-export type PortalDashboardResponse = PortalMeResponse & {
+export type PortalMeResponse = PortalSessionSummary;
+
+export type PortalDashboardResponse = PortalSessionSummary & {
   currentSegment: PortalSegmentSummary | null;
   projectDraft: PortalProjectDraftSummary | null;
   windows: EventWindowSummary[];
@@ -109,19 +155,42 @@ export type PortalSegmentActionState = {
   releaseHint: string;
 };
 
-export type PortalCurrentSegmentResponse = PortalMeResponse & {
+export type PortalCurrentSegmentResponse = PortalApprovedParticipantSummary & {
   currentSegment: PortalSegmentSummary | null;
   actions: PortalSegmentActionState;
   windows: EventWindowSummary[];
 };
 
-export type PortalProjectResponse = PortalMeResponse & {
+export type PortalProjectResponse = PortalApprovedParticipantSummary & {
   draft: PortalProjectDraftDetail;
   windows: EventWindowSummary[];
 };
 
-export type PortalHistoryResponse = PortalMeResponse & {
+export type PortalHistoryResponse = PortalApprovedParticipantSummary & {
   items: PortalEventItem[];
+};
+
+export type PortalProfileResponse = PortalSessionSummary & {
+  profile: PortalProfile | null;
+};
+
+export type PortalProfileMutationResponse = {
+  ok: true;
+  message: string;
+  profile: PortalProfile;
+};
+
+export type PortalApplicationResponse = PortalSessionSummary & {
+  application: PortalApplicationDetail | null;
+  editable: boolean;
+  editState: "create" | "update" | "locked";
+  message: string | null;
+};
+
+export type PortalApplicationMutationResponse = {
+  ok: true;
+  message: string;
+  application: PortalApplicationDetail;
 };
 
 export type PortalAvailableSegmentSummary = PortalSegmentSummary & {
@@ -143,6 +212,40 @@ export type PortalSegmentMutationResponse = {
   message: string;
   segment: PortalSegmentSummary | null;
 };
+
+export const portalPublicCreditModeSchema = z.enum(["named", "pseudonymous", "anonymous"]);
+
+export type PortalPublicCreditMode = z.infer<typeof portalPublicCreditModeSchema>;
+
+export const updatePortalProfileInputSchema = z
+  .object({
+    penName: z.string().trim().max(80).optional(),
+    contactEmail: z.string().trim().email().max(320),
+    primaryContactChannel: z.string().trim().min(1).max(40),
+    primaryContactHandle: z.string().trim().min(1).max(120),
+    backupContact: z.string().trim().max(160).optional(),
+    publicCreditMode: portalPublicCreditModeSchema,
+    publicCreditName: z.string().trim().max(80).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.publicCreditMode === "named" && !value.penName?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "使用常用笔名公开时请填写笔名，或改用匿名/单独署名。",
+        path: ["penName"],
+      });
+    }
+
+    if (value.publicCreditMode === "pseudonymous" && !value.publicCreditName?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "单独署名模式必须填写公开署名。",
+        path: ["publicCreditName"],
+      });
+    }
+  });
+
+export type UpdatePortalProfileInput = z.infer<typeof updatePortalProfileInputSchema>;
 
 export const updatePortalProjectPreviewInputSchema = z.object({
   previewTitle: z.string().trim().max(120).optional(),

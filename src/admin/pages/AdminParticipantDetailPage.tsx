@@ -1,15 +1,15 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, Clock, XCircle } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
+import { formatDateTime } from "../../app/lib/format";
 import {
   adminParticipantStatusLabels,
   type AdminParticipantDetailResponse,
   type AdminParticipantInviteResponse,
   type UpdateParticipantInput,
 } from "../../shared/admin";
-import { SectionCard } from "../../app/components/SectionCard";
-import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
-import { StatusBadge } from "../../app/components/StatusBadge";
 
 const participantRouteApi = getRouteApi("/admin/participants/$participantId");
 
@@ -40,9 +40,7 @@ export function AdminParticipantDetailPage() {
     setState({ status: "loading" });
 
     try {
-      const payload = await requestJson<AdminParticipantDetailResponse>(
-        `/api/admin/participants/${participantId}`,
-      );
+      const payload = await requestJson<AdminParticipantDetailResponse>(`/api/admin/participants/${participantId}`);
       setState({ status: "ready", payload });
       setForm({
         displayName: payload.participant.displayName,
@@ -63,20 +61,17 @@ export function AdminParticipantDetailPage() {
 
     try {
       const requestedStatus = form.status;
-      const payload = await requestJson<AdminParticipantDetailResponse>(
-        `/api/admin/participants/${participantId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            displayName: form.displayName,
-            contactHandle: form.contactHandle?.trim() || undefined,
-            status: form.status,
-          } satisfies UpdateParticipantInput),
+      const payload = await requestJson<AdminParticipantDetailResponse>(`/api/admin/participants/${participantId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          displayName: form.displayName,
+          contactHandle: form.contactHandle?.trim() || undefined,
+          status: form.status,
+        } satisfies UpdateParticipantInput),
+      });
 
       setState({ status: "ready", payload });
       setForm({
@@ -103,9 +98,7 @@ export function AdminParticipantDetailPage() {
     try {
       const payload = await requestJson<AdminParticipantInviteResponse>(
         `/api/admin/participants/${participantId}/invite`,
-        {
-          method: "POST",
-        },
+        { method: "POST" },
       );
 
       setState({
@@ -113,6 +106,11 @@ export function AdminParticipantDetailPage() {
         payload: {
           participant: payload.participant,
         },
+      });
+      setForm({
+        displayName: payload.participant.displayName,
+        contactHandle: payload.participant.contactHandle ?? "",
+        status: payload.participant.status,
       });
       setMessage(payload.message);
     } catch (error) {
@@ -122,138 +120,254 @@ export function AdminParticipantDetailPage() {
     }
   }
 
-  function getStatusTone(status: UpdateParticipantInput["status"]): "info" | "warn" | "success" {
-    if (status === "active" || status === "completed") {
-      return "success";
-    }
+  if (state.status === "loading") {
+    return <ParticipantDetailShell description="正在读取参与者详情。" />;
+  }
 
-    if (status === "withdrawn") {
-      return "warn";
-    }
+  if (state.status === "error") {
+    return <ParticipantDetailShell description={state.message} />;
+  }
 
-    return "info";
+  const participant = state.payload.participant;
+
+  return (
+    <div className="max-w-5xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="mb-4">
+        <Link
+          className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-4"
+          to="/admin/participants"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" /> 返回名册
+        </Link>
+        <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+          <div>
+            <h1 className="text-2xl font-headline tracking-tight mb-1">参与者详情</h1>
+            <p className="text-sm text-on-surface-variant font-mono">ID: {participant.id}</p>
+          </div>
+          <ParticipantStatusBadge status={participant.status} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              基础信息
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <DetailItem label="显示名" value={participant.displayName} />
+              <DetailItem label="邀请邮箱" value={participant.inviteEmail} />
+              <DetailItem label="联系方式备注" value={participant.contactHandle ?? "未填写"} />
+              <DetailItem label="门户用户 ID" value={participant.userId ?? "尚未绑定"} />
+              <DetailItem label="转入时间" value={formatDateTime(participant.invitedAt)} />
+              <DetailItem label="激活时间" value={formatDateTime(participant.activatedAt)} />
+              <DetailItem label="最近更新时间" value={formatDateTime(participant.updatedAt)} />
+              <DetailItem
+                label="当前时间段"
+                value={
+                  participant.currentSegmentCode
+                    ? `${participant.currentSegmentCode} · ${participant.currentSegmentName ?? "已命名"}`
+                    : "暂无"
+                }
+              />
+            </div>
+          </section>
+
+          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+              关联记录
+            </h2>
+            <div className="space-y-4">
+              <DetailBlock
+                title="入口说明"
+                value="当前项目只有一套参与者入口。提醒邮件不会创建第二套账号体系，而是提醒对方继续使用当前邮箱通过 /portal/login 收验证码进入。"
+              />
+              <DetailBlock
+                title="维护建议"
+                value={
+                  participant.status === "withdrawn"
+                    ? "该参与者已撤回。可以保留记录用于追踪，但不建议继续发送入口提醒。"
+                    : participant.currentSegmentCode
+                      ? `当前已持有 ${participant.currentSegmentCode}，如需改坑或释放，应转到时间段页处理。`
+                      : "当前尚未持有时间段，可在时间段页完成认领或人工分配。"
+                }
+              />
+            </div>
+
+            {participant.applicationId ? (
+              <Link
+                className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-surface-variant border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium"
+                params={{ applicationId: participant.applicationId }}
+                to="/admin/applications/$applicationId"
+              >
+                查看原报名
+              </Link>
+            ) : null}
+          </section>
+        </div>
+
+        <div className="space-y-6">
+          <section className="p-6 border border-outline-variant bg-surface-container-low/80 rounded-xl shadow-lg">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">参与者设置</h2>
+            <div className="space-y-4">
+              <FormField label="显示名">
+                <input
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  disabled={saving || sendingInvite}
+                  onChange={(event) => setForm({ ...form, displayName: event.target.value })}
+                  value={form.displayName}
+                />
+              </FormField>
+
+              <FormField label="联系方式备注">
+                <input
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  disabled={saving || sendingInvite}
+                  onChange={(event) => setForm({ ...form, contactHandle: event.target.value })}
+                  placeholder="QQ / Telegram / Discord / 其他"
+                  value={form.contactHandle ?? ""}
+                />
+              </FormField>
+
+              <FormField label="参与状态">
+                <select
+                  className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  disabled={saving || sendingInvite}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      status: event.target.value as UpdateParticipantInput["status"],
+                    })
+                  }
+                  value={form.status}
+                >
+                  {Object.entries(adminParticipantStatusLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-outline-variant space-y-3">
+              <SidebarNotice>
+                如果该账号已经完成首次登录，服务端可能会拒绝部分状态回退；此时以后端真实状态为准。
+              </SidebarNotice>
+              {message ? <SidebarNotice tone="success">{message}</SidebarNotice> : null}
+
+              <button
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={saving || sendingInvite}
+                onClick={() => void handleSave()}
+                type="button"
+              >
+                {saving ? "保存中..." : "保存参与者设置"}
+              </button>
+
+              <button
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface-variant text-on-surface border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={saving || sendingInvite || participant.status === "withdrawn"}
+                onClick={() => void handleSendInvite()}
+                type="button"
+              >
+                {sendingInvite ? "发送中..." : "发送门户提醒邮件"}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ParticipantDetailShell({ description }: { description: string }) {
+  return (
+    <div className="max-w-5xl mx-auto relative z-10 py-6 space-y-6">
+      <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">参与者详情</h1>
+          <p className="text-sm text-on-surface-variant font-mono">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ParticipantStatusBadge({
+  status,
+}: {
+  status: UpdateParticipantInput["status"];
+}) {
+  if (status === "active" || status === "completed") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-medium">
+        <CheckCircle2 className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}
+      </span>
+    );
+  }
+
+  if (status === "withdrawn") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-xs font-medium">
+        <XCircle className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}
+      </span>
+    );
   }
 
   return (
-    <div className="page-stack">
-      {state.status === "loading" ? <p>正在读取参与者详情。</p> : null}
-      {state.status === "error" ? (
-        <p className="inline-message inline-message--error">{state.message}</p>
-      ) : null}
-      {state.status === "ready" ? (
-        <SectionCard
-          eyebrow="后台 / 参与者详情"
-          title={`管理 ${state.payload.participant.displayName}`}
-          description="这里处理一期真正需要的参与者维护：状态调整、联系信息纠偏，以及手动补发门户入口提醒。"
-        >
-          <div className="detail-grid">
-            <div className="mini-card mini-card--compact">
-              <StatusBadge
-                label={adminParticipantStatusLabels[state.payload.participant.status]}
-                tone={getStatusTone(state.payload.participant.status)}
-              />
-              <p>受邀邮箱：{state.payload.participant.inviteEmail}</p>
-              <p>转入时间：{formatDateTime(state.payload.participant.invitedAt)}</p>
-              <p>激活时间：{formatDateTime(state.payload.participant.activatedAt)}</p>
-            </div>
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium">
+      <Clock className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}
+    </span>
+  );
+}
 
-            <div className="mini-card mini-card--compact">
-              <strong>当前时间段</strong>
-              <p>
-                {state.payload.participant.currentSegmentCode
-                  ? `${state.payload.participant.currentSegmentCode} · ${state.payload.participant.currentSegmentName ?? "已命名"}`
-                  : "暂无"}
-              </p>
-              <strong>门户用户 ID</strong>
-              <p>{state.payload.participant.userId ?? "尚未绑定"}</p>
-            </div>
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-2">
+      <span className="text-xs font-medium text-on-surface-variant">{label}</span>
+      {children}
+    </label>
+  );
+}
 
-            <div className="mini-card mini-card--compact">
-              <strong>关联报名</strong>
-              <p>
-                {state.payload.participant.applicationId ? (
-                  <Link
-                    className="button button--secondary"
-                    params={{ applicationId: state.payload.participant.applicationId }}
-                    to="/admin/applications/$applicationId"
-                  >
-                    查看原报名
-                  </Link>
-                ) : (
-                  "暂无"
-                )}
-              </p>
-              <strong>最近更新时间</strong>
-              <p>{formatDateTime(state.payload.participant.updatedAt)}</p>
-            </div>
-          </div>
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-on-surface-variant mb-1">{label}</div>
+      <div className="font-medium text-on-surface break-words">{value}</div>
+    </div>
+  );
+}
 
-          <div className="grid-two">
-            <label className="field">
-              <span>显示名</span>
-              <input
-                disabled={saving || sendingInvite}
-                onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-                value={form.displayName}
-              />
-            </label>
+function DetailBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
+      <p className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50 whitespace-pre-wrap">
+        {value}
+      </p>
+    </div>
+  );
+}
 
-            <label className="field">
-              <span>联系方式备注</span>
-              <input
-                disabled={saving || sendingInvite}
-                onChange={(event) => setForm({ ...form, contactHandle: event.target.value })}
-                placeholder="QQ / Telegram / Discord / 其他"
-                value={form.contactHandle ?? ""}
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>参与状态</span>
-            <select
-              disabled={saving || sendingInvite}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  status: event.target.value as UpdateParticipantInput["status"],
-                })
-              }
-              value={form.status}
-            >
-              {Object.entries(adminParticipantStatusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <p className="inline-message">
-            手动提醒邮件不会创建第二套账号体系，只是提醒对方从同一个 `/portal/login` 入口用受邀邮箱收验证码登录。
-          </p>
-          {message ? <p className="inline-message">{message}</p> : null}
-
-          <div className="action-row">
-            <button
-              className="button button--primary"
-              disabled={saving || sendingInvite}
-              onClick={() => void handleSave()}
-              type="button"
-            >
-              {saving ? "保存中" : "保存参与者设置"}
-            </button>
-            <button
-              className="button button--secondary"
-              disabled={saving || sendingInvite || state.payload.participant.status === "withdrawn"}
-              onClick={() => void handleSendInvite()}
-              type="button"
-            >
-              {sendingInvite ? "发送中" : "发送门户提醒邮件"}
-            </button>
-          </div>
-        </SectionCard>
-      ) : null}
+function SidebarNotice({
+  children,
+  tone = "info",
+}: {
+  children: ReactNode;
+  tone?: "info" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs leading-6",
+        tone === "success"
+          ? "border-tertiary/25 bg-tertiary/10 text-tertiary"
+          : "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
+      )}
+    >
+      {children}
     </div>
   );
 }

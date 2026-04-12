@@ -1,4 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Clock, Clock3, UserRound } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
+import { formatDateTime } from "../../app/lib/format";
 import {
   adminParticipantStatusLabels,
   adminSegmentStatusLabels,
@@ -8,8 +12,6 @@ import {
   type AdminSegmentListResponse,
   type AdminSegmentMutationResponse,
 } from "../../shared/admin";
-import { SectionCard } from "../../app/components/SectionCard";
-import { requestJson } from "../../app/lib/api";
 
 type SchedulePayload = {
   participants: AdminParticipantListResponse["items"];
@@ -142,7 +144,6 @@ export function AdminSchedulePage() {
 
   async function handleSegmentSave(event: FormEvent<HTMLFormElement>, segmentId: string) {
     event.preventDefault();
-
     const draft = drafts[segmentId];
 
     if (!draft) {
@@ -155,20 +156,17 @@ export function AdminSchedulePage() {
     }));
 
     try {
-      const payload = await requestJson<AdminSegmentMutationResponse>(
-        `/api/admin/segments/${segmentId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            description: draft.description,
-            status: draft.status,
-            currentParticipantId: draft.status === "held" ? draft.currentParticipantId || null : null,
-          }),
+      const payload = await requestJson<AdminSegmentMutationResponse>(`/api/admin/segments/${segmentId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          description: draft.description,
+          status: draft.status,
+          currentParticipantId: draft.status === "held" ? draft.currentParticipantId || null : null,
+        }),
+      });
 
       setDrafts((current) => ({
         ...current,
@@ -205,60 +203,83 @@ export function AdminSchedulePage() {
     }
   }
 
+  const segmentMetrics =
+    state.status === "ready"
+      ? {
+          total: state.payload.segments.length,
+          open: state.payload.segments.filter((item) => item.status === "open").length,
+          held: state.payload.segments.filter((item) => item.status === "held").length,
+          completed: state.payload.segments.filter((item) => item.status === "completed").length,
+        }
+      : null;
+
   return (
-    <SectionCard
-      eyebrow="后台 / 时间段"
-      title="时间段状态总览"
-      description="一期先把查看和人工纠偏入口放在这里。当前数据使用 `schedule_segments`。"
-    >
-      {state.status === "loading" ? <p>正在读取时间段状态。</p> : null}
-      {state.status === "error" ? (
-        <p className="inline-message inline-message--error">{state.message}</p>
+    <div className="max-w-7xl mx-auto space-y-6 relative z-10 py-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant pb-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">全局日程</h1>
+          <p className="text-sm text-on-surface-variant">查看时间段初始化状态、当前占用情况，并手动修正单个时间段。</p>
+        </div>
+        {segmentMetrics ? (
+          <div className="text-xs font-mono text-on-surface-variant">
+            当前共 {segmentMetrics.total} 个时间段
+          </div>
+        ) : null}
+      </div>
+
+      {segmentMetrics ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <MetricCard label="总时间段" value={String(segmentMetrics.total)} />
+          <MetricCard label="可认领" value={String(segmentMetrics.open)} />
+          <MetricCard label="已认领" value={String(segmentMetrics.held)} />
+          <MetricCard label="已完成" value={String(segmentMetrics.completed)} />
+        </div>
       ) : null}
-      {bootstrap.status === "success" ? (
-        <p className="inline-message inline-message--success">{bootstrap.message}</p>
-      ) : null}
+
+      {state.status === "loading" ? <StateNotice message="正在读取时间段状态。" /> : null}
+      {state.status === "error" ? <StateNotice message={state.message} tone="error" /> : null}
+      {bootstrap.status === "success" ? <StateNotice message={bootstrap.message} tone="success" /> : null}
+
       {state.status === "ready" && state.payload.segments.length === 0 ? (
-        <div className="mini-card mini-card--compact">
-          <strong>时间段还未初始化</strong>
-          <p>当前默认排期已经创建，但还没有插入 `schedule_segments`。这里先做一期最低可用初始化，后续再补单条编辑和重排。</p>
-          <form className="form-grid" onSubmit={handleBootstrap}>
-            <label className="field">
-              <span>初始时间段数量</span>
+        <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
+          <div className="border-b border-outline-variant pb-4">
+            <h2 className="text-sm font-mono text-on-surface-variant uppercase">初始化时间段</h2>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              当前还没有时间段记录。先写入一期初始数量，后续再在同页进行人工修正。
+            </p>
+          </div>
+
+          <form className="max-w-sm space-y-4" onSubmit={handleBootstrap}>
+            <FormField label="初始时间段数量">
               <input
+                className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 inputMode="numeric"
                 max={120}
                 min={1}
                 onChange={(event) => setBootstrapCount(event.target.value)}
-                placeholder="例如 12"
                 type="number"
                 value={bootstrapCount}
               />
-            </label>
-            <p className="inline-message">
-              这一数量只用于生成当前 active schedule 的初始时间段，编号会按数量自动补零。
-            </p>
-            <div className="action-row">
-              <button
-                className="button--primary"
-                disabled={bootstrap.status === "submitting"}
-                type="submit"
-              >
-                {bootstrap.status === "submitting" ? "正在初始化..." : "初始化时间段"}
-              </button>
-            </div>
-            {bootstrap.status === "error" ? (
-              <p className="inline-message inline-message--error">{bootstrap.message}</p>
-            ) : null}
+            </FormField>
+            <button
+              className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={bootstrap.status === "submitting"}
+              type="submit"
+            >
+              {bootstrap.status === "submitting" ? "正在初始化..." : "初始化时间段"}
+            </button>
+            {bootstrap.status === "error" ? <StateNotice message={bootstrap.message} tone="error" /> : null}
           </form>
-        </div>
+        </section>
       ) : null}
+
       {state.status === "ready" && state.payload.segments.length > 0 ? (
-        <>
-          <p className="inline-message">
-            这里允许管理员直接修正单个时间段。若把某位参与者改到新的 `held` 时间段，系统会自动释放他原先持有的时间段，并同步 `project_drafts.segment_id`。
-          </p>
-          <div className="route-grid">
+        <section className="space-y-4">
+          <div className="rounded-xl border border-outline-variant bg-surface-container-low/80 p-4 text-sm text-on-surface-variant">
+            如果把某位参与者改到新的 `held` 时间段，系统会自动释放其原先持有的时间段，并同步 `project_drafts.segment_id`。
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
             {state.payload.segments.map((segment) => {
               const draft = drafts[segment.id] ?? buildDraft(segment);
               const saveState = saveStates[segment.id] ?? { status: "idle" as const };
@@ -266,95 +287,107 @@ export function AdminSchedulePage() {
               return (
                 <form
                   key={segment.id}
-                  className="mini-card mini-card--tall form-grid"
+                  className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-5 space-y-5"
                   onSubmit={(event) => void handleSegmentSave(event, segment.id)}
                 >
-                  <div>
-                    <strong>
-                      {segment.code} · {segment.name}
-                    </strong>
-                    <p>当前状态：{adminSegmentStatusLabels[segment.status]}</p>
-                    <p>当前认领人：{segment.currentParticipantName ?? "暂无"}</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-medium text-on-surface">
+                        {segment.code} · {segment.name}
+                      </h2>
+                      <p className="mt-1 text-sm text-on-surface-variant">
+                        当前认领人: {segment.currentParticipantName ?? "暂无"}
+                      </p>
+                    </div>
+                    <SegmentStatusBadge status={segment.status} />
                   </div>
 
-                  <label className="field">
-                    <span>时间段说明</span>
-                    <textarea
-                      maxLength={240}
-                      onChange={(event) => updateDraft(segment.id, { description: event.target.value })}
-                      placeholder="例如：前半段、可做预告、需要主催复核等"
-                      value={draft.description}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <MetaCard
+                      icon={<UserRound className="w-4 h-4" />}
+                      label="当前参与者"
+                      value={segment.currentParticipantName ?? "未分配"}
                     />
-                  </label>
+                    <MetaCard
+                      icon={<Clock3 className="w-4 h-4" />}
+                      label="最近更新时间"
+                      value={formatDateTime(segment.updatedAt)}
+                    />
+                    <MetaCard label="认领时间" value={formatDateTime(segment.claimedAt)} />
+                    <MetaCard label="释放时间" value={formatDateTime(segment.releasedAt)} />
+                  </div>
 
-                  <label className="field">
-                    <span>状态</span>
-                    <select
-                      onChange={(event) =>
-                        updateDraft(segment.id, {
-                          status: event.target.value as AdminSegmentItem["status"],
-                          currentParticipantId:
-                            event.target.value === "held" ? draft.currentParticipantId : "",
-                        })
-                      }
-                      value={draft.status}
-                    >
-                      {Object.entries(adminSegmentStatusLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="space-y-4">
+                    <FormField label="时间段说明">
+                      <textarea
+                        className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-28"
+                        maxLength={240}
+                        onChange={(event) => updateDraft(segment.id, { description: event.target.value })}
+                        placeholder="例如：前半段、可做预告、需要主催复核等"
+                        rows={4}
+                        value={draft.description}
+                      />
+                    </FormField>
 
-                  <label className="field">
-                    <span>认领人</span>
-                    <select
-                      disabled={draft.status !== "held" || saveState.status === "submitting"}
-                      onChange={(event) =>
-                        updateDraft(segment.id, { currentParticipantId: event.target.value })
-                      }
-                      value={draft.currentParticipantId}
-                    >
-                      <option value="">请选择参与者</option>
-                      {state.payload.participants.map((participant) => (
-                        <option key={participant.id} value={participant.id}>
-                          {participant.displayName}
-                          {" · "}
-                          {adminParticipantStatusLabels[participant.status]}
-                          {participant.currentSegmentCode ? ` · 当前 ${participant.currentSegmentCode}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField label="状态">
+                        <select
+                          className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                          onChange={(event) =>
+                            updateDraft(segment.id, {
+                              status: event.target.value as AdminSegmentItem["status"],
+                              currentParticipantId: event.target.value === "held" ? draft.currentParticipantId : "",
+                            })
+                          }
+                          value={draft.status}
+                        >
+                          {Object.entries(adminSegmentStatusLabels).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </FormField>
 
-                  {draft.status !== "held" ? (
-                    <p className="inline-message">非 `held` 状态不会保留认领人。</p>
-                  ) : null}
+                      <FormField label="认领人">
+                        <select
+                          className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
+                          disabled={draft.status !== "held" || saveState.status === "submitting"}
+                          onChange={(event) => updateDraft(segment.id, { currentParticipantId: event.target.value })}
+                          value={draft.currentParticipantId}
+                        >
+                          <option value="">请选择参与者</option>
+                          {state.payload.participants.map((participant) => (
+                            <option key={participant.id} value={participant.id}>
+                              {participant.displayName}
+                              {" · "}
+                              {adminParticipantStatusLabels[participant.status]}
+                              {participant.currentSegmentCode ? ` · 当前 ${participant.currentSegmentCode}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </FormField>
+                    </div>
+                  </div>
 
-                  <div className="action-row">
+                  <div className="pt-4 border-t border-outline-variant space-y-3">
+                    {saveState.status === "success" ? <StateNotice message={saveState.message} tone="success" /> : null}
+                    {saveState.status === "error" ? <StateNotice message={saveState.message} tone="error" /> : null}
                     <button
-                      className="button--primary"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       disabled={saveState.status === "submitting"}
                       type="submit"
                     >
                       {saveState.status === "submitting" ? "正在保存..." : "保存修正"}
                     </button>
                   </div>
-
-                  {saveState.status === "success" ? (
-                    <p className="inline-message inline-message--success">{saveState.message}</p>
-                  ) : null}
-                  {saveState.status === "error" ? (
-                    <p className="inline-message inline-message--error">{saveState.message}</p>
-                  ) : null}
                 </form>
               );
             })}
           </div>
-        </>
+        </section>
       ) : null}
-    </SectionCard>
+    </div>
   );
 }
 
@@ -368,4 +401,92 @@ function buildDraft(item: AdminSegmentItem): SegmentDraft {
     status: item.status,
     currentParticipantId: item.currentParticipantId ?? "",
   };
+}
+
+function resolveSegmentTone(status: AdminSegmentItem["status"]): "info" | "warn" | "success" {
+  if (status === "completed") {
+    return "success";
+  }
+
+  if (status === "locked") {
+    return "warn";
+  }
+
+  return "info";
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-4 rounded-lg border border-outline-variant bg-surface-container-low/80 backdrop-blur-sm">
+      <h2 className="text-xs font-mono text-on-surface-variant mb-2 uppercase">{label}</h2>
+      <div className="text-2xl font-bold tracking-tight text-on-surface">{value}</div>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-2">
+      <span className="text-xs font-medium text-on-surface-variant">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function MetaCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-outline-variant bg-surface-variant/30 p-4">
+      <div className="flex items-center gap-2 text-on-surface-variant">
+        {icon}
+        <p className="text-xs uppercase tracking-[0.24em]">{label}</p>
+      </div>
+      <p className="mt-2 text-sm text-on-surface break-words">{value}</p>
+    </div>
+  );
+}
+
+function SegmentStatusBadge({ status }: { status: AdminSegmentItem["status"] }) {
+  const tone = resolveSegmentTone(status);
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-medium",
+        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
+        tone === "warn" && "bg-primary/10 text-primary border-primary/20",
+        tone === "info" && "bg-surface-variant text-on-surface-variant border-outline-variant",
+      )}
+    >
+      <Clock className="w-3.5 h-3.5" /> {adminSegmentStatusLabels[status]}
+    </span>
+  );
+}
+
+function StateNotice({
+  message,
+  tone = "info",
+}: {
+  message: string;
+  tone?: "info" | "error" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm",
+        tone === "error" && "border-error/40 bg-error/8 text-error",
+        tone === "success" && "border-tertiary/25 bg-tertiary/10 text-tertiary",
+        tone === "info" && "border-outline-variant bg-surface-container-low/80 text-on-surface-variant",
+      )}
+    >
+      {message}
+    </div>
+  );
 }

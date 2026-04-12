@@ -1,35 +1,18 @@
 import { Link } from "@tanstack/react-router";
-import { SectionCard } from "../components/SectionCard";
-import { StatusBadge } from "../components/StatusBadge";
 
 export function ApplySuccessPage() {
   return (
-    <div className="page-stack">
-      <div className="page-heading">
-        <StatusBadge label="已提交" tone="success" />
-        <h1>报名已送达</h1>
-        <p>你的报名已进入后台审核队列。通过后，主催会把该邮箱加入参与者门户入口名单。</p>
+    <div className="max-w-2xl mx-auto space-y-8 relative z-10 text-center mt-20">
+      <h1 className="text-2xl font-headline tracking-tight text-tertiary">报名已提交</h1>
+      <p className="text-on-surface-variant">当前报名已经绑定到你的参与者入口账号。后续继续使用同一邮箱登录，即可查看审核状态并维护资料。</p>
+      <div className="flex items-center justify-center gap-3 flex-wrap pt-4">
+        <Link className="px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors" to="/portal">
+          返回参与者门户
+        </Link>
+        <Link className="px-6 py-3 bg-surface-variant text-on-surface rounded-full font-medium hover:bg-surface-bright transition-colors border border-outline-variant" to="/">
+          返回开始页
+        </Link>
       </div>
-
-      <SectionCard
-        eyebrow="后续步骤"
-        title="接下来会发生什么"
-        description="第一期把公开报名和后台审核拆开，是为了让主催能明确地把参与者转入正式协作流程。"
-      >
-        <ul className="plain-list">
-          <li>后台会先查看报名信息并做批准 / 拒绝处理。</li>
-          <li>通过后，该邮箱会成为受控登录邮箱。</li>
-          <li>真正的时间段认领、变更和资料补录会在参与者门户完成。</li>
-        </ul>
-        <div className="action-row">
-          <Link className="button button--primary" to="/">
-            返回开始页
-          </Link>
-          <Link className="button button--secondary" to="/portal/login">
-            参与者登录
-          </Link>
-        </div>
-      </SectionCard>
     </div>
   );
 }

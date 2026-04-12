@@ -24,22 +24,6 @@ type SegmentRow = {
   sort_order: number;
 };
 
-type ClaimMutationRow = {
-  claimed_count: number;
-  event_count: number;
-};
-
-type ChangeMutationRow = {
-  released_count: number;
-  claimed_count: number;
-  event_count: number;
-};
-
-type ReleaseMutationRow = {
-  released_count: number;
-  event_count: number;
-};
-
 type ActiveScheduleVersionRow = {
   id: string;
 };
@@ -187,30 +171,31 @@ export async function claimParticipantSegment(
   }
 
   const now = nowIso();
-  const mutation = await db
-    .prepare(
-      `WITH claimed AS (
-        UPDATE schedule_segments
-        SET current_participant_id = ?1,
-            status = 'held',
-            claimed_at = ?2,
-            released_at = NULL,
-            updated_at = ?2
-        WHERE id = ?3
-          AND schedule_version_id = ?6
-          AND current_participant_id IS NULL
-          AND status IN ('open', 'released')
-          AND NOT EXISTS (
-            SELECT 1
-            FROM schedule_segments
-            WHERE schedule_version_id = ?6
-              AND current_participant_id = ?1
-              AND status = 'held'
-          )
-        RETURNING id
-      ),
-      event_insert AS (
-        INSERT INTO participant_events (
+  const mutation = await db.batch([
+    db
+      .prepare(
+        `UPDATE schedule_segments
+         SET current_participant_id = ?1,
+             status = 'held',
+             claimed_at = ?2,
+             released_at = NULL,
+             updated_at = ?2
+         WHERE id = ?3
+           AND schedule_version_id = ?6
+           AND current_participant_id IS NULL
+           AND status IN ('open', 'released')
+           AND NOT EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE schedule_version_id = ?6
+               AND current_participant_id = ?1
+               AND status = 'held'
+           )`,
+      )
+      .bind(input.participant.id, now, targetSegment.id, createPrefixedId("pevt"), "", scheduleVersionId),
+    db
+      .prepare(
+        `INSERT INTO participant_events (
           id,
           participant_id,
           actor_type,
@@ -222,36 +207,48 @@ export async function claimParticipantSegment(
           created_at
         )
         SELECT ?4, ?1, 'participant', ?1, 'segment_claimed', 'schedule_segment', ?3, ?5, ?2
-        FROM claimed
-        RETURNING id
-      ),
-      draft_update AS (
-        UPDATE project_drafts
-        SET segment_id = ?3,
-            updated_at = ?2
-        WHERE participant_id = ?1
-          AND EXISTS (SELECT 1 FROM claimed)
-        RETURNING id
+        WHERE EXISTS (
+          SELECT 1
+          FROM schedule_segments
+          WHERE id = ?3
+            AND schedule_version_id = ?6
+            AND current_participant_id = ?1
+            AND status = 'held'
+            AND claimed_at = ?2
+        )`,
       )
-      SELECT
-        (SELECT count(*) FROM claimed) AS claimed_count,
-        (SELECT count(*) FROM event_insert) AS event_count`,
-    )
-    .bind(
-      input.participant.id,
-      now,
-      targetSegment.id,
-      createPrefixedId("pevt"),
-      JSON.stringify({
-        segmentId: targetSegment.id,
-        segmentCode: targetSegment.code,
-        segmentName: targetSegment.name,
-      }),
-      scheduleVersionId,
-    )
-    .first<ClaimMutationRow>();
+      .bind(
+        input.participant.id,
+        now,
+        targetSegment.id,
+        createPrefixedId("pevt"),
+        JSON.stringify({
+          segmentId: targetSegment.id,
+          segmentCode: targetSegment.code,
+          segmentName: targetSegment.name,
+        }),
+        scheduleVersionId,
+      ),
+    db
+      .prepare(
+        `UPDATE project_drafts
+         SET segment_id = ?3,
+             updated_at = ?2
+         WHERE participant_id = ?1
+           AND EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE id = ?3
+               AND schedule_version_id = ?6
+               AND current_participant_id = ?1
+               AND status = 'held'
+               AND claimed_at = ?2
+           )`,
+      )
+      .bind(input.participant.id, now, targetSegment.id, createPrefixedId("pevt"), "", scheduleVersionId),
+  ]);
 
-  if (toCount(mutation?.claimed_count) !== 1) {
+  if (toChanges(mutation[0]) !== 1) {
     return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
   }
 
@@ -322,44 +319,54 @@ export async function changeParticipantSegment(
   }
 
   const now = nowIso();
-  const mutation = await db
-    .prepare(
-      `WITH target_segment AS (
-        SELECT id
-        FROM schedule_segments
-        WHERE id = ?3
-          AND schedule_version_id = ?5
-          AND current_participant_id IS NULL
-          AND status IN ('open', 'released')
-        LIMIT 1
-      ),
-      released AS (
-        UPDATE schedule_segments
-        SET current_participant_id = NULL,
-            status = 'released',
-            released_at = ?4,
-            updated_at = ?4
-        WHERE id = ?1
-          AND schedule_version_id = ?5
-          AND current_participant_id = ?2
-          AND status = 'held'
-          AND EXISTS (SELECT 1 FROM target_segment)
-        RETURNING id
-      ),
-      claimed AS (
-        UPDATE schedule_segments
-        SET current_participant_id = ?2,
-            status = 'held',
-            claimed_at = ?4,
-            released_at = NULL,
-            updated_at = ?4
-        WHERE id = ?3
-          AND schedule_version_id = ?5
-          AND EXISTS (SELECT 1 FROM released)
-        RETURNING id
-      ),
-      event_insert AS (
-        INSERT INTO participant_events (
+  const mutation = await db.batch([
+    db
+      .prepare(
+        `UPDATE schedule_segments
+         SET current_participant_id = NULL,
+             status = 'released',
+             released_at = ?4,
+             updated_at = ?4
+         WHERE id = ?1
+           AND schedule_version_id = ?5
+           AND current_participant_id = ?2
+           AND status = 'held'
+           AND EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE id = ?3
+               AND schedule_version_id = ?5
+               AND current_participant_id IS NULL
+               AND status IN ('open', 'released')
+           )`,
+      )
+      .bind(currentSegment.id, input.participant.id, targetSegment.id, now, scheduleVersionId),
+    db
+      .prepare(
+        `UPDATE schedule_segments
+         SET current_participant_id = ?2,
+             status = 'held',
+             claimed_at = ?4,
+             released_at = NULL,
+             updated_at = ?4
+         WHERE id = ?3
+           AND schedule_version_id = ?5
+           AND current_participant_id IS NULL
+           AND status IN ('open', 'released')
+           AND EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE id = ?1
+               AND schedule_version_id = ?5
+               AND current_participant_id IS NULL
+               AND status = 'released'
+               AND released_at = ?4
+           )`,
+      )
+      .bind(currentSegment.id, input.participant.id, targetSegment.id, now, scheduleVersionId),
+    db
+      .prepare(
+        `INSERT INTO participant_events (
           id,
           participant_id,
           actor_type,
@@ -371,41 +378,52 @@ export async function changeParticipantSegment(
           created_at
         )
         SELECT ?6, ?2, 'participant', ?2, 'segment_changed', 'schedule_segment', ?3, ?7, ?4
-        FROM claimed
-        RETURNING id
-      ),
-      draft_update AS (
-        UPDATE project_drafts
-        SET segment_id = ?3,
-            updated_at = ?4
-        WHERE participant_id = ?2
-          AND EXISTS (SELECT 1 FROM claimed)
-        RETURNING id
+        WHERE EXISTS (
+          SELECT 1
+          FROM schedule_segments
+          WHERE id = ?3
+            AND schedule_version_id = ?5
+            AND current_participant_id = ?2
+            AND status = 'held'
+            AND claimed_at = ?4
+        )`,
       )
-      SELECT
-        (SELECT count(*) FROM released) AS released_count,
-        (SELECT count(*) FROM claimed) AS claimed_count,
-        (SELECT count(*) FROM event_insert) AS event_count`,
-    )
-    .bind(
-      currentSegment.id,
-      input.participant.id,
-      targetSegment.id,
-      now,
-      scheduleVersionId,
-      createPrefixedId("pevt"),
-      JSON.stringify({
-        fromSegmentId: currentSegment.id,
-        fromSegmentCode: currentSegment.code,
-        fromSegmentName: currentSegment.name,
-        toSegmentId: targetSegment.id,
-        toSegmentCode: targetSegment.code,
-        toSegmentName: targetSegment.name,
-      }),
-    )
-    .first<ChangeMutationRow>();
+      .bind(
+        currentSegment.id,
+        input.participant.id,
+        targetSegment.id,
+        now,
+        scheduleVersionId,
+        createPrefixedId("pevt"),
+        JSON.stringify({
+          fromSegmentId: currentSegment.id,
+          fromSegmentCode: currentSegment.code,
+          fromSegmentName: currentSegment.name,
+          toSegmentId: targetSegment.id,
+          toSegmentCode: targetSegment.code,
+          toSegmentName: targetSegment.name,
+        }),
+      ),
+    db
+      .prepare(
+        `UPDATE project_drafts
+         SET segment_id = ?3,
+             updated_at = ?4
+         WHERE participant_id = ?2
+           AND EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE id = ?3
+               AND schedule_version_id = ?5
+               AND current_participant_id = ?2
+               AND status = 'held'
+               AND claimed_at = ?4
+           )`,
+      )
+      .bind(currentSegment.id, input.participant.id, targetSegment.id, now, scheduleVersionId),
+  ]);
 
-  if (toCount(mutation?.released_count) !== 1 || toCount(mutation?.claimed_count) !== 1) {
+  if (toChanges(mutation[0]) !== 1 || toChanges(mutation[1]) !== 1) {
     return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
   }
 
@@ -449,21 +467,22 @@ export async function releaseParticipantSegment(
   }
 
   const now = nowIso();
-  const mutation = await db
-    .prepare(
-      `WITH released AS (
-        UPDATE schedule_segments
-        SET current_participant_id = NULL,
-            status = 'released',
-            released_at = ?3,
-            updated_at = ?3
-        WHERE id = ?1
-          AND current_participant_id = ?2
-          AND status = 'held'
-        RETURNING id
-      ),
-      event_insert AS (
-        INSERT INTO participant_events (
+  const mutation = await db.batch([
+    db
+      .prepare(
+        `UPDATE schedule_segments
+         SET current_participant_id = NULL,
+             status = 'released',
+             released_at = ?3,
+             updated_at = ?3
+         WHERE id = ?1
+           AND current_participant_id = ?2
+           AND status = 'held'`,
+      )
+      .bind(currentSegment.id, input.participant.id, now),
+    db
+      .prepare(
+        `INSERT INTO participant_events (
           id,
           participant_id,
           actor_type,
@@ -475,35 +494,45 @@ export async function releaseParticipantSegment(
           created_at
         )
         SELECT ?4, ?2, 'participant', ?2, 'segment_released', 'schedule_segment', ?1, ?5, ?3
-        FROM released
-        RETURNING id
-      ),
-      draft_update AS (
-        UPDATE project_drafts
-        SET segment_id = NULL,
-            updated_at = ?3
-        WHERE participant_id = ?2
-          AND EXISTS (SELECT 1 FROM released)
-        RETURNING id
+        WHERE EXISTS (
+          SELECT 1
+          FROM schedule_segments
+          WHERE id = ?1
+            AND current_participant_id IS NULL
+            AND status = 'released'
+            AND released_at = ?3
+        )`,
       )
-      SELECT
-        (SELECT count(*) FROM released) AS released_count,
-        (SELECT count(*) FROM event_insert) AS event_count`,
-    )
-    .bind(
-      currentSegment.id,
-      input.participant.id,
-      now,
-      createPrefixedId("pevt"),
-      JSON.stringify({
-        segmentId: currentSegment.id,
-        segmentCode: currentSegment.code,
-        segmentName: currentSegment.name,
-      }),
-    )
-    .first<ReleaseMutationRow>();
+      .bind(
+        currentSegment.id,
+        input.participant.id,
+        now,
+        createPrefixedId("pevt"),
+        JSON.stringify({
+          segmentId: currentSegment.id,
+          segmentCode: currentSegment.code,
+          segmentName: currentSegment.name,
+        }),
+      ),
+    db
+      .prepare(
+        `UPDATE project_drafts
+         SET segment_id = NULL,
+             updated_at = ?3
+         WHERE participant_id = ?2
+           AND EXISTS (
+             SELECT 1
+             FROM schedule_segments
+             WHERE id = ?1
+               AND current_participant_id IS NULL
+               AND status = 'released'
+               AND released_at = ?3
+           )`,
+      )
+      .bind(currentSegment.id, input.participant.id, now),
+  ]);
 
-  if (toCount(mutation?.released_count) !== 1) {
+  if (toChanges(mutation[0]) !== 1) {
     return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
   }
 
@@ -593,6 +622,6 @@ function segmentMutationError(status: number, code: string, message: string): Se
   };
 }
 
-function toCount(value: number | null | undefined) {
-  return value ?? 0;
+function toChanges(result: { meta?: { changes?: number } } | null | undefined) {
+  return result?.meta?.changes ?? 0;
 }

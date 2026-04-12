@@ -26,7 +26,7 @@ export function buildParticipantPortalInviteEmail(input: {
       "",
       `登录入口：${input.portalLoginUrl}`,
       "",
-      "进入后输入当前受邀邮箱，即可收到一次性验证码完成登录。",
+      "进入后使用当前邮箱，即可收到一次性验证码完成登录。",
       "如果邮箱已变更或资格状态需要调整，请直接联系主催。",
     ].join("\n"),
   };

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Clock3, Sparkles } from "../../app/components/icons";
+import { requestJson } from "../../app/lib/api";
+import { cn } from "../../app/lib/cn";
+import { formatDateTime } from "../../app/lib/format";
 import type { AdminEventWindowListResponse, AdminEventWindowMutationResponse } from "../../shared/admin";
 import type { EventWindowKey, EventWindowSummary } from "../../shared/windows";
-import { SectionCard } from "../../app/components/SectionCard";
-import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
-import { StatusBadge } from "../../app/components/StatusBadge";
 
 type PageState =
   | { status: "loading" }
@@ -111,58 +111,68 @@ export function AdminEventWindowsPage() {
   }
 
   return (
-    <div className="page-stack">
-      <SectionCard
-        eyebrow="后台 / 动作窗口"
-        title="开放窗口管理"
-        description="所有报名、认领、改坑和资料提交动作都应由服务端读取 `event_windows` 判定。前端只展示状态，不单独决定开放逻辑。"
-      >
-        {state.status === "loading" ? <p>正在读取动作窗口。</p> : null}
-        {state.status === "error" ? (
-          <p className="inline-message inline-message--error">{state.message}</p>
-        ) : null}
-        {state.status === "ready" ? (
-          <div className="route-grid">
-            {state.payload.items.map((item) => {
-              const draft = drafts[item.key] ?? buildDraft(item);
-              const itemFeedback = feedback[item.key];
+    <div className="max-w-7xl mx-auto space-y-6 relative z-10 py-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant pb-4">
+        <div>
+          <h1 className="text-2xl font-headline tracking-tight mb-1">事件窗口设置</h1>
+          <p className="text-sm text-on-surface-variant">
+            所有报名、认领、改坑和资料提交动作都应由服务端读取 `event_windows` 判定。
+          </p>
+        </div>
+      </div>
 
-              return (
-                <div key={item.key} className="mini-card">
-                  <StatusBadge
-                    label={item.isOpen ? "当前开放" : item.isEnabled ? "等待时间到达" : "已关闭"}
-                    tone={item.isOpen ? "success" : item.isEnabled ? "info" : "warn"}
-                  />
-                  <strong>{item.label}</strong>
-                  <p>窗口键：{item.key}</p>
-                  <p>当前开始：{formatDateTime(item.opensAt)}</p>
-                  <p>当前结束：{formatDateTime(item.closesAt)}</p>
-                  <p>最近更新：{formatDateTime(item.updatedAt)}</p>
+      {state.status === "loading" ? <StateNotice message="正在读取动作窗口。" /> : null}
+      {state.status === "error" ? <StateNotice message={state.message} tone="error" /> : null}
 
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>启用状态</span>
-                      <select
-                        disabled={savingKey === item.key}
-                        onChange={(event) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [item.key]: {
-                              ...draft,
-                              isEnabled: event.target.value === "enabled",
-                            },
-                          }))
-                        }
-                        value={draft.isEnabled ? "enabled" : "disabled"}
-                      >
-                        <option value="enabled">启用</option>
-                        <option value="disabled">关闭</option>
-                      </select>
-                    </label>
+      {state.status === "ready" ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {state.payload.items.map((item) => {
+            const draft = drafts[item.key] ?? buildDraft(item);
+            const itemFeedback = feedback[item.key];
 
-                    <label className="field">
-                      <span>开始时间</span>
+            return (
+              <section
+                key={item.key}
+                className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-5 space-y-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="font-medium text-on-surface">{item.label}</h2>
+                    <p className="mt-1 text-xs text-on-surface-variant font-mono">{item.key}</p>
+                  </div>
+                  <WindowStatusBadge isEnabled={item.isEnabled} isOpen={item.isOpen} />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 text-sm">
+                  <MetaCard icon={<Clock3 className="w-4 h-4" />} label="当前开始" value={formatDateTime(item.opensAt)} />
+                  <MetaCard icon={<Clock3 className="w-4 h-4" />} label="当前结束" value={formatDateTime(item.closesAt)} />
+                </div>
+
+                <div className="space-y-4">
+                  <FormField label="启用状态">
+                    <select
+                      className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      disabled={savingKey === item.key}
+                      onChange={(event) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [item.key]: {
+                            ...draft,
+                            isEnabled: event.target.value === "enabled",
+                          },
+                        }))
+                      }
+                      value={draft.isEnabled ? "enabled" : "disabled"}
+                    >
+                      <option value="enabled">启用</option>
+                      <option value="disabled">关闭</option>
+                    </select>
+                  </FormField>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="开始时间">
                       <input
+                        className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         disabled={savingKey === item.key}
                         onChange={(event) =>
                           setDrafts((current) => ({
@@ -176,11 +186,10 @@ export function AdminEventWindowsPage() {
                         type="datetime-local"
                         value={draft.opensAt}
                       />
-                    </label>
-
-                    <label className="field">
-                      <span>结束时间</span>
+                    </FormField>
+                    <FormField label="结束时间">
                       <input
+                        className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         disabled={savingKey === item.key}
                         onChange={(event) =>
                           setDrafts((current) => ({
@@ -194,40 +203,28 @@ export function AdminEventWindowsPage() {
                         type="datetime-local"
                         value={draft.closesAt}
                       />
-                    </label>
-                  </div>
-
-                  <p className="inline-message">
-                    时间按你当前浏览器时区填写，保存后统一转成 ISO 时间由服务端计算是否开放。
-                  </p>
-                  {itemFeedback ? (
-                    <p
-                      className={
-                        itemFeedback.tone === "error"
-                          ? "inline-message inline-message--error"
-                          : "inline-message inline-message--success"
-                      }
-                    >
-                      {itemFeedback.message}
-                    </p>
-                  ) : null}
-
-                  <div className="action-row">
-                    <button
-                      className="button button--primary"
-                      disabled={savingKey === item.key}
-                      onClick={() => void handleSave(item.key)}
-                      type="button"
-                    >
-                      {savingKey === item.key ? "保存中" : "保存窗口设置"}
-                    </button>
+                    </FormField>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </SectionCard>
+
+                <div className="pt-4 border-t border-outline-variant space-y-3">
+                  <StateNotice message="时间按当前浏览器时区填写，保存后统一转成 ISO 时间由服务端计算是否开放。" />
+                  {itemFeedback ? <StateNotice message={itemFeedback.message} tone={itemFeedback.tone} /> : null}
+                  <button
+                    className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={savingKey === item.key}
+                    onClick={() => void handleSave(item.key)}
+                    type="button"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {savingKey === item.key ? "保存中..." : "保存窗口设置"}
+                  </button>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -274,4 +271,78 @@ function toIsoDateTimeOrNull(value: string) {
   }
 
   return new Date(trimmed).toISOString();
+}
+
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-2">
+      <span className="text-xs font-medium text-on-surface-variant">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function MetaCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-outline-variant bg-surface-variant/30 p-4">
+      <div className="flex items-center gap-2 text-on-surface-variant">
+        {icon}
+        <p className="text-xs uppercase tracking-[0.24em]">{label}</p>
+      </div>
+      <p className="mt-2 text-sm text-on-surface break-words">{value}</p>
+    </div>
+  );
+}
+
+function WindowStatusBadge({
+  isEnabled,
+  isOpen,
+}: {
+  isEnabled: boolean;
+  isOpen: boolean;
+}) {
+  const tone = isOpen ? "success" : isEnabled ? "info" : "warn";
+  const label = isOpen ? "当前开放" : isEnabled ? "等待时间到达" : "已关闭";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-medium",
+        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
+        tone === "warn" && "bg-error/10 text-error border-error/20",
+        tone === "info" && "bg-primary/10 text-primary border-primary/20",
+      )}
+    >
+      <Clock3 className="w-3.5 h-3.5" /> {label}
+    </span>
+  );
+}
+
+function StateNotice({
+  message,
+  tone = "info",
+}: {
+  message: string;
+  tone?: "info" | "error" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm",
+        tone === "error" && "border-error/40 bg-error/8 text-error",
+        tone === "success" && "border-tertiary/25 bg-tertiary/10 text-tertiary",
+        tone === "info" && "border-outline-variant bg-surface-container-low/80 text-on-surface-variant",
+      )}
+    >
+      {message}
+    </div>
+  );
 }
