@@ -1,6 +1,6 @@
 # Starward2026 Architecture
 
-Last reviewed against official documentation: 2026-04-12
+Last reviewed against official documentation: 2026-04-13
 
 ## 1. Scope
 
@@ -27,7 +27,7 @@ Last reviewed against official documentation: 2026-04-12
 - 前端：React + TypeScript + Vite
 - API 运行时：Hono on Cloudflare Workers
 - 数据库：Cloudflare D1
-- 参与者认证：Better Auth + Email OTP + Cookie Session
+- 参与者认证：Better Auth + Email OTP + 30-day sliding Cookie Session
 - 反滥用：Email OTP 限流 + 服务端字段校验 + Workers Rate Limiting
 - 管理后台保护：Cloudflare Access
 - 文件存储：Cloudflare R2（仅在后续需要上传文件时启用）
@@ -50,10 +50,11 @@ Last reviewed against official documentation: 2026-04-12
 1. 访客访问公共站点
 2. 访客通过 `/portal/login` 使用邮箱验证码建立或恢复会话
 3. 已登录用户补充资料并提交报名
-4. 服务端对门户内报名执行资料完整度校验、字段校验与状态校验
-5. 管理员审核后创建或激活 `participant`
-6. 已批准账号通过 `/api/portal/*` 执行参与者动作
-7. 管理员在 `/admin/*` 内执行审核与管理操作
+4. 系统在首次成功登录后创建或恢复 `participant` 工作台主体
+5. 服务端对门户内报名执行资料完整度校验、字段校验与状态校验
+6. 管理员审核后将 `participant.status` 从 `pending` 调整为 `approved`
+7. 已批准账号通过 `/api/portal/*` 执行参与者动作
+8. 管理员在 `/admin/*` 内执行审核与管理操作
 
 ## 5. Repository Layout
 
@@ -193,8 +194,9 @@ Starward2026/
 1. 访客通过 Email OTP 建立 `auth user`
 2. 已登录用户补充 `portal_profiles`
 3. 已登录用户提交 `applications`
-4. 管理员审核并创建或激活 `participants`
-5. 已批准账号的门户业务数据统一挂载到 `participant`
+4. 系统在首次成功登录后创建或恢复 `participants`
+5. 管理员审核并更新 `participants.status`
+6. 门户业务数据统一挂载到 `participant`
 
 ## 10. Anti-Abuse Design
 

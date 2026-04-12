@@ -195,7 +195,7 @@ Last updated: 2026-04-12
 
 ### 9.2 Participant State
 
-- `active`
+- `approved`
 - `withdrawn`
 - `completed`
 
@@ -220,11 +220,12 @@ Last updated: 2026-04-12
 ### 10.1 First Entry
 
 1. 访客在 `/portal/login` 使用邮箱验证码建立或恢复会话
-2. 系统根据当前账号资料完成度，将首次进入用户导向下一步必填页面
-3. 已登录用户补充联系资料与公开署名设置
-4. 已登录用户填写报名资料
-5. 管理员审核后创建或激活 `participant`
-6. 已批准账号解锁参与者工作台
+2. 系统在首次成功登录后创建或恢复 `participant` 工作台主体
+3. 系统根据当前账号资料完成度，将首次进入用户导向下一步必填页面
+4. 已登录用户补充联系资料与公开署名设置
+5. 已登录用户填写报名资料，并可提前整理作品资料
+6. 管理员审核后将 `participant.status` 从 `pending` 更新为 `approved`
+7. 已批准账号解锁时间段等正式动作
 
 ### 10.2 Schedule Claim
 

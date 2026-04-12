@@ -29,7 +29,7 @@ Last updated: 2026-04-12
 
 一句话定义：
 
-`先建立入口，再补资料，再由后台放行参与资格。`
+`先进入工作台，再补资料与作品，最后由后台开放参与资格。`
 
 ## 3. User Journey
 
@@ -53,19 +53,22 @@ Last updated: 2026-04-12
 
 - 补充笔名、SNS 与联系资料
 - 填写或完善报名资料
+- 提前整理作品资料
 - 查看审核状态
 
 该阶段采用以下入口规则：
 
 - 首次登录后，如未填写联系资料，系统优先引导至 `/portal/profile`
 - 联系资料完成后，如尚未建立报名记录，系统优先引导至 `/portal/application`
-- 已存在联系资料与报名记录的账号进入 `/portal` 查看当前状态
+- 已存在联系资料与报名记录但仍待审核的账号优先进入 `/portal/project`
+- 已获得参与资格的账号进入 `/portal` 查看当前状态
 
 对应入口：
 
 - `/portal`
 - `/portal/profile`
 - `/portal/application`
+- `/portal/project`
 
 ### 3.3 Approved Participant
 
@@ -160,8 +163,8 @@ Last updated: 2026-04-12
 
 - 公共说明入口：`/`、`/apply`
 - 认证入口：`/portal/login`
-- 已登录待审核入口：`/portal`、`/portal/profile`、`/portal/application`
-- 已批准参与者入口：`/portal/schedule`、`/portal/project`、`/portal/history`
+- 已登录待审核入口：`/portal`、`/portal/profile`、`/portal/application`、`/portal/project`
+- 已批准参与者入口：`/portal/schedule`、`/portal/history`
 - 管理后台：`/admin/*`
 
 ### 5.4 Session Policy
@@ -169,6 +172,9 @@ Last updated: 2026-04-12
 会话策略采用以下原则：
 
 - 支持长期会话，减少重复输入验证码
+- 认证层显式配置 `expiresIn = 30 days`
+- 认证层显式配置 `updateAge = 1 day`
+- 持续使用中的会话按日续期；连续 30 天无访问后需要重新使用邮箱验证码登录
 - 提供明确的退出入口
 - 不要求单设备限制
 - 使用同一邮箱继续登录，不额外引入密码记忆负担
@@ -319,11 +325,11 @@ Last updated: 2026-04-12
 
 1. 访客访问公共页面并了解活动
 2. 访客在 `/portal/login` 使用邮箱验证码建立或恢复会话
-3. 已登录用户补充资料并完成报名
-4. 管理员结合资料与报名内容进行审核
-5. 审核通过后系统创建或激活 `participant`
-6. 如审核发生在门户首次登录前，后续同邮箱登录会自动绑定到既有 `participant`
-7. 已批准用户解锁参与者工作台
+3. 系统在首次成功登录后创建或恢复 `participant` 工作台主体
+4. 已登录用户补充资料、完成报名，并可提前整理作品资料
+5. 管理员结合资料与报名内容进行审核
+6. 审核通过后系统将 `participant.status` 从 `pending` 更新为 `approved`
+7. 已批准用户解锁时间段等正式动作
 8. 后续使用同一邮箱继续登录并维持长期会话
 
 ## 12. Phase-1 Scope

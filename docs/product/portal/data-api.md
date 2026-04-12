@@ -1,6 +1,6 @@
 # Starward2026 Participant Portal Data and API Draft
 
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## 1. Purpose
 
@@ -66,8 +66,22 @@ Last updated: 2026-04-12
 1. 访客通过 Email OTP 建立或恢复 `user`
 2. 已登录用户补充 `portal_profiles`
 3. 已登录用户提交 `applications`
-4. 管理员审核后创建或激活 `participant`
-5. 已批准账号以 `participant` 作为业务主体进入门户
+4. 系统在首次成功登录后创建或恢复 `participant`
+5. 已登录用户即可通过 `participant` 进入创作者工作台并维护作品资料
+6. 管理员审核后将 `participant.status` 从 `pending` 调整为 `approved`
+
+### 3.4 Session Lifetime
+
+当前实现对认证层会话采用显式配置：
+
+- `expiresIn = 60 * 60 * 24 * 30`
+- `updateAge = 60 * 60 * 24`
+
+因此：
+
+- 会话属于滑动续期会话
+- 持续访问时，服务端会在达到刷新阈值后延长有效期
+- 连续 30 天无访问后，用户需要重新通过邮箱验证码建立会话
 
 ## 4. Table Overview
 
@@ -129,7 +143,7 @@ Last updated: 2026-04-12
 
 用途：
 
-- 表示进入活动流程的参与者身份
+- 表示创作者在活动内的工作台主体
 
 建议字段：
 
@@ -147,7 +161,8 @@ Last updated: 2026-04-12
 
 建议状态：
 
-- `active`
+- `pending`
+- `approved`
 - `withdrawn`
 - `completed`
 
