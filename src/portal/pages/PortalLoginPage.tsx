@@ -3,6 +3,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, KeyRound, Mail } from "../../app/components/icons";
 import { requestJson } from "../../app/lib/api";
 import type { PortalMeResponse } from "../../shared/portal";
+import {
+  PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS,
+  getPortalEmailOtpNoticeText,
+  getPortalEmailOtpResendCooldownText,
+  getPortalEmailOtpResendSuccessMessage,
+} from "../../shared/email-otp";
 import { authClient } from "../lib/auth-client";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
 
@@ -17,6 +23,7 @@ export function PortalLoginPage() {
   const [isSending, setIsSending] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isResolvingDestination, setIsResolvingDestination] = useState(false);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
 
   useEffect(() => {
     if (!sessionQuery.data) {
@@ -48,8 +55,21 @@ export function PortalLoginPage() {
     };
   }, [navigate, sessionQuery.data]);
 
-  async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [resendCooldownSeconds]);
+
+  async function sendOtp(isResend = false) {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -74,7 +94,17 @@ export function PortalLoginPage() {
     }
 
     setStep("otp");
-    setMessage(`验证码已发送到 ${normalizedEmail}。`);
+    setResendCooldownSeconds(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS);
+    setMessage(
+      isResend
+        ? getPortalEmailOtpResendSuccessMessage(normalizedEmail)
+        : `验证码已发送到 ${normalizedEmail}。`,
+    );
+  }
+
+  async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await sendOtp();
   }
 
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
@@ -134,7 +164,7 @@ export function PortalLoginPage() {
             </div>
             <button
               className="w-full bg-primary text-on-primary font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              disabled={isSending}
+              disabled={isSending || isSigningIn}
               type="submit"
             >
               {isSending ? "发送中..." : "获取访问码"} <ArrowRight className="w-4 h-4" />
@@ -157,7 +187,10 @@ export function PortalLoginPage() {
                   value={otp}
                 />
               </div>
-              <p className="text-xs text-on-surface-variant text-center mt-2">访问码已发送至您的邮箱，10分钟内有效。</p>
+              <p className="text-xs text-on-surface-variant text-center mt-2">{getPortalEmailOtpNoticeText()}</p>
+              <p className="text-xs text-on-surface-variant/80 text-center">
+                若首封邮件延迟到达，有效期内重新发送仍可继续使用同一验证码。
+              </p>
             </div>
             <button
               className="w-full bg-primary text-on-primary font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
@@ -167,8 +200,26 @@ export function PortalLoginPage() {
               {isSigningIn ? "验证中..." : "验证并进入"}
             </button>
             <button
+              className="w-full border border-outline-variant bg-surface-variant py-3 rounded-xl text-sm font-medium text-on-surface transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+              disabled={isSending || isSigningIn || resendCooldownSeconds > 0}
+              onClick={() => {
+                void sendOtp(true);
+              }}
+              type="button"
+            >
+              {isSending
+                ? "发送中..."
+                : resendCooldownSeconds > 0
+                  ? getPortalEmailOtpResendCooldownText(resendCooldownSeconds)
+                  : "重新发送验证码"}
+            </button>
+            <button
               className="w-full text-sm text-on-surface-variant hover:text-primary transition-colors"
-              onClick={() => setStep("email")}
+              onClick={() => {
+                setStep("email");
+                setOtp("");
+                setResendCooldownSeconds(0);
+              }}
               type="button"
             >
               使用其他邮箱

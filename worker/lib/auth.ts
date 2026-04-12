@@ -4,6 +4,15 @@ import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { HTTPException } from "hono/http-exception";
 import { Resend } from "resend";
+import {
+  PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS,
+  PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
+  PORTAL_EMAIL_OTP_RATE_LIMIT_MAX,
+  PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS,
+  PORTAL_EMAIL_OTP_RESEND_STRATEGY,
+  PORTAL_EMAIL_OTP_STORE_MODE,
+  getPortalEmailOtpValidityLabel,
+} from "../../src/shared/email-otp";
 import type { AppContext, AppBindings } from "./types";
 import {
   getParticipantByInviteEmail,
@@ -149,7 +158,7 @@ async function sendPortalOtpEmail(
           "你正在登录 Starward2026 参与者门户。",
           "",
           `验证码：${payload.otp}`,
-          "有效期：5 分钟",
+          `有效期：${getPortalEmailOtpValidityLabel()}`,
           "",
           "如果这不是你本人的操作，可以直接忽略此邮件。",
         ].join("\n")
@@ -157,7 +166,7 @@ async function sendPortalOtpEmail(
           "你正在进行 Starward2026 的邮箱验证操作。",
           "",
           `验证码：${payload.otp}`,
-          "有效期：5 分钟",
+          `有效期：${getPortalEmailOtpValidityLabel()}`,
         ].join("\n");
 
   const response = await resend.emails.send({
@@ -172,6 +181,29 @@ async function sendPortalOtpEmail(
   }
 }
 
+export function buildPortalEmailOtpOptions(env: AppBindings) {
+  return {
+    disableSignUp: false,
+    expiresIn: PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
+    allowedAttempts: PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS,
+    storeOTP: PORTAL_EMAIL_OTP_STORE_MODE,
+    resendStrategy: PORTAL_EMAIL_OTP_RESEND_STRATEGY,
+    rateLimit: {
+      window: PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS,
+      max: PORTAL_EMAIL_OTP_RATE_LIMIT_MAX,
+    },
+    async sendVerificationOTP(
+      payload: {
+        email: string;
+        otp: string;
+        type: "sign-in" | "email-verification" | "forget-password" | "change-email";
+      },
+    ) {
+      await sendPortalOtpEmail(env, payload);
+    },
+  };
+}
+
 export function createAuth(env: AppBindings) {
   const { db, secret, baseUrl } = getRequiredAuthEnv(env);
 
@@ -182,18 +214,7 @@ export function createAuth(env: AppBindings) {
     basePath: "/api/auth",
     plugins: [
       buildPortalEntryPlugin(env),
-      emailOTP({
-        disableSignUp: false,
-        expiresIn: 60 * 5,
-        allowedAttempts: 3,
-        rateLimit: {
-          window: 60,
-          max: 3,
-        },
-        async sendVerificationOTP(payload) {
-          await sendPortalOtpEmail(env, payload);
-        },
-      }),
+      emailOTP(buildPortalEmailOtpOptions(env)),
     ],
   });
 }
