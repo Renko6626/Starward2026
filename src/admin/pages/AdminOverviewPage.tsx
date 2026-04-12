@@ -69,7 +69,7 @@ export function AdminOverviewPage() {
   const recentFeed = buildFeedItems(state);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 relative z-10 py-6">
+    <div className="w-full max-w-6xl mx-auto space-y-8 relative z-10 py-6">
       <section>
         <div className="flex items-center justify-between mb-4 gap-4">
           <h1 className="text-2xl font-bold tracking-tight uppercase font-headline">组委会看板</h1>
@@ -133,7 +133,7 @@ export function AdminOverviewPage() {
 
 function AdminOverviewShell({ description }: { description: string }) {
   return (
-    <div className="max-w-6xl mx-auto space-y-8 relative z-10 py-6">
+    <div className="w-full max-w-6xl mx-auto space-y-8 relative z-10 py-6">
       <section>
         <div className="flex items-center justify-between mb-4 gap-4 border-b border-outline-variant pb-4">
           <h1 className="text-2xl font-bold tracking-tight uppercase font-headline">组委会看板</h1>

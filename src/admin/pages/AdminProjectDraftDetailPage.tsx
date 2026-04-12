@@ -102,7 +102,7 @@ export function AdminProjectDraftDetailPage() {
   const draft = state.payload.draft;
 
   return (
-    <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-6">
+    <div className="w-full max-w-6xl mx-auto relative z-10 py-6 space-y-6">
       <div className="mb-4">
         <Link
           className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-4"
@@ -258,7 +258,7 @@ export function AdminProjectDraftDetailPage() {
 
 function DraftDetailShell({ description }: { description: string }) {
   return (
-    <div className="max-w-6xl mx-auto relative z-10 py-6 space-y-6">
+    <div className="w-full max-w-6xl mx-auto relative z-10 py-6 space-y-6">
       <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
         <div>
           <h1 className="text-2xl font-headline tracking-tight mb-1">项目草案详情</h1>

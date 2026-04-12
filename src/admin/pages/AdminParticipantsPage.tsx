@@ -37,7 +37,7 @@ export function AdminParticipantsPage() {
       : 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 relative z-10 py-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 relative z-10 py-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant pb-4">
         <div>
           <h1 className="text-2xl font-headline tracking-tight mb-1">参与者名册</h1>

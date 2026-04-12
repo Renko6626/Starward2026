@@ -134,7 +134,7 @@ export function PortalApplicationPage() {
 
   if (sessionQuery.isPending || isLoading || !pageState) {
     return (
-      <div className="max-w-4xl mx-auto relative z-10 py-6 space-y-8">
+      <div className="w-full max-w-4xl mx-auto relative z-10 py-6 space-y-8">
         <div className="border-b border-outline-variant pb-4">
           <h1 className="text-2xl font-headline tracking-tight mb-1">我的申请</h1>
           <p className="text-sm text-on-surface-variant">正在读取当前报名状态。</p>
@@ -148,7 +148,7 @@ export function PortalApplicationPage() {
   const canSubmit = editable && profileReady;
 
   return (
-    <div className="max-w-4xl mx-auto relative z-10 py-6 space-y-8">
+    <div className="w-full max-w-4xl mx-auto relative z-10 py-6 space-y-8">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-outline-variant pb-4">
         <div>
           <h1 className="text-2xl font-headline tracking-tight mb-1">我的申请</h1>

@@ -63,7 +63,7 @@ export function PortalOverviewPage() {
 
   if (sessionQuery.isPending || isLoading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10 py-6">
+      <div className="w-full max-w-5xl mx-auto space-y-8 relative z-10 py-6">
         <div className="flex items-end justify-between border-b border-outline-variant pb-4">
           <div>
             <h1 className="text-3xl font-headline tracking-tight mb-1">创作者工作台</h1>
@@ -76,7 +76,7 @@ export function PortalOverviewPage() {
 
   if (!dashboard) {
     return (
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10 py-6">
+      <div className="w-full max-w-5xl mx-auto space-y-8 relative z-10 py-6">
         <div className="flex items-end justify-between border-b border-outline-variant pb-4">
           <div>
             <h1 className="text-3xl font-headline tracking-tight mb-1">创作者工作台</h1>
@@ -150,7 +150,7 @@ export function PortalOverviewPage() {
       ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 relative z-10 py-6">
+    <div className="w-full max-w-5xl mx-auto space-y-8 relative z-10 py-6">
       <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
         <div>
           <h1 className="text-3xl font-headline tracking-tight mb-1">创作者工作台</h1>

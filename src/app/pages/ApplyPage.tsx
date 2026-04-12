@@ -38,7 +38,7 @@ export function ApplyPage() {
       : "正在读取窗口状态...";
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 relative z-10 py-8">
+    <div className="w-full max-w-3xl mx-auto space-y-8 relative z-10 py-8">
       <div className="mb-12">
         <Link className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-6" to="/">
           <ArrowRight className="w-4 h-4 rotate-180" /> 返回首页

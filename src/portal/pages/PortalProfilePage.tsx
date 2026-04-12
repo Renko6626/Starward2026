@@ -100,7 +100,7 @@ export function PortalProfilePage() {
 
   if (sessionQuery.isPending || isLoading) {
     return (
-      <div className="max-w-3xl mx-auto relative z-10 py-6 space-y-8">
+      <div className="w-full max-w-3xl mx-auto relative z-10 py-6 space-y-8">
         <div>
           <h1 className="text-2xl font-headline tracking-tight mb-1">创作者档案</h1>
           <p className="text-sm text-on-surface-variant">正在读取当前资料。</p>
@@ -110,7 +110,7 @@ export function PortalProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto relative z-10 py-6 space-y-8">
+    <div className="w-full max-w-3xl mx-auto relative z-10 py-6 space-y-8">
       <div>
         <h1 className="text-2xl font-headline tracking-tight mb-1">创作者档案</h1>
         <p className="text-sm text-on-surface-variant">更新您的参企信息与展示资料。对外匿名，不等于对主催匿名。</p>

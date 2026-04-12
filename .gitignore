@@ -57,3 +57,4 @@ htmlcov/
 *.sqlite3
 .wrangler/
 .dev.vars
+.tmp-*.png
