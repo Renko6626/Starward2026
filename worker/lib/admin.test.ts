@@ -87,6 +87,34 @@ describe("resolveAdminIdentity", () => {
     ).resolves.toBe("admin@example.com");
   });
 
+  it("normalizes a bare access team domain before verifying the token", async () => {
+    const verifyToken = vi.fn().mockResolvedValue({
+      email: "admin@example.com",
+    });
+
+    await expect(
+      resolveAdminIdentity(
+        {
+          env: {
+            CLOUDFLARE_ACCESS_TEAM_DOMAIN: "example.cloudflareaccess.com",
+            CLOUDFLARE_ACCESS_POLICY_AUD: "policy-aud",
+          },
+          headers: new Headers({
+            "cf-access-jwt-assertion": "jwt-token",
+          }),
+          requestUrl: "https://hifuu-staging.ayafeed.com/api/admin/applications",
+        },
+        verifyToken,
+      ),
+    ).resolves.toBe("admin@example.com");
+
+    expect(verifyToken).toHaveBeenCalledWith({
+      token: "jwt-token",
+      teamDomain: "https://example.cloudflareaccess.com",
+      policyAud: "policy-aud",
+    });
+  });
+
   it("falls back to access identity headers after successful token verification", async () => {
     const verifyToken = vi.fn().mockResolvedValue({});
 

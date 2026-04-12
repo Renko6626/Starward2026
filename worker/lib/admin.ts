@@ -146,7 +146,9 @@ function normalizeAccessTeamDomain(value: string | undefined) {
     return null;
   }
 
-  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  return withProtocol.endsWith("/") ? withProtocol.slice(0, -1) : withProtocol;
 }
 
 function normalizeIdentityValue(value: unknown) {
