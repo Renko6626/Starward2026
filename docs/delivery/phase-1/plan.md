@@ -1,6 +1,6 @@
 # Starward2026 Phase-1 Delivery Plan
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
@@ -20,7 +20,8 @@ Last updated: 2026-04-11
 
 - 公共访客能够理解活动状态与入口
 - 管理员能够审核报名并维护参与者状态
-- 参与者能够通过受控入口建立会话
+- 访客能够通过邮箱验证码建立入口会话
+- 已登录用户能够补充资料并等待审核
 
 ## 3. Planning Constraints
 
@@ -39,8 +40,8 @@ Last updated: 2026-04-11
 | 路由 | 交付级别 | 说明 |
 |------|----------|------|
 | `/` | 必做 | 开始页、阶段说明、入口汇总 |
-| `/apply` | 必做 | 报名页 |
-| `/apply/success` | 必做 | 报名成功页 |
+| `/apply` | 必做 | 报名规则说明与入口引导页 |
+| `/apply/success` | 必做 | 正式报名提交成功说明页 |
 | `/works` | 延期 | 公开归档阶段实现 |
 | `/works/:slug` | 延期 | 公开归档阶段实现 |
 
@@ -48,10 +49,12 @@ Last updated: 2026-04-11
 
 | 路由 | 交付级别 | 说明 |
 |------|----------|------|
-| `/portal/login` | 必做 | 受控登录入口 |
-| `/portal` | 必做 | 参与者总览 |
-| `/portal/schedule` | 后续 | 时间段操作页 |
-| `/portal/project` | 后续 | 资料补录页 |
+| `/portal/login` | 必做 | 邮箱验证码入口 |
+| `/portal` | 必做 | 已登录总览与状态页 |
+| `/portal/profile` | 必做 | 联系资料与公开署名设置 |
+| `/portal/application` | 必做 | 报名资料与审核状态页 |
+| `/portal/schedule` | 后续 | 已批准参与者的时间段操作页 |
+| `/portal/project` | 后续 | 已批准参与者的资料补录页 |
 | `/portal/history` | 后续 | 历史记录页 |
 
 ### 4.3 Admin Routes
@@ -71,7 +74,7 @@ Last updated: 2026-04-11
 ### 5.1 Public APIs
 
 - `GET /api/applications/intake`
-- `POST /api/applications`
+- `POST /api/applications`（返回 `410`，用于阻断旧的公开正式报名入口）
 
 ### 5.2 Auth APIs
 
@@ -82,6 +85,11 @@ Last updated: 2026-04-11
 
 - `GET /api/portal/dashboard`
 - `GET /api/portal/me`
+- `GET /api/portal/profile`
+- `PATCH /api/portal/profile`
+- `GET /api/portal/application`
+- `POST /api/portal/application`
+- `PATCH /api/portal/application`
 - `GET /api/portal/segments/current`
 - `GET /api/portal/segments/available`
 - `POST /api/portal/segments/claim`
@@ -151,51 +159,60 @@ Last updated: 2026-04-11
 目标：
 
 - 接入 Cloudflare Access 保护 `/admin/*`
+- 对 `/api/admin/*` 执行 Cloudflare Access JWT fail-closed 校验
 - 完成后台导航与基础页面外壳
 
 ### Milestone 2: Application Review Flow
 
 目标：
 
-- 开放报名接口
 - 完成后台报名列表与详情页
 - 支持审核状态更新
+- 建立“正式报名必须绑定参与者入口账号”的审核边界
 
 ### Milestone 3: Participant Auth Bootstrap
 
 目标：
 
-- 建立 `participants` 记录
-- 支持门户入口提醒邮件
+- 建立邮箱验证码入口与长期会话
 - 完成 `/portal/login` 与 `/portal`
+- 支持未审核账号进入待审核状态页
 
-### Milestone 4: Schedule Workflow
+### Milestone 4: Profile and Application Flow
+
+目标：
+
+- 建立联系资料与公开署名模型
+- 完成 `/portal/profile` 与 `/portal/application`
+- 支持账号内正式报名与后台审核联动
+
+### Milestone 5: Schedule Workflow
 
 目标：
 
 - 完成时间段列表与认领逻辑
 - 完成窗口控制与冲突处理
 
-### Milestone 5: Project Draft Workflow
+### Milestone 6: Project Draft Workflow
 
 目标：
 
 - 建立资料补录接口
 - 支持预告与审查状态更新
 
-### Milestone 6: Public Start Page
+### Milestone 7: Public Start Page
 
 目标：
 
 - 完成首页内容模块
 - 展示阶段信息与入口
 
-### Milestone 7: Apply Flow Polishing
+### Milestone 8: Apply Guidance Polishing
 
 目标：
 
-- 完成报名页与成功页的交互完善
-- 完成 Turnstile 与限流策略验证
+- 完成报名说明页与成功页的交互完善
+- 明确公共说明页与参与者入口之间的引导关系
 
 ## 8. Verification
 
@@ -203,9 +220,10 @@ Last updated: 2026-04-11
 
 第一阶段结束前需要完成以下验证：
 
-- 报名提交流程可用
+- 账号内报名提交流程可用
 - 审核流可用
-- 参与者登录流可用
+- 入口建号与继续登录流可用
+- 待审核与已批准权限边界可用
 - 时间段冲突处理可用
 - 开放窗口控制可用
 
@@ -213,8 +231,8 @@ Last updated: 2026-04-11
 
 需要验证以下边界：
 
-- Turnstile 服务端校验生效
-- 报名接口限流生效
+- OTP 发送限流生效
+- 报名接口的资料完整度与字段校验生效
 - OTP 接口在必要时可增加额外保护
 
 ### 8.3 Build Verification

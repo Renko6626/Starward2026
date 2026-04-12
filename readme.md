@@ -52,6 +52,7 @@ Starward2026/
 - `src/` 包含前端页面、共享类型与客户端逻辑
 - `worker/` 包含 Hono API、认证集成与数据访问逻辑
 - `migrations/` 包含 Cloudflare D1 SQL 迁移文件
+- `scripts/` 包含本地开发与运维辅助脚本
 - `docs/` 包含架构、范围、页面规范与产品文档
 
 ## 文档索引
@@ -59,6 +60,7 @@ Starward2026/
 文档入口：
 
 - [docs/README.md](./docs/README.md)
+- [docs/development/local-d1.md](./docs/development/local-d1.md)
 
 架构与范围：
 
@@ -91,6 +93,42 @@ Starward2026/
 - 数据迁移位于 `migrations/`
 
 后续实现应以架构文档与一期交付计划为准。
+
+## 本地开发
+
+推荐本地数据库初始化流程如下：
+
+```bash
+npm run db:local:reset
+npm run dev
+```
+
+补充说明：
+
+- `npm run db:local:reset` 会重建本地 D1 并写入 smoke 用示例数据
+- `npm run db:local:print-portals` 会输出本地门户样本账号的已签名 cookie
+- 详细约定见 [docs/development/local-d1.md](./docs/development/local-d1.md)
+
+## 环境部署
+
+仓库当前采用以下 Wrangler 环境划分：
+
+- 默认顶层配置：本地开发与通用构建
+- `env.staging`：`https://hifuu-staging.ayafeed.com`
+- `env.production`：保留为正式环境模板，启用前需补真实域名、路由与生产 D1 绑定
+
+推荐命令如下：
+
+```bash
+npm run build:staging
+npm run deploy:staging
+```
+
+补充说明：
+
+- 使用 `@cloudflare/vite-plugin` 时，环境通过 `CLOUDFLARE_ENV` 选择
+- 本地 `.dev.vars` 中的 `BETTER_AUTH_URL` 继续用于本地开发
+- `env.production` 当前仍是模板，需补齐正式域名、正式 D1 绑定与独立 rate limit namespace 后再启用生产脚本
 
 ## License
 

@@ -1,6 +1,6 @@
 # Starward2026 Participant Portal Data and API Draft
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
@@ -50,6 +50,7 @@ Last updated: 2026-04-11
 
 业务层负责：
 
+- `portal_profiles`
 - `applications`
 - `participants`
 - `schedule_versions`
@@ -62,24 +63,47 @@ Last updated: 2026-04-11
 
 标准流转如下：
 
-1. 访客提交公开报名
-2. 管理员审核报名
-3. 系统创建 `participant`
-4. 系统向 `invite_email` 发送入口提醒
-5. 参与者首次登录并绑定 `user_id`
+1. 访客通过 Email OTP 建立或恢复 `user`
+2. 已登录用户补充 `portal_profiles`
+3. 已登录用户提交 `applications`
+4. 管理员审核后创建或激活 `participant`
+5. 已批准账号以 `participant` 作为业务主体进入门户
 
 ## 4. Table Overview
 
-### 4.1 `applications`
+### 4.1 `portal_profiles`
 
 用途：
 
-- 记录公开报名数据
-- 作为审核前的数据来源
+- 记录已登录用户补充的联系方式与公开署名偏好
+- 作为后台审核与后续联系的稳定资料来源
+
+建议字段：
+
+- `user_id`
+- `pen_name`
+- `contact_email`
+- `primary_contact_channel`
+- `primary_contact_handle`
+- `backup_contact`
+- `public_credit_mode`
+- `public_credit_name`
+- `admin_note`
+- `created_at`
+- `updated_at`
+
+### 4.2 `applications`
+
+用途：
+
+- 记录报名内容
+- 与已登录账号关联
+- 作为审核前的业务资料快照
 
 建议字段：
 
 - `id`
+- `user_id`
 - `display_name`
 - `contact_email`
 - `contact_handle`
@@ -101,7 +125,7 @@ Last updated: 2026-04-11
 - `rejected`
 - `withdrawn`
 
-### 4.2 `participants`
+### 4.3 `participants`
 
 用途：
 
@@ -112,7 +136,7 @@ Last updated: 2026-04-11
 - `id`
 - `user_id`
 - `application_id`
-- `invite_email`
+- `account_email`
 - `display_name`
 - `contact_handle`
 - `status`
@@ -123,12 +147,11 @@ Last updated: 2026-04-11
 
 建议状态：
 
-- `invited`
 - `active`
 - `withdrawn`
 - `completed`
 
-### 4.3 `schedule_versions`
+### 4.4 `schedule_versions`
 
 用途：
 
@@ -149,7 +172,7 @@ Last updated: 2026-04-11
 - `active`
 - `archived`
 
-### 4.4 `schedule_segments`
+### 4.5 `schedule_segments`
 
 用途：
 
@@ -180,7 +203,7 @@ Last updated: 2026-04-11
 - `completed`
 - `cancelled`
 
-### 4.5 `project_drafts`
+### 4.6 `project_drafts`
 
 用途：
 
@@ -207,7 +230,7 @@ Last updated: 2026-04-11
 - `created_at`
 - `updated_at`
 
-### 4.6 `event_windows`
+### 4.7 `event_windows`
 
 用途：
 
@@ -221,7 +244,7 @@ Last updated: 2026-04-11
 - `preview_submit_open`
 - `review_submit_open`
 
-### 4.7 `participant_events`
+### 4.8 `participant_events`
 
 用途：
 
@@ -244,7 +267,9 @@ Last updated: 2026-04-11
 ### 5.1 Basic Constraints
 
 - `participants.user_id` 唯一
-- `participants.invite_email` 唯一
+- 参与者账号邮箱唯一
+- `portal_profiles.user_id` 唯一
+- `applications.user_id` 可在一期约束为唯一
 - `project_drafts.participant_id` 唯一
 - `schedule_segments(schedule_version_id, sequence_no)` 唯一
 
@@ -257,6 +282,8 @@ Last updated: 2026-04-11
 建议建立以下索引：
 
 - `applications(contact_email)`
+- `applications(user_id)`
+- `portal_profiles(contact_email)`
 - `participants(status)`
 - `schedule_segments(status, sequence_no)`
 - `participant_events(participant_id, created_at)`

@@ -1,202 +1,127 @@
 # Starward2026 Apply Page Wireframe
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
-本文定义报名页的线框、字段优先级、反馈状态与反滥用要求。
+本文定义 `/apply` 的线框与信息结构。
+
+当前版本中，`/apply` 不承载正式报名表单，只负责说明报名规则、解释账号边界，并引导访客进入参与者入口。
 
 ## 2. Page Objectives
 
-报名页需要同时完成以下任务：
+`/apply` 需要同时完成以下任务：
 
-- 说明报名规则
-- 提供必要字段
-- 控制提交摩擦
-- 建立明确的后续预期
+- 说明报名是否开放
+- 解释“先建账号，再补资料，再提交正式报名”的顺序
+- 明确匿名只影响公开署名，不影响主催识别
+- 将访客导向 `/portal/login` 或 `/portal/application`
 
 ## 3. UX Principles
 
-### 3.1 Minimal Required Fields
+### 3.1 Read Before Action
 
-报名页仅收集当前审核阶段必需的数据。
+页面优先说明规则，再给出进入按钮。
 
-### 3.2 Single-Column Layout
+### 3.2 Single Next Step
 
-单列布局为默认方案，便于在同一阅读节奏中呈现说明、字段与提交动作。
+访客只需要理解一个下一步：
 
-### 3.3 Grouped Questions
+- 未登录则进入 `/portal/login`
+- 已登录则进入 `/portal/application`
 
-字段按主题分组呈现，不采用多步骤流程。
+### 3.3 Identity Boundary First
 
-### 3.4 Calm Validation
+页面必须明确：
 
-错误反馈应逐项说明，避免高压式交互。
+- 正式报名必须绑定参与者入口账号
+- 联系邮箱、主联系渠道、主联系标识是审核依据
+- 笔名与公开署名属于展示层设置
 
-### 3.5 Visible Contact Path
+### 3.4 Low-Friction Copy
 
-页面保留主催联系方式或联系说明。
+说明语气保持平实，不制造企业表单式压迫感。
 
-## 4. Technical Constraints
+## 4. Desktop Wireframe
 
-### 4.1 Turnstile
-
-报名接口使用 Cloudflare Turnstile，并在服务端执行 token 校验。
-
-### 4.2 Rate Limiting
-
-报名接口使用基础限流控制短时滥用，但不依赖限流系统承担业务状态判断。
-
-## 5. Desktop Wireframe
-
-### 5.1 Header
+### 4.1 Header
 
 页头应包含：
 
 - 返回首页
 - 页面标题
-- 当前阶段标签
-- 截止信息
+- 当前报名状态标签
 
-### 5.2 Opening Block
+### 4.2 Status Block
 
-开场说明应包含：
+状态区应包含：
 
-- 报名简介
-- 审核说明
-- 后续联系说明
+- 当前 `application_open` 窗口状态
+- 简短说明
+- 对未开放状态的明确提示
 
-### 5.3 Before You Apply
+### 4.3 Rule Block
 
-报名前说明应包含：
+规则区应包含：
 
-- 参与条件
-- 提交前准备
-- 基本规则
+- 正式报名仅在门户内提交
+- 匿名仅代表不公开笔名或改用单独署名
+- 主催后台仍需要稳定联系方式
 
-### 5.4 Form Section A: Basic Identity
+### 4.4 Action Block
 
-字段建议：
+动作区应包含：
 
-- `displayName`
-- `publicName`（如需）
+- 主按钮：前往 `/portal/login` 或 `/portal/application`
+- 次按钮：返回首页
+- 可选说明：同一邮箱用于后续继续登录与查看审核状态
 
-### 5.5 Form Section B: Contact
-
-字段建议：
-
-- `contactEmail`
-- `contactHandle`
-
-### 5.6 Form Section C: Participation Intent
-
-字段建议：
-
-- `interestFormat`
-- `introText`
-
-### 5.7 Form Section D: Past Work or Reference
-
-字段建议：
-
-- `portfolioUrl`
-
-### 5.8 Form Section E: Message to Hosts
-
-字段建议：
-
-- `messageToHosts`
-
-### 5.9 Form Section F: Consent
-
-字段建议：
-
-- 规则确认
-- 联系确认
-
-### 5.10 Submit Block
-
-提交区应包含：
-
-- Turnstile 组件
-- 提交按钮
-- 结果提示区
-
-## 6. Mobile Wireframe
+## 5. Mobile Wireframe
 
 移动端顺序建议如下：
 
-1. 页面说明
-2. 报名前说明
-3. 基础身份
-4. 联系方式
-5. 参与意向
-6. 参考资料
-7. 附加说明
-8. 同意项
-9. 提交区
+1. 页面标题与状态
+2. 当前报名状态
+3. 规则说明
+4. 下一步动作
 
-## 7. Field Strategy
+## 6. State Rules
 
-### 7.1 Required
+### 6.1 Not Logged In
 
-- 昵称或显示名
-- 联系邮箱
-- 主要联系方式
-- 参与形式
-- 规则确认
+- 主按钮显示“先进入参与者入口”
+- 跳转到 `/portal/login`
 
-### 7.2 Optional
+### 6.2 Logged In
 
-- 参考链接
-- 补充说明
+- 主按钮显示“前往当前账号的报名资料页”
+- 跳转到 `/portal/application`
 
-### 7.3 Excluded for Phase 1
+### 6.3 Window Closed
 
-- 复杂履历字段
-- 多附件上传
-- 长篇项目提案
+- 仍允许进入登录页
+- 明确告知当前不能提交正式报名
 
-## 8. Error and Success States
+## 7. Copy Rules
 
-### 8.1 Validation Error
+页面文案应满足以下要求：
 
-字段错误应显示在字段附近，并保留表单内容。
+- 使用“报名说明”“参与者入口”“正式报名”等术语
+- 避免将 `/apply` 写成公开表单
+- 避免把匿名解释成匿名账户
+- 明确区分“已登录”与“已审核通过”
 
-### 8.2 Rate Limit Error
-
-应返回明确的稍后重试提示。
-
-### 8.3 Turnstile Error
-
-应提示重新验证，不重置已填写字段。
-
-### 8.4 Success State
-
-提交成功后跳转到 `/apply/success`。
-
-## 9. Copy Rules
-
-报名页文案应满足以下要求：
-
-- 语气明确
-- 规则完整
-- 避免企业表单术语
-- 明确审核与联系预期
-
-## 10. Recommended Components
+## 8. Recommended Components
 
 - `ApplyPageHeader`
-- `ApplyIntro`
-- `ApplyRules`
-- `ApplyForm`
-- `ApplyConsent`
-- `ApplySubmitBlock`
+- `ApplyWindowStatus`
+- `ApplyBoundaryRules`
+- `ApplyNextStep`
 
-## 11. References
+## 9. References
 
 - [skeleton.md](../product/site/skeleton.md)
 - [homepage-wireframe.md](./homepage-wireframe.md)
 - [participant-account-system.md](../product/accounts/participant-account-system.md)
-- Cloudflare Turnstile
-  - https://developers.cloudflare.com/turnstile/concepts/widget/
+- Better Auth Email OTP
+  - https://better-auth.com/docs/plugins/email-otp

@@ -1,6 +1,6 @@
 # Starward2026 Site Skeleton
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
@@ -11,7 +11,7 @@ Last updated: 2026-04-11
 站点由以下部分构成：
 
 - 活动开始页
-- 报名页
+- 报名说明页
 - 作品归档页
 - 参与者门户
 - 管理员后台
@@ -45,6 +45,8 @@ Last updated: 2026-04-11
 
 - `/portal/login`
 - `/portal`
+- `/portal/profile`
+- `/portal/application`
 - `/portal/schedule`
 - `/portal/project`
 - `/portal/history`
@@ -72,13 +74,13 @@ Last updated: 2026-04-11
 
 ## 6. Apply Page Skeleton
 
-报名页建议包含以下区块：
+`/apply` 建议包含以下区块：
 
 - 页面说明
 - 报名前须知
-- 报名表单
-- 反滥用校验
-- 提交结果说明
+- 正式报名边界说明
+- 参与者入口 CTA
+- 提交成功后的后续说明
 
 ## 7. Works Index Skeleton
 
@@ -108,8 +110,10 @@ Last updated: 2026-04-11
 
 - 登录页
 - 总览页
-- 时间段页
 - 资料页
+- 报名状态页
+- 时间段页
+- 作品资料页
 - 历史页
 
 ## 10. Admin Skeleton

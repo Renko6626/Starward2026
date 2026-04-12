@@ -1,16 +1,17 @@
 # Starward2026 Participant Account System PRD
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
 本文定义 Starward2026 面向外部用户的账号系统。
 
-本文中的“账号系统”指报名、审核、参与者入口与会话管理的整体设计，不等同于开放注册平台。
+本文中的“账号系统”指参与者入口、资料补充、报名审核、参与资格放行与会话管理的整体设计，不等同于开放社区平台。
 
 相关文档：
 
 - [scope.md](../../delivery/phase-1/scope.md)
+- [plan.md](../../delivery/phase-1/plan.md)
 - [skeleton.md](../portal/skeleton.md)
 - [data-api.md](../portal/data-api.md)
 
@@ -18,15 +19,17 @@ Last updated: 2026-04-11
 
 账号系统采用以下原则：
 
-- 公开报名不要求登录
-- 审核通过后建立参与者身份
-- 参与者通过受控入口登录
-- 管理员身份与参与者身份分离
-- 认证层与业务身份层分离
+- 任何访客都可以通过邮箱验证码建立入口账号
+- 登录成功不等于获得参与资格
+- 正式报名只能在已登录账号内提交
+- 参与资格由后台审核和状态控制决定
+- 认证层、资料层、报名层与参与者业务层分离
+- 匿名仅影响公开展示，不影响主催识别和联系
+- 第一阶段不引入用户名与密码体系
 
 一句话定义：
 
-`公开报名，审核转入，受邀登录。`
+`先建立入口，再补资料，再由后台放行参与资格。`
 
 ## 3. User Journey
 
@@ -35,44 +38,42 @@ Last updated: 2026-04-11
 访客阶段的任务如下：
 
 - 浏览活动说明
-- 查看当前阶段
-- 判断是否报名
+- 判断是否进入报名流程
+- 使用邮箱验证码建立入口会话
 
 对应入口：
 
 - `/`
 - `/apply`
+- `/portal/login`
 
-### 3.2 Applicant
+### 3.2 Authenticated Applicant
 
-报名者阶段的任务如下：
+已建立会话但尚未通过审核的用户任务如下：
 
-- 提交报名表单
-- 获得提交结果反馈
-- 等待审核结果
+- 补充笔名、SNS 与联系资料
+- 填写或完善报名资料
+- 查看审核状态
+
+该阶段采用以下入口规则：
+
+- 首次登录后，如未填写联系资料，系统优先引导至 `/portal/profile`
+- 联系资料完成后，如尚未建立报名记录，系统优先引导至 `/portal/application`
+- 已存在联系资料与报名记录的账号进入 `/portal` 查看当前状态
 
 对应入口：
 
-- `/apply`
-- `/apply/success`
+- `/portal`
+- `/portal/profile`
+- `/portal/application`
 
 ### 3.3 Approved Participant
 
 审核通过后的任务如下：
 
-- 接收参与者入口邮件
-- 使用受邀邮箱建立首次会话
-
-对应入口：
-
-- `/portal/login`
-
-### 3.4 Active Participant
-
-参与者阶段的任务如下：
-
-- 确认身份与当前状态
-- 进入后续时间段与资料工作台
+- 确认已开放的参与者资格
+- 进入时间段与资料工作台
+- 后续多次返回系统完成协作
 
 对应入口：
 
@@ -81,39 +82,56 @@ Last updated: 2026-04-11
 - `/portal/project`
 - `/portal/history`
 
+### 3.4 Withdrawn or Completed Participant
+
+状态变为 `withdrawn` 或 `completed` 后的任务如下：
+
+- 查看当前状态
+- 保留必要的历史记录可见性
+- 不再执行新的参与者动作
+
 ## 4. Identity Model
 
 ### 4.1 Identity Layers
 
-账号系统分为四层：
+账号系统分为五层：
 
-1. `application`
-2. `participant`
-3. `auth user`
-4. `admin`
+1. `auth user`
+2. `portal_profile`
+3. `application`
+4. `participant`
+5. `admin`
 
 ### 4.2 Responsibilities
 
 各层职责如下：
 
-- `application`
-  - 报名记录
-  - 审核前数据来源
-
-- `participant`
-  - 活动中的稳定业务身份
-  - 时间段、资料、事件日志的关联主体
-
 - `auth user`
   - Better Auth 用户与会话
-  - OTP 校验与 cookie 管理
+  - Email OTP 校验
+  - 登录态与 cookie 生命周期
+
+- `portal_profile`
+  - 参与者自填的联系方式与公开署名偏好
+  - 后台审核时的识别依据
+
+- `application`
+  - 报名内容
+  - 审核状态
+  - 与活动意向相关的静态资料快照
+
+- `participant`
+  - 审核通过后的稳定业务身份
+  - 时间段、资料、事件日志的关联主体
 
 - `admin`
   - 后台访问与运营操作
 
 ### 4.3 Canonical Business Identity
 
-业务上的核心身份为 `participant`，不是认证层 `user`。
+通过审核前，稳定的登录主体是 `auth user`。
+
+通过审核后，活动内的核心业务身份为 `participant`，不是认证层 `user`。
 
 ## 5. Authentication Strategy
 
@@ -130,165 +148,235 @@ Last updated: 2026-04-11
 
 第一阶段不包含：
 
-- 自由注册
 - 用户名与密码体系
 - 社交登录
 - 多因素认证
+- 对主催完全匿名的参与模式
+- 绕过审核直接进入参与流程
 
 ### 5.3 Entry Boundary
 
 入口边界定义如下：
 
-- 公共入口：`/apply`
-- 参与者入口：`/portal/login`
+- 公共说明入口：`/`、`/apply`
+- 认证入口：`/portal/login`
+- 已登录待审核入口：`/portal`、`/portal/profile`、`/portal/application`
+- 已批准参与者入口：`/portal/schedule`、`/portal/project`、`/portal/history`
 - 管理后台：`/admin/*`
 
 ### 5.4 Session Policy
 
 会话策略采用以下原则：
 
-- 支持长期会话
+- 支持长期会话，减少重复输入验证码
 - 提供明确的退出入口
 - 不要求单设备限制
+- 使用同一邮箱继续登录，不额外引入密码记忆负担
 
-## 6. Product Copy Requirements
+## 6. Profile and Contact Requirements
 
-### 6.1 Preferred Terms
+### 6.1 Required Fields
+
+已登录用户至少需要补充以下资料：
+
+- 当前联系邮箱
+- 主联系渠道类型
+- 主联系渠道标识
+- 公开署名模式
+
+### 6.2 Recommended Fields
+
+如有需要，可继续补充：
+
+- 常用笔名
+- 备用联系方式
+- 常用公开署名
+- 主催备注
+- 时区
+
+### 6.3 Operational Rules
+
+资料收集遵守以下规则：
+
+- 系统不收集真实姓名作为必填项
+- 主催必须始终能够识别并联系到具体参与者
+- 公开展示名可以与主联系身份不同
+- 匿名参与者仍需向主催提供稳定联系方式
+- 未完成联系资料的账号不得提交或更新门户内报名资料
+
+## 7. Anonymous Participation Model
+
+匿名参与采用以下公开署名模式：
+
+- `named`
+  - 公开使用常用笔名
+
+- `pseudonymous`
+  - 公开使用单独设置的署名
+
+- `anonymous`
+  - 公开页不展示常用笔名，改为匿名标识
+
+匿名模式的产品要求如下：
+
+- 主催后台始终可见常用笔名和联系方式
+- 公开页仅根据署名模式展示公开名称
+- 审核、联系、时间段与资料流程始终绑定真实业务主体
+
+## 8. Product Copy Requirements
+
+### 8.1 Preferred Terms
 
 界面优先使用以下术语：
 
 - `参与者入口`
-- `受邀邮箱`
-- `我的接力`
+- `首次进入`
+- `继续登录`
+- `公开署名`
+- `匿名参与`
 - `时间段`
-- `资料补录`
 
-### 6.2 Terms to Avoid
+### 8.2 Terms to Avoid
 
 界面避免以下术语：
 
-- `注册`
+- `受邀邮箱`
 - `账号中心`
 - `平台账户`
 - `用户控制台`
+- `自由注册平台`
 
-### 6.3 Message Style
+### 8.3 Message Style
 
 消息文案应满足以下要求：
 
 - 使用说明性表达
 - 避免企业后台语气
 - 明确下一步操作
+- 将“已登录”与“已获准参与”明确区分
 
-## 7. Route Model
+## 9. Route Model
 
-### 7.1 Public Surface
+### 9.1 Public Surface
 
 - `/`
 - `/apply`
 - `/apply/success`
 
-### 7.2 Participant Surface
+### 9.2 Authenticated Applicant Surface
 
 - `/portal/login`
 - `/portal`
+- `/portal/profile`
+- `/portal/application`
+
+### 9.3 Approved Participant Surface
+
 - `/portal/schedule`
 - `/portal/project`
 - `/portal/history`
 
-### 7.3 Admin Surface
+### 9.4 Admin Surface
 
 - `/admin/*`
 
-## 8. Anti-Abuse Requirements
+## 10. Anti-Abuse Requirements
 
-### 8.1 Application Form
+### 10.1 Public Intake
 
-报名入口采用以下防护：
+第一阶段的公共入口仅承担说明与引导职责，不承载正式报名提交。
 
-- Cloudflare Turnstile
-- 服务端 token 校验
-- 基础限流
+因此：
 
-### 8.2 Portal Login
+- `/apply` 不接收正式报名数据
+- 正式报名统一在 `/portal/application` 内提交
+- 旧的 `POST /api/applications` 仅保留为兼容阻断接口
 
-参与者登录采用以下防护：
+### 10.2 Portal Entry
 
-- 受邀邮箱白名单
+参与者入口采用以下防护：
+
 - Email OTP
-- 在必要时对发送 OTP 的动作增加额外校验
+- 邮箱规范化与统一比对
+- 对 OTP 发送动作按 IP 与邮箱限流
+- 使用通用反馈文案，避免暴露邮箱状态
+- 在必要时为首次进入或异常流量增加额外校验
 
-### 8.3 State-Changing Actions
+### 10.3 State-Changing Actions
 
 以下动作必须由服务端统一校验：
 
+- 提交或更新报名资料
 - 认领时间段
 - 变更时间段
 - 释放时间段
 - 提交预告资料
 - 提交审查资料
 
-## 9. Operational Flow
+## 11. Operational Flow
 
 标准流转如下：
 
-1. 访客提交报名
-2. 管理员审核报名
-3. 系统创建 `participant`
-4. 系统发送参与者入口邮件
-5. 参与者通过 `/portal/login` 建立会话
-6. 系统将 `auth user` 绑定到 `participant`
+1. 访客访问公共页面并了解活动
+2. 访客在 `/portal/login` 使用邮箱验证码建立或恢复会话
+3. 已登录用户补充资料并完成报名
+4. 管理员结合资料与报名内容进行审核
+5. 审核通过后系统创建或激活 `participant`
+6. 如审核发生在门户首次登录前，后续同邮箱登录会自动绑定到既有 `participant`
+7. 已批准用户解锁参与者工作台
+8. 后续使用同一邮箱继续登录并维持长期会话
 
-## 10. Phase-1 Scope
+## 12. Phase-1 Scope
 
-### 10.1 Required Now
+### 12.1 Required Now
 
 第一阶段必须具备：
 
-- `participant` 身份模型
-- 受邀邮箱登录
+- 允许邮箱验证码建立入口会话
 - `/portal/login`
 - `/portal`
-- 后台触发参与者入口邮件
+- `/portal/profile`
+- `/portal/application`
+- 后台可审核并决定是否放行为参与者
+- 已批准和未批准状态的服务端权限边界
+- 匿名公开模式的资料结构
 
-### 10.2 Follow-Up
+### 12.2 Follow-Up
 
 以下能力可在第一阶段后续迭代中补齐：
 
-- 时间段工作台
-- 资料补录工作台
-- 历史记录页
+- 时间段工作台的完整体验
+- 资料补录工作台的完整体验
+- 历史记录页的细化展示
 
-## 11. Acceptance Criteria
+## 13. Acceptance Criteria
 
 账号系统完成后，至少满足以下条件：
 
-- 访客可直接报名
-- 审核通过后可转入参与者身份
-- 仅受邀邮箱可登录参与者入口
-- 首次登录后可建立稳定会话
-- 管理员系统与参与者系统边界清楚
+- 任意访客都可通过邮箱验证码建立会话
+- 未获准参与的账号不能执行参与者专属动作
+- 后台可以根据资料与报名内容放行或撤回参与资格
+- 主催始终可以看到稳定的联系资料
+- 匿名模式只影响公开展示，不影响后台识别
+- 用户后续可通过同一邮箱继续登录
 
-## 12. Out of Scope
+## 14. Out of Scope
 
 以下能力不在当前范围内：
 
-- 公开自由注册
-- 社区功能
-- 即时通信
-- 用户关系系统
 - 长期平台化账户体系
+- 社区关系与即时通信
+- 用户名与密码重置系统
+- 对主催不可识别的匿名模式
+- 大规模开放社区治理能力
 
-## 13. References
+## 15. Official References
 
-- [skeleton.md](../portal/skeleton.md)
-- [data-api.md](../portal/data-api.md)
-- [scope.md](../../delivery/phase-1/scope.md)
 - Better Auth Email OTP
   - https://better-auth.com/docs/plugins/email-otp
-- Better Auth Session Management
-  - https://better-auth.com/docs/concepts/session-management
-- Cloudflare Turnstile
-  - https://developers.cloudflare.com/turnstile/concepts/widget/
-- Cloudflare Access Application Paths
-  - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/
+- Better Auth options
+  - https://better-auth.com/docs/reference/options
+- OWASP Authentication Cheat Sheet
+  - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
+- OWASP Email Validation and Verification Cheat Sheet
+  - https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html

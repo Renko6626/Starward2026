@@ -10,6 +10,7 @@
 docs/
 ├── README.md
 ├── architecture/
+├── development/
 ├── delivery/
 ├── product/
 └── design/
@@ -19,6 +20,8 @@ docs/
 
 - `architecture/`
   - 长期稳定的系统架构、领域模型与命名规则
+- `development/`
+  - 本地开发、seed、调试与运行约定
 - `delivery/`
   - 交付阶段、范围定义与实施计划
 - `product/`
@@ -34,14 +37,16 @@ docs/
 2. [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
 3. [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
 4. [product/accounts/participant-account-system.md](./product/accounts/participant-account-system.md)
-5. [product/portal/skeleton.md](./product/portal/skeleton.md)
-6. [product/portal/data-api.md](./product/portal/data-api.md)
-7. [product/site/skeleton.md](./product/site/skeleton.md)
+5. [development/local-d1.md](./development/local-d1.md)
+6. [product/portal/skeleton.md](./product/portal/skeleton.md)
+7. [product/portal/data-api.md](./product/portal/data-api.md)
+8. [product/site/skeleton.md](./product/site/skeleton.md)
 
 设计或页面实现阶段可继续阅读：
 
 - [design/homepage-wireframe.md](./design/homepage-wireframe.md)
 - [design/apply-page-wireframe.md](./design/apply-page-wireframe.md)
+- [design/ui-redesign-handoff.md](./design/ui-redesign-handoff.md)
 - [design/works-page-wireframe.md](./design/works-page-wireframe.md)
 - [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)
 
@@ -57,6 +62,10 @@ docs/
 - [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
 - [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
 
+开发：
+
+- [development/local-d1.md](./development/local-d1.md)
+
 产品：
 
 - [product/accounts/participant-account-system.md](./product/accounts/participant-account-system.md)
@@ -68,5 +77,6 @@ docs/
 
 - [design/homepage-wireframe.md](./design/homepage-wireframe.md)
 - [design/apply-page-wireframe.md](./design/apply-page-wireframe.md)
+- [design/ui-redesign-handoff.md](./design/ui-redesign-handoff.md)
 - [design/works-page-wireframe.md](./design/works-page-wireframe.md)
 - [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)

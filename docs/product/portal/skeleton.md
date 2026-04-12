@@ -1,6 +1,6 @@
 # Starward2026 Participant Portal Skeleton
 
-Last updated: 2026-04-11
+Last updated: 2026-04-12
 
 ## 1. Purpose
 
@@ -42,8 +42,11 @@ Last updated: 2026-04-11
 门户采用以下账号原则：
 
 - 存在稳定身份
-- 不开放自由注册
 - 不引入用户名与密码体系
+- 允许通过邮箱验证码建立入口会话
+- 登录成功不等于获得参与资格
+- 正式报名只能在已登录账号内提交
+- 公开匿名与后台可识别同时成立
 - 入口术语使用“参与者入口”，不使用平台化账户术语
 
 ## 5. Scope
@@ -52,9 +55,10 @@ Last updated: 2026-04-11
 
 - 登录
 - 总览页
-- 时间段状态
-- 时间段认领、调整、释放
-- 资料补录
+- 联系资料维护
+- 报名状态与审核反馈
+- 已批准参与者的时间段入口
+- 已批准参与者的资料补录入口
 - 状态提示
 
 ### 5.2 Recommended
@@ -77,6 +81,8 @@ Last updated: 2026-04-11
 
 - `/portal/login`
 - `/portal`
+- `/portal/profile`
+- `/portal/application`
 - `/portal/schedule`
 - `/portal/project`
 - `/portal/history`
@@ -93,7 +99,15 @@ Last updated: 2026-04-11
 - 查看活动说明
 - 进入参与者登录入口
 
-### 7.2 Participant
+### 7.2 Authenticated Applicant
+
+能力：
+
+- 维护联系资料与公开署名
+- 查看报名与审核状态
+- 查看当前账号状态
+
+### 7.3 Approved Participant
 
 能力：
 
@@ -102,7 +116,7 @@ Last updated: 2026-04-11
 - 补录资料
 - 查看历史记录
 
-### 7.3 Admin
+### 7.4 Admin
 
 能力：
 
@@ -119,11 +133,24 @@ Last updated: 2026-04-11
 
 - `id`
 - `display_name`
-- `invite_email`
+- `account_email`
 - `contact_handle`
 - `status`
 
-### 8.2 Schedule Segment
+### 8.2 Portal Profile
+
+关键字段：
+
+- `user_id`
+- `pen_name`
+- `contact_email`
+- `primary_contact_channel`
+- `primary_contact_handle`
+- `backup_contact`
+- `public_credit_mode`
+- `public_credit_name`
+
+### 8.3 Schedule Segment
 
 关键字段：
 
@@ -135,7 +162,7 @@ Last updated: 2026-04-11
 - `current_participant_id`
 - `claimed_at`
 
-### 8.3 Project Draft
+### 8.4 Project Draft
 
 关键字段：
 
@@ -146,7 +173,7 @@ Last updated: 2026-04-11
 - `review_status`
 - `public_author_name`
 
-### 8.4 Activity Log
+### 8.5 Activity Log
 
 关键字段：
 
@@ -159,14 +186,20 @@ Last updated: 2026-04-11
 
 ## 9. State Model
 
-### 9.1 Participant State
+### 9.1 Application State
 
-- `invited`
+- `pending`
+- `approved`
+- `rejected`
+- `withdrawn`
+
+### 9.2 Participant State
+
 - `active`
 - `withdrawn`
 - `completed`
 
-### 9.2 Schedule Segment State
+### 9.3 Schedule Segment State
 
 - `claimable`
 - `held`
@@ -175,7 +208,7 @@ Last updated: 2026-04-11
 - `completed`
 - `cancelled`
 
-### 9.3 Project Draft State
+### 9.4 Project Draft State
 
 - `draft`
 - `submitted`
@@ -186,10 +219,12 @@ Last updated: 2026-04-11
 
 ### 10.1 First Entry
 
-1. 管理员创建或激活 `participant`
-2. 系统发送入口邮件
-3. 参与者在 `/portal/login` 使用受邀邮箱登录
-4. 系统建立会话并绑定 `participant`
+1. 访客在 `/portal/login` 使用邮箱验证码建立或恢复会话
+2. 系统根据当前账号资料完成度，将首次进入用户导向下一步必填页面
+3. 已登录用户补充联系资料与公开署名设置
+4. 已登录用户填写报名资料
+5. 管理员审核后创建或激活 `participant`
+6. 已批准账号解锁参与者工作台
 
 ### 10.2 Schedule Claim
 
@@ -223,14 +258,35 @@ Last updated: 2026-04-11
 
 总览页应包含：
 
-- 参与者身份信息
+- 当前账号状态
+- 参与者身份信息或待审核提示
 - 当前时间段摘要
 - 资料状态摘要
 - 当前开放窗口
 - 最近事件
 - 导航入口
 
-### 11.2 Schedule Page
+### 11.2 Profile Page
+
+资料页应包含：
+
+- 常用笔名
+- 主联系渠道
+- 备用联系方式
+- 公开署名模式
+- 匿名参与说明
+
+### 11.3 Application Page
+
+报名资料页应包含：
+
+- 报名正文
+- 创作形式偏好
+- 审核状态
+- 对主催备注
+- 提交与更新反馈
+
+### 11.4 Schedule Page
 
 时间段页应包含：
 
@@ -239,7 +295,7 @@ Last updated: 2026-04-11
 - 动作可用性说明
 - 操作反馈
 
-### 11.3 Project Page
+### 11.5 Project Page
 
 资料页应包含：
 
@@ -248,7 +304,7 @@ Last updated: 2026-04-11
 - 当前状态
 - 保存与提交动作
 
-### 11.4 History Page
+### 11.6 History Page
 
 历史页应包含：
 

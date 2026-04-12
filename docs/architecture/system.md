@@ -1,6 +1,6 @@
 # Starward2026 Architecture
 
-Last reviewed against official documentation: 2026-04-11
+Last reviewed against official documentation: 2026-04-12
 
 ## 1. Scope
 
@@ -28,7 +28,7 @@ Last reviewed against official documentation: 2026-04-11
 - API 运行时：Hono on Cloudflare Workers
 - 数据库：Cloudflare D1
 - 参与者认证：Better Auth + Email OTP + Cookie Session
-- 反滥用：Cloudflare Turnstile + Workers Rate Limiting
+- 反滥用：Email OTP 限流 + 服务端字段校验 + Workers Rate Limiting
 - 管理后台保护：Cloudflare Access
 - 文件存储：Cloudflare R2（仅在后续需要上传文件时启用）
 
@@ -40,19 +40,19 @@ Last reviewed against official documentation: 2026-04-11
 - Hono 提供 `/api/*`
 - Better Auth 提供 `/api/auth/*`
 - D1 存储报名、参与者、时间段、资料与事件日志
-- Turnstile 保护公开报名提交
-- Cloudflare Access 保护 `/admin/*`
+- 正式报名仅存在于 `/portal/application`
+- Cloudflare Access 保护 `/admin/*`，并由 Worker 对 `/api/admin/*` 执行 fail-closed JWT 校验
 
 ## 4. Request Flow
 
 标准请求流如下：
 
 1. 访客访问公共站点
-2. 报名请求进入 `POST /api/applications`
-3. 服务端执行校验、Turnstile 验证与限流
-4. 审核通过后系统创建 `participant`
-5. 参与者通过 `/portal/login` 建立会话
-6. 门户通过 `/api/portal/*` 读取和修改数据
+2. 访客通过 `/portal/login` 使用邮箱验证码建立或恢复会话
+3. 已登录用户补充资料并提交报名
+4. 服务端对门户内报名执行资料完整度校验、字段校验与状态校验
+5. 管理员审核后创建或激活 `participant`
+6. 已批准账号通过 `/api/portal/*` 执行参与者动作
 7. 管理员在 `/admin/*` 内执行审核与管理操作
 
 ## 5. Repository Layout
@@ -94,6 +94,8 @@ Starward2026/
 
 - `/portal/login`
 - `/portal`
+- `/portal/profile`
+- `/portal/application`
 - `/portal/schedule`
 - `/portal/project`
 - `/portal/history`
@@ -112,7 +114,7 @@ Starward2026/
 ### 7.1 Public API
 
 - `GET /api/applications/intake`
-- `POST /api/applications`
+- `POST /api/applications`（兼容阻断接口，固定返回 `410`）
 - `GET /api/works`
 - `GET /api/works/:slug`
 
@@ -125,6 +127,11 @@ Starward2026/
 
 - `GET /api/portal/me`
 - `GET /api/portal/dashboard`
+- `GET /api/portal/profile`
+- `PATCH /api/portal/profile`
+- `GET /api/portal/application`
+- `POST /api/portal/application`
+- `PATCH /api/portal/application`
 - `GET /api/portal/segments/current`
 - `GET /api/portal/segments/available`
 - `POST /api/portal/segments/claim`
@@ -168,6 +175,7 @@ Starward2026/
 
 由项目管理：
 
+- `portal_profiles`
 - `applications`
 - `participants`
 - `schedule_versions`
@@ -182,25 +190,32 @@ Starward2026/
 
 身份流转如下：
 
-1. 公开访客提交 `applications`
-2. 管理员审核并创建 `participants`
-3. 参与者通过受邀邮箱建立 Better Auth 会话
-4. 门户业务数据统一挂载到 `participant`
+1. 访客通过 Email OTP 建立 `auth user`
+2. 已登录用户补充 `portal_profiles`
+3. 已登录用户提交 `applications`
+4. 管理员审核并创建或激活 `participants`
+5. 已批准账号的门户业务数据统一挂载到 `participant`
 
 ## 10. Anti-Abuse Design
 
-公开报名入口采用以下防护：
+第一阶段不存在公开正式报名入口；`/apply` 仅承担说明与引导职责。
 
-1. Turnstile
-2. 服务端校验
+账号内正式报名采用以下防护：
+
+1. Email OTP 建立受控会话
+2. 资料完整度校验
 3. 基础限流
 4. 严格字段校验
 
 参与者入口采用以下防护：
 
-1. 受邀邮箱白名单
-2. Email OTP
-3. 必要时增加额外 OTP 发送保护
+1. Email OTP
+2. 邮箱规范化与统一比对
+3. 按 IP 与邮箱对 OTP 发送限流
+4. 使用通用反馈文案降低账号枚举风险
+5. 在必要时增加额外 OTP 发送保护
+
+如后续重新引入公开正式报名表单，再补充 Turnstile 或同类人机验证。
 
 ## 11. Schedule Atomicity
 
@@ -228,7 +243,7 @@ Durable Objects 不作为第一阶段默认依赖，仅作为后续并发升级�
 
 - 单一代码仓库
 - 单一 Workers 应用
-- Wrangler 管理 D1、Turnstile、Rate Limiting、R2 绑定
+- Wrangler 管理 D1、Rate Limiting、R2 等绑定
 
 ## 14. Future Extensions
 
@@ -254,12 +269,14 @@ Durable Objects 不作为第一阶段默认依赖，仅作为后续并发升级�
   - https://better-auth.com/docs/integrations/hono
 - Better Auth Email OTP
   - https://better-auth.com/docs/plugins/email-otp
+- Better Auth options
+  - https://better-auth.com/docs/reference/options
 - Cloudflare D1 Worker API
   - https://developers.cloudflare.com/d1/worker-api/d1-database/
 - Cloudflare D1 migrations
   - https://developers.cloudflare.com/d1/reference/migrations/
-- Cloudflare Turnstile server-side validation
-  - https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
+- OWASP Authentication Cheat Sheet
+  - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
 - Cloudflare Workers Rate Limiting binding
   - https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
 - Cloudflare Access application paths
