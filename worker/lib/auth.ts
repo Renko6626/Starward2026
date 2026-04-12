@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import {
   PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS,
   PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
+  PORTAL_EMAIL_OTP_LENGTH,
   PORTAL_EMAIL_OTP_RATE_LIMIT_MAX,
   PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS,
   PORTAL_EMAIL_OTP_RESEND_STRATEGY,
@@ -24,6 +25,8 @@ import {
 const AUTH_PLUGIN_VERSION = "0.1.0";
 const PORTAL_SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30;
 const PORTAL_SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24;
+const LOCALHOST_HOSTNAME = "localhost";
+const IPV6_LOOPBACK_HOSTNAME = "[::1]";
 
 function getRequiredAuthEnv(env: AppBindings) {
   if (!env.DB) {
@@ -189,6 +192,7 @@ export function buildPortalEmailOtpOptions(env: AppBindings) {
   return {
     disableSignUp: false,
     expiresIn: PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
+    otpLength: PORTAL_EMAIL_OTP_LENGTH,
     allowedAttempts: PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS,
     storeOTP: PORTAL_EMAIL_OTP_STORE_MODE,
     resendStrategy: PORTAL_EMAIL_OTP_RESEND_STRATEGY,
@@ -215,6 +219,41 @@ export function buildPortalSessionOptions() {
   };
 }
 
+export function buildPortalTrustedOrigins(env: Pick<AppBindings, "BETTER_AUTH_TRUSTED_ORIGINS" | "BETTER_AUTH_URL">) {
+  const configuredOrigins = new Set<string>();
+  const baseUrl = normalizeBaseUrl(env.BETTER_AUTH_URL);
+
+  if (baseUrl) {
+    configuredOrigins.add(baseUrl);
+  }
+
+  for (const origin of parseConfiguredTrustedOrigins(env.BETTER_AUTH_TRUSTED_ORIGINS)) {
+    configuredOrigins.add(origin);
+  }
+
+  return async (request?: Request) => {
+    const trustedOrigins = new Set(configuredOrigins);
+
+    if (!request) {
+      return [...trustedOrigins];
+    }
+
+    for (const candidate of [
+      new URL(request.url).origin,
+      request.headers.get("origin"),
+      request.headers.get("referer"),
+    ]) {
+      const normalizedOrigin = normalizeOriginCandidate(candidate);
+
+      if (normalizedOrigin && isLocalDevelopmentOrigin(normalizedOrigin)) {
+        trustedOrigins.add(normalizedOrigin);
+      }
+    }
+
+    return [...trustedOrigins];
+  };
+}
+
 export function createAuth(env: AppBindings) {
   const { db, secret, baseUrl } = getRequiredAuthEnv(env);
 
@@ -223,6 +262,7 @@ export function createAuth(env: AppBindings) {
     database: db,
     baseURL: baseUrl,
     basePath: "/api/auth",
+    trustedOrigins: buildPortalTrustedOrigins(env),
     session: buildPortalSessionOptions(),
     plugins: [
       buildPortalEntryPlugin(env),
@@ -286,4 +326,62 @@ export async function requireParticipantSession(c: AppContext) {
     session: result.response,
     participant,
   };
+}
+
+function parseConfiguredTrustedOrigins(value: string | undefined) {
+  return (value ?? "")
+    .split(/[,\n]/)
+    .map((item) => normalizeOriginCandidate(item))
+    .filter((item): item is string => Boolean(item));
+}
+
+function normalizeOriginCandidate(value: string | null | undefined) {
+  const trimmed = value?.trim();
+
+  if (!trimmed || trimmed === "null") {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return url.origin.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function isLocalDevelopmentOrigin(origin: string) {
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+
+    if (
+      hostname === LOCALHOST_HOSTNAME ||
+      hostname === IPV6_LOOPBACK_HOSTNAME ||
+      hostname.endsWith(".localhost")
+    ) {
+      return true;
+    }
+
+    return isLoopbackOrPrivateIpv4(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isLoopbackOrPrivateIpv4(hostname: string) {
+  const parts = hostname.split(".").map((segment) => Number(segment));
+
+  if (parts.length !== 4 || parts.some((segment) => Number.isNaN(segment) || segment < 0 || segment > 255)) {
+    return false;
+  }
+
+  if (parts[0] === 127 || parts[0] === 10) {
+    return true;
+  }
+
+  if (parts[0] === 192 && parts[1] === 168) {
+    return true;
+  }
+
+  return parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31;
 }

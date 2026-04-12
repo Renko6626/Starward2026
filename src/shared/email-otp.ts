@@ -1,10 +1,15 @@
 export const PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS = 60 * 10;
+export const PORTAL_EMAIL_OTP_LENGTH = 6;
 export const PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS = 3;
 export const PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS = 60;
 export const PORTAL_EMAIL_OTP_RATE_LIMIT_MAX = 3;
 export const PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS = 30;
 export const PORTAL_EMAIL_OTP_RESEND_STRATEGY = "reuse" as const;
 export const PORTAL_EMAIL_OTP_STORE_MODE = "plain" as const;
+
+export function normalizePortalEmailOtpInput(value: string) {
+  return value.replace(/\D/g, "").slice(0, PORTAL_EMAIL_OTP_LENGTH);
+}
 
 export function getPortalEmailOtpValidityLabel() {
   return `${PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS / 60} 分钟`;

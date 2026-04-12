@@ -6,6 +6,7 @@ export type AppBindings = Env & {
   APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  BETTER_AUTH_TRUSTED_ORIGINS?: string;
   CLOUDFLARE_ACCESS_TEAM_DOMAIN?: string;
   CLOUDFLARE_ACCESS_POLICY_AUD?: string;
   RESEND_API_KEY?: string;

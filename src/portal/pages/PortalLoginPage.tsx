@@ -4,10 +4,12 @@ import { ArrowRight, KeyRound, Mail } from "../../app/components/icons";
 import { requestJson } from "../../app/lib/api";
 import type { PortalMeResponse } from "../../shared/portal";
 import {
+  PORTAL_EMAIL_OTP_LENGTH,
   PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS,
   getPortalEmailOtpNoticeText,
   getPortalEmailOtpResendCooldownText,
   getPortalEmailOtpResendSuccessMessage,
+  normalizePortalEmailOtpInput,
 } from "../../shared/email-otp";
 import { authClient } from "../lib/auth-client";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
@@ -110,10 +112,15 @@ export function PortalLoginPage() {
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedOtp = otp.trim();
+    const normalizedOtp = normalizePortalEmailOtpInput(otp);
 
     if (!normalizedEmail || !normalizedOtp) {
       setError("请输入邮箱和验证码。");
+      return;
+    }
+
+    if (normalizedOtp.length !== PORTAL_EMAIL_OTP_LENGTH) {
+      setError(`请输入 ${PORTAL_EMAIL_OTP_LENGTH} 位访问码。`);
       return;
     }
 
@@ -138,7 +145,7 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 relative z-10">
+    <div className="w-full max-w-md mx-auto mt-20 relative z-10">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-headline tracking-tight mb-2">创作者登录</h1>
         <p className="text-on-surface-variant">参与接力企划需要验证您的身份。</p>
@@ -181,8 +188,10 @@ export function PortalLoginPage() {
                   className="w-full bg-surface-variant border border-outline-variant rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono tracking-widest text-center text-lg"
                   disabled={isSigningIn}
                   inputMode="numeric"
-                  onChange={(event) => setOtp(event.target.value)}
-                  placeholder="000000"
+                  maxLength={PORTAL_EMAIL_OTP_LENGTH}
+                  onChange={(event) => setOtp(normalizePortalEmailOtpInput(event.target.value))}
+                  pattern="[0-9]*"
+                  placeholder={"0".repeat(PORTAL_EMAIL_OTP_LENGTH)}
                   type="text"
                   value={otp}
                 />
