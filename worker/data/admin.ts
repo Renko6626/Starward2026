@@ -8,7 +8,6 @@ import type {
   UpdateParticipantInput,
 } from "../../src/shared/admin";
 import type { ParticipantPortalStatus, PortalSegmentStatus } from "../../src/shared/portal";
-import { resolveParticipantStatusForAdminUpdate } from "../lib/participant-admin";
 import { resolveAdminSegmentState } from "../lib/segment-admin";
 import { buildInitialScheduleSegments } from "../lib/schedule-bootstrap";
 import { createPrefixedId } from "../lib/ids";
@@ -21,7 +20,7 @@ type ParticipantRow = {
   display_name: string;
   invite_email: string;
   contact_handle: string | null;
-  status: "invited" | "active" | "withdrawn" | "completed";
+  status: "approved" | "withdrawn" | "completed";
   application_id: string | null;
   current_segment_code: string | null;
   current_segment_name: string | null;
@@ -104,11 +103,9 @@ export type UpdateActiveScheduleSegmentResult =
 
 type ParticipantAdminUpdateRow = {
   id: string;
-  user_id: string | null;
   display_name: string;
   contact_handle: string | null;
-  status: "invited" | "active" | "withdrawn" | "completed";
-  activated_at: string | null;
+  status: "approved" | "withdrawn" | "completed";
 };
 
 export async function listParticipants(db: D1Database): Promise<AdminParticipantItem[]> {
@@ -192,11 +189,9 @@ export async function updateParticipant(
     .prepare(
       `SELECT
         id,
-        user_id,
         display_name,
         contact_handle,
-        status,
-        activated_at
+        status
       FROM participants
       WHERE id = ?
       LIMIT 1`,
@@ -210,10 +205,7 @@ export async function updateParticipant(
 
   const nextDisplayName = input.displayName.trim();
   const nextContactHandle = normalizeOptionalText(input.contactHandle);
-  const nextStatus = resolveParticipantStatusForAdminUpdate({
-    requestedStatus: input.status,
-    hasActivatedPortal: Boolean(existing.user_id || existing.activated_at),
-  });
+  const nextStatus = input.status;
 
   const hasChanges =
     existing.display_name !== nextDisplayName ||
@@ -825,5 +817,5 @@ function mapAdminSegmentItem(row: SegmentRow): AdminSegmentItem {
 }
 
 function canAssignParticipantToHeldSegment(status: ParticipantPortalStatus) {
-  return status === "invited" || status === "active";
+  return status === "approved";
 }

@@ -24,9 +24,9 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
 
   switch (input.eventType) {
     case "portal_activated":
-      return "参与者门户已激活。";
+      return "创作者工作台已激活。";
     case "portal_invite_sent":
-      return "主催发送了参与者门户入口提醒。";
+      return "主催发送了参与资格通过提醒。";
     case "participant_updated":
       return "主催更新了你的参与者状态。";
     case "segment_claimed":

@@ -109,7 +109,7 @@ export function AdminApplicationDetailPage() {
       await loadDetail();
       setActionMessage(payload.message);
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "发送门户提醒邮件失败。");
+      setActionMessage(error instanceof Error ? error.message : "发送通过提醒邮件失败。");
     } finally {
       setSendingInvite(false);
     }
@@ -209,7 +209,7 @@ export function AdminApplicationDetailPage() {
                 tone="success"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                {submitting === "approved" ? "处理中..." : "批准并转入参与者"}
+                {submitting === "approved" ? "处理中..." : "批准并开放参与资格"}
               </ActionButton>
               <ActionButton
                 disabled={submitting !== null || sendingInvite}
@@ -275,7 +275,7 @@ export function AdminApplicationDetailPage() {
                     查看参与者详情
                   </Link>
                   <p className="text-xs text-on-surface-variant">
-                    关联参与者: {participant.id} / {adminParticipantStatusLabels[participant.status]}
+                    关联创作者: {participant.id} / {adminParticipantStatusLabels[participant.status]}
                   </p>
                 </div>
               ) : null}

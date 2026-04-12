@@ -41,14 +41,14 @@ describe("summarizeApplicationReviewState", () => {
     );
     expect(summary.inviteAction).toEqual({
       enabled: false,
-      label: "需先绑定入口账号",
-      reason: "当前还没有参与者入口账号，不能直接发送正式门户提醒。",
+      label: "需先建立工作台",
+      reason: "当前还没有可发送提醒的创作者工作台记录。",
     });
     expect(summary.items.map((item) => item.statusLabel)).toEqual([
       "未建立入口",
       "联系资料未补充",
       "待审核",
-      "未转入参与者",
+      "未建立工作台",
     ]);
   });
 
@@ -75,34 +75,36 @@ describe("summarizeApplicationReviewState", () => {
       }),
     );
 
-    expect(summary.recommendation).toBe("入口账号和联系资料已具备，可直接完成审核并转入参与者。");
+    expect(summary.recommendation).toBe(
+      "入口账号和联系资料已具备。首次登录后会自动建立工作台，可在确认作品准备情况后开放参与资格。",
+    );
     expect(summary.items.map((item) => item.completed)).toEqual([true, true, false, false]);
   });
 
-  it("recommends sending a first portal reminder after the participant record is created", async () => {
+  it("recommends sending an approval reminder after the participant qualification is opened", async () => {
     const { summarizeApplicationReviewState } = await import("./application-review");
 
     const summary = summarizeApplicationReviewState(
       createApplicationDetail({
         status: "approved",
         participantId: "part_1",
-        participantStatus: "invited",
+        participantStatus: "approved",
         participant: {
           id: "part_1",
           inviteEmail: "sample@example.com",
-          status: "invited",
+          status: "approved",
           activatedAt: null,
         },
       }),
     );
 
     expect(summary.recommendation).toBe(
-      "该报名已转入参与者，建议直接发送门户提醒邮件，引导对方首次登录激活。",
+      "该创作者资格已批准，建议发送通过提醒邮件，说明后续已解锁正式动作。",
     );
     expect(summary.inviteAction).toEqual({
       enabled: true,
-      label: "发送门户提醒邮件",
-      reason: "参与者记录已创建，但对方还没有完成首次登录激活。",
+      label: "发送通过提醒邮件",
+      reason: "创作者资格已批准，可发送提醒说明后续已解锁的正式动作。",
     });
   });
 
@@ -113,21 +115,21 @@ describe("summarizeApplicationReviewState", () => {
       createApplicationDetail({
         status: "approved",
         participantId: "part_2",
-        participantStatus: "active",
+        participantStatus: "approved",
         participant: {
           id: "part_2",
           inviteEmail: "sample@example.com",
-          status: "active",
+          status: "approved",
           activatedAt: "2026-04-12T08:00:00.000Z",
         },
       }),
     );
 
-    expect(summary.recommendation).toBe("该报名已进入参与者流程。后续维护建议转到参与者详情页继续处理。");
+    expect(summary.recommendation).toBe("该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。");
     expect(summary.inviteAction).toEqual({
       enabled: true,
-      label: "补发门户提醒邮件",
-      reason: "该参与者已激活门户，如需提醒可补发入口邮件。",
+      label: "补发通过提醒邮件",
+      reason: "该创作者已进入过工作台，如需再次提醒可补发。",
     });
   });
 });

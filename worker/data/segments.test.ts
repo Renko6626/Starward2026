@@ -165,7 +165,7 @@ function buildParticipant(overrides: Partial<ParticipantAuthRow> = {}): Particip
     invite_email: "smoke@example.com",
     display_name: "烟测样本",
     contact_handle: "@smoke",
-    status: "invited",
+    status: "approved",
     activated_at: null,
     updated_at: "2026-04-12T00:00:00.000Z",
     current_segment_code: null,

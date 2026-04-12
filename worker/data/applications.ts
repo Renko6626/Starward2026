@@ -14,6 +14,8 @@ import { resolvePortalApplicationMutation } from "../lib/portal-application";
 import { normalizeOptionalText } from "../lib/strings";
 import { nowIso } from "../lib/time";
 
+type ApplicationParticipantStatus = NonNullable<ApplicationDetail["participant"]>["status"];
+
 type ApplicationListRow = {
   id: string;
   display_name: string;
@@ -26,7 +28,7 @@ type ApplicationListRow = {
   auth_email: string | null;
   profile_user_id: string | null;
   participant_id: string | null;
-  participant_status: "invited" | "active" | "withdrawn" | "completed" | null;
+  participant_status: ApplicationParticipantStatus | null;
 };
 
 type ApplicationDetailRow = ApplicationListRow & {
@@ -46,7 +48,7 @@ type ApplicationDetailRow = ApplicationListRow & {
   profile_public_credit_mode: "named" | "pseudonymous" | "anonymous" | null;
   profile_public_credit_name: string | null;
   invite_email: string | null;
-  participant_status: "invited" | "active" | "withdrawn" | "completed" | null;
+  participant_status: ApplicationParticipantStatus | null;
   activated_at: string | null;
 };
 
@@ -260,12 +262,24 @@ export async function listApplications(db: D1Database) {
         applications.reviewed_at,
         "user".email AS auth_email,
         portal_profiles.user_id AS profile_user_id,
-        participants.id AS participant_id,
-        participants.status AS participant_status
+        COALESCE(participant_by_application.id, participant_by_user.id, participant_by_email.id) AS participant_id,
+        COALESCE(
+          participant_by_application.status,
+          participant_by_user.status,
+          participant_by_email.status
+        ) AS participant_status
       FROM applications
       LEFT JOIN "user" ON "user".id = applications.user_id
       LEFT JOIN portal_profiles ON portal_profiles.user_id = applications.user_id
-      LEFT JOIN participants ON participants.application_id = applications.id
+      LEFT JOIN participants participant_by_application
+        ON participant_by_application.application_id = applications.id
+      LEFT JOIN participants participant_by_user
+        ON participant_by_user.user_id = applications.user_id
+       AND participant_by_application.id IS NULL
+      LEFT JOIN participants participant_by_email
+        ON lower(participant_by_email.invite_email) = lower(COALESCE("user".email, applications.contact_email))
+       AND participant_by_application.id IS NULL
+       AND participant_by_user.id IS NULL
       ORDER BY applications.created_at DESC`,
     )
     .all<ApplicationListRow>();
@@ -300,14 +314,34 @@ export async function getApplicationDetail(db: D1Database, applicationId: string
         portal_profiles.backup_contact AS profile_backup_contact,
         portal_profiles.public_credit_mode AS profile_public_credit_mode,
         portal_profiles.public_credit_name AS profile_public_credit_name,
-        participants.id AS participant_id,
-        participants.invite_email,
-        participants.status AS participant_status,
-        participants.activated_at
+        COALESCE(participant_by_application.id, participant_by_user.id, participant_by_email.id) AS participant_id,
+        COALESCE(
+          participant_by_application.invite_email,
+          participant_by_user.invite_email,
+          participant_by_email.invite_email
+        ) AS invite_email,
+        COALESCE(
+          participant_by_application.status,
+          participant_by_user.status,
+          participant_by_email.status
+        ) AS participant_status,
+        COALESCE(
+          participant_by_application.activated_at,
+          participant_by_user.activated_at,
+          participant_by_email.activated_at
+        ) AS activated_at
       FROM applications
       LEFT JOIN "user" ON "user".id = applications.user_id
       LEFT JOIN portal_profiles ON portal_profiles.user_id = applications.user_id
-      LEFT JOIN participants ON participants.application_id = applications.id
+      LEFT JOIN participants participant_by_application
+        ON participant_by_application.application_id = applications.id
+      LEFT JOIN participants participant_by_user
+        ON participant_by_user.user_id = applications.user_id
+       AND participant_by_application.id IS NULL
+      LEFT JOIN participants participant_by_email
+        ON lower(participant_by_email.invite_email) = lower(COALESCE("user".email, applications.contact_email))
+       AND participant_by_application.id IS NULL
+       AND participant_by_user.id IS NULL
       WHERE applications.id = ?`,
     )
     .bind(applicationId)
@@ -429,6 +463,8 @@ async function buildParticipantSyncPlan(
              invite_email = ?,
              display_name = ?,
              contact_handle = ?,
+             status = 'approved',
+             invited_at = COALESCE(invited_at, ?),
              updated_at = ?
          WHERE id = ?`,
         ).bind(
@@ -440,6 +476,7 @@ async function buildParticipantSyncPlan(
             contactEmail: email,
           }),
           application.contact_handle,
+          now,
           now,
           existingByApplication.id,
         ),
@@ -462,6 +499,8 @@ async function buildParticipantSyncPlan(
              user_id = COALESCE(user_id, ?),
              display_name = ?,
              contact_handle = ?,
+             status = 'approved',
+             invited_at = COALESCE(invited_at, ?),
              updated_at = ?
          WHERE id = ?`,
         ).bind(
@@ -473,6 +512,7 @@ async function buildParticipantSyncPlan(
             contactEmail: email,
           }),
           application.contact_handle,
+          now,
           now,
           existingByEmail.id,
         ),
@@ -497,7 +537,7 @@ async function buildParticipantSyncPlan(
             invited_at,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 'invited', ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?)`,
         )
         .bind(
           participantId,

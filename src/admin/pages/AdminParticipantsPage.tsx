@@ -33,7 +33,7 @@ export function AdminParticipantsPage() {
 
   const activeCount =
     state.status === "ready"
-      ? state.payload.items.filter((item) => item.status === "active" || item.status === "completed").length
+      ? state.payload.items.filter((item) => item.status === "approved" || item.status === "completed").length
       : 0;
 
   return (
@@ -60,7 +60,7 @@ export function AdminParticipantsPage() {
       {state.status === "ready" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard label="总参与者数" value={String(state.payload.items.length)} />
-          <MetricCard label="已激活 / 已完成" value={String(activeCount)} />
+          <MetricCard label="已批准 / 已完成" value={String(activeCount)} />
           <MetricCard label="当前搜索结果" value={String(items.length)} />
         </div>
       ) : null}
@@ -134,7 +134,7 @@ function ParticipantStatusBadge({
 }: {
   status: AdminParticipantListResponse["items"][number]["status"];
 }) {
-  if (status === "active" || status === "completed") {
+  if (status === "approved" || status === "completed") {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-medium">
         <CheckCircle2 className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}

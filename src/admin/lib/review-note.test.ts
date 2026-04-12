@@ -8,7 +8,7 @@ describe("getReviewNoteTemplates", () => {
       {
         id: "approved",
         label: "批准模板",
-        body: "已核对报名内容与现有联系方式，准许转入参与者流程。后续请继续使用同一邮箱进入参与者入口。",
+        body: "已核对报名内容与现有联系方式，准许开放本期参与资格。后续请继续使用同一邮箱进入创作者工作台，处理时间段与作品提交流程。",
       },
       {
         id: "awaiting-profile",
@@ -23,7 +23,7 @@ describe("getReviewNoteTemplates", () => {
       {
         id: "withdrawn",
         label: "撤回模板",
-        body: "根据申请者意愿或后续沟通结果，当前报名已撤回，不继续进入本期参与者流程。",
+        body: "根据申请者意愿或后续沟通结果，当前报名已撤回，不继续开放本期参与资格。",
       },
     ]);
   });

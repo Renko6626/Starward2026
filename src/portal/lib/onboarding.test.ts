@@ -12,7 +12,17 @@ describe("resolvePortalEntryDestination", () => {
           name: "first",
           emailVerified: true,
         },
-        participant: null,
+        participant: {
+          id: "part_1",
+          displayName: "first",
+          inviteEmail: "first@example.com",
+          contactHandle: null,
+          status: "pending",
+          activatedAt: "2026-04-12T00:00:00.000Z",
+          currentSegmentCode: null,
+          currentSegmentName: null,
+          updatedAt: "2026-04-12T00:00:00.000Z",
+        },
         profile: null,
         application: null,
       }),
@@ -30,7 +40,17 @@ describe("resolvePortalEntryDestination", () => {
           name: "profiled",
           emailVerified: true,
         },
-        participant: null,
+        participant: {
+          id: "part_2",
+          displayName: "profiled",
+          inviteEmail: "profiled@example.com",
+          contactHandle: null,
+          status: "pending",
+          activatedAt: "2026-04-12T00:00:00.000Z",
+          currentSegmentCode: null,
+          currentSegmentName: null,
+          updatedAt: "2026-04-12T00:00:00.000Z",
+        },
         profile: {
           penName: "示例",
           contactEmail: "profiled@example.com",
@@ -46,7 +66,7 @@ describe("resolvePortalEntryDestination", () => {
     ).toEqual("/portal/application");
   });
 
-  it("keeps accounts with profile and application on the dashboard", async () => {
+  it("sends pending creators with profile and application into the project workspace", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -57,7 +77,17 @@ describe("resolvePortalEntryDestination", () => {
           name: "ready",
           emailVerified: true,
         },
-        participant: null,
+        participant: {
+          id: "part_3",
+          displayName: "ready",
+          inviteEmail: "ready@example.com",
+          contactHandle: "@ready",
+          status: "pending",
+          activatedAt: "2026-04-12T00:00:00.000Z",
+          currentSegmentCode: null,
+          currentSegmentName: null,
+          updatedAt: "2026-04-12T00:00:00.000Z",
+        },
         profile: {
           penName: "示例",
           contactEmail: "ready@example.com",
@@ -77,6 +107,52 @@ describe("resolvePortalEntryDestination", () => {
           status: "pending",
           updatedAt: "2026-04-12T00:00:00.000Z",
           reviewedAt: null,
+        },
+      }),
+    ).toEqual("/portal/project");
+  });
+
+  it("keeps approved creators with profile and application on the dashboard", async () => {
+    const { resolvePortalEntryDestination } = await import("./onboarding");
+
+    expect(
+      resolvePortalEntryDestination({
+        user: {
+          id: "user_4",
+          email: "approved@example.com",
+          name: "approved",
+          emailVerified: true,
+        },
+        participant: {
+          id: "part_4",
+          displayName: "approved",
+          inviteEmail: "approved@example.com",
+          contactHandle: "@approved",
+          status: "approved",
+          activatedAt: "2026-04-12T00:00:00.000Z",
+          currentSegmentCode: null,
+          currentSegmentName: null,
+          updatedAt: "2026-04-12T00:00:00.000Z",
+        },
+        profile: {
+          penName: "示例",
+          contactEmail: "approved@example.com",
+          primaryContactChannel: "Discord",
+          primaryContactHandle: "@approved",
+          backupContact: null,
+          publicCreditMode: "named",
+          publicCreditName: null,
+          updatedAt: "2026-04-12T00:00:00.000Z",
+        },
+        application: {
+          id: "app_2",
+          displayName: "示例",
+          contactEmail: "approved@example.com",
+          contactHandle: "@approved",
+          interestFormat: "novel",
+          status: "approved",
+          updatedAt: "2026-04-12T00:00:00.000Z",
+          reviewedAt: "2026-04-12T01:00:00.000Z",
         },
       }),
     ).toEqual("/portal");

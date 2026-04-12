@@ -87,10 +87,11 @@ export function PortalOverviewPage() {
     );
   }
 
-  const hasParticipant = Boolean(dashboard.participant);
+  const isApprovedParticipant =
+    dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const windowFlags = buildWindowFlagMap(dashboard.windows);
   const displayName = dashboard.profile?.penName ?? dashboard.profile?.publicCreditName ?? dashboard.user.email;
-  const tasks = hasParticipant
+  const tasks = isApprovedParticipant
     ? [
         {
           icon: <Calendar className="w-5 h-5" />,
@@ -136,6 +137,16 @@ export function PortalOverviewPage() {
           to: "/portal/application" as const,
           urgent: !dashboard.application && windowFlags.applicationOpen,
         },
+        {
+          icon: <FileText className="w-5 h-5" />,
+          title: "提前整理作品资料",
+          description: dashboard.projectDraft
+            ? `预告 ${dashboard.projectDraft.previewStatus} / 审查 ${dashboard.projectDraft.reviewStatus}`
+            : "现在就可以先填写预告与审查说明，审核通过后继续进入排期与正式动作。",
+          actionLabel: "打开作品页",
+          to: "/portal/project" as const,
+          urgent: Boolean(dashboard.application),
+        },
       ];
 
   return (
@@ -148,7 +159,7 @@ export function PortalOverviewPage() {
         <div className="text-right space-y-3">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-mono font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-            {hasParticipant ? "参与者工作区" : "等待审核中"}
+            {isApprovedParticipant ? "参与者工作区" : "创作者工作区"}
           </span>
           <div>
             <button className="text-xs font-mono text-on-surface-variant hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => void handleSignOut()} type="button">
@@ -162,20 +173,23 @@ export function PortalOverviewPage() {
         <div className="space-y-6">
           <div className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl">
             <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">当前状态</h2>
-            {hasParticipant ? (
+            {isApprovedParticipant ? (
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-6 h-6 text-tertiary shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-lg text-tertiary">报名已通过</p>
+                  <p className="font-medium text-lg text-tertiary">参与资格已开放</p>
                   <p className="text-sm text-on-surface-variant mt-1">当前资格状态：{participantPortalStatusLabels[dashboard.participant!.status]}</p>
+                  <p className="text-sm text-on-surface-variant mt-1">
+                    门户状态：{dashboard.participant!.activatedAt ? "已激活" : "未激活"}
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="flex items-start gap-3">
                 <Clock className="w-6 h-6 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-lg text-primary">{dashboard.application ? applicationStatusLabels[dashboard.application.status] : "待审核"}</p>
-                  <p className="text-sm text-on-surface-variant mt-1">当前账号已完成入口登录，但仍需等待主催完成报名审核。</p>
+                  <p className="font-medium text-lg text-primary">{dashboard.application ? applicationStatusLabels[dashboard.application.status] : "待补报名"}</p>
+                  <p className="text-sm text-on-surface-variant mt-1">当前账号已进入创作者工作台。你可以继续补资料和整理作品；时间段等正式动作会在审核通过后开放。</p>
                 </div>
               </div>
             )}

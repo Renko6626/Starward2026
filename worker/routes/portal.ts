@@ -49,7 +49,10 @@ import {
 import type { ParticipantAuthRow } from "../data/participants";
 import { requireParticipantSession } from "../lib/auth";
 import { getRequiredDb, jsonError } from "../lib/http";
-import { resolveParticipantActionEligibility } from "../lib/portal-access";
+import {
+  resolveParticipantActionEligibility,
+  resolveProjectWorkspaceEligibility,
+} from "../lib/portal-access";
 import {
   resolvePortalApplicationMutation,
   resolvePortalApplicationProfileRequirement,
@@ -72,6 +75,16 @@ type PortalSessionAccess =
     };
 
 type ParticipantActionAccess =
+  | {
+      response: ReturnType<typeof jsonError>;
+    }
+  | {
+      db: D1Database;
+      session: PortalSessionState["session"];
+      participant: ParticipantAuthRow;
+    };
+
+type ProjectWorkspaceAccess =
   | {
       response: ReturnType<typeof jsonError>;
     }
@@ -451,7 +464,7 @@ portalApi.post("/segments/change", changeSegmentHandler);
 portalApi.post("/segments/release", releaseSegmentHandler);
 
 portalApi.get("/project", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getProjectWorkspaceAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -481,7 +494,7 @@ portalApi.get("/project", async (c) => {
 });
 
 portalApi.patch("/project/preview", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getProjectWorkspaceAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -513,7 +526,7 @@ portalApi.patch("/project/preview", async (c) => {
 });
 
 portalApi.post("/project/preview/submit", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getProjectWorkspaceAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -538,7 +551,7 @@ portalApi.post("/project/preview/submit", async (c) => {
 });
 
 portalApi.patch("/project/review", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getProjectWorkspaceAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -570,7 +583,7 @@ portalApi.patch("/project/review", async (c) => {
 });
 
 portalApi.post("/project/review/submit", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getProjectWorkspaceAccess(c);
 
   if ("response" in access) {
     return access.response;
@@ -645,7 +658,36 @@ async function getParticipantActionAccess(c: AppContext): Promise<ParticipantAct
 
   if (!participant) {
     return {
-      response: jsonError(c, 403, "portal_pending_review", "当前账号已登录，但尚未获得参与资格。请先补充资料并等待主催审核。"),
+      response: jsonError(c, 403, "portal_creator_missing", "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。"),
+    };
+  }
+
+  return {
+    db: access.db,
+    session: access.session,
+    participant,
+  };
+}
+
+async function getProjectWorkspaceAccess(c: AppContext): Promise<ProjectWorkspaceAccess> {
+  const access = await getPortalSessionAccess(c);
+
+  if ("response" in access) {
+    return access;
+  }
+
+  const participant = access.participant;
+  const eligibility = resolveProjectWorkspaceEligibility(participant);
+
+  if (!eligibility.ok) {
+    return {
+      response: jsonError(c, 403, eligibility.code, eligibility.message),
+    };
+  }
+
+  if (!participant) {
+    return {
+      response: jsonError(c, 403, "portal_creator_missing", "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。"),
     };
   }
 

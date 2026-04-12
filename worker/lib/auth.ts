@@ -15,13 +15,15 @@ import {
 } from "../../src/shared/email-otp";
 import type { AppContext, AppBindings } from "./types";
 import {
+  ensureParticipantForAuthUser,
   getParticipantByInviteEmail,
   getParticipantByUserId,
-  linkParticipantToAuthUser,
   normalizeEmailAddress,
 } from "../data/participants";
 
 const AUTH_PLUGIN_VERSION = "0.1.0";
+const PORTAL_SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30;
+const PORTAL_SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24;
 
 function getRequiredAuthEnv(env: AppBindings) {
   if (!env.DB) {
@@ -93,9 +95,11 @@ function buildPortalEntryPlugin(env: AppBindings) {
                     return;
                   }
 
-                  await linkParticipantToAuthUser(db, {
+                  await ensureParticipantForAuthUser(db, {
                     email,
                     userId: session.userId,
+                    displayName:
+                      typeof context.body?.name === "string" ? context.body.name : null,
                   });
                 },
               },
@@ -204,6 +208,13 @@ export function buildPortalEmailOtpOptions(env: AppBindings) {
   };
 }
 
+export function buildPortalSessionOptions() {
+  return {
+    expiresIn: PORTAL_SESSION_EXPIRES_IN_SECONDS,
+    updateAge: PORTAL_SESSION_UPDATE_AGE_SECONDS,
+  };
+}
+
 export function createAuth(env: AppBindings) {
   const { db, secret, baseUrl } = getRequiredAuthEnv(env);
 
@@ -212,6 +223,7 @@ export function createAuth(env: AppBindings) {
     database: db,
     baseURL: baseUrl,
     basePath: "/api/auth",
+    session: buildPortalSessionOptions(),
     plugins: [
       buildPortalEntryPlugin(env),
       emailOTP(buildPortalEmailOtpOptions(env)),
@@ -255,9 +267,10 @@ export async function requireParticipantSession(c: AppContext) {
   let participant = await getParticipantByUserId(db, result.response.user.id);
 
   if (!participant) {
-    await linkParticipantToAuthUser(db, {
+    await ensureParticipantForAuthUser(db, {
       email: result.response.user.email,
       userId: result.response.user.id,
+      displayName: result.response.user.name,
     });
     participant = await getParticipantByUserId(db, result.response.user.id);
   }

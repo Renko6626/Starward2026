@@ -58,7 +58,7 @@ export function AdminOverviewPage() {
   }
 
   const pendingApplications = state.applications.filter((item) => item.status === "pending").length;
-  const confirmedParticipants = state.participants.filter((item) => item.status === "active" || item.status === "completed").length;
+  const confirmedParticipants = state.participants.filter((item) => item.status === "approved" || item.status === "completed").length;
   const assignedSegments = state.segments.filter(
     (item) => item.status === "held" || item.status === "locked" || item.status === "completed",
   ).length;
@@ -90,7 +90,7 @@ export function AdminOverviewPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <QuickLink description="审核正式报名并转入参与者。" icon={<Scroll className="w-5 h-5" />} label="报名审核" to="/admin/applications" />
+          <QuickLink description="审核正式报名并开放参与资格。" icon={<Scroll className="w-5 h-5" />} label="报名审核" to="/admin/applications" />
           <QuickLink description="维护参与者状态与入口提醒。" icon={<UserRound className="w-5 h-5" />} label="参与者名册" to="/admin/participants" />
           <QuickLink description="查看并修正时间段占用。" icon={<Clock3 className="w-5 h-5" />} label="时间段状态" to="/admin/schedule" />
           <QuickLink description="审阅预告资料与内容说明。" icon={<FileText className="w-5 h-5" />} label="资料审阅" to="/admin/project-drafts" />

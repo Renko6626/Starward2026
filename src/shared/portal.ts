@@ -2,11 +2,11 @@ import { z } from "zod";
 import type { ApplicationInterestFormat, ApplicationStatus } from "./applications";
 import type { EventWindowSummary } from "./windows";
 
-export type ParticipantPortalStatus = "invited" | "active" | "withdrawn" | "completed";
+export type ParticipantPortalStatus = "pending" | "approved" | "withdrawn" | "completed";
 
 export const participantPortalStatusLabels: Record<ParticipantPortalStatus, string> = {
-  invited: "已放行",
-  active: "已激活",
+  pending: "待审核",
+  approved: "已获得参与资格",
   withdrawn: "已撤回",
   completed: "已完成",
 };
@@ -133,7 +133,7 @@ export type PortalSessionSummary = {
   application: PortalApplicationSummary | null;
 };
 
-export type PortalApprovedParticipantSummary = Omit<PortalSessionSummary, "participant"> & {
+export type PortalExistingParticipantSummary = Omit<PortalSessionSummary, "participant"> & {
   participant: PortalParticipantSummary;
 };
 
@@ -155,18 +155,18 @@ export type PortalSegmentActionState = {
   releaseHint: string;
 };
 
-export type PortalCurrentSegmentResponse = PortalApprovedParticipantSummary & {
+export type PortalCurrentSegmentResponse = PortalExistingParticipantSummary & {
   currentSegment: PortalSegmentSummary | null;
   actions: PortalSegmentActionState;
   windows: EventWindowSummary[];
 };
 
-export type PortalProjectResponse = PortalApprovedParticipantSummary & {
+export type PortalProjectResponse = PortalExistingParticipantSummary & {
   draft: PortalProjectDraftDetail;
   windows: EventWindowSummary[];
 };
 
-export type PortalHistoryResponse = PortalApprovedParticipantSummary & {
+export type PortalHistoryResponse = PortalExistingParticipantSummary & {
   items: PortalEventItem[];
 };
 

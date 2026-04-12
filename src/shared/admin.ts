@@ -9,8 +9,8 @@ import {
 import type { EventWindowSummary } from "./windows";
 
 export const adminParticipantStatusValues = [
-  "invited",
-  "active",
+  "pending",
+  "approved",
   "withdrawn",
   "completed",
 ] as const;
@@ -20,8 +20,8 @@ export const adminParticipantStatusSchema = z.enum(adminParticipantStatusValues)
 export type AdminParticipantStatus = z.infer<typeof adminParticipantStatusSchema>;
 
 export const adminParticipantStatusLabels: Record<AdminParticipantStatus, string> = {
-  invited: "待首次登录",
-  active: "已激活",
+  pending: "待审核",
+  approved: "已批准",
   withdrawn: "已撤回",
   completed: "已完成",
 };

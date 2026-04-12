@@ -90,7 +90,7 @@ export type ApplicationDetail = ApplicationListItem & {
     | {
         id: string;
         inviteEmail: string;
-        status: "invited" | "active" | "withdrawn" | "completed";
+        status: ParticipantPortalStatus;
         activatedAt: string | null;
       }
     | null;

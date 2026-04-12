@@ -3,7 +3,7 @@ import type { ApplicationDetail } from "../../shared/applications";
 type ReviewItemTone = "info" | "warn" | "success";
 
 export type ApplicationReviewItem = {
-  key: "entry" | "profile" | "review" | "participant";
+  key: "entry" | "profile" | "review" | "workspace";
   title: string;
   statusLabel: string;
   hint: string;
@@ -49,7 +49,7 @@ export function summarizeApplicationReviewState(
         hint: hasProfile
           ? `${application.portalProfile!.primaryContactChannel} / ${application.portalProfile!.primaryContactHandle}`
           : hasAuthUser
-            ? "已建立入口账号，但尚未补充联系资料；按当前规则，正式报名前应先完成这一步。"
+            ? "已建立入口账号，但尚未补充联系资料；建议先补齐资料，再继续资格判断。"
             : "该记录未绑定入口账号。除历史导入或异常数据外，不应再出现此类正式报名。",
         completed: hasProfile,
         tone: hasProfile ? "success" : "warn",
@@ -63,12 +63,12 @@ export function summarizeApplicationReviewState(
         tone: application.status === "approved" ? "success" : application.status === "pending" ? "warn" : "info",
       },
       {
-        key: "participant",
-        title: "参与者转入",
-        statusLabel: hasParticipant ? "已转入参与者" : "未转入参与者",
+        key: "workspace",
+        title: "创作者工作台",
+        statusLabel: hasParticipant ? "已建立工作台" : "未建立工作台",
         hint: hasParticipant
-          ? `${application.participant!.id} / ${application.participant!.status}`
-          : "批准后会创建或更新参与者记录。",
+          ? `${application.participant!.id} / ${application.participant!.status} / ${application.participant!.activatedAt ? "门户已激活" : "门户未激活"}`
+          : "首次验证码登录后会自动创建创作者工作台记录。",
         completed: hasParticipant,
         tone: hasParticipant ? "success" : "info",
       },
@@ -120,19 +120,35 @@ function resolveRecommendation(input: {
   participant: ApplicationDetail["participant"];
 }) {
   if (input.participant) {
-    if (!input.participant.activatedAt) {
-      return "该报名已转入参与者，建议直接发送门户提醒邮件，引导对方首次登录激活。";
+    if (input.participant.status === "withdrawn") {
+      return "该创作者资格已撤回。建议仅保留记录，不再继续推进本期动作。";
     }
 
-    return "该报名已进入参与者流程。后续维护建议转到参与者详情页继续处理。";
+    if (input.participant.status === "approved" || input.participant.status === "completed") {
+      if (!input.participant.activatedAt) {
+        return "该创作者资格已批准，建议发送通过提醒邮件，说明后续已解锁正式动作。";
+      }
+
+      return "该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。";
+    }
+
+    if (input.hasAuthUser && input.hasProfile) {
+      return "入口账号、联系资料与工作台已具备，可继续观察作品准备情况，并在合适时点开放参与资格。";
+    }
+
+    if (input.hasAuthUser) {
+      return "创作者已进入工作台，但联系资料未完成。建议先补齐资料，再决定是否开放参与资格。";
+    }
+
+    return "工作台记录已存在，但未读取到入口账号信息，需人工核对。";
   }
 
   if (input.hasAuthUser && input.hasProfile) {
-    return "入口账号和联系资料已具备，可直接完成审核并转入参与者。";
+    return "入口账号和联系资料已具备。首次登录后会自动建立工作台，可在确认作品准备情况后开放参与资格。";
   }
 
   if (input.hasAuthUser) {
-    return "已建立入口账号，但联系资料未完成。按当前规则，应先补齐资料后再继续审核；如系历史数据，可人工例外处理。";
+    return "已建立入口账号，但联系资料未完成。建议先补齐资料，再继续审核；如系历史数据，可人工例外处理。";
   }
 
   return "该记录尚未绑定参与者入口账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。";
@@ -142,8 +158,8 @@ function resolveInviteAction(application: ApplicationDetail): ApplicationInviteA
   if (!application.participant) {
     return {
       enabled: false,
-      label: "需先绑定入口账号",
-      reason: "当前还没有参与者入口账号，不能直接发送正式门户提醒。",
+      label: "需先建立工作台",
+      reason: "当前还没有可发送提醒的创作者工作台记录。",
     };
   }
 
@@ -151,21 +167,29 @@ function resolveInviteAction(application: ApplicationDetail): ApplicationInviteA
     return {
       enabled: false,
       label: "当前状态不可发送",
-      reason: "已撤回的参与者不应继续发送门户提醒。",
+      reason: "已撤回的创作者不应继续发送通过提醒。",
+    };
+  }
+
+  if (application.participant.status !== "approved" && application.participant.status !== "completed") {
+    return {
+      enabled: false,
+      label: "尚未开放资格",
+      reason: "只有已批准的创作者才需要发送通过提醒。",
     };
   }
 
   if (application.participant.activatedAt) {
     return {
       enabled: true,
-      label: "补发门户提醒邮件",
-      reason: "该参与者已激活门户，如需提醒可补发入口邮件。",
+      label: "补发通过提醒邮件",
+      reason: "该创作者已进入过工作台，如需再次提醒可补发。",
     };
   }
 
   return {
     enabled: true,
-    label: "发送门户提醒邮件",
-    reason: "参与者记录已创建，但对方还没有完成首次登录激活。",
+    label: "发送通过提醒邮件",
+    reason: "创作者资格已批准，可发送提醒说明后续已解锁的正式动作。",
   };
 }

@@ -57,7 +57,7 @@ export function AdminApplicationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant pb-4">
         <div>
           <h1 className="text-2xl font-headline tracking-tight mb-1">报名审核队列</h1>
-          <p className="text-sm text-on-surface-variant">管理与审核创作者正式报名，并识别未绑入口或待补资料账号。</p>
+          <p className="text-sm text-on-surface-variant">管理与审核创作者正式报名，并识别未绑入口、待补资料或尚未开放资格的账号。</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -148,8 +148,8 @@ export function AdminApplicationsPage() {
                       <ApplicationStatusBadge status={application.status} />
                       <div className="mt-2 text-xs text-on-surface-variant">
                         {application.participantId && application.participantStatus
-                          ? `已转参与者：${participantPortalStatusLabels[application.participantStatus]}`
-                          : "尚未转入参与者"}
+                          ? `工作台：${participantPortalStatusLabels[application.participantStatus]}`
+                          : "尚未建立工作台"}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">

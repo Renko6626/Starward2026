@@ -1,6 +1,6 @@
 import type { PortalMeResponse } from "../../shared/portal";
 
-export type PortalEntryDestination = "/portal" | "/portal/profile" | "/portal/application";
+export type PortalEntryDestination = "/portal" | "/portal/profile" | "/portal/application" | "/portal/project";
 
 export function resolvePortalEntryDestination(state: PortalMeResponse): PortalEntryDestination {
   if (!state.profile) {
@@ -9,6 +9,10 @@ export function resolvePortalEntryDestination(state: PortalMeResponse): PortalEn
 
   if (!state.application) {
     return "/portal/application";
+  }
+
+  if (state.participant?.status === "pending") {
+    return "/portal/project";
   }
 
   return "/portal";

@@ -17,8 +17,6 @@ export type ParticipantAuthRow = {
 
 export type ParticipantLinkResult =
   | { kind: "linked"; participantId: string; activated: boolean }
-  | { kind: "missing" }
-  | { kind: "withdrawn"; participantId: string }
   | { kind: "conflict"; participantId: string };
 
 export function normalizeEmailAddress(value: string) {
@@ -26,7 +24,7 @@ export function normalizeEmailAddress(value: string) {
 }
 
 export function isParticipantPortalEligible(status: ParticipantPortalStatus) {
-  return status === "invited" || status === "active" || status === "completed";
+  return status === "approved" || status === "completed";
 }
 
 export async function getParticipantByInviteEmail(db: D1Database, email: string) {
@@ -93,41 +91,91 @@ export async function getParticipantByUserId(db: D1Database, userId: string) {
     .first<ParticipantAuthRow>();
 }
 
-export async function linkParticipantToAuthUser(
+export async function ensureParticipantForAuthUser(
   db: D1Database,
   input: {
     email: string;
     userId: string;
+    displayName?: string | null;
   },
 ): Promise<ParticipantLinkResult> {
-  const participant = await getParticipantByInviteEmail(db, input.email);
+  const participant =
+    (await getParticipantByUserId(db, input.userId)) ??
+    (await getParticipantByInviteEmail(db, input.email));
 
-  if (!participant) {
-    return { kind: "missing" };
-  }
-
-  if (participant.status === "withdrawn") {
-    return { kind: "withdrawn", participantId: participant.id };
-  }
-
-  if (participant.user_id && participant.user_id !== input.userId) {
+  if (participant?.user_id && participant.user_id !== input.userId) {
     return { kind: "conflict", participantId: participant.id };
   }
 
   const now = nowIso();
+  const normalizedEmail = normalizeEmailAddress(input.email);
+  const displayName = resolveCreatorDisplayName(input.displayName, normalizedEmail);
+
+  if (!participant) {
+    const participantId = createPrefixedId("part");
+
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO participants (
+            id,
+            user_id,
+            invite_email,
+            display_name,
+            contact_handle,
+            status,
+            invited_at,
+            activated_at,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, NULL, 'pending', NULL, ?, ?, ?)`,
+        )
+        .bind(participantId, input.userId, normalizedEmail, displayName, now, now, now),
+      db
+        .prepare(
+          `INSERT INTO participant_events (
+            id,
+            participant_id,
+            actor_type,
+            actor_id,
+            event_type,
+            target_type,
+            target_id,
+            payload_json,
+            created_at
+          ) VALUES (?, ?, 'system', ?, 'portal_activated', 'participant', ?, ?, ?)`,
+        )
+        .bind(
+          createPrefixedId("pevt"),
+          participantId,
+          input.userId,
+          participantId,
+          JSON.stringify({
+            email: normalizedEmail,
+            activatedAt: now,
+          }),
+          now,
+        ),
+    ]);
+
+    return {
+      kind: "linked",
+      participantId,
+      activated: true,
+    };
+  }
+
   const activated = !participant.activated_at || !participant.user_id;
-  const nextStatus = participant.status === "invited" ? "active" : participant.status;
   const statements: D1PreparedStatement[] = [
     db
       .prepare(
         `UPDATE participants
          SET user_id = COALESCE(user_id, ?),
-             status = ?,
              activated_at = COALESCE(activated_at, ?),
              updated_at = ?
          WHERE id = ?`,
       )
-      .bind(input.userId, nextStatus, now, now, participant.id),
+      .bind(input.userId, now, now, participant.id),
   ];
 
   if (activated) {
@@ -152,8 +200,8 @@ export async function linkParticipantToAuthUser(
           input.userId,
           participant.id,
           JSON.stringify({
-            email: normalizeEmailAddress(input.email),
-            nextStatus,
+            email: normalizedEmail,
+            activatedAt: now,
           }),
           now,
         ),
@@ -167,4 +215,15 @@ export async function linkParticipantToAuthUser(
     participantId: participant.id,
     activated,
   };
+}
+
+function resolveCreatorDisplayName(displayName: string | null | undefined, email: string) {
+  const trimmedDisplayName = displayName?.trim();
+
+  if (trimmedDisplayName) {
+    return trimmedDisplayName;
+  }
+
+  const localPart = email.split("@")[0]?.trim();
+  return localPart || "参与者";
 }

@@ -115,7 +115,7 @@ describe("buildAdminApplicationFilterCounts", () => {
         authUserEmail: "ready@example.com",
         hasPortalProfile: true,
         participantId: "part_1",
-        participantStatus: "invited",
+        participantStatus: "approved",
       }),
     ];
 

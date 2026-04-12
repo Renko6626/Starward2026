@@ -547,7 +547,7 @@ export async function releaseParticipantSegment(
 }
 
 function canParticipantManageSegments(status: ParticipantAuthRow["status"]) {
-  return status === "invited" || status === "active";
+  return status === "approved";
 }
 
 function isSegmentAvailable(segment: SegmentRow) {

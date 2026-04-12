@@ -6,8 +6,40 @@ export function resolveParticipantActionEligibility(
   if (!participant) {
     return {
       ok: false as const,
+      code: "portal_creator_missing",
+      message: "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+    };
+  }
+
+  if (participant.status === "pending") {
+    return {
+      ok: false as const,
       code: "portal_pending_review",
-      message: "当前账号已登录，但尚未获得参与资格。请先补充资料并等待主催审核。",
+      message: "当前账号已进入创作者工作台，但参与资格仍在审核中，暂时不能操作时间段或其他已放行动作。",
+    };
+  }
+
+  if (participant.status === "withdrawn") {
+    return {
+      ok: false as const,
+      code: "portal_participant_withdrawn",
+      message: "你的参与资格已被撤回。如需恢复，请联系主催。",
+    };
+  }
+
+  return {
+    ok: true as const,
+  };
+}
+
+export function resolveProjectWorkspaceEligibility(
+  participant: { status: ParticipantPortalStatus } | null,
+) {
+  if (!participant) {
+    return {
+      ok: false as const,
+      code: "portal_creator_missing",
+      message: "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
     };
   }
 

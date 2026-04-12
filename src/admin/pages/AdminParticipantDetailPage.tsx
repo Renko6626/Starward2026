@@ -21,7 +21,7 @@ type DetailState =
 const initialForm: UpdateParticipantInput = {
   displayName: "",
   contactHandle: "",
-  status: "invited",
+  status: "approved",
 };
 
 export function AdminParticipantDetailPage() {
@@ -81,7 +81,7 @@ export function AdminParticipantDetailPage() {
       });
       setMessage(
         payload.participant.status !== requestedStatus
-          ? `已保存参与者设置。该账号已激活门户，状态保持为${adminParticipantStatusLabels[payload.participant.status]}。`
+          ? `已保存参与者设置。当前参与资格为${adminParticipantStatusLabels[payload.participant.status]}。`
           : "已保存参与者设置。",
       );
     } catch (error) {
@@ -114,7 +114,7 @@ export function AdminParticipantDetailPage() {
       });
       setMessage(payload.message);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "发送门户提醒邮件失败。");
+      setMessage(error instanceof Error ? error.message : "发送通过提醒邮件失败。");
     } finally {
       setSendingInvite(false);
     }
@@ -156,10 +156,11 @@ export function AdminParticipantDetailPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <DetailItem label="显示名" value={participant.displayName} />
-              <DetailItem label="邀请邮箱" value={participant.inviteEmail} />
+              <DetailItem label="登录邮箱" value={participant.inviteEmail} />
               <DetailItem label="联系方式备注" value={participant.contactHandle ?? "未填写"} />
               <DetailItem label="门户用户 ID" value={participant.userId ?? "尚未绑定"} />
-              <DetailItem label="转入时间" value={formatDateTime(participant.invitedAt)} />
+              <DetailItem label="通过时间" value={formatDateTime(participant.invitedAt)} />
+              <DetailItem label="门户激活" value={participant.activatedAt ? "已激活" : "未激活"} />
               <DetailItem label="激活时间" value={formatDateTime(participant.activatedAt)} />
               <DetailItem label="最近更新时间" value={formatDateTime(participant.updatedAt)} />
               <DetailItem
@@ -183,13 +184,19 @@ export function AdminParticipantDetailPage() {
                 value="当前项目只有一套参与者入口。提醒邮件不会创建第二套账号体系，而是提醒对方继续使用当前邮箱通过 /portal/login 收验证码进入。"
               />
               <DetailBlock
+                title="资格说明"
+                value="验证码登录会自动建立创作者工作台；参与资格是否开放，由这里的状态字段控制。只有已批准状态才应进入时间段等正式动作。"
+              />
+              <DetailBlock
                 title="维护建议"
                 value={
                   participant.status === "withdrawn"
-                    ? "该参与者已撤回。可以保留记录用于追踪，但不建议继续发送入口提醒。"
+                    ? "该创作者已撤回。可以保留记录用于追踪，但不建议继续发送通过提醒。"
                     : participant.currentSegmentCode
                       ? `当前已持有 ${participant.currentSegmentCode}，如需改坑或释放，应转到时间段页处理。`
-                      : "当前尚未持有时间段，可在时间段页完成认领或人工分配。"
+                      : participant.status === "pending"
+                        ? "当前仍处于待审核状态，可继续观察作品与资料准备情况。"
+                        : "当前尚未持有时间段，可在时间段页完成认领或人工分配。"
                 }
               />
             </div>
@@ -229,7 +236,7 @@ export function AdminParticipantDetailPage() {
                 />
               </FormField>
 
-              <FormField label="参与状态">
+              <FormField label="参与资格">
                 <select
                   className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={saving || sendingInvite}
@@ -252,7 +259,7 @@ export function AdminParticipantDetailPage() {
 
             <div className="mt-6 pt-4 border-t border-outline-variant space-y-3">
               <SidebarNotice>
-                如果该账号已经完成首次登录，服务端可能会拒绝部分状态回退；此时以后端真实状态为准。
+                资格状态与门户激活已分离。是否完成门户激活，请以“门户激活 / 激活时间”字段为准。
               </SidebarNotice>
               {message ? <SidebarNotice tone="success">{message}</SidebarNotice> : null}
 
@@ -267,11 +274,15 @@ export function AdminParticipantDetailPage() {
 
               <button
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface-variant text-on-surface border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={saving || sendingInvite || participant.status === "withdrawn"}
+                disabled={
+                  saving ||
+                  sendingInvite ||
+                  (participant.status !== "approved" && participant.status !== "completed")
+                }
                 onClick={() => void handleSendInvite()}
                 type="button"
               >
-                {sendingInvite ? "发送中..." : "发送门户提醒邮件"}
+                {sendingInvite ? "发送中..." : "发送通过提醒邮件"}
               </button>
             </div>
           </section>
@@ -299,7 +310,7 @@ function ParticipantStatusBadge({
 }: {
   status: UpdateParticipantInput["status"];
 }) {
-  if (status === "active" || status === "completed") {
+  if (status === "approved" || status === "completed") {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-medium">
         <CheckCircle2 className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}

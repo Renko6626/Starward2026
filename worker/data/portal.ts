@@ -7,24 +7,15 @@ import type {
   PortalHistoryResponse,
   PortalMeResponse,
   PortalParticipantSummary,
-  PortalProjectDraftSummary,
   PortalSegmentSummary,
 } from "../../src/shared/portal";
 import type { EventWindowSummary } from "../../src/shared/windows";
 import { buildPortalEventActorLabel, buildPortalEventLabel } from "../lib/portal-history";
 import { getPortalApplicationByUserId } from "./applications";
+import { getPortalProjectDraftDetail } from "./project-drafts";
 import type { ParticipantAuthRow } from "./participants";
 import { getPortalProfileByUserId } from "./portal-profiles";
 import { getCurrentSegmentForParticipant } from "./segments";
-
-type PortalDraftRow = {
-  id: string;
-  preview_status: PortalProjectDraftSummary["previewStatus"];
-  review_status: PortalProjectDraftSummary["reviewStatus"];
-  preview_title: string | null;
-  public_author_name: string | null;
-  updated_at: string;
-};
 
 type ParticipantEventRow = {
   id: string;
@@ -103,21 +94,7 @@ export async function getPortalDashboard(
     };
   }
 
-  const projectDraft = await db
-    .prepare(
-      `SELECT
-        id,
-        preview_status,
-        review_status,
-        preview_title,
-        public_author_name,
-        updated_at
-      FROM project_drafts
-      WHERE participant_id = ?
-      LIMIT 1`,
-    )
-    .bind(input.participant.id)
-    .first<PortalDraftRow>();
+  const projectDraft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   const recentEvents = await db
     .prepare(participantEventSelectSql + " WHERE participant_id = ? ORDER BY created_at DESC LIMIT ?")
@@ -136,11 +113,11 @@ export async function getPortalDashboard(
     projectDraft: projectDraft
       ? {
           id: projectDraft.id,
-          previewStatus: projectDraft.preview_status,
-          reviewStatus: projectDraft.review_status,
-          previewTitle: projectDraft.preview_title,
-          publicAuthorName: projectDraft.public_author_name,
-          updatedAt: projectDraft.updated_at,
+          previewStatus: projectDraft.previewStatus,
+          reviewStatus: projectDraft.reviewStatus,
+          previewTitle: projectDraft.previewTitle,
+          publicAuthorName: projectDraft.publicAuthorName,
+          updatedAt: projectDraft.updatedAt,
         }
       : null,
     windows: input.windows,

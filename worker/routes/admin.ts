@@ -186,7 +186,7 @@ adminApi.post("/participants/:participantId/invite", async (c) => {
   }
 
   if (!isParticipantPortalEligible(participant.status)) {
-    return jsonError(c, 409, "participant_portal_disabled", "当前参与者状态不可发送门户入口提醒。");
+    return jsonError(c, 409, "participant_portal_disabled", "当前参与者状态不可发送通过提醒邮件。");
   }
 
   const portalLoginUrl = new URL("/portal/login", c.req.url).toString();
@@ -209,7 +209,7 @@ adminApi.post("/participants/:participantId/invite", async (c) => {
 
   const response: AdminParticipantInviteResponse = {
     ok: true,
-    message: `已向 ${participant.inviteEmail} 发送参与者门户提醒邮件。`,
+    message: `已向 ${participant.inviteEmail} 发送参与资格通过提醒邮件。`,
     participant: refreshedParticipant,
   };
 
