@@ -49,10 +49,20 @@ describe("resolveParticipantActionEligibility", () => {
 });
 
 describe("resolveProjectWorkspaceEligibility", () => {
-  it("allows pending creators to continue into the project workspace", async () => {
+  it("blocks pending creators from the project workspace until approved", async () => {
     const { resolveProjectWorkspaceEligibility } = await import("./portal-access");
 
     expect(resolveProjectWorkspaceEligibility({ status: "pending" })).toEqual({
+      ok: false,
+      code: "portal_pending_review",
+      message: "当前账号已进入创作者工作台，但参与资格仍在审核中，暂时不能操作时间段或其他已放行动作。",
+    });
+  });
+
+  it("allows approved creators to continue into the project workspace", async () => {
+    const { resolveProjectWorkspaceEligibility } = await import("./portal-access");
+
+    expect(resolveProjectWorkspaceEligibility({ status: "approved" })).toEqual({
       ok: true,
     });
   });

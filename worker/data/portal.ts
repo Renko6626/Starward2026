@@ -61,7 +61,7 @@ export async function getPortalMe(
   },
 ): Promise<PortalMeResponse> {
   const profile = await getPortalProfileByUserId(db, input.user.id);
-  const application = await getPortalApplicationByUserId(db, input.user.id, input.user.email);
+  const application = await getPortalApplicationByUserId(db, input.user.id);
 
   return {
     user: input.user,

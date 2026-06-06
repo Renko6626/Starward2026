@@ -7,8 +7,10 @@ export type AppBindings = Env & {
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   BETTER_AUTH_TRUSTED_ORIGINS?: string;
+  ALLOW_LOCAL_DEV_ORIGINS?: string;
   CLOUDFLARE_ACCESS_TEAM_DOMAIN?: string;
   CLOUDFLARE_ACCESS_POLICY_AUD?: string;
+  ALLOW_LOCAL_ADMIN_BYPASS?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_FROM_NAME?: string;

@@ -37,6 +37,43 @@ export type SegmentMutationResult =
       message: string;
     };
 
+/**
+ * Statements that administratively release any segment a participant currently
+ * holds and detach it from their project draft. Used when a participant loses
+ * eligibility (application rejected/withdrawn, or admin downgrade) so a held
+ * slot is never left owned by an ineligible participant who can no longer
+ * release it themselves. Safe to include even when no segment is held — the
+ * guarded predicates simply match zero rows.
+ */
+export function buildParticipantSegmentReleaseStatements(
+  db: D1Database,
+  participantId: string,
+  now: string,
+): D1PreparedStatement[] {
+  return [
+    db
+      .prepare(
+        `UPDATE schedule_segments
+         SET current_participant_id = NULL,
+             status = 'released',
+             released_at = ?,
+             updated_at = ?
+         WHERE current_participant_id = ?
+           AND status = 'held'`,
+      )
+      .bind(now, now, participantId),
+    db
+      .prepare(
+        `UPDATE project_drafts
+         SET segment_id = NULL,
+             updated_at = ?
+         WHERE participant_id = ?
+           AND segment_id IS NOT NULL`,
+      )
+      .bind(now, participantId),
+  ];
+}
+
 export async function getCurrentSegmentForParticipant(
   db: D1Database,
   participantId: string,

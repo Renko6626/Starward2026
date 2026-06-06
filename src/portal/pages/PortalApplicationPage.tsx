@@ -1,11 +1,13 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ApiError, requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
-import { normalizeApplicationInput } from "../../app/lib/apply-form";
+import { getTurnstileSiteKey, normalizeApplicationInput } from "../../app/lib/apply-form";
+import { loadTurnstileApi } from "../../app/lib/turnstile";
 import {
   applicationInterestFormatLabels,
   applicationStatusLabels,
+  type ApplicationIntakeResponse,
   type UpsertPortalApplicationInput,
   upsertPortalApplicationInputSchema,
 } from "../../shared/applications";
@@ -41,6 +43,64 @@ export function PortalApplicationPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileEnabled, setTurnstileEnabled] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+
+  const turnstileSiteKey = getTurnstileSiteKey(import.meta.env);
+  const turnstileRequired = turnstileEnabled && Boolean(turnstileSiteKey);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void requestJson<ApplicationIntakeResponse>("/api/applications/intake")
+      .then((response) => {
+        if (!cancelled) {
+          setTurnstileEnabled(response.turnstileEnabled);
+        }
+      })
+      .catch(() => {
+        // Intake failures should not block the form; Turnstile stays disabled.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!turnstileRequired || !turnstileSiteKey || !pageState || !turnstileContainerRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    let widgetId: string | undefined;
+    const container = turnstileContainerRef.current;
+
+    void loadTurnstileApi()
+      .then((api) => {
+        if (cancelled || !container) {
+          return;
+        }
+
+        widgetId = api.render(container, {
+          sitekey: turnstileSiteKey,
+          callback: (token) => setTurnstileToken(token),
+          "expired-callback": () => setTurnstileToken(null),
+          "error-callback": () => setTurnstileToken(null),
+        });
+      })
+      .catch(() => {
+        // If the widget fails to load, leave the token empty so submit is blocked.
+      });
+
+    return () => {
+      cancelled = true;
+      if (widgetId && window.turnstile?.remove) {
+        window.turnstile.remove(widgetId);
+      }
+    };
+  }, [turnstileRequired, turnstileSiteKey, pageState]);
 
   useEffect(() => {
     if (!sessionQuery.isPending && !sessionQuery.data) {
@@ -95,13 +155,18 @@ export function PortalApplicationPage() {
 
     const normalized = normalizeApplicationInput({
       ...form,
-      turnstileToken: undefined,
+      turnstileToken: turnstileToken ?? undefined,
     });
-    const { turnstileToken: _unused, ...payload } = normalized;
+    const { turnstileToken: token, ...payload } = normalized;
     const parsed = upsertPortalApplicationInputSchema.safeParse(payload);
 
     if (!parsed.success) {
       setError("请先补全必填字段，并检查邮箱或链接格式。");
+      return;
+    }
+
+    if (turnstileRequired && !token) {
+      setError("请先完成人机验证后再提交。");
       return;
     }
 
@@ -113,7 +178,7 @@ export function PortalApplicationPage() {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify(token ? { ...parsed.data, turnstileToken: token } : parsed.data),
       });
 
       if (pageState.editState === "create") {
@@ -129,6 +194,11 @@ export function PortalApplicationPage() {
       setError(caught instanceof Error ? caught.message : "报名资料保存失败。");
     } finally {
       setIsSaving(false);
+      if (turnstileRequired) {
+        // Turnstile tokens are single-use; clear and reset for any follow-up submit.
+        setTurnstileToken(null);
+        window.turnstile?.reset();
+      }
     }
   }
 
@@ -259,10 +329,16 @@ export function PortalApplicationPage() {
           />
         </Field>
 
+        {turnstileRequired ? (
+          <Field label="人机验证" hint="提交前请完成下方的人机验证。">
+            <div ref={turnstileContainerRef} />
+          </Field>
+        ) : null}
+
         <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
           <button
             className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            disabled={!canSubmit || isSaving}
+            disabled={!canSubmit || isSaving || (turnstileRequired && !turnstileToken)}
             type="submit"
           >
             {isSaving ? "保存中..." : pageState.editState === "create" ? "提交报名" : "更新报名"}

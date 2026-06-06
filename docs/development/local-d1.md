@@ -92,14 +92,16 @@ npm run dev
 
 ## 6. Admin Smoke Note
 
-本地管理员接口仍沿用现有 localhost bypass 规则：
+本地管理员 bypass 默认关闭，必须显式开启：
 
-- `/api/admin/*` 在 localhost 环境下接受 `x-admin-email`
+- 在仓库根目录 `.dev.vars` 中设置 `ALLOW_LOCAL_ADMIN_BYPASS="true"`（可参考 `.dev.vars.example`）
+- 开启后，`/api/admin/*` 仅在 loopback host（localhost / 127.0.0.1 / [::1]）下接受 `x-admin-email`
+- 该开关只应出现在本地 `.dev.vars`（已 gitignore），不得进入 staging / production 配置；缺少开关时 hostname 为 localhost 也不再放行
 
 因此：
 
 - 数据问题由本地 seed 解决
-- 身份问题仍由本地 admin bypass 解决
+- 身份问题由本地 admin bypass 解决（需先开启 `ALLOW_LOCAL_ADMIN_BYPASS`）
 
 ## 7. Operational Notes
 

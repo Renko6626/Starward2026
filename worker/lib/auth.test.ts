@@ -44,9 +44,10 @@ describe("buildPortalTrustedOrigins", () => {
     ]);
   });
 
-  it("trusts the current local development origin when the request itself is local", async () => {
+  it("trusts the current local development origin only when local dev origins are explicitly enabled", async () => {
     const trustedOrigins = buildPortalTrustedOrigins({
       BETTER_AUTH_URL: "http://127.0.0.1:4173",
+      ALLOW_LOCAL_DEV_ORIGINS: "true",
     });
 
     const request = new Request("http://localhost:5173/api/auth/email-otp/send-verification-otp", {
@@ -58,6 +59,23 @@ describe("buildPortalTrustedOrigins", () => {
     await expect(trustedOrigins(request)).resolves.toEqual([
       "http://127.0.0.1:4173",
       "http://localhost:5173",
+    ]);
+  });
+
+  it("does not auto-trust local/private-network request origins by default", async () => {
+    const trustedOrigins = buildPortalTrustedOrigins({
+      BETTER_AUTH_URL: "https://hifuu-staging.ayafeed.com",
+    });
+
+    const request = new Request("https://hifuu-staging.ayafeed.com/api/auth/email-otp/send-verification-otp", {
+      headers: {
+        origin: "http://192.168.1.50:5173",
+        referer: "http://localhost:5173/",
+      },
+    });
+
+    await expect(trustedOrigins(request)).resolves.toEqual([
+      "https://hifuu-staging.ayafeed.com",
     ]);
   });
 

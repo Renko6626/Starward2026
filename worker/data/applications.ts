@@ -11,6 +11,7 @@ import type { PortalApplicationDetail } from "../../src/shared/portal";
 import { resolveApplicationDisplayName } from "../../src/shared/application-identity";
 import { createPrefixedId } from "../lib/ids";
 import { resolvePortalApplicationMutation } from "../lib/portal-application";
+import { buildParticipantSegmentReleaseStatements } from "./segments";
 import { normalizeOptionalText } from "../lib/strings";
 import { nowIso } from "../lib/time";
 
@@ -76,6 +77,22 @@ type AuthUserEmailRow = {
   email: string;
 };
 
+export class DuplicateApplicationError extends Error {
+  constructor(message = "该账号已存在报名。") {
+    super(message);
+    this.name = "DuplicateApplicationError";
+  }
+}
+
+function isUniqueConstraintError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return message.includes("unique constraint failed") || message.includes("uq_applications_user_id");
+}
+
 export async function createApplication(
   db: D1Database,
   input: CreateApplicationInput,
@@ -84,69 +101,81 @@ export async function createApplication(
   const id = createPrefixedId("app");
   const createdAt = nowIso();
 
-  await db
-    .prepare(
-      `INSERT INTO applications (
+  try {
+    await db
+      .prepare(
+        `INSERT INTO applications (
+          id,
+          user_id,
+          display_name,
+          contact_email,
+          contact_handle,
+          interest_format,
+          intro_text,
+          portfolio_url,
+          message_to_hosts,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+      )
+      .bind(
         id,
-        user_id,
-        display_name,
-        contact_email,
-        contact_handle,
-        interest_format,
-        intro_text,
-        portfolio_url,
-        message_to_hosts,
-        status,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-    )
-    .bind(
-      id,
-      options?.userId ?? null,
-      input.displayName?.trim() ?? "",
-      input.contactEmail.trim().toLowerCase(),
-      normalizeOptionalText(input.contactHandle),
-      input.interestFormat,
-      normalizeOptionalText(input.introText),
-      normalizeOptionalText(input.portfolioUrl),
-      normalizeOptionalText(input.messageToHosts),
-      createdAt,
-      createdAt,
-    )
-    .run();
+        options?.userId ?? null,
+        input.displayName?.trim() ?? "",
+        input.contactEmail.trim().toLowerCase(),
+        normalizeOptionalText(input.contactHandle),
+        input.interestFormat,
+        normalizeOptionalText(input.introText),
+        normalizeOptionalText(input.portfolioUrl),
+        normalizeOptionalText(input.messageToHosts),
+        createdAt,
+        createdAt,
+      )
+      .run();
+  } catch (error) {
+    // A concurrent create for the same user races past the existence check and
+    // is rejected by uq_applications_user_id. Surface it as a typed conflict so
+    // callers can return a clean 409 instead of a generic 500.
+    if (isUniqueConstraintError(error)) {
+      throw new DuplicateApplicationError();
+    }
+
+    throw error;
+  }
 
   return id;
 }
 
-export async function getPortalApplicationByUserId(db: D1Database, userId: string, email: string) {
+// Pure read: returns the application linked to this user, or null. It performs
+// no writes, so GET handlers can call it freely without mutating ownership.
+export async function getPortalApplicationByUserId(db: D1Database, userId: string) {
   const linked = await db
     .prepare(portalApplicationSelectSql + " WHERE applications.user_id = ? LIMIT 1")
     .bind(userId)
     .first<PortalApplicationRow>();
 
-  if (linked) {
-    return mapPortalApplicationRow(linked);
-  }
+  return linked ? mapPortalApplicationRow(linked) : null;
+}
 
+// Explicit write path: claim an unlinked application whose contact email matches
+// the caller's verified session email. Only ever invoked from mutation flows.
+async function claimUnlinkedApplicationByEmail(db: D1Database, userId: string, email: string) {
   const candidate = await db
     .prepare(
-      portalApplicationSelectSql +
-        " WHERE applications.user_id IS NULL AND lower(applications.contact_email) = lower(?) ORDER BY applications.created_at DESC LIMIT 1",
+      "SELECT id FROM applications WHERE user_id IS NULL AND lower(contact_email) = lower(?) ORDER BY created_at DESC LIMIT 1",
     )
     .bind(email.trim().toLowerCase())
-    .first<PortalApplicationRow>();
+    .first<{ id: string }>();
 
   if (!candidate) {
-    return null;
+    return;
   }
 
   await db
-    .prepare("UPDATE applications SET user_id = ?, updated_at = ? WHERE id = ?")
+    .prepare("UPDATE applications SET user_id = ?, updated_at = ? WHERE id = ? AND user_id IS NULL")
     .bind(userId, nowIso(), candidate.id)
     .run();
-
-  return getPortalApplicationByUserId(db, userId, email);
 }
 
 export async function upsertPortalApplication(
@@ -157,7 +186,8 @@ export async function upsertPortalApplication(
     data: UpsertPortalApplicationInput;
   },
 ) {
-  const existing = await getPortalApplicationByUserId(db, input.userId, input.authEmail);
+  await claimUnlinkedApplicationByEmail(db, input.userId, input.authEmail);
+  const existing = await getPortalApplicationByUserId(db, input.userId);
   const mutation = resolvePortalApplicationMutation(existing?.status ?? null, true);
 
   if (!mutation.editable) {
@@ -171,18 +201,33 @@ export async function upsertPortalApplication(
   }
 
   if (mutation.mode === "create") {
-    const applicationId = await createApplication(
-      db,
-      {
-        ...input.data,
-        turnstileToken: undefined,
-      },
-      {
-        userId: input.userId,
-      },
-    );
+    let applicationId: string;
 
-    const created = await getPortalApplicationByUserId(db, input.userId, input.authEmail);
+    try {
+      applicationId = await createApplication(
+        db,
+        {
+          ...input.data,
+          turnstileToken: undefined,
+        },
+        {
+          userId: input.userId,
+        },
+      );
+    } catch (error) {
+      if (error instanceof DuplicateApplicationError) {
+        return {
+          ok: false as const,
+          code: "portal_application_conflict",
+          status: 409,
+          message: "该账号已存在报名，请刷新后重试。",
+        };
+      }
+
+      throw error;
+    }
+
+    const created = await getPortalApplicationByUserId(db, input.userId);
 
     if (!created) {
       return {
@@ -230,7 +275,7 @@ export async function upsertPortalApplication(
     )
     .run();
 
-  const updated = await getPortalApplicationByUserId(db, input.userId, input.authEmail);
+  const updated = await getPortalApplicationByUserId(db, input.userId);
 
   if (!updated) {
     return {
@@ -388,7 +433,9 @@ export async function reviewApplication(
   const participantPlan =
     input.status === "approved"
       ? await buildParticipantSyncPlan(db, existing, reviewedAt)
-      : { participantId: null, statements: [] as D1PreparedStatement[] };
+      : input.status === "rejected" || input.status === "withdrawn"
+        ? await buildParticipantDemotionPlan(db, existing, reviewedAt)
+        : { participantId: null, statements: [] as D1PreparedStatement[] };
   const statements = [
     ...participantPlan.statements,
     db
@@ -484,9 +531,18 @@ async function buildParticipantSyncPlan(
     };
   }
 
+  // Adopt a participant by email only when it is unclaimed or already belongs to
+  // this application's user. Without this guard an anonymous application (or one
+  // owned by another user) could approve a participant that belongs to whoever
+  // happens to share the contact email.
   const existingByEmail = await db
-    .prepare(`SELECT id FROM participants WHERE lower(invite_email) = lower(?)`)
-    .bind(email)
+    .prepare(
+      `SELECT id
+       FROM participants
+       WHERE lower(invite_email) = lower(?)
+         AND (user_id IS NULL OR user_id = ?)`,
+    )
+    .bind(email, application.user_id)
     .first<ParticipantRow>();
 
   if (existingByEmail) {
@@ -554,6 +610,51 @@ async function buildParticipantSyncPlan(
           now,
           now,
         ),
+    ],
+  };
+}
+
+async function buildParticipantDemotionPlan(
+  db: D1Database,
+  application: {
+    id: string;
+    user_id: string | null;
+    display_name: string;
+    contact_email: string;
+    contact_handle: string | null;
+  },
+  now: string,
+) {
+  // Only follow the strong links (application_id / user_id). Matching by
+  // invite_email here would let one application's review revoke a different
+  // user who merely shares a contact email, mirroring the approval-side risk.
+  const participant = await db
+    .prepare(
+      `SELECT id
+       FROM participants
+       WHERE application_id = ?
+          OR (? IS NOT NULL AND user_id = ?)
+       LIMIT 1`,
+    )
+    .bind(application.id, application.user_id, application.user_id)
+    .first<ParticipantRow>();
+
+  if (!participant) {
+    return { participantId: null, statements: [] as D1PreparedStatement[] };
+  }
+
+  return {
+    participantId: null,
+    statements: [
+      db
+        .prepare(
+          `UPDATE participants
+           SET status = 'withdrawn',
+               updated_at = ?
+           WHERE id = ?`,
+        )
+        .bind(now, participant.id),
+      ...buildParticipantSegmentReleaseStatements(db, participant.id, now),
     ],
   };
 }

@@ -219,7 +219,12 @@ export function buildPortalSessionOptions() {
   };
 }
 
-export function buildPortalTrustedOrigins(env: Pick<AppBindings, "BETTER_AUTH_TRUSTED_ORIGINS" | "BETTER_AUTH_URL">) {
+export function buildPortalTrustedOrigins(
+  env: Pick<
+    AppBindings,
+    "BETTER_AUTH_TRUSTED_ORIGINS" | "BETTER_AUTH_URL" | "ALLOW_LOCAL_DEV_ORIGINS"
+  >,
+) {
   const configuredOrigins = new Set<string>();
   const baseUrl = normalizeBaseUrl(env.BETTER_AUTH_URL);
 
@@ -231,10 +236,17 @@ export function buildPortalTrustedOrigins(env: Pick<AppBindings, "BETTER_AUTH_TR
     configuredOrigins.add(origin);
   }
 
+  // Dynamically trusting loopback/private-network request origins is a
+  // development-only convenience. It must stay opt-in: enabling it in a
+  // deployed environment would let any page served from the victim's LAN pass
+  // Better Auth's origin/CSRF check. Production should instead list its origins
+  // via BETTER_AUTH_TRUSTED_ORIGINS.
+  const allowLocalDevOrigins = isLocalDevOriginsEnabled(env.ALLOW_LOCAL_DEV_ORIGINS);
+
   return async (request?: Request) => {
     const trustedOrigins = new Set(configuredOrigins);
 
-    if (!request) {
+    if (!request || !allowLocalDevOrigins) {
       return [...trustedOrigins];
     }
 
@@ -252,6 +264,10 @@ export function buildPortalTrustedOrigins(env: Pick<AppBindings, "BETTER_AUTH_TR
 
     return [...trustedOrigins];
   };
+}
+
+function isLocalDevOriginsEnabled(value: string | undefined) {
+  return value?.trim().toLowerCase() === "true";
 }
 
 export function createAuth(env: AppBindings) {

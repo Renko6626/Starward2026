@@ -214,6 +214,18 @@ export async function updatePortalProjectPreview(
     return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
   }
 
+  // An approved preview is terminal for the participant: only an admin requesting
+  // changes (status -> changes_requested) reopens it. Without this guard a save
+  // silently recomputes the status back to 'draft', un-approving admin-approved
+  // work with no window gating.
+  if (existing.preview_status === "approved") {
+    return projectDraftMutationError(
+      409,
+      "preview_already_approved",
+      "预告资料当前已通过，暂不可修改，如需调整请联系主催。",
+    );
+  }
+
   const nextPreviewTitle = normalizeOptionalText(input.data.previewTitle);
   const nextPreviewSummary = normalizeOptionalText(input.data.previewSummary);
   const nextPublicAuthorName = normalizeOptionalText(input.data.publicAuthorName);
@@ -385,6 +397,16 @@ export async function updatePortalProjectReview(
 
   if (!existing) {
     return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+  }
+
+  // See updatePortalProjectPreview: an approved review must not be silently
+  // reverted to 'draft' through the unguarded save path.
+  if (existing.review_status === "approved") {
+    return projectDraftMutationError(
+      409,
+      "review_already_approved",
+      "审查说明当前已通过，暂不可修改，如需调整请联系主催。",
+    );
   }
 
   const nextContentNote = normalizeOptionalText(input.data.contentNote);

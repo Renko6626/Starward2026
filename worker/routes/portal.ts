@@ -47,6 +47,7 @@ import {
   releaseParticipantSegment,
 } from "../data/segments";
 import type { ParticipantAuthRow } from "../data/participants";
+import { enforceApplicationSubmissionGuards } from "../lib/application-submission-guards";
 import { requireParticipantSession } from "../lib/auth";
 import { getRequiredDb, jsonError } from "../lib/http";
 import {
@@ -136,11 +137,7 @@ portalApi.get("/profile", async (c) => {
     user: mapPortalAuthUser(access.session.user),
     participant: access.participant ? mapPortalParticipant(access.participant) : null,
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(
-      access.db,
-      access.session.user.id,
-      access.session.user.email,
-    ),
+    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
   };
 
   return c.json(response);
@@ -185,11 +182,7 @@ portalApi.get("/application", async (c) => {
     return access.response;
   }
 
-  const application = await getPortalApplicationByUserId(
-    access.db,
-    access.session.user.id,
-    access.session.user.email,
-  );
+  const application = await getPortalApplicationByUserId(access.db, access.session.user.id);
   const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
   const windows = await listEventWindows(access.db);
   const applicationWindow = getWindowOrFallback(windows, "application_open");
@@ -220,11 +213,7 @@ portalApi.post("/application", async (c) => {
     return access.response;
   }
 
-  const existing = await getPortalApplicationByUserId(
-    access.db,
-    access.session.user.id,
-    access.session.user.email,
-  );
+  const existing = await getPortalApplicationByUserId(access.db, access.session.user.id);
   const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
@@ -258,6 +247,15 @@ portalApi.post("/application", async (c) => {
     return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
   }
 
+  const guard = await enforceApplicationSubmissionGuards(c, {
+    contactEmail: parsed.data.contactEmail,
+    turnstileToken: readTurnstileToken(body),
+  });
+
+  if (!guard.ok) {
+    return jsonError(c, guard.status, guard.code, guard.message);
+  }
+
   const result = await upsertPortalApplication(access.db, {
     userId: access.session.user.id,
     authEmail: access.session.user.email,
@@ -284,11 +282,7 @@ portalApi.patch("/application", async (c) => {
     return access.response;
   }
 
-  const existing = await getPortalApplicationByUserId(
-    access.db,
-    access.session.user.id,
-    access.session.user.email,
-  );
+  const existing = await getPortalApplicationByUserId(access.db, access.session.user.id);
   const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
@@ -320,6 +314,15 @@ portalApi.patch("/application", async (c) => {
 
   if (!parsed.success) {
     return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
+  }
+
+  const guard = await enforceApplicationSubmissionGuards(c, {
+    contactEmail: parsed.data.contactEmail,
+    turnstileToken: readTurnstileToken(body),
+  });
+
+  if (!guard.ok) {
+    return jsonError(c, guard.status, guard.code, guard.message);
   }
 
   const result = await upsertPortalApplication(access.db, {
@@ -357,11 +360,7 @@ const getCurrentSegmentHandler = async (c: AppContext) => {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(
-      access.db,
-      access.session.user.id,
-      access.session.user.email,
-    ),
+    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
     currentSegment: segmentState.currentSegment,
     actions: segmentState.actions,
     windows: segmentState.windows,
@@ -481,11 +480,7 @@ portalApi.get("/project", async (c) => {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(
-      access.db,
-      access.session.user.id,
-      access.session.user.email,
-    ),
+    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
     draft,
     windows,
   };
@@ -623,6 +618,17 @@ portalApi.get("/history", async (c) => {
 });
 
 export { portalApi };
+
+function readTurnstileToken(body: unknown): string | undefined {
+  if (body && typeof body === "object" && "turnstileToken" in body) {
+    const token = (body as { turnstileToken?: unknown }).turnstileToken;
+    if (typeof token === "string" && token.trim().length > 0) {
+      return token.trim();
+    }
+  }
+
+  return undefined;
+}
 
 async function getPortalSessionAccess(c: AppContext): Promise<PortalSessionAccess> {
   const sessionState = await requireParticipantSession(c);

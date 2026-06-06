@@ -45,13 +45,20 @@ export async function requireAdminAccess(c: AppContext) {
 
 export async function resolveAdminIdentity(
   input: {
-    env: Pick<AppBindings, "CLOUDFLARE_ACCESS_POLICY_AUD" | "CLOUDFLARE_ACCESS_TEAM_DOMAIN">;
+    env: Pick<
+      AppBindings,
+      "CLOUDFLARE_ACCESS_POLICY_AUD" | "CLOUDFLARE_ACCESS_TEAM_DOMAIN" | "ALLOW_LOCAL_ADMIN_BYPASS"
+    >;
     headers: Headers;
     requestUrl: string;
   },
   verifyAccessToken: VerifyAdminAccessToken = verifyAdminAccessToken,
 ) {
-  const localBypassIdentity = getLocalAdminBypassIdentity(input.headers, input.requestUrl);
+  const localBypassIdentity = getLocalAdminBypassIdentity(
+    input.env,
+    input.headers,
+    input.requestUrl,
+  );
 
   if (localBypassIdentity) {
     return localBypassIdentity;
@@ -126,12 +133,27 @@ function getAccessJwks(teamDomain: string) {
   return created;
 }
 
-function getLocalAdminBypassIdentity(headers: Headers, requestUrl: string) {
+function getLocalAdminBypassIdentity(
+  env: Pick<AppBindings, "ALLOW_LOCAL_ADMIN_BYPASS">,
+  headers: Headers,
+  requestUrl: string,
+) {
+  // The bypass is a development-only convenience. It requires an explicit
+  // opt-in flag (set only in local wrangler config) AND a loopback host, so a
+  // leaked flag or a rewritten Host header alone cannot unlock admin in prod.
+  if (!isLocalAdminBypassEnabled(env.ALLOW_LOCAL_ADMIN_BYPASS)) {
+    return null;
+  }
+
   if (!isLocalRequest(requestUrl)) {
     return null;
   }
 
   return normalizeIdentityValue(headers.get(LOCAL_ADMIN_BYPASS_HEADER));
+}
+
+function isLocalAdminBypassEnabled(value: string | undefined) {
+  return value?.trim().toLowerCase() === "true";
 }
 
 function isLocalRequest(requestUrl: string) {

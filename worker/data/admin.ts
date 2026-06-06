@@ -13,6 +13,7 @@ import { buildInitialScheduleSegments } from "../lib/schedule-bootstrap";
 import { createPrefixedId } from "../lib/ids";
 import { normalizeOptionalText } from "../lib/strings";
 import { nowIso } from "../lib/time";
+import { buildParticipantSegmentReleaseStatements } from "./segments";
 
 type ParticipantRow = {
   id: string;
@@ -68,11 +69,6 @@ type ActiveScheduleVersionRow = {
 
 type CountRow = {
   count: number;
-};
-
-type SegmentAdminMutationRow = {
-  incoming_released_count: number;
-  target_updated_count: number;
 };
 
 export type BootstrapActiveScheduleSegmentsResult =
@@ -218,7 +214,7 @@ export async function updateParticipant(
 
   const now = nowIso();
 
-  await db.batch([
+  const statements = [
     db
       .prepare(
         `UPDATE participants
@@ -258,7 +254,16 @@ export async function updateParticipant(
         }),
         now,
       ),
-  ]);
+  ];
+
+  // A participant whose status is no longer 'approved' must not keep holding a
+  // schedule segment — they can no longer release it themselves. Release any
+  // held segment (and detach its project draft) in the same atomic batch.
+  if (nextStatus !== "approved") {
+    statements.push(...buildParticipantSegmentReleaseStatements(db, participantId, now));
+  }
+
+  await db.batch(statements);
 
   return getParticipantDetail(db, participantId);
 }
@@ -503,144 +508,172 @@ export async function updateActiveScheduleSegment(
     };
   }
 
-  try {
-    const mutation = await db
-      .prepare(
-        `WITH target_snapshot AS (
-          SELECT id
-          FROM schedule_segments
-          WHERE id = ?1
-            AND schedule_version_id = ?2
-            AND updated_at = ?3
-          LIMIT 1
-        ),
-        incoming_current_segment AS (
-          SELECT id
-          FROM schedule_segments
-          WHERE schedule_version_id = ?2
-            AND current_participant_id = ?4
-            AND status = 'held'
-            AND id != ?1
-            AND EXISTS (SELECT 1 FROM target_snapshot)
-          LIMIT 1
-        ),
-        incoming_released AS (
-          UPDATE schedule_segments
-          SET current_participant_id = NULL,
-              status = 'released',
-              released_at = ?5,
-              updated_at = ?5
-          WHERE id IN (SELECT id FROM incoming_current_segment)
-          RETURNING id
-        ),
-        target_updated AS (
-          UPDATE schedule_segments
-          SET description = ?6,
-              status = ?7,
-              current_participant_id = ?4,
-              claimed_at = ?8,
-              released_at = ?9,
-              updated_at = ?5
-          WHERE id = ?1
-            AND schedule_version_id = ?2
-            AND EXISTS (SELECT 1 FROM target_snapshot)
-          RETURNING id
-        ),
-        previous_draft_cleared AS (
-          UPDATE project_drafts
-          SET segment_id = NULL,
-              updated_at = ?5
-          WHERE participant_id = ?10
-            AND segment_id = ?1
-            AND EXISTS (SELECT 1 FROM target_updated)
-            AND ?10 IS NOT NULL
-            AND (?10 != ?4 OR ?4 IS NULL)
-          RETURNING id
-        ),
-        incoming_draft_updated AS (
-          UPDATE project_drafts
-          SET segment_id = ?1,
-              updated_at = ?5
-          WHERE participant_id = ?4
-            AND EXISTS (SELECT 1 FROM target_updated)
-            AND ?4 IS NOT NULL
-          RETURNING id
-        ),
-        previous_participant_event AS (
-          INSERT INTO participant_events (
-            id,
-            participant_id,
-            actor_type,
-            actor_id,
-            event_type,
-            target_type,
-            target_id,
-            payload_json,
-            created_at
-          )
-          SELECT ?11, ?10, 'admin', ?12, 'segment_admin_released', 'schedule_segment', ?1, ?13, ?5
-          WHERE EXISTS (SELECT 1 FROM target_updated)
-            AND ?10 IS NOT NULL
-            AND (?10 != ?4 OR ?4 IS NULL)
-          RETURNING id
-        ),
-        incoming_participant_event AS (
-          INSERT INTO participant_events (
-            id,
-            participant_id,
-            actor_type,
-            actor_id,
-            event_type,
-            target_type,
-            target_id,
-            payload_json,
-            created_at
-          )
-          SELECT ?14, ?4, 'admin', ?12, 'segment_admin_assigned', 'schedule_segment', ?1, ?15, ?5
-          WHERE EXISTS (SELECT 1 FROM target_updated)
-            AND ?4 IS NOT NULL
-            AND (?4 != ?10 OR ?16 != 'held')
-          RETURNING id
-        )
-        SELECT
-          (SELECT count(*) FROM incoming_released) AS incoming_released_count,
-          (SELECT count(*) FROM target_updated) AS target_updated_count`,
-      )
-      .bind(
-        existingSegment.id,
-        scheduleVersionId,
-        existingSegment.updated_at,
-        nextResolvedState.nextParticipantId,
-        now,
-        nextDescription,
-        nextResolvedState.nextStatus,
-        nextResolvedState.claimedAt,
-        nextResolvedState.releasedAt,
-        existingSegment.current_participant_id,
-        createPrefixedId("pevt"),
-        updatedBy,
-        JSON.stringify({
-          segmentId: existingSegment.id,
-          segmentCode: existingSegment.code,
-          segmentName: existingSegment.name,
-          previousStatus: existingSegment.status,
-          nextStatus: nextResolvedState.nextStatus,
-        }),
-        createPrefixedId("pevt"),
-        JSON.stringify({
-          segmentId: existingSegment.id,
-          segmentCode: existingSegment.code,
-          segmentName: existingSegment.name,
-          previousStatus: existingSegment.status,
-          nextStatus: nextResolvedState.nextStatus,
-          previousParticipantId: existingSegment.current_participant_id,
-          nextParticipantId: nextResolvedState.nextParticipantId,
-        }),
-        existingSegment.status,
-      )
-      .first<SegmentAdminMutationRow>();
+  // D1/SQLite does not support data-modifying statements inside a CTE (that is
+  // a Postgres-only extension). The mutation is expressed as an ordered,
+  // single-transaction batch instead. Every dependent statement is gated on the
+  // same optimistic-lock snapshot (the target segment still carries its
+  // original updated_at), and the target row is updated LAST so that snapshot
+  // stays valid for the preceding statements. If a concurrent writer already
+  // advanced the row, the snapshot guard makes every statement (including the
+  // target update) a no-op, so the whole batch leaves the data untouched.
+  const targetId = existingSegment.id;
+  const prevParticipantId = existingSegment.current_participant_id;
+  const nextParticipantId = nextResolvedState.nextParticipantId;
+  const snapshotClause =
+    "EXISTS (SELECT 1 FROM schedule_segments WHERE id = ? AND schedule_version_id = ? AND updated_at = ?)";
+  const snapshotArgs = [targetId, scheduleVersionId, existingSegment.updated_at] as const;
 
-    if ((mutation?.target_updated_count ?? 0) !== 1) {
+  const releasedPayload = JSON.stringify({
+    segmentId: existingSegment.id,
+    segmentCode: existingSegment.code,
+    segmentName: existingSegment.name,
+    previousStatus: existingSegment.status,
+    nextStatus: nextResolvedState.nextStatus,
+  });
+  const assignedPayload = JSON.stringify({
+    segmentId: existingSegment.id,
+    segmentCode: existingSegment.code,
+    segmentName: existingSegment.name,
+    previousStatus: existingSegment.status,
+    nextStatus: nextResolvedState.nextStatus,
+    previousParticipantId: existingSegment.current_participant_id,
+    nextParticipantId: nextResolvedState.nextParticipantId,
+  });
+
+  const releaseIncomingHeldSegment = db
+    .prepare(
+      `UPDATE schedule_segments
+        SET current_participant_id = NULL,
+            status = 'released',
+            released_at = ?,
+            updated_at = ?
+        WHERE schedule_version_id = ?
+          AND current_participant_id = ?
+          AND status = 'held'
+          AND id != ?
+          AND ${snapshotClause}`,
+    )
+    .bind(now, now, scheduleVersionId, nextParticipantId, targetId, ...snapshotArgs);
+
+  const clearPreviousDraft = db
+    .prepare(
+      `UPDATE project_drafts
+        SET segment_id = NULL,
+            updated_at = ?
+        WHERE participant_id = ?
+          AND segment_id = ?
+          AND ? IS NOT NULL
+          AND (? != ? OR ? IS NULL)
+          AND ${snapshotClause}`,
+    )
+    .bind(
+      now,
+      prevParticipantId,
+      targetId,
+      prevParticipantId,
+      prevParticipantId,
+      nextParticipantId,
+      nextParticipantId,
+      ...snapshotArgs,
+    );
+
+  const linkIncomingDraft = db
+    .prepare(
+      `UPDATE project_drafts
+        SET segment_id = ?,
+            updated_at = ?
+        WHERE participant_id = ?
+          AND ? IS NOT NULL
+          AND ${snapshotClause}`,
+    )
+    .bind(targetId, now, nextParticipantId, nextParticipantId, ...snapshotArgs);
+
+  const recordReleaseEvent = db
+    .prepare(
+      `INSERT INTO participant_events (
+        id, participant_id, actor_type, actor_id, event_type, target_type, target_id, payload_json, created_at
+      )
+      SELECT ?, ?, 'admin', ?, 'segment_admin_released', 'schedule_segment', ?, ?, ?
+      WHERE ? IS NOT NULL
+        AND (? != ? OR ? IS NULL)
+        AND ${snapshotClause}`,
+    )
+    .bind(
+      createPrefixedId("pevt"),
+      prevParticipantId,
+      updatedBy,
+      targetId,
+      releasedPayload,
+      now,
+      prevParticipantId,
+      prevParticipantId,
+      nextParticipantId,
+      nextParticipantId,
+      ...snapshotArgs,
+    );
+
+  const recordAssignEvent = db
+    .prepare(
+      `INSERT INTO participant_events (
+        id, participant_id, actor_type, actor_id, event_type, target_type, target_id, payload_json, created_at
+      )
+      SELECT ?, ?, 'admin', ?, 'segment_admin_assigned', 'schedule_segment', ?, ?, ?
+      WHERE ? IS NOT NULL
+        AND (? != ? OR ? != 'held')
+        AND ${snapshotClause}`,
+    )
+    .bind(
+      createPrefixedId("pevt"),
+      nextParticipantId,
+      updatedBy,
+      targetId,
+      assignedPayload,
+      now,
+      nextParticipantId,
+      nextParticipantId,
+      prevParticipantId,
+      existingSegment.status,
+      ...snapshotArgs,
+    );
+
+  const updateTarget = db
+    .prepare(
+      `UPDATE schedule_segments
+        SET description = ?,
+            status = ?,
+            current_participant_id = ?,
+            claimed_at = ?,
+            released_at = ?,
+            updated_at = ?
+        WHERE id = ?
+          AND schedule_version_id = ?
+          AND updated_at = ?`,
+    )
+    .bind(
+      nextDescription,
+      nextResolvedState.nextStatus,
+      nextParticipantId,
+      nextResolvedState.claimedAt,
+      nextResolvedState.releasedAt,
+      now,
+      targetId,
+      scheduleVersionId,
+      existingSegment.updated_at,
+    );
+
+  try {
+    const results = await db.batch([
+      releaseIncomingHeldSegment,
+      clearPreviousDraft,
+      linkIncomingDraft,
+      recordReleaseEvent,
+      recordAssignEvent,
+      updateTarget,
+    ]);
+
+    const targetChanges = results[results.length - 1]?.meta?.changes ?? 0;
+
+    if (targetChanges !== 1) {
       return {
         ok: false,
         status: 409,

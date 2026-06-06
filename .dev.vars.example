@@ -1,0 +1,22 @@
+# Copy this file to `.dev.vars` for local development (`.dev.vars` is gitignored).
+# These values are read by `wrangler dev` / the local Vite worker and the
+# db:local:* scripts. Never commit real secrets, and never set the dev-only
+# flags below in staging/production wrangler config.
+
+# Signs the local Better Auth session cookies emitted by db:local:reset.
+BETTER_AUTH_SECRET="replace-with-a-32-plus-character-local-secret"
+
+# Dev-only admin bypass. When "true" AND the request host is loopback,
+# /api/admin/* trusts the `x-admin-email` header instead of Cloudflare Access.
+# Leave unset (or remove) to disable. MUST stay out of deployed environments.
+ALLOW_LOCAL_ADMIN_BYPASS="true"
+
+# Dev-only origin trust. When "true", Better Auth dynamically trusts loopback /
+# private-network (localhost, *.localhost, 127.x, 10.x, 192.168.x, 172.16-31.x)
+# request origins so multi-port local setups pass the CSRF/origin check.
+# Leave unset in deployed environments; list real origins via
+# BETTER_AUTH_TRUSTED_ORIGINS instead.
+ALLOW_LOCAL_DEV_ORIGINS="true"
+
+# Comma/newline separated list of additional trusted origins (all environments).
+# BETTER_AUTH_TRUSTED_ORIGINS="https://dev.example.com"

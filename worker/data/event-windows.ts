@@ -16,7 +16,9 @@ export async function listEventWindows(db: D1Database): Promise<EventWindowSumma
     )
     .all<EventWindowRow>();
 
-  return (result.results ?? []).map(mapEventWindowRow);
+  return (result.results ?? [])
+    .map(mapEventWindowRow)
+    .filter((window): window is EventWindowSummary => window !== null);
 }
 
 export async function updateEventWindow(

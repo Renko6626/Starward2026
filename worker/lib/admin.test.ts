@@ -2,7 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { resolveAdminIdentity } from "./admin";
 
 describe("resolveAdminIdentity", () => {
-  it("allows localhost development bypass through x-admin-email", async () => {
+  it("allows localhost development bypass when explicitly enabled", async () => {
+    await expect(
+      resolveAdminIdentity({
+        env: { ALLOW_LOCAL_ADMIN_BYPASS: "true" },
+        headers: new Headers({
+          "x-admin-email": "local-admin@example.com",
+        }),
+        requestUrl: "http://localhost:5173/api/admin/applications",
+      }),
+    ).resolves.toBe("local-admin@example.com");
+  });
+
+  it("ignores the x-admin-email bypass when ALLOW_LOCAL_ADMIN_BYPASS is not set", async () => {
     await expect(
       resolveAdminIdentity({
         env: {},
@@ -11,7 +23,23 @@ describe("resolveAdminIdentity", () => {
         }),
         requestUrl: "http://localhost:5173/api/admin/applications",
       }),
-    ).resolves.toBe("local-admin@example.com");
+    ).rejects.toMatchObject({
+      status: 503,
+    });
+  });
+
+  it("ignores the x-admin-email bypass on a non-local host even when enabled", async () => {
+    await expect(
+      resolveAdminIdentity({
+        env: { ALLOW_LOCAL_ADMIN_BYPASS: "true" },
+        headers: new Headers({
+          "x-admin-email": "attacker@example.com",
+        }),
+        requestUrl: "https://hifuu-staging.ayafeed.com/api/admin/applications",
+      }),
+    ).rejects.toMatchObject({
+      status: 503,
+    });
   });
 
   it("rejects non-local requests when access verification is not configured", async () => {

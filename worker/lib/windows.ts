@@ -14,8 +14,14 @@ export type EventWindowRow = {
   updated_at: string;
 };
 
-export function mapEventWindowRow(row: EventWindowRow): EventWindowSummary {
-  const key = eventWindowKeySchema.parse(row.key);
+export function mapEventWindowRow(row: EventWindowRow): EventWindowSummary | null {
+  const parsedKey = eventWindowKeySchema.safeParse(row.key);
+
+  if (!parsedKey.success) {
+    return null;
+  }
+
+  const key = parsedKey.data;
 
   return {
     key,

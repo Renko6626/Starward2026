@@ -43,6 +43,14 @@ export function resolveProjectWorkspaceEligibility(
     };
   }
 
+  if (participant.status === "pending") {
+    return {
+      ok: false as const,
+      code: "portal_pending_review",
+      message: "当前账号已进入创作者工作台，但参与资格仍在审核中，暂时不能操作时间段或其他已放行动作。",
+    };
+  }
+
   if (participant.status === "withdrawn") {
     return {
       ok: false as const,
