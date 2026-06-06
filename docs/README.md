@@ -68,6 +68,7 @@ docs/
 
 产品：
 
+- [product/feature-map.md](./product/feature-map.md) — 已实现页面与功能现状（as-built）
 - [product/accounts/participant-account-system.md](./product/accounts/participant-account-system.md)
 - [product/portal/skeleton.md](./product/portal/skeleton.md)
 - [product/portal/data-api.md](./product/portal/data-api.md)

@@ -71,6 +71,7 @@ Starward2026/
 
 账号与流程：
 
+- [docs/product/feature-map.md](./docs/product/feature-map.md) — 已实现页面与功能现状（as-built）
 - [docs/product/accounts/participant-account-system.md](./docs/product/accounts/participant-account-system.md)
 - [docs/product/portal/skeleton.md](./docs/product/portal/skeleton.md)
 - [docs/product/portal/data-api.md](./docs/product/portal/data-api.md)
