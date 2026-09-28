@@ -1,5 +1,5 @@
 import { HTTPException } from "hono/http-exception";
-import type { AppContext } from "./types";
+import type { AppContext, RuntimeKind } from "./types";
 
 export function jsonError(
   c: AppContext,
@@ -20,10 +20,18 @@ export function jsonError(
   );
 }
 
+/**
+ * Resolves the runtime marker for the current context, defaulting to the
+ * Cloudflare Worker runtime so existing requests keep their behaviour.
+ */
+export function getRuntimeKind(c: AppContext): RuntimeKind {
+  return c.env.RUNTIME ?? "cloudflare";
+}
+
 export function getRequiredDb(c: AppContext) {
   if (!c.env.DB) {
     throw new HTTPException(503, {
-      message: "D1 binding `DB` is not configured yet.",
+      message: "Database binding `DB` is not configured yet.",
     });
   }
 
