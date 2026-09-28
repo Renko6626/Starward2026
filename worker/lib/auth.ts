@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import type { GenericEndpointContext } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthEndpoint, createAuthMiddleware, setPassword } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { HTTPException } from "hono/http-exception";
 import { Resend } from "resend";
@@ -41,19 +41,10 @@ function getRequiredAuthEnv(env: AppBindings) {
     });
   }
 
-  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-    throw new HTTPException(503, {
-      message: "Resend mail sender is not configured yet.",
-    });
-  }
-
   return {
     db: env.DB,
     secret: env.BETTER_AUTH_SECRET,
     baseUrl: normalizeBaseUrl(env.BETTER_AUTH_URL),
-    resendApiKey: env.RESEND_API_KEY,
-    resendFromEmail: env.RESEND_FROM_EMAIL,
-    resendFromName: env.RESEND_FROM_NAME?.trim() || "Starward2026",
   };
 }
 
@@ -72,6 +63,9 @@ function buildPortalEntryPlugin(env: AppBindings) {
   return {
     id: "portal-entry",
     version: AUTH_PLUGIN_VERSION,
+    endpoints: {
+      setPassword: createAuthEndpoint("/set-password", setPassword.options, setPassword),
+    },
     init() {
       return {
         options: {
@@ -82,7 +76,7 @@ function buildPortalEntryPlugin(env: AppBindings) {
                   session: { userId: string } & Record<string, unknown>,
                   context: GenericEndpointContext | null,
                 ) {
-                  if (context?.path !== "/sign-in/email-otp") {
+                  if (!context?.path || !["/sign-in/email-otp", "/sign-in/email", "/sign-up/email"].includes(context.path)) {
                     return;
                   }
 
@@ -117,10 +111,27 @@ function buildPortalEntryPlugin(env: AppBindings) {
           matcher(context: { path?: string }) {
             return (
               context.path === "/email-otp/send-verification-otp" ||
-              context.path === "/sign-in/email-otp"
+              context.path === "/sign-in/email-otp" ||
+              context.path === "/sign-in/email" ||
+              context.path === "/sign-up/email"
             );
           },
           handler: createAuthMiddleware(async (ctx) => {
+            if (ctx.path === "/sign-in/email" || ctx.path === "/sign-up/email") {
+              const email = normalizeEmailAddress(typeof ctx.body?.email === "string" ? ctx.body.email : "");
+              ctx.body.email = email;
+              if (ctx.path === "/sign-up/email") {
+                const participant = await getParticipantByInviteEmail(db, email);
+                // Password signup does not prove ownership of an existing invitation.
+                if (participant && !participant.user_id) {
+                  throw new APIError("CONFLICT", {
+                    message: "此邮箱已有参与者资料，请先通过邮箱验证码登录，再设置密码。",
+                  });
+                }
+              }
+              return;
+            }
+
             const type =
               typeof ctx.body?.type === "string"
                 ? ctx.body.type
@@ -155,8 +166,12 @@ async function sendPortalOtpEmail(
     type: "sign-in" | "email-verification" | "forget-password" | "change-email";
   },
 ) {
-  const { resendApiKey, resendFromEmail, resendFromName } = getRequiredAuthEnv(env);
-  const resend = new Resend(resendApiKey);
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+    throw new HTTPException(503, { message: "Resend mail sender is not configured yet." });
+  }
+  const resend = new Resend(env.RESEND_API_KEY);
+  const resendFromEmail = env.RESEND_FROM_EMAIL;
+  const resendFromName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
   const subject =
     payload.type === "sign-in" ? "Starward2026 参与者登录验证码" : "Starward2026 邮件验证码";
   const text =
@@ -280,6 +295,12 @@ export function createAuth(env: AppBindings) {
     basePath: "/api/auth",
     trustedOrigins: buildPortalTrustedOrigins(env),
     session: buildPortalSessionOptions(),
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: false,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+    },
     plugins: [
       buildPortalEntryPlugin(env),
       emailOTP(buildPortalEmailOtpOptions(env)),

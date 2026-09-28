@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { PortalProfileMutationResponse, PortalProfileResponse, UpdatePortalProfileInput } from "../../shared/portal";
 import { updatePortalProfileInputSchema } from "../../shared/portal";
+import { PasswordSettings } from "../components/PasswordSettings";
 import { authClient } from "../lib/auth-client";
 import { normalizePortalProfileInput } from "../lib/profile-form";
 
@@ -167,6 +168,7 @@ export function PortalProfilePage() {
           </button>
         </div>
       </form>
+      <PasswordSettings />
       {message ? <Notice tone="success">{message}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
     </div>
