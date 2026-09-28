@@ -47,6 +47,48 @@ describe("loadNodeRuntimeEnv", () => {
     expect(env.ALLOW_LOCAL_ADMIN_BYPASS).toBe(false);
     expect(env.BETTER_AUTH_TRUSTED_ORIGINS).toBeUndefined();
     expect(env.TURNSTILE_SECRET_KEY).toBeUndefined();
+    expect(env.VPS_ADMIN_EMAILS).toBeUndefined();
+    expect(env.APPLICATION_SUBMIT_IP_RATE_LIMIT).toBe(6);
+    expect(env.APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+    expect(env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT).toBe(2);
+    expect(env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+    expect(env.TRUST_PROXY_HEADERS).toBe(false);
+    expect(env.TRUSTED_PROXY_IPS).toBeUndefined();
+  });
+
+  it("trims admin allowlist and trusted proxy configuration", () => {
+    const env = loadNodeRuntimeEnv({
+      ...requiredEnv,
+      VPS_ADMIN_EMAILS: "  admin@example.com, second@example.com ",
+      TRUSTED_PROXY_IPS: " 198.51.100.7, 198.51.100.8 ",
+    });
+
+    expect(env.VPS_ADMIN_EMAILS).toBe("admin@example.com, second@example.com");
+    expect(env.TRUSTED_PROXY_IPS).toBe("198.51.100.7, 198.51.100.8");
+  });
+
+  it("parses rate limit counts and rejects invalid values", () => {
+    const env = loadNodeRuntimeEnv({
+      ...requiredEnv,
+      APPLICATION_SUBMIT_IP_RATE_LIMIT: "10",
+      APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS: "120",
+      APPLICATION_SUBMIT_EMAIL_RATE_LIMIT: "0",
+      APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS: "30",
+      TRUST_PROXY_HEADERS: "true",
+    });
+
+    expect(env.APPLICATION_SUBMIT_IP_RATE_LIMIT).toBe(10);
+    expect(env.APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS).toBe(120);
+    expect(env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT).toBe(0);
+    expect(env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS).toBe(30);
+    expect(env.TRUST_PROXY_HEADERS).toBe(true);
+
+    expect(() =>
+      loadNodeRuntimeEnv({ ...requiredEnv, APPLICATION_SUBMIT_IP_RATE_LIMIT: "-1" }),
+    ).toThrowError(/APPLICATION_SUBMIT_IP_RATE_LIMIT/);
+    expect(() =>
+      loadNodeRuntimeEnv({ ...requiredEnv, APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS: "x" }),
+    ).toThrowError(/APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS/);
   });
 
   it.each([

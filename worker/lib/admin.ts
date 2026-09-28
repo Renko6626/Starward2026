@@ -38,22 +38,29 @@ export async function requireAdminAccess(c: AppContext) {
     env: c.env,
     headers: c.req.raw.headers,
     requestUrl: c.req.url,
+    request: c.req.raw,
   });
 
   c.set("adminIdentity", identity);
 }
 
+type ResolveAdminIdentityInput = {
+  env: AppBindings;
+  headers: Headers;
+  requestUrl: string;
+  request?: Request;
+};
+
 export async function resolveAdminIdentity(
-  input: {
-    env: Pick<
-      AppBindings,
-      "CLOUDFLARE_ACCESS_POLICY_AUD" | "CLOUDFLARE_ACCESS_TEAM_DOMAIN" | "ALLOW_LOCAL_ADMIN_BYPASS"
-    >;
-    headers: Headers;
-    requestUrl: string;
-  },
+  input: ResolveAdminIdentityInput,
   verifyAccessToken: VerifyAdminAccessToken = verifyAdminAccessToken,
 ) {
+  // The Node/VPS runtime selects an explicit admin adapter. It never falls
+  // through to Cloudflare Access or to header-based identity.
+  if (input.env.RUNTIME === "node") {
+    return resolveNodeAdminIdentity(input);
+  }
+
   const localBypassIdentity = getLocalAdminBypassIdentity(
     input.env,
     input.headers,
@@ -108,6 +115,47 @@ export async function resolveAdminIdentity(
   }
 
   return identity;
+}
+
+async function resolveNodeAdminIdentity(input: ResolveAdminIdentityInput) {
+  // The VPS production path never authorizes from request headers. The
+  // development-only loopback bypass is ignored unless NODE_ENV explicitly
+  // marks a local run, so `ALLOW_LOCAL_ADMIN_BYPASS` can never be reached by a
+  // remote Host header on production Node.
+  if (isNodeDevelopmentBypassAllowed(input.env)) {
+    const localBypassIdentity = getLocalAdminBypassIdentity(
+      input.env,
+      input.headers,
+      input.requestUrl,
+    );
+
+    if (localBypassIdentity) {
+      return localBypassIdentity;
+    }
+  }
+
+  const resolver = input.env.VPS_ADMIN_IDENTITY_RESOLVER;
+
+  if (!resolver || !input.request) {
+    throw new HTTPException(503, {
+      message: "VPS admin authentication is not configured yet.",
+    });
+  }
+
+  const identity = await resolver({ request: input.request, env: input.env });
+
+  if (!identity) {
+    throw new HTTPException(403, {
+      message: "Admin access requires a configured administrator session.",
+    });
+  }
+
+  return identity;
+}
+
+function isNodeDevelopmentBypassAllowed(env: AppBindings) {
+  const nodeEnv = env.NODE_ENV?.trim().toLowerCase();
+  return nodeEnv === "development" || nodeEnv === "test";
 }
 
 export async function verifyAdminAccessToken(input: VerifyAdminAccessTokenInput) {

@@ -3,6 +3,11 @@ export const DEFAULT_RESEND_FROM_NAME = "Starward2026";
 export const DEFAULT_PORT = 3000;
 export const DEFAULT_HOST = "0.0.0.0";
 
+export const DEFAULT_APPLICATION_SUBMIT_IP_RATE_LIMIT = 6;
+export const DEFAULT_APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS = 60;
+export const DEFAULT_APPLICATION_SUBMIT_EMAIL_RATE_LIMIT = 2;
+export const DEFAULT_APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS = 60;
+
 export const VPS_ADMIN_MODES = ["better-auth", "disabled"] as const;
 export type VpsAdminMode = (typeof VPS_ADMIN_MODES)[number];
 export const DEFAULT_VPS_ADMIN_MODE: VpsAdminMode = "better-auth";
@@ -27,6 +32,13 @@ export type NodeRuntimeEnv = {
   TURNSTILE_SECRET_KEY?: string;
   SQLITE_PATH: string;
   VPS_ADMIN_MODE: VpsAdminMode;
+  VPS_ADMIN_EMAILS?: string;
+  APPLICATION_SUBMIT_IP_RATE_LIMIT: number;
+  APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS: number;
+  APPLICATION_SUBMIT_EMAIL_RATE_LIMIT: number;
+  APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS: number;
+  TRUST_PROXY_HEADERS: boolean;
+  TRUSTED_PROXY_IPS?: string;
   PORT: number;
   HOST: string;
   NODE_ENV: NodeEnvironment;
@@ -56,6 +68,29 @@ export function loadNodeRuntimeEnv(source: NodeJS.ProcessEnv = process.env): Nod
     TURNSTILE_SECRET_KEY: readOptional(source, "TURNSTILE_SECRET_KEY"),
     SQLITE_PATH: readOptional(source, "SQLITE_PATH") ?? DEFAULT_SQLITE_PATH,
     VPS_ADMIN_MODE: readEnum(source, "VPS_ADMIN_MODE", VPS_ADMIN_MODES, DEFAULT_VPS_ADMIN_MODE),
+    VPS_ADMIN_EMAILS: readOptional(source, "VPS_ADMIN_EMAILS"),
+    APPLICATION_SUBMIT_IP_RATE_LIMIT: readNonNegativeInteger(
+      source,
+      "APPLICATION_SUBMIT_IP_RATE_LIMIT",
+      DEFAULT_APPLICATION_SUBMIT_IP_RATE_LIMIT,
+    ),
+    APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS: readNonNegativeInteger(
+      source,
+      "APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS",
+      DEFAULT_APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS,
+    ),
+    APPLICATION_SUBMIT_EMAIL_RATE_LIMIT: readNonNegativeInteger(
+      source,
+      "APPLICATION_SUBMIT_EMAIL_RATE_LIMIT",
+      DEFAULT_APPLICATION_SUBMIT_EMAIL_RATE_LIMIT,
+    ),
+    APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS: readNonNegativeInteger(
+      source,
+      "APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS",
+      DEFAULT_APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS,
+    ),
+    TRUST_PROXY_HEADERS: readBoolean(source, "TRUST_PROXY_HEADERS", false),
+    TRUSTED_PROXY_IPS: readOptional(source, "TRUSTED_PROXY_IPS"),
     PORT: readPort(source),
     HOST: readOptional(source, "HOST") ?? DEFAULT_HOST,
     NODE_ENV: readEnum(source, "NODE_ENV", NODE_ENVIRONMENTS, DEFAULT_NODE_ENVIRONMENT),
@@ -123,6 +158,24 @@ function readEnum<T extends string>(
   }
 
   return normalized;
+}
+
+function readNonNegativeInteger(
+  source: NodeJS.ProcessEnv,
+  name: string,
+  fallback: number,
+) {
+  const value = readOptional(source, name);
+
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    throw new NodeRuntimeEnvError(`Invalid ${name}: expected a non-negative integer.`);
+  }
+
+  return Number(value);
 }
 
 const TRUTHY_FLAGS = new Set(["1", "true", "yes", "on"]);

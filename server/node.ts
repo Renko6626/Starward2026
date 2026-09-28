@@ -5,6 +5,8 @@ import type { ServerType } from "@hono/node-server";
 import { createApp } from "../worker/app.ts";
 import type { AppBindings } from "../worker/lib/types.ts";
 import { loadNodeRuntimeEnv, type NodeRuntimeEnv } from "./env.ts";
+import { resolveVpsAdminIdentity } from "./admin-auth.ts";
+import { createNodeRateLimiter } from "./rate-limit.ts";
 import { applySqliteMigrations, createSqliteD1Database } from "./sqlite-d1.ts";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
@@ -23,11 +25,19 @@ export type CreateNodeAppOptions = {
  * rate limiting) can branch without inspecting the platform. The injected
  * SQLite facade satisfies the unchanged `D1Database` boundary used by
  * `worker/data/*`, so no route or SQL is duplicated for Node.
+ *
+ * The VPS admin resolver is injected as a binding so `worker/lib/admin.ts`
+ * stays free of Node-only imports while still selecting the Better Auth admin
+ * adapter. The in-memory rate limiters are created once here, so their counters
+ * persist for the lifetime of the single Node process.
  */
 export function toAppBindings(env: NodeRuntimeEnv, db: D1Database): AppBindings {
+  const isProduction = env.NODE_ENV === "production";
+
   return {
     RUNTIME: "node",
     DB: db,
+    NODE_ENV: env.NODE_ENV,
     BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: env.BETTER_AUTH_URL,
     BETTER_AUTH_TRUSTED_ORIGINS: env.BETTER_AUTH_TRUSTED_ORIGINS,
@@ -35,8 +45,24 @@ export function toAppBindings(env: NodeRuntimeEnv, db: D1Database): AppBindings 
     RESEND_FROM_EMAIL: env.RESEND_FROM_EMAIL,
     RESEND_FROM_NAME: env.RESEND_FROM_NAME,
     TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY,
-    ALLOW_LOCAL_DEV_ORIGINS: env.ALLOW_LOCAL_DEV_ORIGINS ? "true" : "false",
-    ALLOW_LOCAL_ADMIN_BYPASS: env.ALLOW_LOCAL_ADMIN_BYPASS ? "true" : "false",
+    // Development-only flags must never be reachable on a production Node
+    // deployment, regardless of a rewritten Host header or a leaked env var.
+    ALLOW_LOCAL_DEV_ORIGINS: !isProduction && env.ALLOW_LOCAL_DEV_ORIGINS ? "true" : "false",
+    ALLOW_LOCAL_ADMIN_BYPASS: !isProduction && env.ALLOW_LOCAL_ADMIN_BYPASS ? "true" : "false",
+    VPS_ADMIN_MODE: env.VPS_ADMIN_MODE,
+    VPS_ADMIN_EMAILS: env.VPS_ADMIN_EMAILS,
+    VPS_ADMIN_IDENTITY_RESOLVER: (input) =>
+      resolveVpsAdminIdentity(input.request, { env: input.env }),
+    APPLICATION_SUBMIT_IP_RATE_LIMITER: createNodeRateLimiter({
+      limit: env.APPLICATION_SUBMIT_IP_RATE_LIMIT,
+      windowMs: env.APPLICATION_SUBMIT_IP_RATE_LIMIT_WINDOW_SECONDS * 1000,
+    }),
+    APPLICATION_SUBMIT_EMAIL_RATE_LIMITER: createNodeRateLimiter({
+      limit: env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT,
+      windowMs: env.APPLICATION_SUBMIT_EMAIL_RATE_LIMIT_WINDOW_SECONDS * 1000,
+    }),
+    TRUST_PROXY_HEADERS: env.TRUST_PROXY_HEADERS ? "true" : "false",
+    TRUSTED_PROXY_IPS: env.TRUSTED_PROXY_IPS,
   };
 }
 

@@ -164,3 +164,94 @@ describe("resolveAdminIdentity", () => {
     ).resolves.toBe("header-admin@example.com");
   });
 });
+
+describe("resolveAdminIdentity on the node runtime", () => {
+  it("delegates to the injected vps resolver and ignores identity headers", async () => {
+    const resolver = vi.fn().mockResolvedValue("admin@example.com");
+    const request = new Request("https://vps.example.com/api/admin/applications", {
+      headers: { "x-admin-email": "attacker@example.com" },
+    });
+
+    await expect(
+      resolveAdminIdentity({
+        env: { RUNTIME: "node", VPS_ADMIN_IDENTITY_RESOLVER: resolver },
+        headers: request.headers,
+        requestUrl: request.url,
+        request,
+      }),
+    ).resolves.toBe("admin@example.com");
+
+    expect(resolver).toHaveBeenCalledOnce();
+  });
+
+  it("denies when the vps resolver finds no admin session", async () => {
+    const request = new Request("https://vps.example.com/api/admin/applications");
+
+    await expect(
+      resolveAdminIdentity({
+        env: {
+          RUNTIME: "node",
+          VPS_ADMIN_IDENTITY_RESOLVER: vi.fn().mockResolvedValue(null),
+        },
+        headers: request.headers,
+        requestUrl: request.url,
+        request,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("fails closed when no vps resolver is wired", async () => {
+    const request = new Request("https://vps.example.com/api/admin/applications");
+
+    await expect(
+      resolveAdminIdentity({
+        env: { RUNTIME: "node" },
+        headers: request.headers,
+        requestUrl: request.url,
+        request,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("ignores the local admin bypass on production node even for a loopback host", async () => {
+    const resolver = vi.fn().mockResolvedValue(null);
+    const request = new Request("http://localhost/api/admin/applications", {
+      headers: { "x-admin-email": "attacker@example.com" },
+    });
+
+    await expect(
+      resolveAdminIdentity({
+        env: {
+          RUNTIME: "node",
+          NODE_ENV: "production",
+          ALLOW_LOCAL_ADMIN_BYPASS: "true",
+          VPS_ADMIN_IDENTITY_RESOLVER: resolver,
+        },
+        headers: request.headers,
+        requestUrl: request.url,
+        request,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+
+    expect(resolver).toHaveBeenCalledOnce();
+  });
+
+  it("still allows the loopback bypass in development node", async () => {
+    const request = new Request("http://localhost/api/admin/applications", {
+      headers: { "x-admin-email": "dev@example.com" },
+    });
+
+    await expect(
+      resolveAdminIdentity({
+        env: {
+          RUNTIME: "node",
+          NODE_ENV: "development",
+          ALLOW_LOCAL_ADMIN_BYPASS: "true",
+        },
+        headers: request.headers,
+        requestUrl: request.url,
+        request,
+      }),
+    ).resolves.toBe("dev@example.com");
+  });
+});
