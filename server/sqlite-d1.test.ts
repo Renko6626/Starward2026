@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createKyselyAdapter } from "@better-auth/kysely-adapter";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   applySqliteMigrations,
@@ -148,6 +149,105 @@ describe("createSqliteD1Database", () => {
     expect(Number(second.meta.last_row_id)).toBe(2);
   });
 
+  it("reports real changes and row id when mutations run through all()", async () => {
+    const db = createMemoryDb();
+
+    await db.exec(`CREATE TABLE autos (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL);`);
+
+    const inserted = await db.prepare(`INSERT INTO autos (value) VALUES (?)`).bind("one").all();
+    expect(inserted.success).toBe(true);
+    expect(inserted.results).toEqual([]);
+    expect(inserted.meta.changes).toBe(1);
+    expect(Number(inserted.meta.last_row_id)).toBe(1);
+
+    const updated = await db
+      .prepare(`UPDATE autos SET value = ? WHERE value = ?`)
+      .bind("uno", "one")
+      .all();
+    expect(updated.results).toEqual([]);
+    expect(updated.meta.changes).toBe(1);
+
+    const deleted = await db.prepare(`DELETE FROM autos WHERE value = ?`).bind("uno").all();
+    expect(deleted.results).toEqual([]);
+    expect(deleted.meta.changes).toBe(1);
+
+    const deletedNothing = await db.prepare(`DELETE FROM autos WHERE value = ?`).bind("nope").all();
+    expect(deletedNothing.meta.changes).toBe(0);
+
+    const remaining = await db.prepare(`SELECT COUNT(*) AS count FROM autos`).first<{ count: number }>();
+    expect(Number(remaining?.count)).toBe(0);
+  });
+
+  it("reports real changes and row id for RETURNING mutations run through all()", async () => {
+    const db = createMemoryDb();
+
+    await db.exec(`CREATE TABLE autos (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL);`);
+
+    const inserted = await db
+      .prepare(`INSERT INTO autos (value) VALUES (?) RETURNING id, value`)
+      .bind("one")
+      .all<{ id: number; value: string }>();
+    expect(inserted.results).toEqual([{ id: 1, value: "one" }]);
+    expect(inserted.meta.changes).toBe(1);
+    expect(Number(inserted.meta.last_row_id)).toBe(1);
+
+    const updated = await db
+      .prepare(`UPDATE autos SET value = ? WHERE id = ? RETURNING value`)
+      .bind("uno", 1)
+      .all<{ value: string }>();
+    expect(updated.results).toEqual([{ value: "uno" }]);
+    expect(updated.meta.changes).toBe(1);
+
+    const deleted = await db
+      .prepare(`DELETE FROM autos WHERE id = ? RETURNING id`)
+      .bind(1)
+      .all<{ id: number }>();
+    expect(deleted.results).toEqual([{ id: 1 }]);
+    expect(deleted.meta.changes).toBe(1);
+  });
+
+  it("keeps read-only statements reporting zero changes through all()", async () => {
+    const db = createMemoryDb();
+
+    await db.exec(`CREATE TABLE items (id TEXT PRIMARY KEY, value TEXT NOT NULL);`);
+    await db.prepare(`INSERT INTO items (id, value) VALUES (?, ?)`).bind("a", "one").run();
+
+    const rows = await db.prepare(`SELECT id, value FROM items`).all<{ id: string; value: string }>();
+    expect(rows.results).toEqual([{ id: "a", value: "one" }]);
+    expect(rows.meta.changes).toBe(0);
+    expect(rows.meta.last_row_id).toBe(0);
+  });
+
+  it("exposes affected-row metadata to the Better Auth D1 Kysely dialect", async () => {
+    const db = createMemoryDb();
+
+    await db.exec(`CREATE TABLE autos (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL);`);
+
+    const { kysely, databaseType } = await createKyselyAdapter({ database: db });
+    expect(databaseType).toBe("sqlite");
+    expect(kysely).not.toBeNull();
+
+    if (!kysely) {
+      return;
+    }
+
+    const inserted = await kysely.insertInto("autos").values({ value: "one" }).executeTakeFirst();
+    expect(Number(inserted.insertId)).toBe(1);
+
+    const updated = await kysely
+      .updateTable("autos")
+      .set({ value: "uno" })
+      .where("id", "=", 1)
+      .executeTakeFirst();
+    expect(Number(updated.numUpdatedRows)).toBe(1);
+
+    const selected = await kysely.selectFrom("autos").selectAll().execute();
+    expect(selected).toEqual([{ id: 1, value: "uno" }]);
+
+    const deleted = await kysely.deleteFrom("autos").where("id", "=", 1).executeTakeFirst();
+    expect(Number(deleted.numDeletedRows)).toBe(1);
+  });
+
   it("enforces foreign keys", async () => {
     const db = createMemoryDb();
 
@@ -194,6 +294,34 @@ describe("batch", () => {
 
     const rows = await db.prepare(`SELECT value FROM counter ORDER BY id`).all<{ value: string }>();
     expect(rows.results).toEqual([{ value: "uno" }, { value: "two" }]);
+  });
+
+  it("preserves rows and metadata for result-returning statements in a batch", async () => {
+    const db = createMemoryDb();
+
+    await db.exec(`CREATE TABLE items (id TEXT PRIMARY KEY, qty INTEGER NOT NULL);`);
+    await db.prepare(`INSERT INTO items (id, qty) VALUES (?, ?)`).bind("a", 1).run();
+    await db.prepare(`INSERT INTO items (id, qty) VALUES (?, ?)`).bind("b", 2).run();
+
+    const results = await db.batch([
+      db.prepare(`INSERT INTO items (id, qty) VALUES (?, ?)`).bind("c", 3),
+      db.prepare(`SELECT id, qty FROM items ORDER BY id`),
+      db.prepare(`UPDATE items SET qty = ? WHERE id = ?`).bind(9, "a"),
+    ]);
+
+    expect(results).toHaveLength(3);
+    expect(results[0]?.results).toEqual([]);
+    expect(results[0]?.meta.changes).toBe(1);
+
+    expect(results[1]?.results).toEqual([
+      { id: "a", qty: 1 },
+      { id: "b", qty: 2 },
+      { id: "c", qty: 3 },
+    ]);
+    expect(results[1]?.meta.changes).toBe(0);
+
+    expect(results[2]?.results).toEqual([]);
+    expect(results[2]?.meta.changes).toBe(1);
   });
 
   it("rolls back every statement when any statement fails", async () => {

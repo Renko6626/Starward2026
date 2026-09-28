@@ -177,42 +177,90 @@ class SqlitePreparedStatement {
   }
 
   async all<T = Record<string, unknown>>(): Promise<D1Result<T>> {
-    const startedAt = performance.now();
-    const prepared = this.database.prepare(this.sql);
-    const rows = prepared.all(...this.boundArguments()) as Record<string, unknown>[];
+    const resolved = this.resolveSync<T>();
 
     return {
       success: true,
-      results: rows.map((row) => toPlainRow<T>(row)),
-      meta: buildMeta({
-        changes: 0,
-        lastRowId: 0,
-        rowsRead: rows.length,
-        durationMs: performance.now() - startedAt,
-      }),
+      results: resolved.results,
+      meta: buildMeta(resolved),
     };
   }
 
   async run<T = Record<string, unknown>>(): Promise<D1Result<T>> {
-    return this.runSync<T>();
-  }
-
-  /** Synchronous form used by {@link SqliteD1DatabaseFacade.batch}. */
-  runSync<T = Record<string, unknown>>(): D1Result<T> {
-    const startedAt = performance.now();
-    const prepared = this.database.prepare(this.sql);
-    const result = prepared.run(...this.boundArguments());
-    const changes = Number(result.changes ?? 0);
+    const resolved = this.resolveSync<T>();
 
     return {
       success: true,
       results: [],
-      meta: buildMeta({
+      meta: buildMeta(resolved),
+    };
+  }
+
+  /** Synchronous form used by {@link SqliteD1DatabaseFacade.batch}. */
+  runSync<T = Record<string, unknown>>(): D1Result<T> {
+    const resolved = this.resolveSync<T>();
+
+    return {
+      success: true,
+      results: resolved.results,
+      meta: buildMeta(resolved),
+    };
+  }
+
+  /**
+   * Single routing point shared by `all()`, `run()`, and `batch()`.
+   *
+   * D1 routes every statement through `all()` (Better Auth's D1 Kysely dialect
+   * relies on that), so result-returning writes such as `... RETURNING` must
+   * report the same affected-row metadata `run()` reports for plain writes.
+   * `StatementSync.columns()` is empty exactly when a statement returns no
+   * rows, which splits non-RETURNING writes from reads and `RETURNING` writes.
+   */
+  private resolveSync<T>(): {
+    results: T[];
+    changes: number;
+    lastRowId: number;
+    rowsRead: number;
+    durationMs: number;
+  } {
+    const startedAt = performance.now();
+    const prepared = this.database.prepare(this.sql);
+    const args = this.boundArguments();
+    const columns = prepared.columns();
+
+    if (columns.length === 0) {
+      const result = prepared.run(...args);
+      const changes = Number(result.changes ?? 0);
+
+      return {
+        results: [],
         changes,
         lastRowId: Number(result.lastInsertRowid ?? 0),
         rowsRead: 0,
         durationMs: performance.now() - startedAt,
-      }),
+      };
+    }
+
+    const rows = prepared.all(...args) as Record<string, unknown>[];
+    const results = rows.map((row) => toPlainRow<T>(row));
+    const durationMs = performance.now() - startedAt;
+
+    if (!isWriteStatement(this.sql)) {
+      return { results, changes: 0, lastRowId: 0, rowsRead: rows.length, durationMs };
+    }
+
+    // A RETURNING mutation returns rows, but SQLite's per-statement change
+    // counters remain the source of truth for D1's `meta` fields.
+    const counters = this.database
+      .prepare(`SELECT changes() AS changes, last_insert_rowid() AS last_row_id`)
+      .get() as { changes: number; last_row_id: number };
+
+    return {
+      results,
+      changes: Number(counters.changes ?? 0),
+      lastRowId: Number(counters.last_row_id ?? 0),
+      rowsRead: rows.length,
+      durationMs,
     };
   }
 
@@ -223,6 +271,29 @@ class SqlitePreparedStatement {
 
     return this.params.map(normalizeBindValue);
   }
+}
+
+/**
+ * True when the SQL is a top-level DML statement (`INSERT`/`UPDATE`/`DELETE`/
+ * `REPLACE`). Only result-returning statements reach this check, so it exists
+ * to let `RETURNING` mutations surface SQLite's change counters while plain
+ * reads keep reporting zero. The repository and Better Auth compile top-level
+ * DML directly, so a leading-keyword check is sufficient.
+ */
+function isWriteStatement(sql: string): boolean {
+  let statement = sql;
+
+  for (;;) {
+    const leadingComment = /^\s*(?:--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)/.exec(statement);
+
+    if (!leadingComment) {
+      break;
+    }
+
+    statement = statement.slice(leadingComment[0].length);
+  }
+
+  return /^\s*(insert|update|delete|replace)\b/i.test(statement);
 }
 
 function isNamedBinding(value: unknown): value is Record<string, unknown> {
