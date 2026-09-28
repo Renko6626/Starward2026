@@ -8,6 +8,14 @@ dist/
 dist-ssr/
 build/
 
+# === VPS runtime (SQLite data, WAL members, backups, bundled Node entry) ===
+data/
+backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+dist-vps/
+
 # === Python ===
 __pycache__/
 *.py[cod]

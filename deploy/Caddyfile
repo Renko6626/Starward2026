@@ -1,0 +1,40 @@
+# Caddy edge for the Starward2026 VPS stack.
+#
+# Caddy terminates TLS (automatic ACME/Let's Encrypt), reverse-proxies
+# `/api/*` (including `/api/auth/*`) to the Node app, and serves the built SPA
+# from /srv with an index.html fallback for client-side routes.
+#
+# SITE_ADDRESS and ACME_EMAIL come from the root `.env` via Compose.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Hashed Vite assets are immutable; index.html is served fresh by the
+	# fallback handler so new deployments are picked up immediately.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# API, Better Auth, and portal/admin JSON endpoints.
+	handle /api/* {
+		reverse_proxy app:3000
+	}
+
+	# Everything else is the SPA; unknown paths fall back to index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

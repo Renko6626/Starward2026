@@ -38,12 +38,16 @@ Starward2026 的目标范围包含以下三类能力：
 
 ```text
 Starward2026/
+├── deploy/            # Docker Compose + Caddy VPS stack
 ├── docs/
 ├── migrations/
+├── server/            # Node/VPS 入口与平台适配器
 ├── src/
 ├── worker/
+├── Dockerfile
 ├── package.json
 ├── vite.config.ts
+├── vite.vps.config.ts
 └── wrangler.jsonc
 ```
 
@@ -51,7 +55,9 @@ Starward2026/
 
 - `src/` 包含前端页面、共享类型与客户端逻辑
 - `worker/` 包含 Hono API、认证集成与数据访问逻辑
-- `migrations/` 包含 Cloudflare D1 SQL 迁移文件
+- `server/` 包含 Node/VPS 入口、环境校验与 SQLite/管理员/限流适配器
+- `deploy/` 包含 VPS 的 Docker Compose 与 Caddy 配置
+- `migrations/` 包含 SQL 迁移文件（Cloudflare D1 与 VPS SQLite 共用）
 - `scripts/` 包含本地开发与运维辅助脚本
 - `docs/` 包含架构、范围、页面规范与产品文档
 
@@ -61,6 +67,7 @@ Starward2026/
 
 - [docs/README.md](./docs/README.md)
 - [docs/development/local-d1.md](./docs/development/local-d1.md)
+- [docs/development/vps.md](./docs/development/vps.md) — VPS（Node + SQLite）部署与运维
 
 架构与范围：
 
@@ -110,7 +117,33 @@ npm run dev
 - `npm run db:local:print-portals` 会输出本地门户样本账号的已签名 cookie
 - 详细约定见 [docs/development/local-d1.md](./docs/development/local-d1.md)
 
-## 环境部署
+## VPS 部署（Node + SQLite）
+
+除 Cloudflare Workers 路线外，仓库现在也支持在自有 VPS 上以 Docker Compose +
+Caddy 运行同一套 Hono 应用，数据库为启用 WAL 的 SQLite。业务路由、SQL 与
+Cloudflare 配置均未改动。
+
+```bash
+cp .env.example .env      # 填写密钥后 chmod 600 .env
+docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+curl -fsS https://<your-domain>/api/health
+```
+
+运维脚本：
+
+```bash
+npm run build:vps                       # 打包 Node 入口到 dist-vps/node.mjs
+npm run start:vps                       # 启动已打包的 Node 入口（需已设置环境变量）
+npm run db:vps:migrate                  # 幂等地执行 SQLite 迁移
+npm run db:vps:backup -- --keep 14      # SQLite 在线备份并轮换
+npm run db:vps:restore -- <file> --force  # 校验后恢复（需先停止应用）
+```
+
+防火墙、DNS、TLS、卷权限、日志、备份轮换、恢复、回滚、`VPS_ADMIN_EMAILS`、
+`TRUST_PROXY_HEADERS` 以及反向代理 peer/IP 细节见
+[docs/development/vps.md](./docs/development/vps.md)。
+
+## Cloudflare 环境部署（Wrangler + D1）
 
 仓库当前采用以下 Wrangler 环境划分：
 

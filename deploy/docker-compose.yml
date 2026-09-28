@@ -1,0 +1,93 @@
+# Starward2026 VPS stack: Node app + Caddy TLS/SPA edge.
+#
+# Run from the repository root so the root `.env` is used both for `env_file`
+# and for `${...}` interpolation:
+#
+#   cp .env.example .env
+#   $EDITOR .env
+#   docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+#
+# See docs/development/vps.md for firewall, DNS, TLS, backup, and rollback.
+name: starward2026
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: runtime
+    image: starward2026-app:local
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      SQLITE_PATH: /app/data/starward.sqlite
+      BACKUP_DIR: /app/backups
+      # The app is only reachable through Caddy on the pinned compose network.
+      # TRUSTED_PROXY_IPS must equal Caddy's ipv4_address below exactly.
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-172.28.0.2}
+    user: "1000:1000"
+    volumes:
+      - starward_data:/app/data
+      - starward_backups:/app/backups
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      starward:
+        ipv4_address: 172.28.0.3
+
+  caddy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: caddy
+    image: starward2026-caddy:local
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS must be set in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      starward:
+        ipv4_address: 172.28.0.2
+
+volumes:
+  starward_data:
+  starward_backups:
+  caddy_data:
+  caddy_config:
+
+networks:
+  starward:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

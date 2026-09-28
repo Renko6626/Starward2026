@@ -1,0 +1,28 @@
+# Docker build context exclusions.
+#
+# The build needs package.json/package-lock.json, source, configs, migrations,
+# scripts, and public/. Everything below is either host state, a secret, or a
+# large directory that must not enter the image build cache.
+
+node_modules
+dist
+dist-vps
+data
+backups
+
+# Never bake environment files (including real `.env`) into an image layer.
+.env*
+
+.git
+.gitignore
+.superpowers
+.smoke-evidence
+.wrangler
+
+# Documentation and unrelated host assets.
+docs
+readme.md
+nonebot-plugin
+
+# Local noise.
+*.log

@@ -16,6 +16,11 @@
     "db:local:reset": "node ./scripts/local-dev-bootstrap.mjs bootstrap",
     "db:local:seed": "node ./scripts/local-dev-bootstrap.mjs seed",
     "db:local:print-portals": "node ./scripts/local-dev-bootstrap.mjs print",
+    "build:vps": "vite build --config vite.vps.config.ts",
+    "start:vps": "node ./dist-vps/node.mjs",
+    "db:vps:migrate": "node ./scripts/sqlite-migrate.mjs",
+    "db:vps:backup": "node ./scripts/backup-sqlite.mjs",
+    "db:vps:restore": "node ./scripts/restore-sqlite.mjs",
     "cf-typegen": "wrangler types",
     "check": "tsc -b --pretty false",
     "test": "vitest run"
