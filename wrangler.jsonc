@@ -72,7 +72,7 @@
       ],
       "routes": [
         {
-          "pattern": "hifuu-staging.ayafeed.com",
+          "pattern": "hifuu-staging.mucwiki-edge.link",
           "custom_domain": true
         }
       ],
@@ -84,7 +84,7 @@
         }
       ],
       "vars": {
-        "BETTER_AUTH_URL": "https://hifuu-staging.ayafeed.com"
+        "BETTER_AUTH_URL": "https://hifuu-staging.mucwiki-edge.link"
       }
     },
     "production": {

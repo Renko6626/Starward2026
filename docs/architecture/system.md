@@ -27,7 +27,7 @@ Last reviewed against official documentation: 2026-04-13
 - 前端：React + TypeScript + Vite
 - API 运行时：Hono on Cloudflare Workers
 - 数据库：Cloudflare D1
-- 参与者认证：Better Auth + Email OTP + 30-day sliding Cookie Session
+- 参与者认证：Better Auth + 邮箱密码 / Email OTP + 30-day sliding Cookie Session
 - 反滥用：Email OTP 限流 + 服务端字段校验 + Workers Rate Limiting
 - 管理后台保护：Cloudflare Access
 - 文件存储：Cloudflare R2（仅在后续需要上传文件时启用）
@@ -48,7 +48,7 @@ Last reviewed against official documentation: 2026-04-13
 标准请求流如下：
 
 1. 访客访问公共站点
-2. 访客通过 `/portal/login` 使用邮箱验证码建立或恢复会话
+2. 访客通过 `/portal/login` 使用邮箱密码或邮箱验证码建立或恢复会话
 3. 已登录用户补充资料并提交报名
 4. 系统在首次成功登录后创建或恢复 `participant` 工作台主体
 5. 服务端对门户内报名执行资料完整度校验、字段校验与状态校验
@@ -191,7 +191,7 @@ Starward2026/
 
 身份流转如下：
 
-1. 访客通过 Email OTP 建立 `auth user`
+1. 访客通过邮箱密码注册或 Email OTP 建立 `auth user`
 2. 已登录用户补充 `portal_profiles`
 3. 已登录用户提交 `applications`
 4. 系统在首次成功登录后创建或恢复 `participants`
@@ -204,7 +204,7 @@ Starward2026/
 
 账号内正式报名采用以下防护：
 
-1. Email OTP 建立受控会话
+1. 邮箱密码或 Email OTP 建立受控会话
 2. 资料完整度校验
 3. 基础限流
 4. 严格字段校验

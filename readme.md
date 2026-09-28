@@ -17,7 +17,7 @@ Starward2026 的目标范围包含以下三类能力：
 | 前端 | React + TypeScript + Vite |
 | API | Hono on Cloudflare Workers |
 | 数据库 | Cloudflare D1 |
-| 参与者认证 | Better Auth + Email OTP + Cookie Session |
+| 参与者认证 | Better Auth + 邮箱密码 / Email OTP + Cookie Session |
 | 反滥用 | Cloudflare Turnstile + Workers Rate Limiting |
 | 管理后台保护 | Cloudflare Access |
 | 文件存储 | Cloudflare R2（仅在需要上传文件时启用） |
@@ -109,12 +109,21 @@ npm run dev
 - `npm run db:local:print-portals` 会输出本地门户样本账号的已签名 cookie
 - 详细约定见 [docs/development/local-d1.md](./docs/development/local-d1.md)
 
+## 参与者认证
+
+- `/portal/login` 默认支持邮箱与密码登录，新用户可直接注册，无需验证邮件。
+- 密码由 Better Auth 哈希后存入现有 `account` 表，不需要额外数据库迁移。
+- `/portal/profile` 支持修改密码；原验证码账号可先登录，再设置密码，沿用原账号与参与者资料。
+- 密码注册、登录和会话读取只依赖 D1、`BETTER_AUTH_SECRET` 与站点 URL，不依赖 Resend。
+- 保留邮箱验证码登录和审核通知，只有这些邮件功能需要 Resend；此次不提供邮件找回密码。
+- 原验证码账号若已退出且邮件不可用，需要先恢复身份验证渠道才能设置密码；重新注册不会覆盖原账号。已有未关联账号的邀请也需先验证邮箱后领取。
+
 ## 环境部署
 
 仓库当前采用以下 Wrangler 环境划分：
 
 - 默认顶层配置：本地开发与通用构建
-- `env.staging`：`https://hifuu-staging.ayafeed.com`
+- `env.staging`：`https://hifuu-staging.mucwiki-edge.link`
 - `env.production`：保留为正式环境模板，启用前需补真实域名、路由与生产 D1 绑定
 
 推荐命令如下：

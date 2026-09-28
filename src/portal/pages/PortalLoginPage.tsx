@@ -19,6 +19,8 @@ export function PortalLoginPage() {
   const sessionQuery = authClient.useSession();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [mode, setMode] = useState<"login" | "register" | "otp">("login");
+  const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,34 @@ export function PortalLoginPage() {
       window.clearTimeout(timer);
     };
   }, [resendCooldownSeconds]);
+
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSigningIn(true);
+    setError(null);
+    setMessage(null);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+      const response = mode === "register"
+        ? await authClient.signUp.email({
+            email: normalizedEmail,
+            password,
+            name: normalizedEmail.split("@")[0] || "参与者",
+          })
+        : await authClient.signIn.email({ email: normalizedEmail, password });
+      if (response.error) {
+        setError(response.error.message || "注册或登录失败，请检查邮箱和密码。");
+        return;
+      }
+      setPassword("");
+      setIsResolvingDestination(true);
+    } catch {
+      setError("暂时无法连接，请稍后重试。");
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
 
   async function sendOtp(isResend = false) {
     const normalizedEmail = email.trim().toLowerCase();
@@ -152,7 +182,50 @@ export function PortalLoginPage() {
       </div>
 
       <div className="p-8 border border-outline-variant bg-surface-container-low/80 rounded-2xl backdrop-blur-md shadow-2xl">
-        {step === "email" ? (
+        <div className="flex gap-4 mb-6" role="group" aria-label="登录方式">
+          {([
+            ["login", "密码登录"],
+            ["register", "注册账号"],
+            ["otp", "验证码登录"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              disabled={isSending || isSigningIn}
+              className={`text-sm pb-2 border-b-2 ${mode === value ? "border-primary text-primary" : "border-transparent text-on-surface-variant"}`}
+              onClick={() => { setMode(value); setError(null); setMessage(null); setPassword(""); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {mode !== "otp" ? (
+          <form className="space-y-6" onSubmit={handlePasswordSubmit}>
+            <label className="block space-y-2 text-sm">
+              <span>邮箱</span>
+              <input
+                className="w-full bg-surface-variant border border-outline-variant rounded-xl px-4 py-3"
+                type="email" autoComplete="username" required
+                disabled={isSigningIn}
+                value={email} onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            <label className="block space-y-2 text-sm">
+              <span>密码{mode === "register" ? "（8–128 位）" : ""}</span>
+              <input
+                className="w-full bg-surface-variant border border-outline-variant rounded-xl px-4 py-3"
+                type="password" autoComplete={mode === "register" ? "new-password" : "current-password"}
+                required minLength={mode === "register" ? 8 : undefined} maxLength={128}
+                disabled={isSigningIn}
+                value={password} onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+            <button className="w-full bg-primary text-on-primary rounded-xl py-3 disabled:opacity-50" disabled={isSigningIn} type="submit">
+              {isSigningIn ? "提交中..." : mode === "register" ? "注册并进入" : "登录"}
+            </button>
+          </form>
+        ) : step === "email" ? (
           <form className="space-y-6" onSubmit={handleSendOtp}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-on-surface-variant block">身份标识 (邮箱)</label>

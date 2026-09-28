@@ -181,7 +181,7 @@ export function AdminParticipantDetailPage() {
             <div className="space-y-4">
               <DetailBlock
                 title="入口说明"
-                value="当前项目只有一套参与者入口。提醒邮件不会创建第二套账号体系，而是提醒对方继续使用当前邮箱通过 /portal/login 收验证码进入。"
+                value="当前项目只有一套参与者入口。提醒邮件不会创建第二套账号体系，而是提醒对方继续使用当前邮箱通过 /portal/login 登录。"
               />
               <DetailBlock
                 title="资格说明"
