@@ -1,11 +1,17 @@
 # Starward2026 VPS stack: Node app + Caddy TLS/SPA edge.
 #
-# Run from the repository root so the root `.env` is used both for `env_file`
-# and for `${...}` interpolation:
+# Local build (repository root, uses the root `.env` for `env_file` and for
+# `${...}` interpolation):
 #
 #   cp .env.example .env
 #   $EDITOR .env
 #   docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+#
+# VPS auto-deploy: the workflow pushes the `runtime` and `caddy` targets to ACR.
+# On the VPS set `STARWARD_APP_IMAGE` / `STARWARD_CADDY_IMAGE` in `.env` to the
+# ACR repositories and deploy with `deploy/deploy.sh`, which exports pinned
+# image tags and runs `pull` + `up -d --no-build`. The `build:` blocks remain so
+# local development can still build from source.
 #
 # See docs/development/vps.md for firewall, DNS, TLS, backup, and rollback.
 name: starward2026
@@ -16,7 +22,7 @@ services:
       context: ..
       dockerfile: Dockerfile
       target: runtime
-    image: starward2026-app:local
+    image: ${STARWARD_APP_IMAGE:-starward2026-app:local}
     restart: unless-stopped
     env_file:
       - ../.env
@@ -57,7 +63,7 @@ services:
       context: ..
       dockerfile: Dockerfile
       target: caddy
-    image: starward2026-caddy:local
+    image: ${STARWARD_CADDY_IMAGE:-starward2026-caddy:local}
     restart: unless-stopped
     env_file:
       - ../.env

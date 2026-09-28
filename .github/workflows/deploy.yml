@@ -1,0 +1,127 @@
+# Starward2026 VPS auto-deploy.
+#
+# Trigger: push to `main`, or manual `workflow_dispatch`.
+#
+# Flow:
+#   1. CI gate: npm ci -> npm run check -> npm test -> npm run build.
+#   2. Build the Dockerfile `runtime` and `caddy` targets and push them to
+#      Aliyun ACR with an immutable `${github.sha}` tag plus `latest`.
+#   3. SSH to the VPS checkout and run `deploy/deploy.sh <sha>`, which pulls
+#      those exact tags and recreates the stack without building.
+#
+# Repository configuration (no real values in this file):
+#   secrets: ACR_USERNAME, ACR_PASSWORD, VPS_HOST, VPS_USER, VPS_SSH_KEY,
+#            optional VPS_SSH_PORT
+#   vars:    ACR_REGISTRY (e.g. registry.cn-beijing.aliyuncs.com),
+#            ACR_NAMESPACE, ACR_APP_REPOSITORY, ACR_CADDY_REPOSITORY,
+#            VPS_DEPLOY_PATH (e.g. /opt/starward)
+#
+# The jobs are restricted to the upstream repository owner so forks cannot run
+# a production deploy.
+
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22.18.0"
+
+jobs:
+  build-and-push:
+    name: Build, test, and push images
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Renko6626' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build SPA and Worker
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # `runtime` is the non-root Node server; the SPA is not in this image.
+      - name: Build and push app runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: runtime
+          push: true
+          provenance: false
+          tags: |
+            ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_APP_REPOSITORY }}:${{ github.sha }}
+            ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_APP_REPOSITORY }}:latest
+          cache-from: type=gha,scope=starward2026
+          cache-to: type=gha,scope=starward2026,mode=max
+
+      # `caddy` bakes the built SPA (`dist/client`) into the official image.
+      - name: Build and push Caddy image with baked SPA
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: caddy
+          push: true
+          provenance: false
+          tags: |
+            ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_CADDY_REPOSITORY }}:${{ github.sha }}
+            ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_CADDY_REPOSITORY }}:latest
+          cache-from: type=gha,scope=starward2026
+          cache-to: type=gha,scope=starward2026,mode=max
+
+  deploy:
+    name: Deploy to production VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Renko6626' }}
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    environment:
+      name: production
+    steps:
+      - name: Pull pinned images on the VPS and redeploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || '22' }}
+          command_timeout: 30m
+          script: |
+            set -e
+            cd "${{ vars.VPS_DEPLOY_PATH }}"
+            git fetch --prune origin main
+            git reset --hard FETCH_HEAD
+            bash deploy/deploy.sh "${{ github.sha }}"

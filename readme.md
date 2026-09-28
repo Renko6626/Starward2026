@@ -38,7 +38,8 @@ Starward2026 的目标范围包含以下三类能力：
 
 ```text
 Starward2026/
-├── deploy/            # Docker Compose + Caddy VPS stack
+├── .github/workflows/ # GitHub Actions 自动部署
+├── deploy/            # Docker Compose + Caddy VPS stack（含 deploy.sh）
 ├── docs/
 ├── migrations/
 ├── server/            # Node/VPS 入口与平台适配器
@@ -142,6 +143,22 @@ npm run db:vps:restore -- <file> --force  # 校验后恢复（需先停止应用
 防火墙、DNS、TLS、卷权限、日志、备份轮换、恢复、回滚、`VPS_ADMIN_EMAILS`、
 `TRUST_PROXY_HEADERS` 以及反向代理 peer/IP 细节见
 [docs/development/vps.md](./docs/development/vps.md)。
+
+### 自动部署（GitHub Actions + 阿里云 ACR）
+
+`.github/workflows/deploy.yml` 在 push `main` 或手动 `workflow_dispatch` 时：
+先执行 `npm ci`、`npm run check`、`npm test`、`npm run build`，再把 Dockerfile
+的 `runtime` 与 `caddy`（已烤入 SPA）两个 target 以不可变 SHA tag 与 `latest`
+推送到阿里云 ACR，最后通过 SSH 在 VPS 上执行 `bash deploy/deploy.sh <sha>`。
+脚本会先备份 SQLite、记录当前镜像、`pull` 后 `up -d --no-build`，等待 app
+healthy 与 `/api/health`，失败时切回此前记录的镜像并重新健康检查（不会自动
+恢复数据库）。
+
+生产 `.env` 只保存在 VPS（建议 `/opt/starward/.env`，权限 600）；GitHub 仅保存
+`ACR_*`、`VPS_*` 等 Secrets/Variables，仓库内不写入真实值。前置条件、Secrets/
+Variables 清单、首次配置、手动触发、回滚、SQLite 前向迁移与备份恢复、以及
+阿里云北京 ACME/ICP 风险见
+[docs/development/vps.md](./docs/development/vps.md) 第 18 节。
 
 ## Cloudflare 环境部署（Wrangler + D1）
 

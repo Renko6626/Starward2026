@@ -29,6 +29,8 @@ Compose services:
 ## 2. Prerequisites
 
 - A Linux VPS with Docker Engine 24+ and the Compose v2 plugin.
+- For the automated deployment path: an Aliyun ACR instance, an ECS host, and
+  the GitHub secrets/variables listed in §18.
 - Node.js `>=22.18.0` on the VPS **only** if you want to run the ops scripts
   outside Docker. The container includes Node 22.18 itself.
 - A domain whose DNS you control.
@@ -135,6 +137,9 @@ Caddy obtains and renews certificates automatically through ACME:
   is lost Caddy simply re-issues.
 - For local smoke tests with no DNS, set `SITE_ADDRESS=http://localhost`; Caddy
   serves plain HTTP and no certificate is requested.
+- Alibaba Cloud mainland regions (including Beijing) enforce ICP filing; an
+  unfiled `A` record can be blocked at `80`/`443`, which breaks ACME
+  validation. See §18.9 for the concrete risk and options.
 - If ACME rate limits are a concern while testing, temporarily point Caddy at
   the Let's Encrypt staging CA (`acme_ca https://acme-staging-v02.api.letsencrypt.org/directory`)
   inside the global block of `deploy/Caddyfile` and remove it afterwards.
@@ -291,7 +296,12 @@ SQLITE_PATH=./data/starward.sqlite npm run db:vps:restore -- ./backups/starward-
   migration.
 - **Caddy/edge config**: `git checkout deploy/Caddyfile`, then
   `docker compose --env-file .env -f deploy/docker-compose.yml restart caddy`.
-- **Image rollback**: images are tagged `starward2026-app:local` /
+- **Image rollback (automated path)**: `bash deploy/deploy.sh <known-good-sha>`
+  pulls that immutable ACR tag and recreates the stack without building.
+  `deploy/deploy.sh` also records the running app/caddy digests before every
+  deploy and returns to them automatically if the new release fails its health
+  gate (see §18).
+- **Image rollback (local build)**: images are tagged `starward2026-app:local` /
   `starward2026-caddy:local`, so tag the previous image before upgrading if you
   need instant rollback without rebuilding.
 
@@ -377,3 +387,173 @@ Cloudflare path.
 | `/api/admin/*` always `403` | `VPS_ADMIN_EMAILS` empty/mismatched, or no Better Auth session. Sign in first and verify the address. |
 | Backups fail with permission denied | Volume/bind-mount not owned by uid 1000. See §8. |
 | Rate limiting blocks everyone | `TRUST_PROXY_HEADERS` misconfigured or `TRUSTED_PROXY_IPS` not the exact Caddy peer. See §15. |
+
+## 18. Automated deployment (GitHub Actions + Aliyun ACR)
+
+`.github/workflows/deploy.yml` builds the images once in GitHub Actions, pushes
+them to Aliyun Container Registry (ACR), and lets the VPS pull and restart.
+The VPS never builds in this path, so it needs much less CPU and disk.
+
+### 18.1 Prerequisites
+
+- A GitHub repository owned by `Renko6626`. The workflow checks
+  `github.repository_owner` in both jobs, so forks cannot trigger a production
+  deploy even if they copy the secrets names.
+- An Aliyun ACR instance in the region closest to the ECS host (Beijing is used
+  in the examples). Create two repositories, for example `starward2026-app` and
+  `starward2026-caddy`, and a dedicated ACR user with push/pull rights. Prefer a
+  fixed ACR password/access token over an Aliyun account password.
+- An Aliyun ECS instance with Docker Engine 24+ and the Compose v2 plugin.
+- DNS for `SITE_ADDRESS` pointing at the ECS public IP, and a security group
+  allowing inbound `22`, `80`, and `443`.
+- A checkout of this repository on the ECS at `VPS_DEPLOY_PATH` (recommended
+  `/opt/starward`) that contains the production `.env` and an `origin` remote the
+  SSH user can fetch `main` from (a read-only GitHub deploy key or token). The
+  deploy job runs `git fetch --prune origin main` before invoking the script.
+
+### 18.2 GitHub Secrets
+
+Add under **Settings -> Secrets and variables -> Actions -> Secrets**
+(repository-level or the `production` environment):
+
+| Secret | Purpose |
+|---|---|
+| `ACR_USERNAME` | ACR user name used by `docker/login-action` |
+| `ACR_PASSWORD` | ACR password or access token |
+| `VPS_HOST` | ECS public IP or SSH hostname |
+| `VPS_USER` | SSH user that owns the deployment checkout |
+| `VPS_SSH_KEY` | Private key for that user (its public key lives in the ECS `authorized_keys`) |
+| `VPS_SSH_PORT` | Optional; defaults to `22` |
+
+### 18.3 GitHub Variables
+
+Add under **Settings -> Secrets and variables -> Actions -> Variables**:
+
+| Variable | Example | Purpose |
+|---|---|---|
+| `ACR_REGISTRY` | `registry.cn-beijing.aliyuncs.com` | Registry host used in every image ref |
+| `ACR_NAMESPACE` | `starward` | ACR namespace |
+| `ACR_APP_REPOSITORY` | `starward2026-app` | App runtime repository |
+| `ACR_CADDY_REPOSITORY` | `starward2026-caddy` | Caddy + baked SPA repository |
+| `VPS_DEPLOY_PATH` | `/opt/starward` | Checkout the SSH step resets and runs |
+
+`.env.example` documents the shapes only; never commit real ACR or VPS values.
+
+### 18.4 First-time VPS setup
+
+1. Create the checkout and the production `.env` (only on the VPS):
+
+   ```bash
+   sudo mkdir -p /opt/starward
+   sudo chown "$USER":"$USER" /opt/starward
+   git clone git@github.com:Renko6626/Starward2026.git /opt/starward
+   cd /opt/starward
+   cp .env.example .env
+   chmod 600 .env
+   $EDITOR .env
+   ```
+
+2. Point the image keys at ACR and fill in the real values:
+
+   ```dotenv
+   STARWARD_APP_IMAGE=registry.cn-beijing.aliyuncs.com/starward/starward2026-app:latest
+   STARWARD_CADDY_IMAGE=registry.cn-beijing.aliyuncs.com/starward/starward2026-caddy:latest
+   SITE_ADDRESS=starward.example.com
+   ACME_EMAIL=ops@example.com
+   ```
+
+3. Let the VPS pull from ACR. Either run `docker login <registry>` once for the
+   deploy user (the credential is cached in `~/.docker/config.json`) or configure
+   a registry credential helper. `deploy/deploy.sh` does **not** log in itself.
+
+4. Push `main` once, or run the workflow manually (18.6), to seed the ACR tags.
+   On a brand-new host there is no live database yet, so the first deploy skips
+   the backup step; `SKIP_BACKUP=1 bash deploy/deploy.sh <sha>` does the same
+   explicitly.
+
+### 18.5 Automatic trigger
+
+A push to `main` runs the workflow:
+
+1. `build-and-push` runs `npm ci`, `npm run check`, `npm test`, and
+   `npm run build`.
+2. It builds the Dockerfile `runtime` target and the `caddy` target (which bakes
+   in the built SPA) with `docker/build-push-action`, `provenance: false`, and
+   the GitHub Actions cache (`type=gha`).
+3. It pushes each image with two tags:
+   - `<image>:<40-char-git-sha>` — the immutable release tag the VPS uses;
+   - `<image>:latest` — convenience only.
+4. `deploy` waits for `build-and-push` and runs the SSH step. It uses
+   `concurrency: deploy-production` with `cancel-in-progress: false`, so two
+   releases cannot race, and is attached to the `production` environment (add
+   required reviewers there for a manual approval gate).
+
+### 18.6 Manual trigger
+
+Open **Actions -> deploy -> Run workflow** (`workflow_dispatch`), choose the
+branch/commit, and run. The same build, push, and deploy path executes. Use this
+to re-deploy a known good commit or to seed the first images.
+
+### 18.7 What the deploy job and script do
+
+The SSH step resets the checkout to the fetched `main` and runs:
+
+```bash
+bash deploy/deploy.sh "$GITHUB_SHA"
+```
+
+`deploy/deploy.sh`:
+
+1. validates the root `.env`, that `docker` + Compose v2 are present, and that
+   `docker compose config` parses;
+2. runs the existing `db:vps:backup` against the live database (skipped only on
+   a first deploy or with `SKIP_BACKUP=1`);
+3. records the currently running app/caddy image digests (falling back to tags)
+   before changing anything;
+4. `docker compose pull`, then `up -d --no-build` with the pinned SHA tags;
+5. waits for the `app` container health check and a `/api/health` fetch from
+   inside the container;
+6. on any failure after the recreate starts, brings the recorded images back up
+   and re-checks health. It never restores the database.
+
+The script derives the repository root from its own path, so it works from the
+repository root and from `/opt/starward`. It takes the immutable tag as its only
+positional argument and does not require `jq`.
+
+### 18.8 Rollback and forward-only migrations
+
+- **Roll forward**: re-run the workflow, or run
+  `bash deploy/deploy.sh <known-good-sha>` once that image tag exists in ACR.
+- **Automatic rollback**: a failed deploy returns to the digests recorded before
+  the recreate, then re-checks container health and `/api/health`. It never
+  just restarts `latest`.
+- **Migrations are forward-only** (§10). An image rollback does not un-apply a
+  migration; if the schema change is incompatible with the older image, restore
+  a backup with §12. `deploy.sh` deliberately never touches the database, so a
+  rollback cannot silently replay an old schema.
+
+### 18.9 TLS and Aliyun Beijing ACME risk
+
+- Caddy still obtains and renews certificates automatically on the ECS (§7).
+  The ECS security group must allow inbound `80/tcp` and `443/tcp` from the
+  public internet, and `SITE_ADDRESS` must resolve to the ECS public IP so the
+  ACME HTTP-01 / TLS-ALPN challenges can complete.
+- **Alibaba Cloud Beijing caveat:** mainland-China regions enforce the ICP
+  filing regime. An `A` record pointing at a Beijing ECS without a valid ICP
+  filing can be blocked, and `80`/`443` may be filtered, so ACME validation
+  fails and Caddy retries indefinitely. Complete ICP filing, host in a
+  region/zone that does not require it, or terminate TLS at a front proxy that
+  already holds a valid certificate. This is a policy/network constraint, not a
+  Caddy configuration bug.
+- Before the stack is live, a bare `A`-record request will 502/503. Wait for the
+  app health gate in `deploy.sh`, then
+  `curl -fsS https://<domain>/api/health`.
+- If Let's Encrypt rate limits are hit while iterating, temporarily switch Caddy
+  to the staging CA as described in §7 and remove it afterwards.
+
+### 18.10 Where the production `.env` lives
+
+The production `.env` exists **only** on the VPS (recommended
+`/opt/starward/.env`, mode `600`). It is never committed, never copied into an
+image, and never stored in GitHub. GitHub holds only the deployment credentials
+in 18.2/18.3; neither the workflow nor `deploy.sh` prints `.env` or any secret.

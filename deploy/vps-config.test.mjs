@@ -95,6 +95,13 @@ describe("deploy/docker-compose.yml", () => {
     expect(compose).toMatch(/starward_backups:/);
     expect(compose).toMatch(/\/app\/backups/);
   });
+
+  it("allows ACR image overrides while keeping the local build targets", () => {
+    expect(compose).toMatch(/image:\s*\$\{STARWARD_APP_IMAGE:-starward2026-app:local\}/);
+    expect(compose).toMatch(/image:\s*\$\{STARWARD_CADDY_IMAGE:-starward2026-caddy:local\}/);
+    expect(compose).toMatch(/target:\s*runtime/);
+    expect(compose).toMatch(/target:\s*caddy/);
+  });
 });
 
 describe("deploy/Caddyfile", () => {
@@ -162,6 +169,12 @@ describe(".env.example", () => {
   it("never sets the loopback development flags", () => {
     expect(example).not.toMatch(/ALLOW_LOCAL_ADMIN_BYPASS/);
     expect(example).not.toMatch(/ALLOW_LOCAL_DEV_ORIGINS/);
+  });
+
+  it("documents the deploy-time image override keys", () => {
+    for (const key of ["STARWARD_APP_IMAGE", "STARWARD_CADDY_IMAGE"]) {
+      expect(example, `missing ${key}`).toMatch(new RegExp(`^${key}=`, "m"));
+    }
   });
 
   it("pins the compose proxy peer and documents the exact-match semantics", () => {
@@ -264,6 +277,129 @@ describe("VPS operations documentation", () => {
   });
 });
 
+describe(".github/workflows/deploy.yml", () => {
+  const workflow = read(".github/workflows/deploy.yml");
+
+  it("triggers on pushes to main and on manual dispatch", () => {
+    expect(workflow).toMatch(/on:\s*\n\s*push:/);
+    expect(workflow).toMatch(/branches:\s*\n\s*-\s*main/);
+    expect(workflow).toMatch(/workflow_dispatch:/);
+  });
+
+  it("runs the CI gate before building images", () => {
+    for (const step of ["npm ci", "npm run check", "npm test", "npm run build"]) {
+      expect(workflow, `missing ${step}`).toContain(step);
+    }
+
+    expect(workflow.indexOf("npm ci")).toBeLessThan(workflow.indexOf("npm run check"));
+    expect(workflow.indexOf("npm run check")).toBeLessThan(workflow.indexOf("npm test"));
+    expect(workflow.indexOf("npm test")).toBeLessThan(workflow.indexOf("npm run build"));
+  });
+
+  it("builds and pushes both Dockerfile targets with immutable and latest tags", () => {
+    expect(workflow).toMatch(/uses:\s*docker\/build-push-action@v\d+/);
+    expect(workflow).toMatch(/target:\s*runtime/);
+    expect(workflow).toMatch(/target:\s*caddy/);
+    expect(workflow).toMatch(/provenance:\s*false/);
+    expect(workflow).toMatch(/type=gha/);
+    expect(workflow).toMatch(/:\$\{\{\s*github\.sha\s*\}\}/);
+    expect(workflow).toMatch(/:latest/);
+  });
+
+  it("deploys over SSH behind a concurrency gate and an owner restriction", () => {
+    expect(workflow).toMatch(/concurrency:/);
+    expect(workflow).toMatch(/group:\s*deploy-production/);
+    expect(workflow).toMatch(/cancel-in-progress:\s*false/);
+    expect(workflow).toMatch(/github\.repository_owner\s*==\s*'Renko6626'/);
+    expect(workflow).toMatch(/appleboy\/ssh-action@v\d/);
+    expect(workflow).toMatch(/deploy\/deploy\.sh/);
+    expect(workflow).toMatch(/\$\{\{\s*github\.sha\s*\}\}/);
+  });
+});
+
+describe("deploy/deploy.sh", () => {
+  const script = read("deploy/deploy.sh");
+
+  it("is a bash script with strict mode", () => {
+    expect(script.startsWith("#!/usr/bin/env bash")).toBe(true);
+    expect(script).toMatch(/set -Eeuo pipefail/);
+  });
+
+  it("validates .env, Docker, and the compose config", () => {
+    expect(script).toMatch(/ENV_FILE=/);
+    expect(script).toMatch(/\.env not found/);
+    expect(script).toMatch(/command -v docker/);
+    expect(script).toMatch(/docker compose version/);
+    expect(script).toMatch(/compose config -q/);
+  });
+
+  it("backs up SQLite before pulling or recreating", () => {
+    const backupAt = script.indexOf("db:vps:backup");
+    expect(backupAt).toBeGreaterThan(-1);
+    expect(script.indexOf("compose pull app caddy")).toBeGreaterThan(backupAt);
+    expect(script).toMatch(/up -d --no-build/);
+  });
+
+  it("records the running images and rolls back to them on failure", () => {
+    expect(script).toMatch(/service_current_ref/);
+    expect(script).toMatch(/RepoDigests/);
+    expect(script).toMatch(/rollback\(\)/);
+    expect(script).toMatch(/PREV_APP_IMAGE/);
+    expect(script).toMatch(/PREV_CADDY_IMAGE/);
+  });
+
+  it("waits for app health and /api/health", () => {
+    expect(script).toMatch(/compose pull app caddy/);
+    expect(script).toMatch(/wait_for_app_health/);
+    expect(script).toMatch(/\/api\/health/);
+    expect(script).toMatch(/State\.Health\.Status/);
+  });
+
+  it("never restores the database automatically and does not need jq", () => {
+    expect(script).not.toMatch(/db:vps:restore/);
+    expect(script).not.toMatch(/restore-sqlite/);
+    expect(script).not.toMatch(/(?:^|[|&;]|\$\()\s*jq\b/m);
+  });
+
+  it("accepts an optional tag positional argument", () => {
+    expect(script).toMatch(/tag="\$\{1:-\}"/);
+    expect(script).toMatch(/with_tag/);
+  });
+});
+
+describe("VPS automated deployment documentation", () => {
+  const doc = read("docs/development/vps.md");
+
+  it("documents GitHub Actions, ACR, secrets/vars, triggers, and rollback", () => {
+    for (const topic of [
+      /GitHub Actions/i,
+      /Aliyun ACR|ACR/,
+      /ACR_USERNAME/,
+      /ACR_PASSWORD/,
+      /ACR_REGISTRY/,
+      /VPS_SSH_KEY/,
+      /VPS_DEPLOY_PATH/,
+      /workflow_dispatch/,
+      /deploy\/deploy\.sh/,
+      /forward-only/i,
+      /backup/i,
+      /rollback/i,
+    ]) {
+      expect(doc, `missing ${topic}`).toMatch(topic);
+    }
+  });
+
+  it("documents the Aliyun Beijing ACME / ICP risk", () => {
+    expect(doc).toMatch(/ICP filing/i);
+    expect(doc).toMatch(/Beijing/i);
+    expect(doc).toMatch(/ACME/);
+  });
+
+  it("states that the production .env lives only on the VPS", () => {
+    expect(doc).toMatch(/only\*\* on the VPS/);
+  });
+});
+
 describe("readme", () => {
   it("links the VPS deployment documentation without removing Wrangler guidance", () => {
     const readme = read("readme.md");
@@ -278,6 +414,8 @@ describe("paths that must exist", () => {
       "Dockerfile",
       ".dockerignore",
       ".env.example",
+      ".github/workflows/deploy.yml",
+      "deploy/deploy.sh",
       "deploy/docker-compose.yml",
       "deploy/Caddyfile",
       "scripts/backup-sqlite.mjs",
