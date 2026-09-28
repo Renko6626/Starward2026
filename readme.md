@@ -123,7 +123,7 @@ npm run dev
 仓库当前采用以下 Wrangler 环境划分：
 
 - 默认顶层配置：本地开发与通用构建
-- `env.staging`：`https://hifuu-staging.ayafeed.com`
+- `env.staging`：`https://hifuu-staging.mucwiki-edge.link`
 - `env.production`：保留为正式环境模板，启用前需补真实域名、路由与生产 D1 绑定
 
 推荐命令如下：
