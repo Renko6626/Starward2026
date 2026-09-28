@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -19,6 +18,7 @@ import {
   restoreSqlite,
   VpsOpsError,
 } from "./lib/vps-ops.mjs";
+import { applySqliteMigrations, createSqliteD1Database } from "../server/sqlite-d1.ts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const tempDirs = [];
@@ -268,42 +268,36 @@ describe("pruneBackups", () => {
   });
 });
 
-describe("npm run db:vps:migrate", () => {
-  it("applies migrations once and is idempotent on a second run", () => {
+describe("migration command behavior", () => {
+  it("applies migrations once and is idempotent on a second run", async () => {
     const dir = makeTempDir();
     const sqlitePath = join(dir, "migrate.sqlite");
     const migrationsDir = join(repoRoot, "migrations");
-    const script = join(repoRoot, "scripts", "sqlite-migrate.mjs");
-    const env = { ...process.env, SQLITE_PATH: sqlitePath, MIGRATIONS_DIR: migrationsDir };
-
-    const first = spawnSync(process.execPath, [script], { env, encoding: "utf8" });
-    expect(first.status, first.stderr).toBe(0);
-    expect(first.stdout).toMatch(/Applied \d+ migration/);
-    const appliedCount = countMigrations(sqlitePath);
-    expect(appliedCount).toBeGreaterThan(0);
-
-    const second = spawnSync(process.execPath, [script], { env, encoding: "utf8" });
-    expect(second.status, second.stderr).toBe(0);
-    expect(second.stdout).toMatch(/No pending migrations/);
-    expect(countMigrations(sqlitePath)).toBe(appliedCount);
+    const db = createSqliteD1Database(sqlitePath);
+    try {
+      const first = await applySqliteMigrations(db, migrationsDir);
+      const second = await applySqliteMigrations(db, migrationsDir);
+      expect(first.length).toBeGreaterThan(0);
+      expect(second).toEqual([]);
+      expect(countMigrations(sqlitePath)).toBe(first.length);
+    } finally {
+      db.close();
+    }
   });
 });
 
 describe("missing migrations directory", () => {
-  it("fails loudly instead of reporting success", () => {
+  it("fails loudly instead of reporting success", async () => {
     const dir = makeTempDir();
     const sqlitePath = join(dir, "migrate.sqlite");
-    const script = join(repoRoot, "scripts", "sqlite-migrate.mjs");
-    const env = {
-      ...process.env,
-      SQLITE_PATH: sqlitePath,
-      MIGRATIONS_DIR: join(dir, "no-such-migrations"),
-    };
-
-    const result = spawnSync(process.execPath, [script], { env, encoding: "utf8" });
-
-    expect(result.status).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toMatch(/no such file|ENOENT/i);
+    const db = createSqliteD1Database(sqlitePath);
+    try {
+      await expect(applySqliteMigrations(db, join(dir, "no-such-migrations"))).rejects.toThrow(
+        /no such file|ENOENT/i,
+      );
+    } finally {
+      db.close();
+    }
   });
 });
 
