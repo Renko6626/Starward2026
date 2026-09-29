@@ -211,7 +211,11 @@ export async function updatePortalProjectPreview(
   const existing = await getOrCreateProjectDraftRow(db, input.participant.id);
 
   if (!existing) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   // An approved preview is terminal for the participant: only an admin requesting
@@ -228,17 +232,20 @@ export async function updatePortalProjectPreview(
 
   const nextPreviewTitle = normalizeOptionalText(input.data.previewTitle);
   const nextPreviewSummary = normalizeOptionalText(input.data.previewSummary);
-  const nextPublicAuthorName = normalizeOptionalText(input.data.publicAuthorName);
   const nextFormatLabel = normalizeOptionalText(input.data.formatLabel);
   const nextPublicTags = normalizePublicTags(input.data.publicTags);
-  const nextPreviewStatus = resolvePortalProjectDraftSaveStatus(existing.preview_status);
+  const nextPreviewStatus = resolvePortalProjectDraftSaveStatus(
+    existing.preview_status,
+  );
 
   const hasChanges =
     existing.preview_title !== nextPreviewTitle ||
     existing.preview_summary !== nextPreviewSummary ||
-    existing.public_author_name !== nextPublicAuthorName ||
     existing.format_label !== nextFormatLabel ||
-    !areStringArraysEqual(parsePublicTags(existing.public_tags_json), nextPublicTags) ||
+    !areStringArraysEqual(
+      parsePublicTags(existing.public_tags_json),
+      nextPublicTags,
+    ) ||
     existing.preview_status !== nextPreviewStatus;
 
   if (!hasChanges) {
@@ -257,7 +264,6 @@ export async function updatePortalProjectPreview(
         `UPDATE project_drafts
          SET preview_title = ?,
              preview_summary = ?,
-             public_author_name = ?,
              format_label = ?,
              public_tags_json = ?,
              preview_status = ?,
@@ -267,7 +273,6 @@ export async function updatePortalProjectPreview(
       .bind(
         nextPreviewTitle,
         nextPreviewSummary,
-        nextPublicAuthorName,
         nextFormatLabel,
         nextPublicTags.length > 0 ? JSON.stringify(nextPublicTags) : null,
         nextPreviewStatus,
@@ -289,7 +294,11 @@ export async function updatePortalProjectPreview(
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   return {
@@ -309,13 +318,21 @@ export async function submitPortalProjectPreview(
   const window = getWindowOrFallback(input.windows, "preview_submit_open");
 
   if (!window.isOpen) {
-    return projectDraftMutationError(403, "preview_submit_closed", "当前还没有开放预告资料提交。");
+    return projectDraftMutationError(
+      403,
+      "preview_submit_closed",
+      "当前还没有开放预告资料提交。",
+    );
   }
 
   const existing = await getOrCreateProjectDraftRow(db, input.participant.id);
 
   if (!existing) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   if (existing.preview_status === "approved") {
@@ -341,7 +358,10 @@ export async function submitPortalProjectPreview(
     );
   }
 
-  if (existing.preview_status === "submitted" && existing.preview_submitted_at) {
+  if (
+    existing.preview_status === "submitted" &&
+    existing.preview_submitted_at
+  ) {
     return {
       ok: true,
       draft: mapPortalProjectDraftDetail(existing),
@@ -376,7 +396,11 @@ export async function submitPortalProjectPreview(
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   return {
@@ -396,7 +420,11 @@ export async function updatePortalProjectReview(
   const existing = await getOrCreateProjectDraftRow(db, input.participant.id);
 
   if (!existing) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   // See updatePortalProjectPreview: an approved review must not be silently
@@ -412,7 +440,9 @@ export async function updatePortalProjectReview(
   const nextContentNote = normalizeOptionalText(input.data.contentNote);
   const nextContentWarnings = normalizeOptionalText(input.data.contentWarnings);
   const nextReviewNote = normalizeOptionalText(input.data.reviewNote);
-  const nextReviewStatus = resolvePortalProjectDraftSaveStatus(existing.review_status);
+  const nextReviewStatus = resolvePortalProjectDraftSaveStatus(
+    existing.review_status,
+  );
 
   const hasChanges =
     existing.content_note !== nextContentNote ||
@@ -464,7 +494,11 @@ export async function updatePortalProjectReview(
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   return {
@@ -484,13 +518,21 @@ export async function submitPortalProjectReview(
   const window = getWindowOrFallback(input.windows, "review_submit_open");
 
   if (!window.isOpen) {
-    return projectDraftMutationError(403, "review_submit_closed", "当前还没有开放审查说明提交。");
+    return projectDraftMutationError(
+      403,
+      "review_submit_closed",
+      "当前还没有开放审查说明提交。",
+    );
   }
 
   const existing = await getOrCreateProjectDraftRow(db, input.participant.id);
 
   if (!existing) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   if (existing.review_status === "approved") {
@@ -549,7 +591,11 @@ export async function submitPortalProjectReview(
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
-    return projectDraftMutationError(404, "project_draft_missing", "未找到当前作品资料。");
+    return projectDraftMutationError(
+      404,
+      "project_draft_missing",
+      "未找到当前作品资料。",
+    );
   }
 
   return {
@@ -559,9 +605,15 @@ export async function submitPortalProjectReview(
   };
 }
 
-async function getOrCreateProjectDraftRow(db: D1Database, participantId: string) {
+async function getOrCreateProjectDraftRow(
+  db: D1Database,
+  participantId: string,
+) {
   let row = await db
-    .prepare(projectDraftSelectSql + " WHERE project_drafts.participant_id = ? LIMIT 1")
+    .prepare(
+      projectDraftSelectSql +
+        " WHERE project_drafts.participant_id = ? LIMIT 1",
+    )
     .bind(participantId)
     .first<ProjectDraftRow>();
 
@@ -606,14 +658,19 @@ async function getOrCreateProjectDraftRow(db: D1Database, participantId: string)
     .run();
 
   row = await db
-    .prepare(projectDraftSelectSql + " WHERE project_drafts.participant_id = ? LIMIT 1")
+    .prepare(
+      projectDraftSelectSql +
+        " WHERE project_drafts.participant_id = ? LIMIT 1",
+    )
     .bind(participantId)
     .first<ProjectDraftRow>();
 
   return row ?? null;
 }
 
-function mapAdminProjectDraftDetail(row: ProjectDraftRow): AdminProjectDraftDetail {
+function mapAdminProjectDraftDetail(
+  row: ProjectDraftRow,
+): AdminProjectDraftDetail {
   return {
     id: row.id,
     participantId: row.participant_id,
@@ -642,7 +699,9 @@ function mapAdminProjectDraftDetail(row: ProjectDraftRow): AdminProjectDraftDeta
   };
 }
 
-function mapPortalProjectDraftDetail(row: ProjectDraftRow): PortalProjectDraftDetail {
+function mapPortalProjectDraftDetail(
+  row: ProjectDraftRow,
+): PortalProjectDraftDetail {
   return {
     id: row.id,
     previewStatus: row.preview_status,
@@ -722,14 +781,19 @@ function parsePublicTags(value: string | null) {
 
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
   } catch {
     return [];
   }
 }
 
 function areStringArraysEqual(left: string[], right: string[]) {
-  return left.length === right.length && left.every((item, index) => item === right[index]);
+  return (
+    left.length === right.length &&
+    left.every((item, index) => item === right[index])
+  );
 }
 
 function projectDraftMutationError(
@@ -748,7 +812,7 @@ function projectDraftMutationError(
 const projectDraftSelectSql = `SELECT
   project_drafts.id,
   project_drafts.participant_id,
-  participants.display_name AS participant_name,
+  COALESCE(portal_profiles.credit_name, '未填写署名') AS participant_name,
   participants.invite_email AS participant_invite_email,
   participants.contact_handle AS participant_contact_handle,
   participants.status AS participant_status,
@@ -758,7 +822,7 @@ const projectDraftSelectSql = `SELECT
   project_drafts.review_status,
   project_drafts.preview_title,
   project_drafts.preview_summary,
-  project_drafts.public_author_name,
+  CASE WHEN portal_profiles.is_anonymous = 1 THEN '匿名' ELSE portal_profiles.credit_name END AS public_author_name,
   project_drafts.format_label,
   project_drafts.public_tags_json,
   project_drafts.content_note,
@@ -772,4 +836,5 @@ const projectDraftSelectSql = `SELECT
   project_drafts.updated_at
 FROM project_drafts
 INNER JOIN participants ON participants.id = project_drafts.participant_id
+LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
 LEFT JOIN schedule_segments ON schedule_segments.id = project_drafts.segment_id`;

@@ -8,14 +8,15 @@ import type {
   UpdateApplicationReviewInput,
 } from "../../src/shared/applications";
 import type { PortalApplicationDetail } from "../../src/shared/portal";
-import { resolveApplicationDisplayName } from "../../src/shared/application-identity";
 import { createPrefixedId } from "../lib/ids";
 import { resolvePortalApplicationMutation } from "../lib/portal-application";
 import { buildParticipantSegmentReleaseStatements } from "./segments";
 import { normalizeOptionalText } from "../lib/strings";
 import { nowIso } from "../lib/time";
 
-type ApplicationParticipantStatus = NonNullable<ApplicationDetail["participant"]>["status"];
+type ApplicationParticipantStatus = NonNullable<
+  ApplicationDetail["participant"]
+>["status"];
 
 type ApplicationListRow = {
   id: string;
@@ -41,13 +42,12 @@ type ApplicationDetailRow = ApplicationListRow & {
   admin_note: string | null;
   reviewed_by: string | null;
   updated_at: string;
-  profile_pen_name: string | null;
+  profile_credit_name: string | null;
   profile_contact_email: string | null;
   profile_primary_contact_channel: string | null;
   profile_primary_contact_handle: string | null;
   profile_backup_contact: string | null;
-  profile_public_credit_mode: "named" | "pseudonymous" | "anonymous" | null;
-  profile_public_credit_name: string | null;
+  profile_is_anonymous: number | null;
   invite_email: string | null;
   participant_status: ApplicationParticipantStatus | null;
   activated_at: string | null;
@@ -90,7 +90,10 @@ function isUniqueConstraintError(error: unknown) {
   }
 
   const message = error.message.toLowerCase();
-  return message.includes("unique constraint failed") || message.includes("uq_applications_user_id");
+  return (
+    message.includes("unique constraint failed") ||
+    message.includes("uq_applications_user_id")
+  );
 }
 
 export async function createApplication(
@@ -107,7 +110,6 @@ export async function createApplication(
         `INSERT INTO applications (
           id,
           user_id,
-          display_name,
           contact_email,
           contact_handle,
           interest_format,
@@ -117,12 +119,11 @@ export async function createApplication(
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
       )
       .bind(
         id,
         options?.userId ?? null,
-        input.displayName?.trim() ?? "",
         input.contactEmail.trim().toLowerCase(),
         normalizeOptionalText(input.contactHandle),
         input.interestFormat,
@@ -149,9 +150,14 @@ export async function createApplication(
 
 // Pure read: returns the application linked to this user, or null. It performs
 // no writes, so GET handlers can call it freely without mutating ownership.
-export async function getPortalApplicationByUserId(db: D1Database, userId: string) {
+export async function getPortalApplicationByUserId(
+  db: D1Database,
+  userId: string,
+) {
   const linked = await db
-    .prepare(portalApplicationSelectSql + " WHERE applications.user_id = ? LIMIT 1")
+    .prepare(
+      portalApplicationSelectSql + " WHERE applications.user_id = ? LIMIT 1",
+    )
     .bind(userId)
     .first<PortalApplicationRow>();
 
@@ -160,7 +166,11 @@ export async function getPortalApplicationByUserId(db: D1Database, userId: strin
 
 // Explicit write path: claim an unlinked application whose contact email matches
 // the caller's verified session email. Only ever invoked from mutation flows.
-async function claimUnlinkedApplicationByEmail(db: D1Database, userId: string, email: string) {
+async function claimUnlinkedApplicationByEmail(
+  db: D1Database,
+  userId: string,
+  email: string,
+) {
   const candidate = await db
     .prepare(
       "SELECT id FROM applications WHERE user_id IS NULL AND lower(contact_email) = lower(?) ORDER BY created_at DESC LIMIT 1",
@@ -173,7 +183,9 @@ async function claimUnlinkedApplicationByEmail(db: D1Database, userId: string, e
   }
 
   await db
-    .prepare("UPDATE applications SET user_id = ?, updated_at = ? WHERE id = ? AND user_id IS NULL")
+    .prepare(
+      "UPDATE applications SET user_id = ?, updated_at = ? WHERE id = ? AND user_id IS NULL",
+    )
     .bind(userId, nowIso(), candidate.id)
     .run();
 }
@@ -188,7 +200,10 @@ export async function upsertPortalApplication(
 ) {
   await claimUnlinkedApplicationByEmail(db, input.userId, input.authEmail);
   const existing = await getPortalApplicationByUserId(db, input.userId);
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, true);
+  const mutation = resolvePortalApplicationMutation(
+    existing?.status ?? null,
+    true,
+  );
 
   if (!mutation.editable) {
     return {
@@ -248,8 +263,7 @@ export async function upsertPortalApplication(
   await db
     .prepare(
       `UPDATE applications
-       SET display_name = ?,
-           contact_email = ?,
+       SET contact_email = ?,
            contact_handle = ?,
            interest_format = ?,
            intro_text = ?,
@@ -263,7 +277,6 @@ export async function upsertPortalApplication(
        WHERE user_id = ?`,
     )
     .bind(
-      input.data.displayName?.trim() ?? "",
       input.data.contactEmail.trim().toLowerCase(),
       normalizeOptionalText(input.data.contactHandle),
       input.data.interestFormat,
@@ -298,7 +311,7 @@ export async function listApplications(db: D1Database) {
     .prepare(
       `SELECT
         applications.id,
-        applications.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
         applications.contact_email,
         applications.contact_handle,
         applications.interest_format,
@@ -332,14 +345,17 @@ export async function listApplications(db: D1Database) {
   return (result.results ?? []).map(mapApplicationListRow);
 }
 
-export async function getApplicationDetail(db: D1Database, applicationId: string) {
+export async function getApplicationDetail(
+  db: D1Database,
+  applicationId: string,
+) {
   const row = await db
     .prepare(
       `SELECT
         applications.id,
         applications.user_id,
         "user".email AS auth_email,
-        applications.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
         applications.contact_email,
         applications.contact_handle,
         applications.interest_format,
@@ -352,13 +368,12 @@ export async function getApplicationDetail(db: D1Database, applicationId: string
         applications.admin_note,
         applications.reviewed_by,
         applications.updated_at,
-        portal_profiles.pen_name AS profile_pen_name,
+        portal_profiles.credit_name AS profile_credit_name,
         portal_profiles.contact_email AS profile_contact_email,
         portal_profiles.primary_contact_channel AS profile_primary_contact_channel,
         portal_profiles.primary_contact_handle AS profile_primary_contact_handle,
         portal_profiles.backup_contact AS profile_backup_contact,
-        portal_profiles.public_credit_mode AS profile_public_credit_mode,
-        portal_profiles.public_credit_name AS profile_public_credit_name,
+        portal_profiles.is_anonymous AS profile_is_anonymous,
         COALESCE(participant_by_application.id, participant_by_user.id, participant_by_email.id) AS participant_id,
         COALESCE(
           participant_by_application.invite_email,
@@ -410,7 +425,6 @@ export async function reviewApplication(
       `SELECT
         id,
         user_id,
-        display_name,
         contact_email,
         contact_handle
       FROM applications
@@ -420,7 +434,6 @@ export async function reviewApplication(
     .first<{
       id: string;
       user_id: string | null;
-      display_name: string;
       contact_email: string;
       contact_handle: string | null;
     }>();
@@ -468,7 +481,12 @@ export async function reviewApplication(
           ) VALUES (?, ?, 'not_started', 'not_started', ?, ?)
           ON CONFLICT(participant_id) DO NOTHING`,
         )
-        .bind(createPrefixedId("draft"), participantPlan.participantId, reviewedAt, reviewedAt),
+        .bind(
+          createPrefixedId("draft"),
+          participantPlan.participantId,
+          reviewedAt,
+          reviewedAt,
+        ),
     );
   }
 
@@ -482,7 +500,6 @@ async function buildParticipantSyncPlan(
   application: {
     id: string;
     user_id: string | null;
-    display_name: string;
     contact_email: string;
     contact_handle: string | null;
   },
@@ -494,7 +511,8 @@ async function buildParticipantSyncPlan(
         .bind(application.user_id)
         .first<AuthUserEmailRow>()
     : null;
-  const email = authUser?.email?.toLowerCase() || application.contact_email.toLowerCase();
+  const email =
+    authUser?.email?.toLowerCase() || application.contact_email.toLowerCase();
   const existingByApplication = await db
     .prepare(`SELECT id FROM participants WHERE application_id = ?`)
     .bind(application.id)
@@ -504,29 +522,25 @@ async function buildParticipantSyncPlan(
     return {
       participantId: existingByApplication.id,
       statements: [
-        db.prepare(
-        `UPDATE participants
+        db
+          .prepare(
+            `UPDATE participants
          SET user_id = COALESCE(user_id, ?),
              invite_email = ?,
-             display_name = ?,
              contact_handle = ?,
              status = 'approved',
              invited_at = COALESCE(invited_at, ?),
              updated_at = ?
          WHERE id = ?`,
-        ).bind(
-          application.user_id,
-          email,
-          resolveApplicationDisplayName({
-            displayName: application.display_name,
-            contactHandle: application.contact_handle,
-            contactEmail: email,
-          }),
-          application.contact_handle,
-          now,
-          now,
-          existingByApplication.id,
-        ),
+          )
+          .bind(
+            application.user_id,
+            email,
+            application.contact_handle,
+            now,
+            now,
+            existingByApplication.id,
+          ),
       ],
     };
   }
@@ -549,29 +563,25 @@ async function buildParticipantSyncPlan(
     return {
       participantId: existingByEmail.id,
       statements: [
-        db.prepare(
-        `UPDATE participants
+        db
+          .prepare(
+            `UPDATE participants
          SET application_id = COALESCE(application_id, ?),
              user_id = COALESCE(user_id, ?),
-             display_name = ?,
              contact_handle = ?,
              status = 'approved',
              invited_at = COALESCE(invited_at, ?),
              updated_at = ?
          WHERE id = ?`,
-        ).bind(
-          application.id,
-          application.user_id,
-          resolveApplicationDisplayName({
-            displayName: application.display_name,
-            contactHandle: application.contact_handle,
-            contactEmail: email,
-          }),
-          application.contact_handle,
-          now,
-          now,
-          existingByEmail.id,
-        ),
+          )
+          .bind(
+            application.id,
+            application.user_id,
+            application.contact_handle,
+            now,
+            now,
+            existingByEmail.id,
+          ),
       ],
     };
   }
@@ -587,24 +597,18 @@ async function buildParticipantSyncPlan(
             application_id,
             user_id,
             invite_email,
-            display_name,
-            contact_handle,
+              contact_handle,
             status,
             invited_at,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, 'approved', ?, ?, ?)`,
         )
         .bind(
           participantId,
           application.id,
           application.user_id,
           email,
-          resolveApplicationDisplayName({
-            displayName: application.display_name,
-            contactHandle: application.contact_handle,
-            contactEmail: email,
-          }),
           application.contact_handle,
           now,
           now,
@@ -619,7 +623,6 @@ async function buildParticipantDemotionPlan(
   application: {
     id: string;
     user_id: string | null;
-    display_name: string;
     contact_email: string;
     contact_handle: string | null;
   },
@@ -696,15 +699,14 @@ function mapApplicationDetailRow(row: ApplicationDetailRow): ApplicationDetail {
       row.profile_contact_email &&
       row.profile_primary_contact_channel &&
       row.profile_primary_contact_handle &&
-      row.profile_public_credit_mode
+      row.profile_credit_name
         ? {
-            penName: row.profile_pen_name?.trim() ? row.profile_pen_name : null,
+            creditName: row.profile_credit_name,
             contactEmail: row.profile_contact_email,
             primaryContactChannel: row.profile_primary_contact_channel,
             primaryContactHandle: row.profile_primary_contact_handle,
             backupContact: row.profile_backup_contact,
-            publicCreditMode: row.profile_public_credit_mode,
-            publicCreditName: row.profile_public_credit_name,
+            isAnonymous: Boolean(row.profile_is_anonymous),
           }
         : null,
     participant:
@@ -719,7 +721,9 @@ function mapApplicationDetailRow(row: ApplicationDetailRow): ApplicationDetail {
   };
 }
 
-function mapPortalApplicationRow(row: PortalApplicationRow): PortalApplicationDetail {
+function mapPortalApplicationRow(
+  row: PortalApplicationRow,
+): PortalApplicationDetail {
   return {
     id: row.id,
     displayName: row.display_name,
@@ -739,7 +743,7 @@ function mapPortalApplicationRow(row: PortalApplicationRow): PortalApplicationDe
 
 const portalApplicationSelectSql = `SELECT
   applications.id,
-  applications.display_name,
+  COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
   applications.contact_email,
   applications.contact_handle,
   applications.interest_format,
@@ -751,4 +755,5 @@ const portalApplicationSelectSql = `SELECT
   applications.reviewed_by,
   applications.reviewed_at,
   applications.updated_at
-FROM applications`;
+FROM applications
+LEFT JOIN portal_profiles ON portal_profiles.user_id = applications.user_id`;

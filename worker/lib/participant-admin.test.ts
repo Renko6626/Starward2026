@@ -26,13 +26,12 @@ function createApplicationDetail(
       email: "sample@example.com",
     },
     portalProfile: {
-      penName: "莲子",
+      creditName: "莲子",
       contactEmail: "sample@example.com",
       primaryContactChannel: "Discord",
       primaryContactHandle: "@renko",
       backupContact: null,
-      publicCreditMode: "named",
-      publicCreditName: null,
+      isAnonymous: false,
     },
     participantId: "part_1",
     participantStatus: "approved",
@@ -63,7 +62,9 @@ describe("buildParticipantPortalInviteEmail", () => {
 
     expect(message.subject).toContain("参与资格");
     expect(message.text).toContain("莲子");
-    expect(message.text).toContain("https://starward2026.example.com/portal/login");
+    expect(message.text).toContain(
+      "https://starward2026.example.com/portal/login",
+    );
     expect(message.text).toContain("验证码");
   });
 });
@@ -78,14 +79,17 @@ describe("maybeSendParticipantApprovalNotice", () => {
       return;
     }
 
-    const sendParticipantPortalInviteEmail = vi.fn().mockResolvedValue(undefined);
+    const sendParticipantPortalInviteEmail = vi
+      .fn()
+      .mockResolvedValue(undefined);
     const recordParticipantInviteSent = vi.fn().mockResolvedValue(undefined);
 
     const notification = await module.maybeSendParticipantApprovalNotice({
       env: {},
       db: {} as D1Database,
       actorId: "admin@example.com",
-      requestUrl: "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
+      requestUrl:
+        "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
       previousStatus: "pending",
       application: createApplicationDetail({
         status: "approved",
@@ -125,14 +129,17 @@ describe("maybeSendParticipantApprovalNotice", () => {
       return;
     }
 
-    const sendParticipantPortalInviteEmail = vi.fn().mockResolvedValue(undefined);
+    const sendParticipantPortalInviteEmail = vi
+      .fn()
+      .mockResolvedValue(undefined);
     const recordParticipantInviteSent = vi.fn().mockResolvedValue(undefined);
 
     const notification = await module.maybeSendParticipantApprovalNotice({
       env: {},
       db: {} as D1Database,
       actorId: "admin@example.com",
-      requestUrl: "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
+      requestUrl:
+        "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
       previousStatus: "approved",
       application: createApplicationDetail({
         status: "approved",
@@ -155,14 +162,17 @@ describe("maybeSendParticipantApprovalNotice", () => {
       return;
     }
 
-    const sendParticipantPortalInviteEmail = vi.fn().mockRejectedValue(new Error("mail down"));
+    const sendParticipantPortalInviteEmail = vi
+      .fn()
+      .mockRejectedValue(new Error("mail down"));
     const recordParticipantInviteSent = vi.fn().mockResolvedValue(undefined);
 
     const notification = await module.maybeSendParticipantApprovalNotice({
       env: {},
       db: {} as D1Database,
       actorId: "admin@example.com",
-      requestUrl: "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
+      requestUrl:
+        "https://hifuu-staging.ayafeed.com/api/admin/applications/app_1",
       previousStatus: "pending",
       application: createApplicationDetail({
         status: "approved",

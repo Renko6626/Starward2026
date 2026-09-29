@@ -12,18 +12,23 @@ export const applicationInterestFormatValues = [
   "other",
 ] as const;
 
-export const applicationInterestFormatSchema = z.enum(applicationInterestFormatValues);
+export const applicationInterestFormatSchema = z.enum(
+  applicationInterestFormatValues,
+);
 
-export const applicationStatusValues = ["pending", "approved", "rejected", "withdrawn"] as const;
+export const applicationStatusValues = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+] as const;
 
 export const applicationStatusSchema = z.enum(applicationStatusValues);
 
 const optionalShortTextSchema = z.string().trim().max(120).optional();
 const optionalBodyTextSchema = z.string().trim().max(1600).optional();
-const optionalDisplayNameSchema = z.string().trim().max(80).optional();
 
 const applicationInputSchema = z.object({
-  displayName: optionalDisplayNameSchema,
   contactEmail: z.string().trim().email().max(320),
   contactHandle: optionalShortTextSchema,
   interestFormat: applicationInterestFormatSchema,
@@ -43,9 +48,15 @@ export const updateApplicationReviewInputSchema = z.object({
   adminNote: z.string().trim().max(2000).optional(),
 });
 
-export type CreateApplicationInput = z.infer<typeof createApplicationInputSchema>;
-export type UpsertPortalApplicationInput = z.infer<typeof upsertPortalApplicationInputSchema>;
-export type UpdateApplicationReviewInput = z.infer<typeof updateApplicationReviewInputSchema>;
+export type CreateApplicationInput = z.infer<
+  typeof createApplicationInputSchema
+>;
+export type UpsertPortalApplicationInput = z.infer<
+  typeof upsertPortalApplicationInputSchema
+>;
+export type UpdateApplicationReviewInput = z.infer<
+  typeof updateApplicationReviewInputSchema
+>;
 
 export type ApplicationListItem = {
   id: string;
@@ -69,35 +80,30 @@ export type ApplicationDetail = ApplicationListItem & {
   adminNote: string | null;
   reviewedBy: string | null;
   updatedAt: string;
-  authUser:
-    | {
-        id: string;
-        email: string;
-      }
-    | null;
-  portalProfile:
-    | {
-        penName: string | null;
-        contactEmail: string;
-        primaryContactChannel: string;
-        primaryContactHandle: string;
-        backupContact: string | null;
-        publicCreditMode: "named" | "pseudonymous" | "anonymous";
-        publicCreditName: string | null;
-      }
-    | null;
-  participant:
-    | {
-        id: string;
-        inviteEmail: string;
-        status: ParticipantPortalStatus;
-        activatedAt: string | null;
-      }
-    | null;
+  authUser: {
+    id: string;
+    email: string;
+  } | null;
+  portalProfile: {
+    creditName: string;
+    contactEmail: string;
+    primaryContactChannel: string;
+    primaryContactHandle: string;
+    backupContact: string | null;
+    isAnonymous: boolean;
+  } | null;
+  participant: {
+    id: string;
+    inviteEmail: string;
+    status: ParticipantPortalStatus;
+    activatedAt: string | null;
+  } | null;
 };
 
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
-export type ApplicationInterestFormat = z.infer<typeof applicationInterestFormatSchema>;
+export type ApplicationInterestFormat = z.infer<
+  typeof applicationInterestFormatSchema
+>;
 
 export type ApplicationIntakeResponse = {
   isOpen: boolean;
@@ -128,7 +134,10 @@ export type AdminApplicationDetailResponse = {
   notification?: AdminApplicationReviewNotification | null;
 };
 
-export const applicationInterestFormatLabels: Record<ApplicationInterestFormat, string> = {
+export const applicationInterestFormatLabels: Record<
+  ApplicationInterestFormat,
+  string
+> = {
   novel: "小说 / 文本",
   illustration: "插画",
   comic: "漫画",

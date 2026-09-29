@@ -7,7 +7,10 @@ import type {
   UpdateSegmentInput,
   UpdateParticipantInput,
 } from "../../src/shared/admin";
-import type { ParticipantPortalStatus, PortalSegmentStatus } from "../../src/shared/portal";
+import type {
+  ParticipantPortalStatus,
+  PortalSegmentStatus,
+} from "../../src/shared/portal";
 import { resolveAdminSegmentState } from "../lib/segment-admin";
 import { buildInitialScheduleSegments } from "../lib/schedule-bootstrap";
 import { createPrefixedId } from "../lib/ids";
@@ -19,6 +22,7 @@ type ParticipantRow = {
   id: string;
   user_id: string | null;
   display_name: string;
+  is_anonymous: number;
   invite_email: string;
   contact_handle: string | null;
   status: "approved" | "withdrawn" | "completed";
@@ -47,7 +51,6 @@ type SegmentRow = {
 
 type ParticipantSegmentAssignmentRow = {
   id: string;
-  display_name: string;
   status: ParticipantPortalStatus;
 };
 
@@ -56,8 +59,18 @@ type ProjectDraftRow = {
   participant_id: string;
   participant_name: string;
   segment_code: string | null;
-  preview_status: "not_started" | "draft" | "submitted" | "changes_requested" | "approved";
-  review_status: "not_started" | "draft" | "submitted" | "changes_requested" | "approved";
+  preview_status:
+    | "not_started"
+    | "draft"
+    | "submitted"
+    | "changes_requested"
+    | "approved";
+  review_status:
+    | "not_started"
+    | "draft"
+    | "submitted"
+    | "changes_requested"
+    | "approved";
   preview_title: string | null;
   public_author_name: string | null;
   updated_at: string;
@@ -99,18 +112,20 @@ export type UpdateActiveScheduleSegmentResult =
 
 type ParticipantAdminUpdateRow = {
   id: string;
-  display_name: string;
   contact_handle: string | null;
   status: "approved" | "withdrawn" | "completed";
 };
 
-export async function listParticipants(db: D1Database): Promise<AdminParticipantItem[]> {
+export async function listParticipants(
+  db: D1Database,
+): Promise<AdminParticipantItem[]> {
   const result = await db
     .prepare(
       `SELECT
         participants.id,
         participants.user_id,
-        participants.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
+        portal_profiles.is_anonymous,
         participants.invite_email,
         participants.contact_handle,
         participants.status,
@@ -121,6 +136,7 @@ export async function listParticipants(db: D1Database): Promise<AdminParticipant
         participants.activated_at,
         participants.updated_at
       FROM participants
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
        AND schedule_segments.status = 'held'
@@ -146,7 +162,8 @@ export async function getParticipantDetail(
       `SELECT
         participants.id,
         participants.user_id,
-        participants.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
+        portal_profiles.is_anonymous,
         participants.invite_email,
         participants.contact_handle,
         participants.status,
@@ -157,6 +174,7 @@ export async function getParticipantDetail(
         participants.activated_at,
         participants.updated_at
       FROM participants
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
        AND schedule_segments.status = 'held'
@@ -185,7 +203,6 @@ export async function updateParticipant(
     .prepare(
       `SELECT
         id,
-        display_name,
         contact_handle,
         status
       FROM participants
@@ -199,12 +216,10 @@ export async function updateParticipant(
     return null;
   }
 
-  const nextDisplayName = input.displayName.trim();
   const nextContactHandle = normalizeOptionalText(input.contactHandle);
   const nextStatus = input.status;
 
   const hasChanges =
-    existing.display_name !== nextDisplayName ||
     existing.contact_handle !== nextContactHandle ||
     existing.status !== nextStatus;
 
@@ -218,13 +233,12 @@ export async function updateParticipant(
     db
       .prepare(
         `UPDATE participants
-         SET display_name = ?,
-             contact_handle = ?,
+         SET contact_handle = ?,
              status = ?,
              updated_at = ?
          WHERE id = ?`,
       )
-      .bind(nextDisplayName, nextContactHandle, nextStatus, now, participantId),
+      .bind(nextContactHandle, nextStatus, now, participantId),
     db
       .prepare(
         `INSERT INTO participant_events (
@@ -247,8 +261,6 @@ export async function updateParticipant(
         JSON.stringify({
           previousStatus: existing.status,
           nextStatus,
-          previousDisplayName: existing.display_name,
-          nextDisplayName,
           previousContactHandle: existing.contact_handle,
           nextContactHandle,
         }),
@@ -260,7 +272,9 @@ export async function updateParticipant(
   // schedule segment — they can no longer release it themselves. Release any
   // held segment (and detach its project draft) in the same atomic batch.
   if (nextStatus !== "approved") {
-    statements.push(...buildParticipantSegmentReleaseStatements(db, participantId, now));
+    statements.push(
+      ...buildParticipantSegmentReleaseStatements(db, participantId, now),
+    );
   }
 
   await db.batch(statements);
@@ -305,7 +319,9 @@ export async function recordParticipantInviteSent(
     .run();
 }
 
-export async function listSegments(db: D1Database): Promise<AdminSegmentItem[]> {
+export async function listSegments(
+  db: D1Database,
+): Promise<AdminSegmentItem[]> {
   const result = await db
     .prepare(
       `SELECT
@@ -315,7 +331,7 @@ export async function listSegments(db: D1Database): Promise<AdminSegmentItem[]> 
         schedule_segments.description,
         schedule_segments.status,
         schedule_segments.current_participant_id,
-        participants.display_name AS current_participant_name,
+        portal_profiles.credit_name AS current_participant_name,
         schedule_segments.claimed_at,
         schedule_segments.released_at,
         schedule_segments.sort_order,
@@ -325,6 +341,7 @@ export async function listSegments(db: D1Database): Promise<AdminSegmentItem[]> 
         ON schedule_versions.id = schedule_segments.schedule_version_id
        AND schedule_versions.status = 'active'
       LEFT JOIN participants ON participants.id = schedule_segments.current_participant_id
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       ORDER BY schedule_segments.sort_order ASC, schedule_segments.created_at ASC`,
     )
     .all<SegmentRow>();
@@ -437,7 +454,9 @@ export async function updateActiveScheduleSegment(
   }
 
   const nextDescription = normalizeOptionalText(input.description);
-  const nextRequestedParticipantId = normalizeOptionalText(input.currentParticipantId);
+  const nextRequestedParticipantId = normalizeOptionalText(
+    input.currentParticipantId,
+  );
   const now = nowIso();
 
   let nextResolvedState;
@@ -456,12 +475,16 @@ export async function updateActiveScheduleSegment(
       ok: false,
       status: 422,
       code: "invalid_request",
-      message: error instanceof Error ? error.message : "时间段更新参数不正确。",
+      message:
+        error instanceof Error ? error.message : "时间段更新参数不正确。",
     };
   }
 
   if (nextResolvedState.nextParticipantId) {
-    const participant = await getParticipantForHeldSegment(db, nextResolvedState.nextParticipantId);
+    const participant = await getParticipantForHeldSegment(
+      db,
+      nextResolvedState.nextParticipantId,
+    );
 
     if (!participant) {
       return {
@@ -485,7 +508,8 @@ export async function updateActiveScheduleSegment(
   const hasChanges =
     existingSegment.description !== nextDescription ||
     existingSegment.status !== nextResolvedState.nextStatus ||
-    existingSegment.current_participant_id !== nextResolvedState.nextParticipantId ||
+    existingSegment.current_participant_id !==
+      nextResolvedState.nextParticipantId ||
     existingSegment.claimed_at !== nextResolvedState.claimedAt ||
     existingSegment.released_at !== nextResolvedState.releasedAt;
 
@@ -521,7 +545,11 @@ export async function updateActiveScheduleSegment(
   const nextParticipantId = nextResolvedState.nextParticipantId;
   const snapshotClause =
     "EXISTS (SELECT 1 FROM schedule_segments WHERE id = ? AND schedule_version_id = ? AND updated_at = ?)";
-  const snapshotArgs = [targetId, scheduleVersionId, existingSegment.updated_at] as const;
+  const snapshotArgs = [
+    targetId,
+    scheduleVersionId,
+    existingSegment.updated_at,
+  ] as const;
 
   const releasedPayload = JSON.stringify({
     segmentId: existingSegment.id,
@@ -553,7 +581,14 @@ export async function updateActiveScheduleSegment(
           AND id != ?
           AND ${snapshotClause}`,
     )
-    .bind(now, now, scheduleVersionId, nextParticipantId, targetId, ...snapshotArgs);
+    .bind(
+      now,
+      now,
+      scheduleVersionId,
+      nextParticipantId,
+      targetId,
+      ...snapshotArgs,
+    );
 
   const clearPreviousDraft = db
     .prepare(
@@ -715,21 +750,24 @@ export async function updateActiveScheduleSegment(
   };
 }
 
-export async function listProjectDrafts(db: D1Database): Promise<AdminProjectDraftItem[]> {
+export async function listProjectDrafts(
+  db: D1Database,
+): Promise<AdminProjectDraftItem[]> {
   const result = await db
     .prepare(
       `SELECT
         project_drafts.id,
         project_drafts.participant_id,
-        participants.display_name AS participant_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS participant_name,
         schedule_segments.code AS segment_code,
         project_drafts.preview_status,
         project_drafts.review_status,
         project_drafts.preview_title,
-        project_drafts.public_author_name,
+        CASE WHEN portal_profiles.is_anonymous = 1 THEN '匿名' ELSE portal_profiles.credit_name END AS public_author_name,
         project_drafts.updated_at
       FROM project_drafts
       INNER JOIN participants ON participants.id = project_drafts.participant_id
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments ON schedule_segments.id = project_drafts.segment_id
       ORDER BY project_drafts.updated_at DESC`,
     )
@@ -773,7 +811,7 @@ async function getActiveSegmentDetail(db: D1Database, segmentId: string) {
         schedule_segments.description,
         schedule_segments.status,
         schedule_segments.current_participant_id,
-        participants.display_name AS current_participant_name,
+        portal_profiles.credit_name AS current_participant_name,
         schedule_segments.claimed_at,
         schedule_segments.released_at,
         schedule_segments.sort_order,
@@ -783,6 +821,7 @@ async function getActiveSegmentDetail(db: D1Database, segmentId: string) {
         ON schedule_versions.id = schedule_segments.schedule_version_id
        AND schedule_versions.status = 'active'
       LEFT JOIN participants ON participants.id = schedule_segments.current_participant_id
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       WHERE schedule_segments.id = ?
       LIMIT 1`,
     )
@@ -795,12 +834,14 @@ async function getAdminSegmentItem(db: D1Database, segmentId: string) {
   return row ? mapAdminSegmentItem(row) : null;
 }
 
-async function getParticipantForHeldSegment(db: D1Database, participantId: string) {
+async function getParticipantForHeldSegment(
+  db: D1Database,
+  participantId: string,
+) {
   return db
     .prepare(
       `SELECT
         id,
-        display_name,
         status
       FROM participants
       WHERE id = ?
@@ -814,6 +855,7 @@ function mapAdminParticipantItem(row: ParticipantRow): AdminParticipantItem {
   return {
     id: row.id,
     displayName: row.display_name,
+    isAnonymous: Boolean(row.is_anonymous),
     inviteEmail: row.invite_email,
     contactHandle: row.contact_handle,
     status: row.status,
@@ -823,7 +865,9 @@ function mapAdminParticipantItem(row: ParticipantRow): AdminParticipantItem {
   };
 }
 
-function mapAdminParticipantDetail(row: ParticipantRow): AdminParticipantDetail {
+function mapAdminParticipantDetail(
+  row: ParticipantRow,
+): AdminParticipantDetail {
   return {
     ...mapAdminParticipantItem(row),
     userId: row.user_id,

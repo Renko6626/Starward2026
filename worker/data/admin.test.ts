@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { updateActiveScheduleSegment, updateParticipant } from "./admin";
-
 type BatchResult = {
   success: boolean;
   meta: {
@@ -9,23 +8,19 @@ type BatchResult = {
     last_row_id: number;
   };
 };
-
 class SqlitePreparedStatement {
   constructor(
     private readonly database: DatabaseSync,
     private readonly sql: string,
     private readonly params: any[] = [],
   ) {}
-
   bind(...params: any[]) {
     return new SqlitePreparedStatement(this.database, this.sql, params);
   }
-
   async first<T>() {
     const row = this.database.prepare(this.sql).get(...this.params);
     return (row as T | undefined) ?? null;
   }
-
   async all<T>() {
     const rows = this.database.prepare(this.sql).all(...this.params);
     return {
@@ -34,7 +29,6 @@ class SqlitePreparedStatement {
       meta: { changes: 0, last_row_id: 0 },
     };
   }
-
   async run(): Promise<BatchResult> {
     const result = this.database.prepare(this.sql).run(...this.params);
     return {
@@ -46,12 +40,11 @@ class SqlitePreparedStatement {
     };
   }
 }
-
 class SqliteD1Database {
   readonly sqlite = new DatabaseSync(":memory:");
-
   constructor() {
     this.sqlite.exec(`
+      CREATE TABLE portal_profiles (user_id TEXT PRIMARY KEY, credit_name TEXT NOT NULL, is_anonymous INTEGER NOT NULL);
       CREATE TABLE schedule_versions (
         id TEXT PRIMARY KEY,
         status TEXT NOT NULL,
@@ -63,7 +56,6 @@ class SqliteD1Database {
         user_id TEXT,
         application_id TEXT,
         invite_email TEXT,
-        display_name TEXT NOT NULL,
         contact_handle TEXT,
         status TEXT NOT NULL,
         invited_at TEXT,
@@ -110,11 +102,9 @@ class SqliteD1Database {
       );
     `);
   }
-
   prepare(sql: string) {
     return new SqlitePreparedStatement(this.sqlite, sql);
   }
-
   async batch(statements: SqlitePreparedStatement[]) {
     this.sqlite.exec("BEGIN");
     try {
@@ -130,43 +120,54 @@ class SqliteD1Database {
     }
   }
 }
-
 const TS = "2026-04-12T00:00:00.000Z";
-
 function seedSchedule(db: SqliteD1Database) {
   db.sqlite
-    .prepare(`INSERT INTO schedule_versions (id, status, updated_at) VALUES (?, 'active', ?)`)
+    .prepare(
+      `INSERT INTO schedule_versions (id, status, updated_at) VALUES (?, 'active', ?)`,
+    )
     .run("sched_active", TS);
 }
-
-function seedParticipant(db: SqliteD1Database, id: string, status = "approved") {
+function seedParticipant(
+  db: SqliteD1Database,
+  id: string,
+  status = "approved",
+) {
   db.sqlite
     .prepare(
-      `INSERT INTO participants (id, display_name, contact_handle, status, updated_at)
-       VALUES (?, ?, NULL, ?, ?)`,
+      `INSERT INTO participants (id, contact_handle, status, updated_at) VALUES (?, NULL, ?, ?)`,
     )
-    .run(id, `name-${id}`, status, TS);
+    .run(id, status, TS);
 }
-
-function seedProjectDraft(db: SqliteD1Database, id: string, participantId: string, segmentId: string) {
+function seedProjectDraft(
+  db: SqliteD1Database,
+  id: string,
+  participantId: string,
+  segmentId: string,
+) {
   db.sqlite
     .prepare(
-      `INSERT INTO project_drafts (
-        id, participant_id, segment_id, preview_status, review_status, created_at, updated_at
-      ) VALUES (?, ?, ?, 'draft', 'draft', ?, ?)`,
+      `INSERT INTO project_drafts (id, participant_id, segment_id, preview_status, review_status, created_at, updated_at) VALUES (?, ?, ?, 'draft', 'draft', ?, ?)`,
     )
     .run(id, participantId, segmentId, TS, TS);
 }
-
 function readParticipantStatus(db: SqliteD1Database, id: string) {
   return (
-    db.sqlite.prepare(`SELECT status FROM participants WHERE id = ?`).get(id) as { status: string }
+    db.sqlite
+      .prepare(`SELECT status FROM participants WHERE id = ?`)
+      .get(id) as {
+      status: string;
+    }
   ).status;
 }
-
 function seedSegment(
   db: SqliteD1Database,
-  overrides: { id: string; status?: string; participantId?: string | null; sort?: number },
+  overrides: {
+    id: string;
+    status?: string;
+    participantId?: string | null;
+    sort?: number;
+  },
 ) {
   db.sqlite
     .prepare(
@@ -186,47 +187,50 @@ function seedSegment(
       TS,
     );
 }
-
 function readSegment(db: SqliteD1Database, id: string) {
   return db.sqlite
-    .prepare(`SELECT status, current_participant_id FROM schedule_segments WHERE id = ?`)
-    .get(id) as { status: string; current_participant_id: string | null };
+    .prepare(
+      `SELECT status, current_participant_id FROM schedule_segments WHERE id = ?`,
+    )
+    .get(id) as {
+    status: string;
+    current_participant_id: string | null;
+  };
 }
-
 describe("updateActiveScheduleSegment", () => {
   it("assigns an approved participant to an open segment", async () => {
     const db = new SqliteD1Database();
     seedSchedule(db);
     seedParticipant(db, "part_a");
     seedSegment(db, { id: "seg_open", status: "open" });
-
     const result = await updateActiveScheduleSegment(
       db as unknown as D1Database,
       "seg_open",
       { status: "held", currentParticipantId: "part_a", description: null },
       "admin@example.com",
     );
-
     expect(result.ok).toBe(true);
     const segment = readSegment(db, "seg_open");
     expect(segment.status).toBe("held");
     expect(segment.current_participant_id).toBe("part_a");
   });
-
   it("releases the participant's previously held segment when reassigning them", async () => {
     const db = new SqliteD1Database();
     seedSchedule(db);
     seedParticipant(db, "part_a");
-    seedSegment(db, { id: "seg_held", status: "held", participantId: "part_a", sort: 1 });
+    seedSegment(db, {
+      id: "seg_held",
+      status: "held",
+      participantId: "part_a",
+      sort: 1,
+    });
     seedSegment(db, { id: "seg_target", status: "open", sort: 2 });
-
     const result = await updateActiveScheduleSegment(
       db as unknown as D1Database,
       "seg_target",
       { status: "held", currentParticipantId: "part_a", description: null },
       "admin@example.com",
     );
-
     expect(result.ok).toBe(true);
     expect(readSegment(db, "seg_target")).toMatchObject({
       status: "held",
@@ -238,22 +242,23 @@ describe("updateActiveScheduleSegment", () => {
     });
   });
 });
-
 describe("updateParticipant", () => {
   it("releases the held segment when an approved participant is downgraded to withdrawn", async () => {
     const db = new SqliteD1Database();
     seedSchedule(db);
     seedParticipant(db, "part_a", "approved");
-    seedSegment(db, { id: "seg_held", status: "held", participantId: "part_a" });
+    seedSegment(db, {
+      id: "seg_held",
+      status: "held",
+      participantId: "part_a",
+    });
     seedProjectDraft(db, "draft_a", "part_a", "seg_held");
-
     const result = await updateParticipant(
       db as unknown as D1Database,
       "part_a",
-      { displayName: "name-part_a", contactHandle: undefined, status: "withdrawn" },
+      { status: "withdrawn" },
       "admin@example.com",
     );
-
     expect(result).not.toBeNull();
     expect(readParticipantStatus(db, "part_a")).toBe("withdrawn");
     expect(readSegment(db, "seg_held")).toMatchObject({

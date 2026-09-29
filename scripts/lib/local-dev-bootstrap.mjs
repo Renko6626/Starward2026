@@ -33,25 +33,23 @@ export const localDevSeedFixtures = {
   portalProfiles: [
     {
       user_id: "usr_seed_pending",
-      pen_name: "",
+      credit_name: "宇佐见莲子",
       contact_email: "portal-pending@seed.starward.local",
       primary_contact_channel: "Discord",
       primary_contact_handle: "renko#2026",
       backup_contact: "Telegram @renko_alt",
-      public_credit_mode: "anonymous",
-      public_credit_name: null,
+      is_anonymous: 1,
       created_at: FIXTURE_TIMESTAMP,
       updated_at: FIXTURE_TIMESTAMP,
     },
     {
       user_id: "usr_seed_active",
-      pen_name: "玛艾露贝莉",
+      credit_name: "结界观测者",
       contact_email: "portal-approved@seed.starward.local",
       primary_contact_channel: "Bluesky",
       primary_contact_handle: "@merry-seed",
       backup_contact: "Email portal-approved@seed.starward.local",
-      public_credit_mode: "pseudonymous",
-      public_credit_name: "结界观测者",
+      is_anonymous: 0,
       created_at: FIXTURE_TIMESTAMP,
       updated_at: FIXTURE_TIMESTAMP,
     },
@@ -60,7 +58,6 @@ export const localDevSeedFixtures = {
     {
       id: "app_seed_portal_pending",
       user_id: "usr_seed_pending",
-      display_name: "",
       contact_email: "portal-pending@seed.starward.local",
       contact_handle: "Discord renko#2026",
       interest_format: "novel",
@@ -77,7 +74,6 @@ export const localDevSeedFixtures = {
     {
       id: "app_seed_portal_approved",
       user_id: "usr_seed_active",
-      display_name: "已批准参与者样本",
       contact_email: "portal-approved@seed.starward.local",
       contact_handle: "Bluesky @merry-seed",
       interest_format: "mixed",
@@ -98,7 +94,6 @@ export const localDevSeedFixtures = {
       user_id: "usr_seed_pending",
       application_id: "app_seed_portal_pending",
       invite_email: "portal-pending@seed.starward.local",
-      display_name: "宇佐见莲子",
       contact_handle: "Discord renko#2026",
       status: "pending",
       invited_at: null,
@@ -111,7 +106,6 @@ export const localDevSeedFixtures = {
       user_id: "usr_seed_active",
       application_id: "app_seed_portal_approved",
       invite_email: "portal-approved@seed.starward.local",
-      display_name: "玛艾露贝莉",
       contact_handle: "Bluesky @merry-seed",
       status: "approved",
       invited_at: "2026-04-12T00:30:00.000Z",
@@ -171,7 +165,6 @@ export const localDevSeedFixtures = {
       segment_id: null,
       preview_title: "待审核样本预告",
       preview_summary: "用于本地 smoke 的待审核作品资料样本。",
-      public_author_name: "",
       format_label: "小说",
       public_tags_json: JSON.stringify(["秘封", "待审核"]),
       content_note: "待主催确认的内容说明。",
@@ -193,7 +186,6 @@ export const localDevSeedFixtures = {
       segment_id: "seg_seed_102",
       preview_title: "结界观测预告",
       preview_summary: "用于本地 smoke 的预告资料样本。",
-      public_author_name: "结界观测者",
       format_label: "小说 + 插画",
       public_tags_json: JSON.stringify(["秘封", "示例"]),
       content_note: "本地测试用内容说明。",
@@ -219,7 +211,9 @@ export const localDevSeedFixtures = {
       event_type: "portal_activated",
       target_type: "participant",
       target_id: "part_seed_pending",
-      payload_json: JSON.stringify({ email: "portal-pending@seed.starward.local" }),
+      payload_json: JSON.stringify({
+        email: "portal-pending@seed.starward.local",
+      }),
       created_at: "2026-04-12T00:05:00.000Z",
     },
     {
@@ -337,123 +331,151 @@ export function buildLocalSeedSql() {
   const sqlChunks = [
     cleanupSeedSql(),
     upsertEventWindowsSql(),
-    buildInsertStatement('"user"', [
-      "id",
-      "name",
-      "email",
-      "emailVerified",
-      "image",
-      "createdAt",
-      "updatedAt",
-    ], localDevSeedFixtures.users),
-    buildInsertStatement("applications", [
-      "id",
-      "user_id",
-      "display_name",
-      "contact_email",
-      "contact_handle",
-      "interest_format",
-      "intro_text",
-      "portfolio_url",
-      "message_to_hosts",
-      "status",
-      "reviewed_by",
-      "reviewed_at",
-      "admin_note",
-      "created_at",
-      "updated_at",
-    ], localDevSeedFixtures.applications),
-    buildInsertStatement("portal_profiles", [
-      "user_id",
-      "pen_name",
-      "contact_email",
-      "primary_contact_channel",
-      "primary_contact_handle",
-      "backup_contact",
-      "public_credit_mode",
-      "public_credit_name",
-      "created_at",
-      "updated_at",
-    ], localDevSeedFixtures.portalProfiles),
-    buildInsertStatement("participants", [
-      "id",
-      "user_id",
-      "application_id",
-      "invite_email",
-      "display_name",
-      "contact_handle",
-      "status",
-      "invited_at",
-      "activated_at",
-      "created_at",
-      "updated_at",
-    ], localDevSeedFixtures.participants),
-    buildInsertStatement("schedule_segments", [
-      "id",
-      "schedule_version_id",
-      "code",
-      "name",
-      "description",
-      "status",
-      "current_participant_id",
-      "claimed_at",
-      "released_at",
-      "sort_order",
-      "created_at",
-      "updated_at",
-    ], localDevSeedFixtures.scheduleSegments),
-    buildInsertStatement("project_drafts", [
-      "id",
-      "participant_id",
-      "segment_id",
-      "preview_title",
-      "preview_summary",
-      "public_author_name",
-      "format_label",
-      "public_tags_json",
-      "content_note",
-      "content_warnings",
-      "review_note",
-      "preview_status",
-      "review_status",
-      "preview_submitted_at",
-      "review_submitted_at",
-      "reviewed_at",
-      "reviewed_by",
-      "admin_feedback",
-      "created_at",
-      "updated_at",
-    ], localDevSeedFixtures.projectDrafts),
-    buildInsertStatement("participant_events", [
-      "id",
-      "participant_id",
-      "actor_type",
-      "actor_id",
-      "event_type",
-      "target_type",
-      "target_id",
-      "payload_json",
-      "created_at",
-    ], localDevSeedFixtures.participantEvents),
-    buildInsertStatement("session", [
-      "id",
-      "expiresAt",
-      "token",
-      "createdAt",
-      "updatedAt",
-      "ipAddress",
-      "userAgent",
-      "userId",
-    ], localDevSeedFixtures.portalSessions.map((session) => ({
-      id: session.sessionId,
-      expiresAt: session.expiresAt,
-      token: session.sessionToken,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
-      ipAddress: session.ipAddress,
-      userAgent: session.userAgent,
-      userId: session.userId,
-    }))),
+    buildInsertStatement(
+      '"user"',
+      [
+        "id",
+        "name",
+        "email",
+        "emailVerified",
+        "image",
+        "createdAt",
+        "updatedAt",
+      ],
+      localDevSeedFixtures.users,
+    ),
+    buildInsertStatement(
+      "applications",
+      [
+        "id",
+        "user_id",
+        "contact_email",
+        "contact_handle",
+        "interest_format",
+        "intro_text",
+        "portfolio_url",
+        "message_to_hosts",
+        "status",
+        "reviewed_by",
+        "reviewed_at",
+        "admin_note",
+        "created_at",
+        "updated_at",
+      ],
+      localDevSeedFixtures.applications,
+    ),
+    buildInsertStatement(
+      "portal_profiles",
+      [
+        "user_id",
+        "credit_name",
+        "contact_email",
+        "primary_contact_channel",
+        "primary_contact_handle",
+        "backup_contact",
+        "is_anonymous",
+        "created_at",
+        "updated_at",
+      ],
+      localDevSeedFixtures.portalProfiles,
+    ),
+    buildInsertStatement(
+      "participants",
+      [
+        "id",
+        "user_id",
+        "application_id",
+        "invite_email",
+        "contact_handle",
+        "status",
+        "invited_at",
+        "activated_at",
+        "created_at",
+        "updated_at",
+      ],
+      localDevSeedFixtures.participants,
+    ),
+    buildInsertStatement(
+      "schedule_segments",
+      [
+        "id",
+        "schedule_version_id",
+        "code",
+        "name",
+        "description",
+        "status",
+        "current_participant_id",
+        "claimed_at",
+        "released_at",
+        "sort_order",
+        "created_at",
+        "updated_at",
+      ],
+      localDevSeedFixtures.scheduleSegments,
+    ),
+    buildInsertStatement(
+      "project_drafts",
+      [
+        "id",
+        "participant_id",
+        "segment_id",
+        "preview_title",
+        "preview_summary",
+        "format_label",
+        "public_tags_json",
+        "content_note",
+        "content_warnings",
+        "review_note",
+        "preview_status",
+        "review_status",
+        "preview_submitted_at",
+        "review_submitted_at",
+        "reviewed_at",
+        "reviewed_by",
+        "admin_feedback",
+        "created_at",
+        "updated_at",
+      ],
+      localDevSeedFixtures.projectDrafts,
+    ),
+    buildInsertStatement(
+      "participant_events",
+      [
+        "id",
+        "participant_id",
+        "actor_type",
+        "actor_id",
+        "event_type",
+        "target_type",
+        "target_id",
+        "payload_json",
+        "created_at",
+      ],
+      localDevSeedFixtures.participantEvents,
+    ),
+    buildInsertStatement(
+      "session",
+      [
+        "id",
+        "expiresAt",
+        "token",
+        "createdAt",
+        "updatedAt",
+        "ipAddress",
+        "userAgent",
+        "userId",
+      ],
+      localDevSeedFixtures.portalSessions.map((session) => ({
+        id: session.sessionId,
+        expiresAt: session.expiresAt,
+        token: session.sessionToken,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+        userId: session.userId,
+      })),
+    ),
   ];
 
   return sqlChunks.filter(Boolean).join("\n\n");
@@ -525,13 +547,25 @@ export function readBetterAuthSecret(repoRoot) {
 
 function cleanupSeedSql() {
   const userIds = localDevSeedFixtures.users.map((item) => item.id);
-  const applicationIds = localDevSeedFixtures.applications.map((item) => item.id);
-  const participantIds = localDevSeedFixtures.participants.map((item) => item.id);
-  const sessionIds = localDevSeedFixtures.portalSessions.map((item) => item.sessionId);
-  const sessionTokens = localDevSeedFixtures.portalSessions.map((item) => item.sessionToken);
-  const segmentIds = localDevSeedFixtures.scheduleSegments.map((item) => item.id);
+  const applicationIds = localDevSeedFixtures.applications.map(
+    (item) => item.id,
+  );
+  const participantIds = localDevSeedFixtures.participants.map(
+    (item) => item.id,
+  );
+  const sessionIds = localDevSeedFixtures.portalSessions.map(
+    (item) => item.sessionId,
+  );
+  const sessionTokens = localDevSeedFixtures.portalSessions.map(
+    (item) => item.sessionToken,
+  );
+  const segmentIds = localDevSeedFixtures.scheduleSegments.map(
+    (item) => item.id,
+  );
   const draftIds = localDevSeedFixtures.projectDrafts.map((item) => item.id);
-  const eventIds = localDevSeedFixtures.participantEvents.map((item) => item.id);
+  const eventIds = localDevSeedFixtures.participantEvents.map(
+    (item) => item.id,
+  );
 
   return [
     buildDeleteStatement("participant_events", "id", eventIds),
@@ -549,20 +583,25 @@ function cleanupSeedSql() {
 }
 
 function upsertEventWindowsSql() {
-  return buildInsertStatement("event_windows", [
-    "key",
-    "label",
-    "is_enabled",
-    "opens_at",
-    "closes_at",
-    "created_at",
-    "updated_at",
-  ], localDevSeedFixtures.eventWindows, `ON CONFLICT("key") DO UPDATE SET
+  return buildInsertStatement(
+    "event_windows",
+    [
+      "key",
+      "label",
+      "is_enabled",
+      "opens_at",
+      "closes_at",
+      "created_at",
+      "updated_at",
+    ],
+    localDevSeedFixtures.eventWindows,
+    `ON CONFLICT("key") DO UPDATE SET
   "label" = excluded."label",
   "is_enabled" = excluded."is_enabled",
   "opens_at" = excluded."opens_at",
   "closes_at" = excluded."closes_at",
-  "updated_at" = excluded."updated_at"`);
+  "updated_at" = excluded."updated_at"`,
+  );
 }
 
 function buildDeleteStatement(tableName, columnName, values) {
@@ -579,7 +618,10 @@ function buildInsertStatement(tableName, columns, rows, conflictClause = "") {
   }
 
   const valuesSql = rows
-    .map((row) => `  (${columns.map((column) => toSqlLiteral(row[column])).join(", ")})`)
+    .map(
+      (row) =>
+        `  (${columns.map((column) => toSqlLiteral(row[column])).join(", ")})`,
+    )
     .join(",\n");
 
   return [

@@ -1,8 +1,9 @@
 import type { CreateApplicationInput } from "../../shared/applications";
 
-export function normalizeApplicationInput(form: CreateApplicationInput): CreateApplicationInput {
+export function normalizeApplicationInput(
+  form: CreateApplicationInput,
+): CreateApplicationInput {
   return {
-    displayName: normalizeOptional(form.displayName),
     contactEmail: form.contactEmail.trim(),
     contactHandle: normalizeOptional(form.contactHandle),
     interestFormat: form.interestFormat,

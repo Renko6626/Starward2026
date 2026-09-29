@@ -13,7 +13,7 @@ const reviewNoteTemplates: ReviewNoteTemplate[] = [
   {
     id: "awaiting-profile",
     label: "待补资料模板",
-    body: "已收到报名，但当前联系资料仍不足以完成确认。请先通过参与者入口补充笔名、主联系渠道与公开署名设置，随后再继续审核。",
+    body: "已收到报名，但当前联系资料仍不足以完成确认。请先通过参与者入口补充署名与主联系渠道，随后再继续审核。",
   },
   {
     id: "rejected-info",

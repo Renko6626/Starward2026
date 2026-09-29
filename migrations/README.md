@@ -30,3 +30,11 @@ Notes:
 - The canonical phase-1 schedule model is `schedule_versions + schedule_segments`.
 - 本地开发推荐通过 `npm run db:local:reset` 同时完成 reset、migrate 与 seed。
 - 具体本地样本说明见 [../docs/development/local-d1.md](../docs/development/local-d1.md)。
+
+## Unified credit hard cut
+
+`0012_unified_credit.sql` replaces all profile credit modes with `credit_name` and
+`is_anonymous`. It deliberately discards existing profile rows and removes name
+columns from applications, participants, and project drafts; there is no backfill
+or compatibility path. Apply this migration together with the new application
+version. Users complete their profile again; local fixtures use the new schema.

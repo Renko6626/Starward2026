@@ -6,13 +6,12 @@ import { normalizeOptionalText } from "../lib/strings";
 import { nowIso } from "../lib/time";
 
 type PortalProfileRow = {
-  pen_name: string;
+  credit_name: string;
   contact_email: string;
   primary_contact_channel: string;
   primary_contact_handle: string;
   backup_contact: string | null;
-  public_credit_mode: PortalProfile["publicCreditMode"];
-  public_credit_name: string | null;
+  is_anonymous: number;
   updated_at: string;
 };
 
@@ -20,13 +19,12 @@ export async function getPortalProfileByUserId(db: D1Database, userId: string) {
   const row = await db
     .prepare(
       `SELECT
-        pen_name,
+        credit_name,
         contact_email,
         primary_contact_channel,
         primary_contact_handle,
         backup_contact,
-        public_credit_mode,
-        public_credit_name,
+        is_anonymous,
         updated_at
       FROM portal_profiles
       WHERE user_id = ?
@@ -50,35 +48,32 @@ export async function upsertPortalProfile(
     .prepare(
       `INSERT INTO portal_profiles (
         user_id,
-        pen_name,
+        credit_name,
         contact_email,
         primary_contact_channel,
         primary_contact_handle,
         backup_contact,
-        public_credit_mode,
-        public_credit_name,
+        is_anonymous,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
-        pen_name = excluded.pen_name,
+        credit_name = excluded.credit_name,
         contact_email = excluded.contact_email,
         primary_contact_channel = excluded.primary_contact_channel,
         primary_contact_handle = excluded.primary_contact_handle,
         backup_contact = excluded.backup_contact,
-        public_credit_mode = excluded.public_credit_mode,
-        public_credit_name = excluded.public_credit_name,
+        is_anonymous = excluded.is_anonymous,
         updated_at = excluded.updated_at`,
     )
     .bind(
       input.userId,
-      normalizeOptionalText(input.data.penName) ?? "",
+      input.data.creditName.trim(),
       input.data.contactEmail.trim().toLowerCase(),
       input.data.primaryContactChannel.trim(),
       input.data.primaryContactHandle.trim(),
       normalizeOptionalText(input.data.backupContact),
-      input.data.publicCreditMode,
-      normalizeOptionalText(input.data.publicCreditName),
+      input.data.isAnonymous ? 1 : 0,
       now,
       now,
     )
@@ -89,13 +84,12 @@ export async function upsertPortalProfile(
 
 function mapPortalProfile(row: PortalProfileRow): PortalProfile {
   return {
-    penName: row.pen_name.trim() ? row.pen_name : null,
+    creditName: row.credit_name,
     contactEmail: row.contact_email,
     primaryContactChannel: row.primary_contact_channel,
     primaryContactHandle: row.primary_contact_handle,
     backupContact: row.backup_contact,
-    publicCreditMode: row.public_credit_mode,
-    publicCreditName: row.public_credit_name,
+    isAnonymous: Boolean(row.is_anonymous),
     updatedAt: row.updated_at,
   };
 }
