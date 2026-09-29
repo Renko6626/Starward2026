@@ -1,49 +1,106 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Palette, Scroll, Stars } from "../components/icons";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { StarChart } from "../components/StarChart";
+import { ScrollReveal } from "../components/ScrollReveal";
+import { StatusBadge } from "../components/ui";
+import { useApplicationIntake } from "../lib/use-application-intake";
 
 export function HomePage() {
+  const intake = useApplicationIntake();
+  const isOpen = intake.status === "ready" && intake.payload.isOpen;
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-12 relative z-10 py-8">
-      <section className="text-center space-y-6 py-12 border-b border-outline-variant relative">
-        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-          <Stars className="w-96 h-96" />
+    <>
+      <section className="home-hero">
+        <p className="hero-number">VOL. 2026 / HIFUU CLUB</p>
+        <div className="hero-copy">
+          <p className="eyebrow">A CREATIVE RELAY BEYOND THE BOUNDARY</p>
+          <h1>
+            沿着星光，
+            <br />
+            把故事<em>传下去。</em>
+          </h1>
+          <p>
+            一次关于秘封的共同观测。
+            <br />
+            以文字、画面与想象接续彼此，
+            <br />
+            在日常与不可思议之间，留下我们的记录。
+          </p>
+          <div className="hero-actions">
+            <Link className="button button--primary" to="/apply">
+              了解创作接力 <ArrowRight size={16} />
+            </Link>
+            <Link className="button button--secondary" to="/portal/login">
+              进入创作者空间
+            </Link>
+          </div>
         </div>
-        <h1 className="text-5xl md:text-7xl font-headline tracking-tighter text-primary">
-          STARWARD <span className="text-on-surface">2026</span>
-        </h1>
-        <p className="text-xl text-on-surface-variant max-w-2xl mx-auto font-light">秘封组同人创作接力活动站。</p>
-        <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
-          <Link
-            className="px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-            to="/apply"
-          >
-            报名须知 <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            className="px-6 py-3 bg-surface-variant text-on-surface rounded-full font-medium hover:bg-surface-bright transition-colors border border-outline-variant"
-            to="/portal/login"
-          >
-            创作者入口
-          </Link>
-        </div>
+        <figure className="hero-chart">
+          <StarChart />
+          <figcaption>RENKO × MERRY · A SHARED OBSERVATION</figcaption>
+        </figure>
       </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-8 border border-outline-variant bg-surface-container-low/50 rounded-2xl backdrop-blur-sm hover:border-primary/50 transition-colors group">
-          <Palette className="w-8 h-8 text-primary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-          <h2 className="text-2xl font-headline mb-3">参与方式</h2>
-          <p className="text-on-surface-variant leading-relaxed">
-            阅读报名须知后，可通过创作者入口完成登录、资料填写与报名提交。审核通过后，时间段与作品信息也将在同一入口内继续维护。
+      <ScrollReveal className="home-reveal-block">
+      <section className="intake-strip" aria-label="当前报名状态">
+        <div>
+          <span className="eyebrow">ACTIVITY STATUS</span>
+          <StatusBadge tone={isOpen ? "success" : "muted"}>
+            {intake.status === "loading"
+              ? "正在读取活动状态"
+              : intake.status === "error"
+                ? "暂时无法读取状态"
+                : isOpen
+                  ? "报名开放中"
+                  : "报名暂未开放"}
+          </StatusBadge>
+          <p>
+            {intake.status === "ready"
+              ? (intake.payload.window?.label ?? "秘封组创作接力")
+              : intake.status === "error"
+                ? intake.message
+                : ""}
           </p>
         </div>
-        <div className="p-8 border border-outline-variant bg-surface-container-low/50 rounded-2xl backdrop-blur-sm hover:border-tertiary/50 transition-colors group">
-          <Scroll className="w-8 h-8 text-tertiary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-          <h2 className="text-2xl font-headline mb-3">站点内容</h2>
-          <p className="text-on-surface-variant leading-relaxed">
-            本站用于提供活动说明、参与入口与阶段更新。作品公开展示将在发布阶段开放，现阶段以报名与创作准备相关内容为主。
+        <Link to="/apply" className="text-link">
+          查看参与指南 <ArrowUpRight size={15} />
+        </Link>
+      </section>
+      </ScrollReveal>
+      <ScrollReveal className="home-reveal-block" delay={80}>
+      <section className="editorial-section">
+        <div>
+          <p className="eyebrow">01 / ABOUT THE RELAY</p>
+          <h2>
+            不同的创作，
+            <br />
+            同一条星轨。
+          </h2>
+        </div>
+        <div>
+          <p className="editorial-intro">
+            STARWARD
+            是一场秘封组同人创作接力。无论你想写下一段故事，还是描绘一个瞬间，都可以在这里准备作品、参与报名，与其他创作者共同完成这次接力。
           </p>
+          <div className="journey">
+            <ScrollReveal delay={0}><article>
+              <span>01</span>
+              <h3>留下你的名字</h3>
+              <p>建立账号，补充联系资料，告诉我们你想带来的创作。</p>
+            </article></ScrollReveal>
+            <ScrollReveal delay={90}><article>
+              <span>02</span>
+              <h3>准备你的故事</h3>
+              <p>整理预告与作品说明，跟进审核反馈，让想法逐渐成形。</p>
+            </article></ScrollReveal>
+            <ScrollReveal delay={180}><article>
+              <span>03</span>
+              <h3>接续下一束光</h3>
+              <p>审核通过后，在开放窗口中认领时间段，继续完成接力。</p>
+            </article></ScrollReveal>
+          </div>
         </div>
       </section>
-    </div>
+      </ScrollReveal>
+    </>
   );
 }

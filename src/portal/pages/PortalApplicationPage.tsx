@@ -1,15 +1,24 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  Field,
+  Notice,
+  PageHeading,
+  StatusBadge,
+  SummaryCard,
+} from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
-import { cn } from "../../app/lib/cn";
-import { getTurnstileSiteKey, normalizeApplicationInput } from "../../app/lib/apply-form";
+import {
+  getTurnstileSiteKey,
+  normalizeApplicationInput,
+} from "../../app/lib/apply-form";
 import { loadTurnstileApi } from "../../app/lib/turnstile";
 import {
   applicationInterestFormatLabels,
   applicationStatusLabels,
+  upsertPortalApplicationInputSchema,
   type ApplicationIntakeResponse,
   type UpsertPortalApplicationInput,
-  upsertPortalApplicationInputSchema,
 } from "../../shared/applications";
 import {
   participantPortalStatusLabels,
@@ -19,7 +28,6 @@ import {
 import { authClient } from "../lib/auth-client";
 
 const defaultFormState: UpsertPortalApplicationInput = {
-  displayName: "",
   contactEmail: "",
   contactHandle: "",
   interestFormat: "novel",
@@ -28,17 +36,18 @@ const defaultFormState: UpsertPortalApplicationInput = {
   messageToHosts: "",
 };
 
-const inputClassName =
-  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm disabled:opacity-50";
+const inputClassName = "field-input";
 
-const textareaClassName =
-  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm resize-none disabled:opacity-50";
+const textareaClassName = "field-input min-h-32 resize-y";
 
 export function PortalApplicationPage() {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
-  const [form, setForm] = useState<UpsertPortalApplicationInput>(defaultFormState);
-  const [pageState, setPageState] = useState<PortalApplicationResponse | null>(null);
+  const [form, setForm] =
+    useState<UpsertPortalApplicationInput>(defaultFormState);
+  const [pageState, setPageState] = useState<PortalApplicationResponse | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -69,7 +78,12 @@ export function PortalApplicationPage() {
   }, []);
 
   useEffect(() => {
-    if (!turnstileRequired || !turnstileSiteKey || !pageState || !turnstileContainerRef.current) {
+    if (
+      !turnstileRequired ||
+      !turnstileSiteKey ||
+      !pageState ||
+      !turnstileContainerRef.current
+    ) {
       return;
     }
 
@@ -134,7 +148,9 @@ export function PortalApplicationPage() {
           return;
         }
 
-        setError(caught instanceof Error ? caught.message : "无法读取当前报名资料。");
+        setError(
+          caught instanceof Error ? caught.message : "无法读取当前报名资料。",
+        );
         setIsLoading(false);
       });
 
@@ -173,20 +189,27 @@ export function PortalApplicationPage() {
     setIsSaving(true);
 
     try {
-      const response = await requestJson<PortalApplicationMutationResponse>("/api/portal/application", {
-        method: pageState.editState === "create" ? "POST" : "PATCH",
-        headers: {
-          "content-type": "application/json",
+      const response = await requestJson<PortalApplicationMutationResponse>(
+        "/api/portal/application",
+        {
+          method: pageState.editState === "create" ? "POST" : "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(
+            token ? { ...parsed.data, turnstileToken: token } : parsed.data,
+          ),
         },
-        body: JSON.stringify(token ? { ...parsed.data, turnstileToken: token } : parsed.data),
-      });
+      );
 
       if (pageState.editState === "create") {
         await navigate({ to: "/apply/success" });
         return;
       }
 
-      const refreshed = await requestJson<PortalApplicationResponse>("/api/portal/application");
+      const refreshed = await requestJson<PortalApplicationResponse>(
+        "/api/portal/application",
+      );
       setPageState(refreshed);
       setForm(buildInitialApplicationForm(refreshed));
       setMessage(response.message);
@@ -204,12 +227,10 @@ export function PortalApplicationPage() {
 
   if (sessionQuery.isPending || isLoading || !pageState) {
     return (
-      <div className="w-full max-w-4xl mx-auto relative z-10 py-6 space-y-8">
-        <div className="border-b border-outline-variant pb-4">
-          <h1 className="text-2xl font-headline tracking-tight mb-1">我的申请</h1>
-          <p className="text-sm text-on-surface-variant">正在读取当前报名状态。</p>
-        </div>
-      </div>
+      <PageHeading
+        title={<>参与报名</>}
+        description={<>正在读取当前报名状态。</>}
+      ></PageHeading>
     );
   }
 
@@ -218,51 +239,82 @@ export function PortalApplicationPage() {
   const canSubmit = editable && profileReady;
 
   return (
-    <div className="w-full max-w-4xl mx-auto relative z-10 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-outline-variant pb-4">
-        <div>
-          <h1 className="text-2xl font-headline tracking-tight mb-1">我的申请</h1>
-          <p className="text-sm text-on-surface-variant">正式报名会绑定当前登录邮箱，并以当前联系资料作为维护依据。</p>
-        </div>
+    <div className="page-content">
+      <PageHeading
+        title={<>参与报名</>}
+        description={
+          <>正式报名会绑定当前登录邮箱，并以当前联系资料作为维护依据。</>
+        }
+      >
         <StatusBadge tone={resolveApplicationTone(pageState)}>
-          {pageState.application ? applicationStatusLabels[pageState.application.status] : "未提交"}
+          {pageState.application
+            ? applicationStatusLabels[pageState.application.status]
+            : "未提交"}
         </StatusBadge>
-      </div>
+      </PageHeading>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <SummaryCard label="当前状态" value={pageState.application ? applicationStatusLabels[pageState.application.status] : "未提交"} />
-        <SummaryCard label="资料可编辑" value={editable ? (profileReady ? "可以编辑" : "待先补联系资料") : "已锁定"} />
-        <SummaryCard label="联系资料" value={profileReady ? "已填写" : "待补充"} />
+        <SummaryCard
+          label="当前状态"
+          value={
+            pageState.application
+              ? applicationStatusLabels[pageState.application.status]
+              : "未提交"
+          }
+        />
+        <SummaryCard
+          label="资料可编辑"
+          value={
+            editable ? (profileReady ? "可以编辑" : "待先补联系资料") : "已锁定"
+          }
+        />
+        <SummaryCard
+          label="联系资料"
+          value={profileReady ? "已填写" : "待补充"}
+        />
         <SummaryCard
           label="参与资格"
-          value={pageState.participant ? participantPortalStatusLabels[pageState.participant.status] : "待审核"}
+          value={
+            pageState.participant
+              ? participantPortalStatusLabels[pageState.participant.status]
+              : "待审核"
+          }
         />
       </div>
 
       {pageState.message ? <Notice>{pageState.message}</Notice> : null}
-      {pageState.application?.adminNote ? <Notice tone="warning">主催备注：{pageState.application.adminNote}</Notice> : null}
+      {pageState.application?.adminNote ? (
+        <Notice tone="warning">
+          主催备注：{pageState.application.adminNote}
+        </Notice>
+      ) : null}
       {!profileReady ? (
         <Notice tone="error">
-          当前账号还没有完成联系资料。请先前往联系资料页补充笔名、联系方式和公开署名设置，再返回这里提交报名。
+          当前账号还没有完成联系资料。请先前往联系资料页补充署名和联系方式，再返回这里提交报名。
         </Notice>
       ) : null}
 
-      <form className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6" onSubmit={handleSubmit}>
+      <form className="panel space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Field label="笔名 / 署名（可选）" hint="不填写也可以，后台会用联系方式识别。">
-            <input
-              className={inputClassName}
-              disabled={!canSubmit || isSaving}
-              onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-              type="text"
-              value={form.displayName}
-            />
-          </Field>
+          <div className="space-y-2">
+            <p>署名：{pageState.profile?.creditName ?? "未填写"}</p>
+            <p className="text-sm text-on-surface-variant">
+              对外展示：
+              {pageState.profile?.isAnonymous
+                ? "匿名"
+                : pageState.profile?.creditName}
+            </p>
+            <Link className="text-link" to="/portal/profile">
+              修改个人档案
+            </Link>
+          </div>
           <Field label="联系邮箱">
             <input
               className={inputClassName}
               disabled={!canSubmit || isSaving}
-              onChange={(event) => setForm({ ...form, contactEmail: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, contactEmail: event.target.value })
+              }
               type="email"
               value={form.contactEmail}
             />
@@ -271,7 +323,9 @@ export function PortalApplicationPage() {
             <input
               className={inputClassName}
               disabled={!canSubmit || isSaving}
-              onChange={(event) => setForm({ ...form, contactHandle: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, contactHandle: event.target.value })
+              }
               placeholder="QQ / Telegram / Discord / 其他"
               type="text"
               value={form.contactHandle ?? ""}
@@ -284,16 +338,19 @@ export function PortalApplicationPage() {
               onChange={(event) =>
                 setForm({
                   ...form,
-                  interestFormat: event.target.value as UpsertPortalApplicationInput["interestFormat"],
+                  interestFormat: event.target
+                    .value as UpsertPortalApplicationInput["interestFormat"],
                 })
               }
               value={form.interestFormat}
             >
-              {Object.entries(applicationInterestFormatLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
+              {Object.entries(applicationInterestFormatLabels).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
             </select>
           </Field>
         </div>
@@ -302,7 +359,9 @@ export function PortalApplicationPage() {
           <textarea
             className={textareaClassName}
             disabled={!canSubmit || isSaving}
-            onChange={(event) => setForm({ ...form, introText: event.target.value })}
+            onChange={(event) =>
+              setForm({ ...form, introText: event.target.value })
+            }
             rows={5}
             value={form.introText ?? ""}
           />
@@ -312,7 +371,9 @@ export function PortalApplicationPage() {
           <input
             className={inputClassName}
             disabled={!canSubmit || isSaving}
-            onChange={(event) => setForm({ ...form, portfolioUrl: event.target.value })}
+            onChange={(event) =>
+              setForm({ ...form, portfolioUrl: event.target.value })
+            }
             placeholder="https://example.com"
             type="url"
             value={form.portfolioUrl ?? ""}
@@ -323,7 +384,9 @@ export function PortalApplicationPage() {
           <textarea
             className={textareaClassName}
             disabled={!canSubmit || isSaving}
-            onChange={(event) => setForm({ ...form, messageToHosts: event.target.value })}
+            onChange={(event) =>
+              setForm({ ...form, messageToHosts: event.target.value })
+            }
             rows={5}
             value={form.messageToHosts ?? ""}
           />
@@ -337,22 +400,22 @@ export function PortalApplicationPage() {
 
         <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
           <button
-            className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            disabled={!canSubmit || isSaving || (turnstileRequired && !turnstileToken)}
+            className="button button--primary"
+            disabled={
+              !canSubmit || isSaving || (turnstileRequired && !turnstileToken)
+            }
             type="submit"
           >
-            {isSaving ? "保存中..." : pageState.editState === "create" ? "提交报名" : "更新报名"}
+            {isSaving
+              ? "保存中..."
+              : pageState.editState === "create"
+                ? "提交报名"
+                : "更新报名"}
           </button>
-          <Link
-            className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors"
-            to="/portal/profile"
-          >
+          <Link className="button button--secondary" to="/portal/profile">
             {profileReady ? "返回联系资料" : "先补联系资料"}
           </Link>
-          <Link
-            className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors"
-            to="/portal"
-          >
+          <Link className="button button--secondary" to="/portal">
             返回总览
           </Link>
         </div>
@@ -364,10 +427,11 @@ export function PortalApplicationPage() {
   );
 }
 
-function buildInitialApplicationForm(response: PortalApplicationResponse): UpsertPortalApplicationInput {
+function buildInitialApplicationForm(
+  response: PortalApplicationResponse,
+): UpsertPortalApplicationInput {
   if (response.application) {
     return {
-      displayName: response.application.displayName,
       contactEmail: response.application.contactEmail,
       contactHandle: response.application.contactHandle ?? "",
       interestFormat: response.application.interestFormat,
@@ -382,12 +446,6 @@ function buildInitialApplicationForm(response: PortalApplicationResponse): Upser
     : "";
 
   return {
-    displayName:
-      response.profile?.publicCreditMode === "named"
-        ? response.profile.penName ?? ""
-        : response.profile?.publicCreditMode === "pseudonymous"
-          ? response.profile.publicCreditName ?? ""
-          : "",
     contactEmail: response.profile?.contactEmail ?? response.user.email,
     contactHandle,
     interestFormat: "novel",
@@ -397,7 +455,9 @@ function buildInitialApplicationForm(response: PortalApplicationResponse): Upser
   };
 }
 
-function resolveApplicationTone(pageState: PortalApplicationResponse): "muted" | "warning" | "success" | "error" {
+function resolveApplicationTone(
+  pageState: PortalApplicationResponse,
+): "muted" | "warning" | "success" | "error" {
   if (!pageState.application) {
     return "muted";
   }
@@ -411,75 +471,4 @@ function resolveApplicationTone(pageState: PortalApplicationResponse): "muted" |
   }
 
   return "error";
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-4">
-      <p className="text-xs font-mono uppercase text-on-surface-variant">{label}</p>
-      <p className="mt-2 text-sm text-on-surface">{value}</p>
-    </div>
-  );
-}
-
-function Field({
-  children,
-  hint,
-  label,
-}: {
-  children: ReactNode;
-  hint?: string;
-  label: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-on-surface-variant">{label}</label>
-      {children}
-      {hint ? <p className="text-xs text-on-surface-variant">{hint}</p> : null}
-    </div>
-  );
-}
-
-function StatusBadge({
-  children,
-  tone,
-}: {
-  children: ReactNode;
-  tone: "muted" | "warning" | "success" | "error";
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono font-medium",
-        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
-        tone === "warning" && "bg-primary/10 text-primary border-primary/20",
-        tone === "error" && "bg-error/10 text-error border-error/20",
-        tone === "muted" && "bg-surface-variant text-on-surface-variant border-outline-variant",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Notice({
-  children,
-  tone = "muted",
-}: {
-  children: ReactNode;
-  tone?: "muted" | "warning" | "success" | "error";
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border px-4 py-3 text-sm leading-6",
-        tone === "muted" && "border-outline-variant bg-surface-container-low/50 text-on-surface-variant",
-        tone === "warning" && "border-primary/20 bg-primary/10 text-primary",
-        tone === "success" && "border-tertiary/20 bg-tertiary/10 text-tertiary",
-        tone === "error" && "border-error/20 bg-error/10 text-error",
-      )}
-    >
-      {children}
-    </div>
-  );
 }
