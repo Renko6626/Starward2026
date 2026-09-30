@@ -18,6 +18,15 @@ export type LocalDevPortalSession = {
 export type LocalDevSeedFixtures = {
   applications: LocalDevSeedApplication[];
   portalSessions: LocalDevPortalSession[];
+  eventWindows: {
+    key: string;
+    label: string;
+    is_enabled: number;
+    opens_at: string | null;
+    closes_at: string | null;
+    created_at: string;
+    updated_at: string;
+  }[];
 };
 
 export const localDevSeedFixtures: LocalDevSeedFixtures;

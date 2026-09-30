@@ -2,6 +2,46 @@ import { describe, expect, it, vi } from "vitest";
 import { resolveAdminIdentity } from "./admin";
 
 describe("resolveAdminIdentity", () => {
+  it.each(["localhost", "127.0.0.1", "[::1]"])(
+    "uses a default admin identity for browser requests to %s when enabled",
+    async (hostname) => {
+      const verifyToken = vi.fn();
+
+      await expect(
+        resolveAdminIdentity(
+          {
+            env: {
+              ALLOW_LOCAL_ADMIN_BYPASS: "true",
+              CLOUDFLARE_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
+              CLOUDFLARE_ACCESS_POLICY_AUD: "policy-aud",
+            },
+            headers: new Headers(),
+            requestUrl: `http://${hostname}:20262/api/admin/applications`,
+          },
+          verifyToken,
+        ),
+      ).resolves.toBe("local-admin@starward.local");
+      expect(verifyToken).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([undefined, "false"])(
+    "requires Access for local browser requests when bypass is %s",
+    async (flag) => {
+      await expect(
+        resolveAdminIdentity({
+          env: {
+            ALLOW_LOCAL_ADMIN_BYPASS: flag,
+            CLOUDFLARE_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
+            CLOUDFLARE_ACCESS_POLICY_AUD: "policy-aud",
+          },
+          headers: new Headers(),
+          requestUrl: "http://localhost:20262/api/admin/applications",
+        }),
+      ).rejects.toMatchObject({ status: 403 });
+    },
+  );
+
   it("allows localhost development bypass when explicitly enabled", async () => {
     await expect(
       resolveAdminIdentity({

@@ -149,7 +149,10 @@ function getLocalAdminBypassIdentity(
     return null;
   }
 
-  return normalizeIdentityValue(headers.get(LOCAL_ADMIN_BYPASS_HEADER));
+  return (
+    normalizeIdentityValue(headers.get(LOCAL_ADMIN_BYPASS_HEADER)) ??
+    "local-admin@starward.local"
+  );
 }
 
 function isLocalAdminBypassEnabled(value: string | undefined) {
