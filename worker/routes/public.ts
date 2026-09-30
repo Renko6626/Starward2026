@@ -1,3 +1,5 @@
+import { getPublicWork, listPublicWorks } from "../data/works";
+import { getRequiredDb, jsonError } from "../lib/http";
 import { Hono } from "hono";
 import {
   applicationInterestFormatLabels,
@@ -48,6 +50,18 @@ publicApi.post("/applications", async (c) => {
     },
     410,
   );
+});
+
+publicApi.get("/works", async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({ items: await listPublicWorks(getRequiredDb(c)) });
+});
+
+publicApi.get("/works/:workId", async (c) => {
+  c.header("Cache-Control", "no-store");
+  const result = await getPublicWork(getRequiredDb(c), c.req.param("workId"));
+  if (!result) return jsonError(c, 404, "not_found", "这份观测尚未公开或已撤下。");
+  return c.json(result);
 });
 
 export { publicApi };

@@ -13,9 +13,11 @@ import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ApplyRouteRouteImport } from './routes/apply/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorksIndexRouteImport } from './routes/works/index'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as WorksWorkIdRouteImport } from './routes/works/$workId'
 import { Route as PortalLoginRouteImport } from './routes/portal_/login'
 import { Route as PortalScheduleRouteImport } from './routes/portal/schedule'
 import { Route as PortalProjectRouteImport } from './routes/portal/project'
@@ -55,6 +57,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorksIndexRoute = WorksIndexRouteImport.update({
+  id: '/works/',
+  path: '/works/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortalIndexRoute = PortalIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -69,6 +76,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRouteRoute,
+} as any)
+const WorksWorkIdRoute = WorksWorkIdRouteImport.update({
+  id: '/works/$workId',
+  path: '/works/$workId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PortalLoginRoute = PortalLoginRouteImport.update({
   id: '/portal_/login',
@@ -180,9 +192,11 @@ export interface FileRoutesByFullPath {
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal/login': typeof PortalLoginRoute
+  '/works/$workId': typeof WorksWorkIdRoute
   '/admin/': typeof AdminIndexRoute
   '/apply/': typeof ApplyIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/works/': typeof WorksIndexRoute
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
@@ -201,9 +215,11 @@ export interface FileRoutesByTo {
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal/login': typeof PortalLoginRoute
+  '/works/$workId': typeof WorksWorkIdRoute
   '/admin': typeof AdminIndexRoute
   '/apply': typeof ApplyIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/works': typeof WorksIndexRoute
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
@@ -229,9 +245,11 @@ export interface FileRoutesById {
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
   '/portal_/login': typeof PortalLoginRoute
+  '/works/$workId': typeof WorksWorkIdRoute
   '/admin/': typeof AdminIndexRoute
   '/apply/': typeof ApplyIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/works/': typeof WorksIndexRoute
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
@@ -258,9 +276,11 @@ export interface FileRouteTypes {
     | '/portal/project'
     | '/portal/schedule'
     | '/portal/login'
+    | '/works/$workId'
     | '/admin/'
     | '/apply/'
     | '/portal/'
+    | '/works/'
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
@@ -279,9 +299,11 @@ export interface FileRouteTypes {
     | '/portal/project'
     | '/portal/schedule'
     | '/portal/login'
+    | '/works/$workId'
     | '/admin'
     | '/apply'
     | '/portal'
+    | '/works'
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
@@ -306,9 +328,11 @@ export interface FileRouteTypes {
     | '/portal/project'
     | '/portal/schedule'
     | '/portal_/login'
+    | '/works/$workId'
     | '/admin/'
     | '/apply/'
     | '/portal/'
+    | '/works/'
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
@@ -324,6 +348,8 @@ export interface RootRouteChildren {
   ApplyRouteRoute: typeof ApplyRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   PortalLoginRoute: typeof PortalLoginRoute
+  WorksWorkIdRoute: typeof WorksWorkIdRoute
+  WorksIndexRoute: typeof WorksIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -356,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/works/': {
+      id: '/works/'
+      path: '/works'
+      fullPath: '/works/'
+      preLoaderRoute: typeof WorksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal/': {
       id: '/portal/'
       path: '/'
@@ -376,6 +409,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/works/$workId': {
+      id: '/works/$workId'
+      path: '/works/$workId'
+      fullPath: '/works/$workId'
+      preLoaderRoute: typeof WorksWorkIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/portal_/login': {
       id: '/portal_/login'
@@ -618,6 +658,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApplyRouteRoute: ApplyRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   PortalLoginRoute: PortalLoginRoute,
+  WorksWorkIdRoute: WorksWorkIdRoute,
+  WorksIndexRoute: WorksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

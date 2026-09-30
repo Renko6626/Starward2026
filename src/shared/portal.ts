@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workPublicationFieldsSchema, type WorkPublicationFields } from "./works";
 import type {
   ApplicationInterestFormat,
   ApplicationStatus,
@@ -119,7 +120,7 @@ export type PortalProjectDraftSummary = {
   updatedAt: string;
 };
 
-export type PortalProjectDraftDetail = PortalProjectDraftSummary & {
+export type PortalProjectDraftDetail = PortalProjectDraftSummary & WorkPublicationFields & {
   previewSummary: string | null;
   formatLabel: string | null;
   publicTags: string[];
@@ -245,7 +246,7 @@ export type UpdatePortalProfileInput = z.infer<
   typeof updatePortalProfileInputSchema
 >;
 
-export const updatePortalProjectPreviewInputSchema = z.object({
+export const updatePortalProjectPreviewInputSchema = workPublicationFieldsSchema.extend({
   previewTitle: z.string().trim().max(120).optional(),
   previewSummary: z.string().trim().max(1600).optional(),
   formatLabel: z.string().trim().max(80).optional(),

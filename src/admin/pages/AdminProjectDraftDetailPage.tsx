@@ -1,3 +1,6 @@
+import { WorkPresentation } from "../../app/components/WorkPresentation";
+import { getWorkPublicationIssues } from "../../shared/works";
+import { eventWindowStateLabels } from "../../shared/windows";
 import { Link, getRouteApi } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -43,6 +46,7 @@ export function AdminProjectDraftDetailPage() {
   const [state, setState] = useState<DetailState>({ status: "loading" });
   const [form, setForm] = useState<UpdateProjectDraftInput>(initialForm);
   const [saving, setSaving] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,12 +94,9 @@ export function AdminProjectDraftDetailPage() {
         },
       );
 
-      setState({
-        status: "ready",
-        payload: {
-          draft: payload.draft,
-        },
-      });
+      setState(current => current.status === "ready" ? {
+        status: "ready", payload: { ...current.payload, draft: payload.draft },
+      } : current);
       setForm({
         previewStatus: payload.draft.previewStatus,
         reviewStatus: payload.draft.reviewStatus,
@@ -107,6 +108,18 @@ export function AdminProjectDraftDetailPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePublication(publish: boolean) {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const result = await requestJson<AdminProjectDraftMutationResponse>(`/api/admin/project-drafts/${draftId}/${publish ? "publish" : "unpublish"}`, { method: "POST" });
+      setState(current => current.status === "ready" ? { status: "ready", payload: { ...current.payload, draft: result.draft } } : current);
+      setMessage(result.message);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "作品发布操作失败。");
+    } finally { setSaving(false); }
   }
 
   if (state.status === "loading") {
@@ -123,6 +136,7 @@ export function AdminProjectDraftDetailPage() {
   }
 
   const draft = state.payload.draft;
+  const publicationIssues = getWorkPublicationIssues(draft);
 
   return (
     <div className="page-content">
@@ -144,6 +158,7 @@ export function AdminProjectDraftDetailPage() {
         </PageHeading>
       </div>
 
+      {previewOpen && <section className="panel mb-6" id="public-work-preview" aria-label="公开作品预览"><p className="eyebrow">公开页面预览</p><div className="work-admin-preview"><WorkPresentation work={draft} /></div></section>}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
           <section className="panel space-y-6">
@@ -248,6 +263,16 @@ export function AdminProjectDraftDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <section className="panel space-y-4">
+            <h2 className="panel-title">公开展示</h2>
+            <p>{draft.publishedAt ? `已发布 · ${formatDateTime(draft.publishedAt)}` : "尚未发布"}</p>
+            <p className="text-sm text-on-surface-variant">新增发布窗口：{eventWindowStateLabels[state.payload.publicationWindow.state]}</p>
+            {!draft.publishedAt && publicationIssues.length > 0 && <ul className="publication-issues">{publicationIssues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
+            <button className="button button--secondary w-full" type="button" aria-expanded={previewOpen} aria-controls="public-work-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? "收起公开预览" : "预览公开效果"}</button>
+            <button className="button button--primary w-full" type="button" disabled={saving || (!draft.publishedAt && (publicationIssues.length > 0 || !state.payload.publicationWindow.isOpen))}
+              onClick={() => void handlePublication(!draft.publishedAt)}>{saving ? "处理中…" : draft.publishedAt ? "撤下作品" : "发布到观测集"}</button>
+            {draft.publishedAt && <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开页面</Link>}
+          </section>
           <section className="panel">
             <h2 className="text-base font-mono text-on-surface-variant uppercase mb-4">
               审核设置
@@ -256,7 +281,7 @@ export function AdminProjectDraftDetailPage() {
               <FormField label="预告审核状态">
                 <select
                   className="field-input"
-                  disabled={saving}
+                  disabled={saving || Boolean(draft.publishedAt)}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
@@ -279,7 +304,7 @@ export function AdminProjectDraftDetailPage() {
               <FormField label="审查状态">
                 <select
                   className="field-input"
-                  disabled={saving}
+                  disabled={saving || Boolean(draft.publishedAt)}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
@@ -302,7 +327,7 @@ export function AdminProjectDraftDetailPage() {
               <FormField label="管理员反馈">
                 <textarea
                   className="field-input"
-                  disabled={saving}
+                  disabled={saving || Boolean(draft.publishedAt)}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
@@ -320,7 +345,7 @@ export function AdminProjectDraftDetailPage() {
                 保存后，创作者可以在作品资料页查看审核状态与反馈。
               </SidebarNotice>
               {message ? (
-                <SidebarNotice tone="success">{message}</SidebarNotice>
+                <SidebarNotice>{message}</SidebarNotice>
               ) : null}
               <button
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"

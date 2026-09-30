@@ -1,3 +1,5 @@
+import { setWorkPublication } from "../data/works";
+import { getWindowOrFallback } from "../lib/windows";
 import { Hono } from "hono";
 import type {
   AdminApplicationDetailResponse,
@@ -326,6 +328,7 @@ adminApi.get("/project-drafts/:draftId", async (c) => {
   }
 
   const response: AdminProjectDraftDetailResponse = {
+    publicationWindow: getWindowOrFallback(await listEventWindows(getRequiredDb(c)), "public_release_open"),
     draft,
   };
 
@@ -359,6 +362,14 @@ adminApi.patch("/project-drafts/:draftId", async (c) => {
 
   return c.json(response);
 });
+
+for (const action of ["publish", "unpublish"] as const) {
+  adminApi.post(`/project-drafts/:draftId/${action}`, async (c) => {
+    const result = await setWorkPublication(getRequiredDb(c), c.req.param("draftId"), action === "publish", getAdminIdentity(c));
+    if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+    return c.json(result);
+  });
+}
 
 adminApi.get("/event-windows", async (c) => {
   const response: AdminEventWindowListResponse = {

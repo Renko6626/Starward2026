@@ -23,6 +23,11 @@ import { getWindowOrFallback } from "../lib/windows";
 import type { ParticipantAuthRow } from "./participants";
 
 type ProjectDraftRow = {
+  work_type: import("../../src/shared/works").WorkType | null;
+  cover_url: string | null;
+  cover_alt: string | null;
+  work_url: string | null;
+  published_at: string | null;
   id: string;
   participant_id: string;
   participant_name: string;
@@ -104,6 +109,9 @@ export async function updateAdminProjectDraftReview(
     };
   }
 
+  if (existing.publishedAt && (input.previewStatus !== "approved" || input.reviewStatus !== "approved")) {
+    return { ok: false, status: 409, code: "work_published", message: "请先撤下公开作品，再调整审核状态。" };
+  }
   const now = nowIso();
   const resolved = resolveAdminProjectDraftReviewUpdate({
     currentPreviewStatus: existing.previewStatus,
@@ -230,6 +238,10 @@ export async function updatePortalProjectPreview(
     );
   }
 
+  const nextWorkType = input.data.workType ?? null;
+  const nextCoverUrl = normalizeOptionalText(input.data.coverUrl);
+  const nextCoverAlt = normalizeOptionalText(input.data.coverAlt);
+  const nextWorkUrl = normalizeOptionalText(input.data.workUrl);
   const nextPreviewTitle = normalizeOptionalText(input.data.previewTitle);
   const nextPreviewSummary = normalizeOptionalText(input.data.previewSummary);
   const nextFormatLabel = normalizeOptionalText(input.data.formatLabel);
@@ -239,6 +251,10 @@ export async function updatePortalProjectPreview(
   );
 
   const hasChanges =
+    existing.work_type !== nextWorkType ||
+    existing.cover_url !== nextCoverUrl ||
+    existing.cover_alt !== nextCoverAlt ||
+    existing.work_url !== nextWorkUrl ||
     existing.preview_title !== nextPreviewTitle ||
     existing.preview_summary !== nextPreviewSummary ||
     existing.format_label !== nextFormatLabel ||
@@ -262,7 +278,8 @@ export async function updatePortalProjectPreview(
     db
       .prepare(
         `UPDATE project_drafts
-         SET preview_title = ?,
+         SET work_type = ?, cover_url = ?, cover_alt = ?, work_url = ?,
+             preview_title = ?,
              preview_summary = ?,
              format_label = ?,
              public_tags_json = ?,
@@ -271,6 +288,7 @@ export async function updatePortalProjectPreview(
          WHERE participant_id = ?`,
       )
       .bind(
+        nextWorkType, nextCoverUrl, nextCoverAlt, nextWorkUrl,
         nextPreviewTitle,
         nextPreviewSummary,
         nextFormatLabel,
@@ -682,6 +700,11 @@ function mapAdminProjectDraftDetail(
     segmentName: row.segment_name,
     previewStatus: row.preview_status,
     reviewStatus: row.review_status,
+    workType: row.work_type,
+    coverUrl: row.cover_url,
+    coverAlt: row.cover_alt,
+    workUrl: row.work_url,
+    publishedAt: row.published_at,
     previewTitle: row.preview_title,
     previewSummary: row.preview_summary,
     publicAuthorName: row.public_author_name,
@@ -706,6 +729,11 @@ function mapPortalProjectDraftDetail(
     id: row.id,
     previewStatus: row.preview_status,
     reviewStatus: row.review_status,
+    workType: row.work_type,
+    coverUrl: row.cover_url,
+    coverAlt: row.cover_alt,
+    workUrl: row.work_url,
+    publishedAt: row.published_at,
     previewTitle: row.preview_title,
     previewSummary: row.preview_summary,
     publicAuthorName: row.public_author_name,
@@ -820,6 +848,11 @@ const projectDraftSelectSql = `SELECT
   schedule_segments.name AS segment_name,
   project_drafts.preview_status,
   project_drafts.review_status,
+  project_drafts.work_type,
+  project_drafts.cover_url,
+  project_drafts.cover_alt,
+  project_drafts.work_url,
+  project_drafts.published_at,
   project_drafts.preview_title,
   project_drafts.preview_summary,
   CASE WHEN portal_profiles.is_anonymous = 1 THEN '匿名' ELSE portal_profiles.credit_name END AS public_author_name,

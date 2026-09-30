@@ -38,8 +38,8 @@ export function HomePage() {
             <Link className="button button--primary" to="/apply">
               查看参与指南 <ArrowRight size={16} />
             </Link>
-            <Link className="button button--secondary" to="/portal/login">
-              进入创作者空间
+            <Link className="button button--secondary" to="/works" search={{ view: "gallery", type: "all", q: "" }}>
+              浏览作品观测集
             </Link>
           </div>
         </div>

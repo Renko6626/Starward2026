@@ -50,6 +50,10 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
       return "已保存审查说明草稿。";
     case "review_submitted":
       return "已提交审查说明，等待主催查看。";
+    case "work_published":
+      return "主催将你的作品发布到观测集。";
+    case "work_unpublished":
+      return "主催撤下了你的公开作品。";
     case "project_draft_admin_reviewed":
       return "主催更新了你的资料审核结果。";
     default:

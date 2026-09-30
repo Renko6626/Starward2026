@@ -78,6 +78,7 @@ class SqliteD1Database {
         id TEXT PRIMARY KEY,
         participant_id TEXT NOT NULL UNIQUE,
         segment_id TEXT,
+        work_type TEXT, cover_url TEXT, cover_alt TEXT, work_url TEXT, published_at TEXT,
         preview_title TEXT,
         preview_summary TEXT,
         format_label TEXT,

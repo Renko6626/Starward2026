@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WorkPublicationFields } from "./works";
 import {
   portalSegmentStatusSchema,
   projectDraftStatusSchema,
@@ -154,7 +155,7 @@ export type AdminProjectDraftListResponse = {
   items: AdminProjectDraftItem[];
 };
 
-export type AdminProjectDraftDetail = AdminProjectDraftItem & {
+export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFields & {
   participantInviteEmail: string;
   participantContactHandle: string | null;
   participantStatus: ParticipantPortalStatus;
@@ -173,6 +174,7 @@ export type AdminProjectDraftDetail = AdminProjectDraftItem & {
 };
 
 export type AdminProjectDraftDetailResponse = {
+  publicationWindow: EventWindowSummary;
   draft: AdminProjectDraftDetail;
 };
 

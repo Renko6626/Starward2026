@@ -80,6 +80,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
           >
             活动首页
           </Link>
+          <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} onClick={() => setMenuOpen(false)}>作品展示</Link>
           <Link to="/apply" onClick={() => setMenuOpen(false)}>
             参与指南
           </Link>
