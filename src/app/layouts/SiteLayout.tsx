@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ArrowUpRight, Compass, Menu, X } from "lucide-react";
+import { ScrollProgress } from "../components/ScrollProgress";
 
 export function Brand() {
   return (
@@ -24,8 +25,24 @@ export function SiteLayout({ children }: PropsWithChildren) {
         menuTrigger.current?.focus();
       }
     }
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (
+        !menuTrigger.current?.contains(target) &&
+        !document.getElementById("public-navigation")?.contains(target)
+      ) {
+        setMenuOpen(false);
+      }
+    }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [menuOpen]);
   const { pathname } = useLocation();
   const isWorkspace =
@@ -90,4 +107,3 @@ export function SiteLayout({ children }: PropsWithChildren) {
     </div>
   );
 }
-import { ScrollProgress } from "../components/ScrollProgress";

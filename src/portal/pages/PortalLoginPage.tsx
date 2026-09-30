@@ -155,7 +155,7 @@ export function PortalLoginPage() {
     }
 
     if (normalizedOtp.length !== PORTAL_EMAIL_OTP_LENGTH) {
-      setError(`请输入 ${PORTAL_EMAIL_OTP_LENGTH} 位访问码。`);
+      setError(`请输入 ${PORTAL_EMAIL_OTP_LENGTH} 位验证码。`);
       return;
     }
 
@@ -176,27 +176,27 @@ export function PortalLoginPage() {
     }
 
     setIsResolvingDestination(true);
-    setMessage("验证通过，正在进入参与者入口。");
+    setMessage("验证通过，正在进入创作者空间。");
   }
 
   return (
     <div className="auth-layout">
       <div className="auth-intro">
         <p className="eyebrow">YOUR NEXT OBSERVATION</p>
-        <h1>
+        <h2>
           欢迎回来，
           <br />
           故事仍在继续。
-        </h1>
-        <p>登录创作者空间，跟进报名、作品与接力日程。</p>
-        <StarChart />
+        </h2>
+        <p>在这里，跟进报名、作品与接力日程。</p>
+        <StarChart variant="compact" />
       </div>
       <section className="auth-panel" aria-label="创作者账号">
-        <h2>{mode === "register" ? "建立创作者账号" : "进入创作者空间"}</h2>
+        <h1>{mode === "register" ? "建立创作者账号" : "进入创作者空间"}</h1>
         <p>
           {mode === "register"
-            ? "用一个账号，记录这次创作旅程。"
-            : "使用你的账号，接续上一次的创作。"}
+            ? "使用邮箱注册，准备你的第一份创作。"
+            : "登录账号，接续你的创作。"}
         </p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(

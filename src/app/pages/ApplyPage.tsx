@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { authClient } from "../../portal/lib/auth-client";
 import { useApplicationIntake } from "../lib/use-application-intake";
 import { Notice, StatusBadge } from "../components/ui";
+import { getApplicationWindowLabel } from "../../shared/windows";
 
 export function ApplyPage() {
   const { data: session } = authClient.useSession();
@@ -12,13 +13,9 @@ export function ApplyPage() {
     <div className="guide-layout">
       <aside className="guide-aside">
         <p className="eyebrow">PARTICIPATION / 2026</p>
-        <h1>
-          让故事
-          <br />
-          从这里开始。
-        </h1>
-        <p>在进入创作接力之前，花一点时间了解报名方式与后续安排。</p>
-        <Link to="/" className="text-link mt-8">
+        <h1>参与指南</h1>
+        <p>让故事从这里开始。了解报名方式与后续安排，准备你的创作接力。</p>
+        <Link to="/" className="text-link guide-back-link">
           返回活动首页 <ArrowRight size={15} />
         </Link>
       </aside>
@@ -30,36 +27,25 @@ export function ApplyPage() {
               ? "正在读取"
               : intake.status === "error"
                 ? "状态读取失败"
-                : isOpen
-                  ? "正式报名开放中"
-                  : "报名暂未开放"}
+                : getApplicationWindowLabel(intake.payload.window)}
           </StatusBadge>
           <div className="mt-5">
             <Notice>
-              {intake.status === "ready"
-                ? isOpen
-                  ? "现在可以登录创作者空间，完善资料并提交报名。"
-                  : "你可以先建立账号、完善个人档案，等待报名窗口开放。"
-                : intake.status === "error"
-                  ? intake.message
-                  : "正在获取最新报名安排。"}
+              {intake.status === "ready" ? (
+                isOpen ? (
+                  "现在可以登录创作者空间，完善资料并提交报名。"
+                ) : intake.payload.window?.state === "ended" ? (
+                  "本轮报名已结束。已报名的创作者可以登录查看审核进度。"
+                ) : (
+                  "你可以先建立账号、完善个人档案，等待报名窗口开放。"
+                )
+              ) : intake.status === "error" ? (
+                intake.message
+              ) : (
+                <>&nbsp;</>
+              )}
             </Notice>
           </div>
-        </section>
-        <section className="guide-section">
-          <h2>报名前，请先了解</h2>
-          <ul>
-            <li>
-              报名需要一个创作者账号。后续的审核进度、作品资料和接力日程，都可以在同一个空间查看。
-            </li>
-            <li>
-              可以选择不公开署名。主催仍需要有效的邮箱和联系方式，以便与你沟通。
-            </li>
-            <li>
-              提交报名后，由主催审核参与资格。时间段认领等操作在审核通过及对应窗口开放后进行。
-            </li>
-            <li>已有账号请直接登录，继续维护原有资料。</li>
-          </ul>
         </section>
         <section className="guide-section">
           <h2>接下来，只需三步</h2>
@@ -88,6 +74,27 @@ export function ApplyPage() {
               </div>
             </div>
           </div>
+        </section>
+        <section className="guide-section">
+          <h2>报名前，请先了解</h2>
+          <ul>
+            <li>
+              <strong>账号与进度</strong>
+              报名需要一个创作者账号。后续的审核进度、作品资料和接力日程，都可以在同一个空间查看。
+            </li>
+            <li>
+              <strong>署名与联系方式</strong>
+              可以选择不公开署名。主催仍需要有效的邮箱和联系方式，以便与你沟通。
+            </li>
+            <li>
+              <strong>审核与认领</strong>
+              提交报名后，由主催审核参与资格。时间段认领等操作在审核通过及对应窗口开放后进行。
+            </li>
+            <li>
+              <strong>已有账号</strong>
+              请直接登录，继续维护原有资料。
+            </li>
+          </ul>
         </section>
         <div className="pt-8">
           <Link
