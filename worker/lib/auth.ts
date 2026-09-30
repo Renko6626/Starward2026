@@ -1,6 +1,11 @@
 import { betterAuth } from "better-auth";
 import type { GenericEndpointContext } from "better-auth";
-import { APIError, createAuthEndpoint, createAuthMiddleware, setPassword } from "better-auth/api";
+import {
+  APIError,
+  createAuthEndpoint,
+  createAuthMiddleware,
+  setPassword,
+} from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { HTTPException } from "hono/http-exception";
 import { Resend } from "resend";
@@ -64,7 +69,11 @@ function buildPortalEntryPlugin(env: AppBindings) {
     id: "portal-entry",
     version: AUTH_PLUGIN_VERSION,
     endpoints: {
-      setPassword: createAuthEndpoint("/set-password", setPassword.options, setPassword),
+      setPassword: createAuthEndpoint(
+        "/set-password",
+        setPassword.options,
+        setPassword,
+      ),
     },
     init() {
       return {
@@ -76,7 +85,14 @@ function buildPortalEntryPlugin(env: AppBindings) {
                   session: { userId: string } & Record<string, unknown>,
                   context: GenericEndpointContext | null,
                 ) {
-                  if (!context?.path || !["/sign-in/email-otp", "/sign-in/email", "/sign-up/email"].includes(context.path)) {
+                  if (
+                    !context?.path ||
+                    ![
+                      "/sign-in/email-otp",
+                      "/sign-in/email",
+                      "/sign-up/email",
+                    ].includes(context.path)
+                  ) {
                     return;
                   }
 
@@ -95,8 +111,6 @@ function buildPortalEntryPlugin(env: AppBindings) {
                   await ensureParticipantForAuthUser(db, {
                     email,
                     userId: session.userId,
-                    displayName:
-                      typeof context.body?.name === "string" ? context.body.name : null,
                   });
                 },
               },
@@ -117,15 +131,24 @@ function buildPortalEntryPlugin(env: AppBindings) {
             );
           },
           handler: createAuthMiddleware(async (ctx) => {
-            if (ctx.path === "/sign-in/email" || ctx.path === "/sign-up/email") {
-              const email = normalizeEmailAddress(typeof ctx.body?.email === "string" ? ctx.body.email : "");
+            if (
+              ctx.path === "/sign-in/email" ||
+              ctx.path === "/sign-up/email"
+            ) {
+              const email = normalizeEmailAddress(
+                typeof ctx.body?.email === "string" ? ctx.body.email : "",
+              );
               ctx.body.email = email;
               if (ctx.path === "/sign-up/email") {
-                const participant = await getParticipantByInviteEmail(db, email);
+                const participant = await getParticipantByInviteEmail(
+                  db,
+                  email,
+                );
                 // Password signup does not prove ownership of an existing invitation.
                 if (participant && !participant.user_id) {
                   throw new APIError("CONFLICT", {
-                    message: "此邮箱已有参与者资料，请先通过邮箱验证码登录，再设置密码。",
+                    message:
+                      "此邮箱已有参与者资料，请先通过邮箱验证码登录，再设置密码。",
                   });
                 }
               }
@@ -143,13 +166,15 @@ function buildPortalEntryPlugin(env: AppBindings) {
               return;
             }
 
-            const rawEmail = typeof ctx.body?.email === "string" ? ctx.body.email : "";
+            const rawEmail =
+              typeof ctx.body?.email === "string" ? ctx.body.email : "";
             const email = normalizeEmailAddress(rawEmail);
             const participant = await getParticipantByInviteEmail(db, email);
 
             ctx.body.email = email;
             if (ctx.path === "/sign-in/email-otp") {
-              ctx.body.name = participant?.display_name || email.split("@")[0] || "参与者";
+              ctx.body.name =
+                participant?.display_name || email.split("@")[0] || "参与者";
             }
           }),
         },
@@ -167,13 +192,17 @@ async function sendPortalOtpEmail(
   },
 ) {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-    throw new HTTPException(503, { message: "Resend mail sender is not configured yet." });
+    throw new HTTPException(503, {
+      message: "Resend mail sender is not configured yet.",
+    });
   }
   const resend = new Resend(env.RESEND_API_KEY);
   const resendFromEmail = env.RESEND_FROM_EMAIL;
   const resendFromName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
   const subject =
-    payload.type === "sign-in" ? "Starward2026 参与者登录验证码" : "Starward2026 邮件验证码";
+    payload.type === "sign-in"
+      ? "Starward2026 参与者登录验证码"
+      : "Starward2026 邮件验证码";
   const text =
     payload.type === "sign-in"
       ? [
@@ -199,7 +228,9 @@ async function sendPortalOtpEmail(
   });
 
   if (response.error) {
-    throw new Error(response.error.message || "Failed to send verification OTP email.");
+    throw new Error(
+      response.error.message || "Failed to send verification OTP email.",
+    );
   }
 }
 
@@ -215,13 +246,15 @@ export function buildPortalEmailOtpOptions(env: AppBindings) {
       window: PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS,
       max: PORTAL_EMAIL_OTP_RATE_LIMIT_MAX,
     },
-    async sendVerificationOTP(
-      payload: {
-        email: string;
-        otp: string;
-        type: "sign-in" | "email-verification" | "forget-password" | "change-email";
-      },
-    ) {
+    async sendVerificationOTP(payload: {
+      email: string;
+      otp: string;
+      type:
+        | "sign-in"
+        | "email-verification"
+        | "forget-password"
+        | "change-email";
+    }) {
       await sendPortalOtpEmail(env, payload);
     },
   };
@@ -237,7 +270,9 @@ export function buildPortalSessionOptions() {
 export function buildPortalTrustedOrigins(
   env: Pick<
     AppBindings,
-    "BETTER_AUTH_TRUSTED_ORIGINS" | "BETTER_AUTH_URL" | "ALLOW_LOCAL_DEV_ORIGINS"
+    | "BETTER_AUTH_TRUSTED_ORIGINS"
+    | "BETTER_AUTH_URL"
+    | "ALLOW_LOCAL_DEV_ORIGINS"
   >,
 ) {
   const configuredOrigins = new Set<string>();
@@ -247,7 +282,9 @@ export function buildPortalTrustedOrigins(
     configuredOrigins.add(baseUrl);
   }
 
-  for (const origin of parseConfiguredTrustedOrigins(env.BETTER_AUTH_TRUSTED_ORIGINS)) {
+  for (const origin of parseConfiguredTrustedOrigins(
+    env.BETTER_AUTH_TRUSTED_ORIGINS,
+  )) {
     configuredOrigins.add(origin);
   }
 
@@ -256,7 +293,9 @@ export function buildPortalTrustedOrigins(
   // deployed environment would let any page served from the victim's LAN pass
   // Better Auth's origin/CSRF check. Production should instead list its origins
   // via BETTER_AUTH_TRUSTED_ORIGINS.
-  const allowLocalDevOrigins = isLocalDevOriginsEnabled(env.ALLOW_LOCAL_DEV_ORIGINS);
+  const allowLocalDevOrigins = isLocalDevOriginsEnabled(
+    env.ALLOW_LOCAL_DEV_ORIGINS,
+  );
 
   return async (request?: Request) => {
     const trustedOrigins = new Set(configuredOrigins);
@@ -310,7 +349,8 @@ export function createAuth(env: AppBindings) {
 
 function applyAuthResponseHeaders(c: AppContext, headers: Headers) {
   const setCookieHeaders =
-    typeof (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie === "function"
+    typeof (headers as Headers & { getSetCookie?: () => string[] })
+      .getSetCookie === "function"
       ? (headers as Headers & { getSetCookie: () => string[] }).getSetCookie()
       : [];
 
@@ -347,7 +387,6 @@ export async function requireParticipantSession(c: AppContext) {
     await ensureParticipantForAuthUser(db, {
       email: result.response.user.email,
       userId: result.response.user.id,
-      displayName: result.response.user.name,
     });
     participant = await getParticipantByUserId(db, result.response.user.id);
   }
@@ -408,7 +447,12 @@ function isLocalDevelopmentOrigin(origin: string) {
 function isLoopbackOrPrivateIpv4(hostname: string) {
   const parts = hostname.split(".").map((segment) => Number(segment));
 
-  if (parts.length !== 4 || parts.some((segment) => Number.isNaN(segment) || segment < 0 || segment > 255)) {
+  if (
+    parts.length !== 4 ||
+    parts.some(
+      (segment) => Number.isNaN(segment) || segment < 0 || segment > 255,
+    )
+  ) {
     return false;
   }
 

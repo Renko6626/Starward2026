@@ -12,17 +12,24 @@ export function PasswordSettings() {
 
   useEffect(() => {
     let cancelled = false;
-    void authClient.listAccounts().then((response) => {
-      if (cancelled) return;
-      if (response.error) {
-        setError("无法读取密码设置，请刷新后重试。");
-        return;
-      }
-      setHasPassword(response.data.some((account) => account.providerId === "credential"));
-    }).catch(() => {
-      if (!cancelled) setError("无法读取密码设置，请刷新后重试。");
-    });
-    return () => { cancelled = true; };
+    void authClient
+      .listAccounts()
+      .then((response) => {
+        if (cancelled) return;
+        if (response.error) {
+          setError("无法读取密码设置，请刷新后重试。");
+          return;
+        }
+        setHasPassword(
+          response.data.some((account) => account.providerId === "credential"),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setError("无法读取密码设置，请刷新后重试。");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +39,11 @@ export function PasswordSettings() {
     setMessage(null);
     try {
       if (hasPassword) {
-        const response = await authClient.changePassword({ currentPassword, newPassword, revokeOtherSessions: true });
+        const response = await authClient.changePassword({
+          currentPassword,
+          newPassword,
+          revokeOtherSessions: true,
+        });
         if (response.error) {
           setError(response.error.message || "密码修改失败。");
           return;
@@ -56,28 +67,62 @@ export function PasswordSettings() {
   }
 
   return (
-    <form className="space-y-4 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6" onSubmit={handleSubmit}>
-      <h2 className="text-lg font-medium">登录密码</h2>
-      {hasPassword === false ? <p className="text-sm text-on-surface-variant">为当前账号设置密码，之后可直接使用密码登录。</p> : null}
+    <form className="panel space-y-5" onSubmit={handleSubmit}>
+      <h2 className="panel-title">登录密码</h2>
+      {hasPassword === false ? (
+        <p className="text-base text-on-surface-variant">
+          为当前账号设置密码，之后可直接使用密码登录。
+        </p>
+      ) : null}
       {hasPassword !== null ? (
         <>
           {hasPassword ? (
-            <label className="block space-y-2 text-sm">
+            <label className="block space-y-2 text-base">
               <span>当前密码</span>
-              <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2" type="password" autoComplete="current-password" required disabled={isSaving} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+              <input
+                className="field-input"
+                type="password"
+                autoComplete="current-password"
+                required
+                disabled={isSaving}
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
             </label>
           ) : null}
-          <label className="block space-y-2 text-sm">
+          <label className="block space-y-2 text-base">
             <span>新密码（8–128 位）</span>
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={isSaving} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+            <input
+              className="field-input"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              maxLength={128}
+              disabled={isSaving}
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
           </label>
-          <button className="bg-primary text-on-primary rounded-md px-4 py-2 disabled:opacity-50" type="submit" disabled={isSaving}>
+          <button
+            className="button button--primary"
+            type="submit"
+            disabled={isSaving}
+          >
             {isSaving ? "保存中..." : hasPassword ? "修改密码" : "设置密码"}
           </button>
         </>
       ) : null}
-      {message ? <p className="text-sm text-tertiary" role="status">{message}</p> : null}
-      {error ? <p className="text-sm text-error" role="alert">{error}</p> : null}
+      {message ? (
+        <p className="text-base text-tertiary" role="status">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-base text-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

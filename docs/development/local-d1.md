@@ -43,8 +43,9 @@ npm run dev
 
 - 一个已建立入口账号、已补联系资料、但仍处于待审核状态的门户样本
 - 一个已审核通过、门户已激活、已持有时间段、已存在资料补录草稿的参与者样本
-- 一组开放窗口状态
+- 一组开放窗口状态：报名、时间段认领/变更、预告及审查资料提交默认启用且不设时间限制，公开发布保持未启用；过期与预约状态由窗口测试验证
 - 一组本地样本时间段
+- 使用硬切后的 `credit_name` 与 `is_anonymous` 档案字段
 - 参与者事件历史
 - Better Auth 本地 session
 
@@ -95,7 +96,9 @@ npm run dev
 本地管理员 bypass 默认关闭，必须显式开启：
 
 - 在仓库根目录 `.dev.vars` 中设置 `ALLOW_LOCAL_ADMIN_BYPASS="true"`（可参考 `.dev.vars.example`）
-- 开启后，`/api/admin/*` 仅在 loopback host（localhost / 127.0.0.1 / [::1]）下接受 `x-admin-email`
+- 修改开关后重启 `npm run dev`，直接打开 `http://localhost:20262/admin`，无需 Access 登录或手动添加请求头
+- 开启后，`/api/admin/*` 仅在 loopback host（localhost / 127.0.0.1 / [::1]）下自动使用 `local-admin@starward.local` 身份，操作记录使用该身份
+- 调试脚本仍可通过 `x-admin-email` 显式指定本地管理员身份
 - 该开关只应出现在本地 `.dev.vars`（已 gitignore），不得进入 staging / production 配置；缺少开关时 hostname 为 localhost 也不再放行
 
 因此：

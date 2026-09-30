@@ -1,7 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { workTypeLabels, type WorkType } from "../../shared/works";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  Field,
+  Notice,
+  PageHeading,
+  StatusBadge,
+  SummaryCard,
+  ReadError,
+} from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
-import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
 import type {
   PortalProjectDraftDetail,
@@ -11,18 +19,21 @@ import type {
   UpdatePortalProjectReviewInput,
 } from "../../shared/portal";
 import { projectDraftStatusLabels } from "../../shared/portal";
-import { buildWindowFlagMap } from "../../shared/windows";
+import { buildWindowFlagMap, getWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
 
 type ProjectPageState =
   | { status: "loading" }
   | { status: "ready"; project: PortalProjectResponse }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; forbidden: boolean };
 
 type PreviewFormState = {
+  workType: WorkType | "";
+  coverUrl: string;
+  coverAlt: string;
+  workUrl: string;
   previewTitle: string;
   previewSummary: string;
-  publicAuthorName: string;
   formatLabel: string;
   publicTagsText: string;
 };
@@ -40,18 +51,18 @@ type PendingAction =
   | "review-submit"
   | null;
 
-const inputClassName =
-  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm disabled:opacity-50";
+const inputClassName = "field-input";
 
-const textareaClassName =
-  "w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm resize-none disabled:opacity-50";
+const textareaClassName = "field-input min-h-32 resize-y";
 
 export function PortalProjectPage() {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [state, setState] = useState<ProjectPageState>({ status: "loading" });
-  const [previewForm, setPreviewForm] = useState<PreviewFormState>(emptyPreviewForm);
-  const [reviewForm, setReviewForm] = useState<ReviewFormState>(emptyReviewForm);
+  const [previewForm, setPreviewForm] =
+    useState<PreviewFormState>(emptyPreviewForm);
+  const [reviewForm, setReviewForm] =
+    useState<ReviewFormState>(emptyReviewForm);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -72,7 +83,9 @@ export function PortalProjectPage() {
     setState({ status: "loading" });
 
     try {
-      const project = await requestJson<PortalProjectResponse>("/api/portal/project");
+      const project = await requestJson<PortalProjectResponse>(
+        "/api/portal/project",
+      );
       applyLoadedProject(project);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
@@ -82,7 +95,9 @@ export function PortalProjectPage() {
 
       setState({
         status: "error",
-        message: caught instanceof Error ? caught.message : "无法读取作品资料。",
+        forbidden: caught instanceof ApiError && caught.status === 403,
+        message:
+          caught instanceof Error ? caught.message : "无法读取作品资料。",
       });
     }
   }
@@ -110,19 +125,25 @@ export function PortalProjectPage() {
   }
 
   async function patchPreview(quiet = false) {
-    const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/preview", {
-      method: "PATCH",
-      headers: {
-        "content-type": "application/json",
+    const response = await requestJson<PortalProjectMutationResponse>(
+      "/api/portal/project/preview",
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          workType: previewForm.workType || null,
+          coverUrl: previewForm.coverUrl,
+          coverAlt: previewForm.coverAlt,
+          workUrl: previewForm.workUrl,
+          previewTitle: previewForm.previewTitle,
+          previewSummary: previewForm.previewSummary,
+          formatLabel: previewForm.formatLabel,
+          publicTags: parseTagsText(previewForm.publicTagsText),
+        } satisfies UpdatePortalProjectPreviewInput),
       },
-      body: JSON.stringify({
-        previewTitle: previewForm.previewTitle,
-        previewSummary: previewForm.previewSummary,
-        publicAuthorName: previewForm.publicAuthorName,
-        formatLabel: previewForm.formatLabel,
-        publicTags: parseTagsText(previewForm.publicTagsText),
-      } satisfies UpdatePortalProjectPreviewInput),
-    });
+    );
 
     updateDraft(response.draft);
 
@@ -132,17 +153,20 @@ export function PortalProjectPage() {
   }
 
   async function patchReview(quiet = false) {
-    const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/review", {
-      method: "PATCH",
-      headers: {
-        "content-type": "application/json",
+    const response = await requestJson<PortalProjectMutationResponse>(
+      "/api/portal/project/review",
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          contentNote: reviewForm.contentNote,
+          contentWarnings: reviewForm.contentWarnings,
+          reviewNote: reviewForm.reviewNote,
+        } satisfies UpdatePortalProjectReviewInput),
       },
-      body: JSON.stringify({
-        contentNote: reviewForm.contentNote,
-        contentWarnings: reviewForm.contentWarnings,
-        reviewNote: reviewForm.reviewNote,
-      } satisfies UpdatePortalProjectReviewInput),
-    });
+    );
 
     updateDraft(response.draft);
 
@@ -158,7 +182,9 @@ export function PortalProjectPage() {
     try {
       await patchPreview();
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : "保存预告信息失败。");
+      setNotice(
+        caught instanceof Error ? caught.message : "保存预告信息失败。",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -171,14 +197,19 @@ export function PortalProjectPage() {
     try {
       await patchPreview(true);
 
-      const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/preview/submit", {
-        method: "POST",
-      });
+      const response = await requestJson<PortalProjectMutationResponse>(
+        "/api/portal/project/preview/submit",
+        {
+          method: "POST",
+        },
+      );
 
       updateDraft(response.draft);
       setNotice(response.message);
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : "提交预告资料失败。");
+      setNotice(
+        caught instanceof Error ? caught.message : "提交预告资料失败。",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -191,7 +222,9 @@ export function PortalProjectPage() {
     try {
       await patchReview();
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : "保存审查说明失败。");
+      setNotice(
+        caught instanceof Error ? caught.message : "保存审查说明失败。",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -204,14 +237,19 @@ export function PortalProjectPage() {
     try {
       await patchReview(true);
 
-      const response = await requestJson<PortalProjectMutationResponse>("/api/portal/project/review/submit", {
-        method: "POST",
-      });
+      const response = await requestJson<PortalProjectMutationResponse>(
+        "/api/portal/project/review/submit",
+        {
+          method: "POST",
+        },
+      );
 
       updateDraft(response.draft);
       setNotice(response.message);
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : "提交审查说明失败。");
+      setNotice(
+        caught instanceof Error ? caught.message : "提交审查说明失败。",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -219,22 +257,27 @@ export function PortalProjectPage() {
 
   if (sessionQuery.isPending || state.status === "loading") {
     return (
-      <div className="w-full max-w-6xl mx-auto relative z-10 py-6 space-y-8">
-        <div className="border-b border-outline-variant pb-4">
-          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
-          <p className="text-sm text-on-surface-variant">正在读取当前作品资料状态。</p>
-        </div>
-      </div>
+      <PageHeading
+        title={<>作品资料</>}
+        description={<>正在读取当前作品资料状态。</>}
+      ></PageHeading>
     );
   }
 
   if (state.status === "error") {
     return (
-      <div className="w-full max-w-6xl mx-auto relative z-10 py-6 space-y-8">
-        <div className="border-b border-outline-variant pb-4">
-          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
-          <p className="text-sm text-on-surface-variant">{state.message}</p>
-        </div>
+      <div className="page-content">
+        <PageHeading title="作品资料" />
+        {state.forbidden ? (
+          <>
+            <Notice>{state.message}</Notice>
+            <Link className="text-link" to="/portal/application">
+              查看报名进度
+            </Link>
+          </>
+        ) : (
+          <ReadError message={state.message} />
+        )}
       </div>
     );
   }
@@ -242,14 +285,15 @@ export function PortalProjectPage() {
   const flags = buildWindowFlagMap(state.project.windows);
 
   return (
-    <div className="w-full max-w-6xl mx-auto relative z-10 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-outline-variant pb-4">
-        <div>
-          <h1 className="text-2xl font-headline tracking-tight mb-1">接力稿件提交</h1>
-          <p className="text-sm text-on-surface-variant">
-            {state.project.participant.displayName}，先把可公开预告和给主催看的审查说明分别补全，再在开放窗口内提交。
-          </p>
-        </div>
+    <div className="page-content">
+      <PageHeading
+        title={<>作品资料</>}
+        description={
+          <>
+            填写公开预告和给主催的审查说明，再在开放窗口内提交。
+          </>
+        }
+      >
         <div className="flex flex-wrap gap-2">
           <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
             预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}
@@ -258,7 +302,7 @@ export function PortalProjectPage() {
             审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
           </StatusBadge>
         </div>
-      </div>
+      </PageHeading>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
@@ -269,27 +313,43 @@ export function PortalProjectPage() {
               : "尚未认领"
           }
         />
-        <SummaryCard label="预告提交" value={flags.previewSubmitOpen ? "已开放" : "未开放"} />
-        <SummaryCard label="审查提交" value={flags.reviewSubmitOpen ? "已开放" : "未开放"} />
-        <SummaryCard label="最近更新" value={formatDateTime(state.project.draft.updatedAt)} />
+        <SummaryCard
+          label="预告提交"
+          value={getWindowLabel(state.project.windows, "preview_submit_open")}
+        />
+        <SummaryCard
+          label="审查提交"
+          value={getWindowLabel(state.project.windows, "review_submit_open")}
+        />
+        <SummaryCard
+          label="最近更新"
+          value={formatDateTime(state.project.draft.updatedAt)}
+        />
       </div>
 
       {state.project.draft.adminFeedback ? (
         <Notice tone="warning">
           <div className="font-medium">主催反馈</div>
           <div className="mt-2">{state.project.draft.adminFeedback}</div>
-          <div className="mt-2 text-xs">最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}</div>
+          <div className="mt-2 text-sm">
+            最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}
+          </div>
         </Notice>
       ) : null}
 
+      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "作品尚未公开。资料审核通过并由主催发布后，将出现在观测集中。"}</Notice>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6">
+        <section className="panel space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-medium text-on-surface">预告信息</h2>
-              <p className="text-sm text-on-surface-variant mt-1">这里填写的是之后可能对外展示的标题、简介、作者名和标签。</p>
+              <p className="text-base text-on-surface-variant mt-1">
+                这里的标题、简介、封面和作品链接会用于公开展示。
+              </p>
             </div>
-            <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
+            <StatusBadge
+              tone={getStatusTone(state.project.draft.previewStatus)}
+            >
               {projectDraftStatusLabels[state.project.draft.previewStatus]}
             </StatusBadge>
           </div>
@@ -298,7 +358,7 @@ export function PortalProjectPage() {
             <Field label="预告标题">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -311,26 +371,39 @@ export function PortalProjectPage() {
               />
             </Field>
 
-            <Field label="公开作者名">
-              <input
-                className={inputClassName}
-                disabled={pendingAction !== null}
-                onChange={(event) =>
-                  setPreviewForm((current) => ({
-                    ...current,
-                    publicAuthorName: event.target.value,
-                  }))
-                }
-                placeholder="对外展示时希望显示的名字"
-                type="text"
-                value={previewForm.publicAuthorName}
-              />
+            <div className="space-y-2">
+              <p>
+                对外署名：{state.project.draft.publicAuthorName ?? "未填写"}
+              </p>
+              <Link className="text-link" to="/portal/profile">
+                修改署名设置
+              </Link>
+            </div>
+
+            <Field label="作品类型">
+              <select className={inputClassName} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                value={previewForm.workType} onChange={event => setPreviewForm(current => ({ ...current, workType: event.target.value as WorkType | "" }))}>
+                <option value="">请选择作品类型</option>
+                {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="正式作品链接" hint="填写读者可直接访问的 HTTPS 作品地址，可先留空，发布前补齐。">
+              <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                value={previewForm.workUrl} placeholder="https://…" onChange={event => setPreviewForm(current => ({ ...current, workUrl: event.target.value }))} />
+            </Field>
+            <Field label="封面地址（选填）" hint="填写可公开访问的 HTTPS 图片地址。不填时以标题和简介展示。">
+              <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                value={previewForm.coverUrl} placeholder="https://…" onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
+            </Field>
+            <Field label="封面描述（选填）">
+              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                value={previewForm.coverAlt} onChange={event => setPreviewForm(current => ({ ...current, coverAlt: event.target.value }))} />
             </Field>
 
             <Field label="作品形式">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -346,7 +419,7 @@ export function PortalProjectPage() {
             <Field label="公开标签" hint="用逗号、顿号或换行分隔。">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -361,7 +434,7 @@ export function PortalProjectPage() {
             <Field label="预告简介">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -377,32 +450,42 @@ export function PortalProjectPage() {
           <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
             <button
               className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
-              disabled={pendingAction !== null}
+              disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+              aria-busy={pendingAction === "preview-save"}
               onClick={() => void handlePreviewSave()}
               type="button"
             >
               {pendingAction === "preview-save" ? "保存中..." : "保存预告草稿"}
             </button>
             <button
-              className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-              disabled={pendingAction !== null || !flags.previewSubmitOpen}
+              className="button button--primary"
+              disabled={pendingAction !== null || !flags.previewSubmitOpen || state.project.draft.previewStatus === "approved"}
+              aria-busy={pendingAction === "preview-submit"}
               onClick={() => void handlePreviewSubmit()}
               type="button"
             >
-              {pendingAction === "preview-submit" ? "提交中..." : "提交预告资料"}
+              {pendingAction === "preview-submit"
+                ? "提交中..."
+                : "提交预告资料"}
             </button>
           </div>
 
-          <p className="text-xs text-on-surface-variant">
-            {flags.previewSubmitOpen ? "当前可以提交预告资料。" : "当前只可先保存草稿。"}
+          <p className="text-sm text-on-surface-variant">
+            {state.project.draft.previewStatus === "approved"
+              ? "预告已通过审核。如需修改，请联系主催退回；已发布作品需先撤下。"
+              : flags.previewSubmitOpen
+              ? "当前可以提交预告资料。"
+              : "当前只可先保存草稿。"}
           </p>
         </section>
 
-        <section className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6">
+        <section className="panel space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-medium text-on-surface">审查说明</h2>
-              <p className="text-sm text-on-surface-variant mt-1">这里不对外公开，重点是帮助主催提前了解题材、风险点和需要注意的部分。</p>
+              <p className="text-base text-on-surface-variant mt-1">
+                这里不对外公开，重点是帮助主催提前了解题材、风险点和需要注意的部分。
+              </p>
             </div>
             <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
               {projectDraftStatusLabels[state.project.draft.reviewStatus]}
@@ -460,14 +543,16 @@ export function PortalProjectPage() {
             <button
               className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
               disabled={pendingAction !== null}
+              aria-busy={pendingAction === "review-save"}
               onClick={() => void handleReviewSave()}
               type="button"
             >
               {pendingAction === "review-save" ? "保存中..." : "保存审查草稿"}
             </button>
             <button
-              className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="button button--primary"
               disabled={pendingAction !== null || !flags.reviewSubmitOpen}
+              aria-busy={pendingAction === "review-submit"}
               onClick={() => void handleReviewSubmit()}
               type="button"
             >
@@ -475,8 +560,10 @@ export function PortalProjectPage() {
             </button>
           </div>
 
-          <p className="text-xs text-on-surface-variant">
-            {flags.reviewSubmitOpen ? "当前可以提交审查说明。" : "当前只可先保存草稿。"}
+          <p className="text-sm text-on-surface-variant">
+            {flags.reviewSubmitOpen
+              ? "当前可以提交审查说明。"
+              : "当前只可先保存草稿。"}
           </p>
         </section>
       </div>
@@ -487,9 +574,12 @@ export function PortalProjectPage() {
 }
 
 const emptyPreviewForm: PreviewFormState = {
+  workType: "",
+  coverUrl: "",
+  coverAlt: "",
+  workUrl: "",
   previewTitle: "",
   previewSummary: "",
-  publicAuthorName: "",
   formatLabel: "",
   publicTagsText: "",
 };
@@ -502,9 +592,12 @@ const emptyReviewForm: ReviewFormState = {
 
 function buildPreviewForm(draft: PortalProjectDraftDetail): PreviewFormState {
   return {
+    workType: draft.workType ?? "",
+    coverUrl: draft.coverUrl ?? "",
+    coverAlt: draft.coverAlt ?? "",
+    workUrl: draft.workUrl ?? "",
     previewTitle: draft.previewTitle ?? "",
     previewSummary: draft.previewSummary ?? "",
-    publicAuthorName: draft.publicAuthorName ?? "",
     formatLabel: draft.formatLabel ?? "",
     publicTagsText: draft.publicTags.join("，"),
   };
@@ -529,7 +622,9 @@ function parseTagsText(value: string) {
   );
 }
 
-function getStatusTone(status: PortalProjectDraftDetail["previewStatus"]): "muted" | "warning" | "success" {
+function getStatusTone(
+  status: PortalProjectDraftDetail["previewStatus"],
+): "muted" | "warning" | "success" {
   if (status === "approved") {
     return "success";
   }
@@ -539,73 +634,4 @@ function getStatusTone(status: PortalProjectDraftDetail["previewStatus"]): "mute
   }
 
   return "muted";
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-4">
-      <p className="text-xs font-mono uppercase text-on-surface-variant">{label}</p>
-      <p className="mt-2 text-sm text-on-surface">{value}</p>
-    </div>
-  );
-}
-
-function Field({
-  children,
-  hint,
-  label,
-}: {
-  children: ReactNode;
-  hint?: string;
-  label: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-on-surface-variant">{label}</label>
-      {children}
-      {hint ? <p className="text-xs text-on-surface-variant">{hint}</p> : null}
-    </div>
-  );
-}
-
-function StatusBadge({
-  children,
-  tone,
-}: {
-  children: ReactNode;
-  tone: "muted" | "warning" | "success";
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono font-medium",
-        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
-        tone === "warning" && "bg-primary/10 text-primary border-primary/20",
-        tone === "muted" && "bg-surface-variant text-on-surface-variant border-outline-variant",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Notice({
-  children,
-  tone = "muted",
-}: {
-  children: ReactNode;
-  tone?: "muted" | "warning" | "success";
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border px-4 py-3 text-sm leading-6",
-        tone === "muted" && "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
-        tone === "warning" && "border-primary/20 bg-primary/10 text-primary",
-        tone === "success" && "border-tertiary/20 bg-tertiary/10 text-tertiary",
-      )}
-    >
-      {children}
-    </div>
-  );
 }

@@ -32,7 +32,8 @@ function createApplicationDetail(
 
 describe("summarizeApplicationReviewState", () => {
   it("flags unbound applications as incompatible with the current formal application rule", async () => {
-    const { summarizeApplicationReviewState } = await import("./application-review");
+    const { summarizeApplicationReviewState } =
+      await import("./application-review");
 
     const summary = summarizeApplicationReviewState(createApplicationDetail());
 
@@ -53,7 +54,8 @@ describe("summarizeApplicationReviewState", () => {
   });
 
   it("marks auth and profile as ready when the applicant has already entered the portal", async () => {
-    const { summarizeApplicationReviewState } = await import("./application-review");
+    const { summarizeApplicationReviewState } =
+      await import("./application-review");
 
     const summary = summarizeApplicationReviewState(
       createApplicationDetail({
@@ -64,13 +66,12 @@ describe("summarizeApplicationReviewState", () => {
           email: "portal@example.com",
         },
         portalProfile: {
-          penName: "八云",
+          creditName: "八云",
           contactEmail: "portal@example.com",
           primaryContactChannel: "Discord",
           primaryContactHandle: "@yakumo",
           backupContact: null,
-          publicCreditMode: "named",
-          publicCreditName: null,
+          isAnonymous: false,
         },
       }),
     );
@@ -78,11 +79,17 @@ describe("summarizeApplicationReviewState", () => {
     expect(summary.recommendation).toBe(
       "入口账号和联系资料已具备。首次登录后会自动建立工作台，可在确认作品准备情况后开放参与资格。",
     );
-    expect(summary.items.map((item) => item.completed)).toEqual([true, true, false, false]);
+    expect(summary.items.map((item) => item.completed)).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
   });
 
   it("recommends sending an approval reminder after the participant qualification is opened", async () => {
-    const { summarizeApplicationReviewState } = await import("./application-review");
+    const { summarizeApplicationReviewState } =
+      await import("./application-review");
 
     const summary = summarizeApplicationReviewState(
       createApplicationDetail({
@@ -109,7 +116,8 @@ describe("summarizeApplicationReviewState", () => {
   });
 
   it("switches to resend wording after the participant has already activated the portal", async () => {
-    const { summarizeApplicationReviewState } = await import("./application-review");
+    const { summarizeApplicationReviewState } =
+      await import("./application-review");
 
     const summary = summarizeApplicationReviewState(
       createApplicationDetail({
@@ -125,7 +133,9 @@ describe("summarizeApplicationReviewState", () => {
       }),
     );
 
-    expect(summary.recommendation).toBe("该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。");
+    expect(summary.recommendation).toBe(
+      "该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。",
+    );
     expect(summary.inviteAction).toEqual({
       enabled: true,
       label: "补发通过提醒邮件",
@@ -136,7 +146,8 @@ describe("summarizeApplicationReviewState", () => {
 
 describe("listAvailableApplicationReviewStatuses", () => {
   it("omits the current status from the admin review action list", async () => {
-    const { listAvailableApplicationReviewStatuses } = await import("./application-review");
+    const { listAvailableApplicationReviewStatuses } =
+      await import("./application-review");
 
     expect(listAvailableApplicationReviewStatuses("pending")).toEqual([
       "approved",

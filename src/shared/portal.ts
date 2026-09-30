@@ -1,12 +1,23 @@
 import { z } from "zod";
-import type { ApplicationInterestFormat, ApplicationStatus } from "./applications";
+import { workPublicationFieldsSchema, type WorkPublicationFields } from "./works";
+import type {
+  ApplicationInterestFormat,
+  ApplicationStatus,
+} from "./applications";
 import type { EventWindowSummary } from "./windows";
 
-export type ParticipantPortalStatus = "pending" | "approved" | "withdrawn" | "completed";
+export type ParticipantPortalStatus =
+  | "pending"
+  | "approved"
+  | "withdrawn"
+  | "completed";
 
-export const participantPortalStatusLabels: Record<ParticipantPortalStatus, string> = {
+export const participantPortalStatusLabels: Record<
+  ParticipantPortalStatus,
+  string
+> = {
   pending: "待审核",
-  approved: "已获得参与资格",
+  approved: "审核已通过",
   withdrawn: "已撤回",
   completed: "已完成",
 };
@@ -51,13 +62,12 @@ export type PortalParticipantSummary = {
 };
 
 export type PortalProfile = {
-  penName: string | null;
+  creditName: string;
   contactEmail: string;
   primaryContactChannel: string;
   primaryContactHandle: string;
   backupContact: string | null;
-  publicCreditMode: PortalPublicCreditMode;
-  publicCreditName: string | null;
+  isAnonymous: boolean;
   updatedAt: string;
 };
 
@@ -80,7 +90,13 @@ export type PortalApplicationDetail = PortalApplicationSummary & {
   reviewedBy: string | null;
 };
 
-export const portalSegmentStatusSchema = z.enum(["open", "held", "locked", "released", "completed"]);
+export const portalSegmentStatusSchema = z.enum([
+  "open",
+  "held",
+  "locked",
+  "released",
+  "completed",
+]);
 
 export type PortalSegmentStatus = z.infer<typeof portalSegmentStatusSchema>;
 
@@ -104,7 +120,7 @@ export type PortalProjectDraftSummary = {
   updatedAt: string;
 };
 
-export type PortalProjectDraftDetail = PortalProjectDraftSummary & {
+export type PortalProjectDraftDetail = PortalProjectDraftSummary & WorkPublicationFields & {
   previewSummary: string | null;
   formatLabel: string | null;
   publicTags: string[];
@@ -133,7 +149,10 @@ export type PortalSessionSummary = {
   application: PortalApplicationSummary | null;
 };
 
-export type PortalExistingParticipantSummary = Omit<PortalSessionSummary, "participant"> & {
+export type PortalExistingParticipantSummary = Omit<
+  PortalSessionSummary,
+  "participant"
+> & {
   participant: PortalParticipantSummary;
 };
 
@@ -181,6 +200,7 @@ export type PortalProfileMutationResponse = {
 };
 
 export type PortalApplicationResponse = PortalSessionSummary & {
+  window: EventWindowSummary;
   application: PortalApplicationDetail | null;
   editable: boolean;
   editState: "create" | "update" | "locked";
@@ -213,49 +233,29 @@ export type PortalSegmentMutationResponse = {
   segment: PortalSegmentSummary | null;
 };
 
-export const portalPublicCreditModeSchema = z.enum(["named", "pseudonymous", "anonymous"]);
+export const updatePortalProfileInputSchema = z.object({
+  creditName: z.string().trim().min(1, "请填写署名。").max(80),
+  isAnonymous: z.boolean(),
+  contactEmail: z.string().trim().email().max(320),
+  primaryContactChannel: z.string().trim().min(1).max(40),
+  primaryContactHandle: z.string().trim().min(1).max(120),
+  backupContact: z.string().trim().max(160).optional(),
+});
 
-export type PortalPublicCreditMode = z.infer<typeof portalPublicCreditModeSchema>;
+export type UpdatePortalProfileInput = z.infer<
+  typeof updatePortalProfileInputSchema
+>;
 
-export const updatePortalProfileInputSchema = z
-  .object({
-    penName: z.string().trim().max(80).optional(),
-    contactEmail: z.string().trim().email().max(320),
-    primaryContactChannel: z.string().trim().min(1).max(40),
-    primaryContactHandle: z.string().trim().min(1).max(120),
-    backupContact: z.string().trim().max(160).optional(),
-    publicCreditMode: portalPublicCreditModeSchema,
-    publicCreditName: z.string().trim().max(80).optional(),
-  })
-  .superRefine((value, context) => {
-    if (value.publicCreditMode === "named" && !value.penName?.trim()) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "使用常用笔名公开时请填写笔名，或改用匿名/单独署名。",
-        path: ["penName"],
-      });
-    }
-
-    if (value.publicCreditMode === "pseudonymous" && !value.publicCreditName?.trim()) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "单独署名模式必须填写公开署名。",
-        path: ["publicCreditName"],
-      });
-    }
-  });
-
-export type UpdatePortalProfileInput = z.infer<typeof updatePortalProfileInputSchema>;
-
-export const updatePortalProjectPreviewInputSchema = z.object({
+export const updatePortalProjectPreviewInputSchema = workPublicationFieldsSchema.extend({
   previewTitle: z.string().trim().max(120).optional(),
   previewSummary: z.string().trim().max(1600).optional(),
-  publicAuthorName: z.string().trim().max(80).optional(),
   formatLabel: z.string().trim().max(80).optional(),
   publicTags: z.array(z.string().trim().min(1).max(32)).max(12).optional(),
 });
 
-export type UpdatePortalProjectPreviewInput = z.infer<typeof updatePortalProjectPreviewInputSchema>;
+export type UpdatePortalProjectPreviewInput = z.infer<
+  typeof updatePortalProjectPreviewInputSchema
+>;
 
 export const updatePortalProjectReviewInputSchema = z.object({
   contentNote: z.string().trim().max(2000).optional(),
@@ -263,7 +263,9 @@ export const updatePortalProjectReviewInputSchema = z.object({
   reviewNote: z.string().trim().max(2000).optional(),
 });
 
-export type UpdatePortalProjectReviewInput = z.infer<typeof updatePortalProjectReviewInputSchema>;
+export type UpdatePortalProjectReviewInput = z.infer<
+  typeof updatePortalProjectReviewInputSchema
+>;
 
 export type PortalProjectMutationResponse = {
   ok: true;

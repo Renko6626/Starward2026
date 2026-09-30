@@ -29,6 +29,23 @@ describe("local dev bootstrap fixtures", () => {
     expect(sql).toContain("INSERT INTO session");
   });
 
+  it("keeps development windows open without expiring fixture dates", () => {
+    const developmentWindows = localDevSeedFixtures.eventWindows.filter(
+      (window) => window.key !== "public_release_open",
+    );
+    expect(developmentWindows).toHaveLength(5);
+    for (const window of developmentWindows) {
+      expect(window).toMatchObject({
+        is_enabled: 1,
+        opens_at: null,
+        closes_at: null,
+      });
+    }
+    expect(localDevSeedFixtures.eventWindows.find(
+      (window) => window.key === "public_release_open",
+    )?.is_enabled).toBe(0);
+  });
+
   it("signs Better Auth session cookies for local portal smoke", async () => {
     const signed = await createSignedSessionCookieValue({
       sessionToken: "starward-local-approved-session",

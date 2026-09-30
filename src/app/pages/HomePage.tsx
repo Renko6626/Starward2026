@@ -1,49 +1,90 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Palette, Scroll, Stars } from "../components/icons";
+import { ArrowRight } from "lucide-react";
+import { StarChart } from "../components/StarChart";
+import { ScrollReveal } from "../components/ScrollReveal";
+import { StatusBadge } from "../components/ui";
+import { useApplicationIntake } from "../lib/use-application-intake";
+import { getApplicationWindowLabel } from "../../shared/windows";
 
 export function HomePage() {
+  const intake = useApplicationIntake();
+  const isOpen = intake.status === "ready" && intake.payload.isOpen;
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-12 relative z-10 py-8">
-      <section className="text-center space-y-6 py-12 border-b border-outline-variant relative">
-        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-          <Stars className="w-96 h-96" />
+    <>
+      <section className="home-hero">
+        <p className="hero-number">VOL. 2026</p>
+        <div className="hero-copy">
+          <p className="eyebrow">HIFUU / CREATIVE RELAY</p>
+          <h1>
+            沿着星光，
+            <br />
+            把故事<em>传下去。</em>
+          </h1>
+          <p>
+            一场秘封组同人创作接力，以文字与画面，接续彼此的想象。
+          </p>
+          <section className="intake-strip" aria-label="当前报名状态">
+            <span className="intake-label">当前报名状态</span>
+            <StatusBadge tone={isOpen ? "success" : "muted"}>
+              {intake.status === "loading"
+                ? "正在读取活动状态"
+                : intake.status === "error"
+                  ? "暂时无法读取状态"
+                  : getApplicationWindowLabel(intake.payload.window)}
+            </StatusBadge>
+            {intake.status === "error" ? <p>{intake.message}</p> : null}
+          </section>
+          <div className="hero-actions">
+            <Link className="button button--primary" to="/apply">
+              查看参与指南 <ArrowRight size={16} />
+            </Link>
+            <Link className="button button--secondary" to="/works" search={{ view: "gallery", type: "all", q: "" }}>
+              浏览作品观测集
+            </Link>
+          </div>
         </div>
-        <h1 className="text-5xl md:text-7xl font-headline tracking-tighter text-primary">
-          STARWARD <span className="text-on-surface">2026</span>
-        </h1>
-        <p className="text-xl text-on-surface-variant max-w-2xl mx-auto font-light">秘封组同人创作接力活动站。</p>
-        <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
-          <Link
-            className="px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-            to="/apply"
-          >
-            报名须知 <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            className="px-6 py-3 bg-surface-variant text-on-surface rounded-full font-medium hover:bg-surface-bright transition-colors border border-outline-variant"
-            to="/portal/login"
-          >
-            创作者入口
-          </Link>
+        <figure className="hero-chart">
+          <StarChart />
+        </figure>
+      </section>
+      <section className="editorial-section">
+        <ScrollReveal>
+          <p className="eyebrow">01 / ABOUT THE RELAY</p>
+          <h2>
+            不同的创作，
+            <br />
+            同一条星轨。
+          </h2>
+        </ScrollReveal>
+        <div>
+          <p className="editorial-intro">
+            从故事到画面，让不同的创作在这里相遇。提交报名、准备作品，在开放窗口中认领接力时段。
+          </p>
+          <div className="journey">
+            <ScrollReveal>
+              <article>
+                <span>01</span>
+                <h3>提交报名</h3>
+                <p>建立账号，补充联系资料，提交你的创作计划。</p>
+              </article>
+            </ScrollReveal>
+            <ScrollReveal delay={50}>
+              <article>
+                <span>02</span>
+                <h3>准备作品</h3>
+                <p>整理预告与作品说明，根据审核反馈完善内容。</p>
+              </article>
+            </ScrollReveal>
+            <ScrollReveal delay={100}>
+              <article>
+                <span>03</span>
+                <h3>认领时段</h3>
+                <p>审核通过后，在开放窗口中认领时段，按日程完成接力。</p>
+              </article>
+            </ScrollReveal>
+          </div>
         </div>
       </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-8 border border-outline-variant bg-surface-container-low/50 rounded-2xl backdrop-blur-sm hover:border-primary/50 transition-colors group">
-          <Palette className="w-8 h-8 text-primary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-          <h2 className="text-2xl font-headline mb-3">参与方式</h2>
-          <p className="text-on-surface-variant leading-relaxed">
-            阅读报名须知后，可通过创作者入口完成登录、资料填写与报名提交。审核通过后，时间段与作品信息也将在同一入口内继续维护。
-          </p>
-        </div>
-        <div className="p-8 border border-outline-variant bg-surface-container-low/50 rounded-2xl backdrop-blur-sm hover:border-tertiary/50 transition-colors group">
-          <Scroll className="w-8 h-8 text-tertiary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-          <h2 className="text-2xl font-headline mb-3">站点内容</h2>
-          <p className="text-on-surface-variant leading-relaxed">
-            本站用于提供活动说明、参与入口与阶段更新。作品公开展示将在发布阶段开放，现阶段以报名与创作准备相关内容为主。
-          </p>
-        </div>
-      </section>
-    </div>
+    </>
   );
 }

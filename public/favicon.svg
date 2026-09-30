@@ -1,19 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0f0f13" />
+  <title>Starward</title>
   <path
-    d="M18 18h28a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H30l-8 8v-8h-4a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6Z"
+    d="M32 9a23 23 0 1 0 23 23"
     fill="none"
-    stroke="#a97cff"
+    stroke="#c4aceb"
     stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="4"
+    stroke-width="5"
   />
   <path
-    d="m27 26-6 6 6 6M37 26l6 6-6 6"
-    fill="none"
-    stroke="#f6f2ff"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="4"
+    d="M35 14l4 11 11 4-11 4-4 11-4-11-11-4 11-4Z"
+    fill="#edce94"
   />
 </svg>

@@ -1,78 +1,108 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Sparkles } from "../components/icons";
+import { ArrowRight } from "lucide-react";
 import { authClient } from "../../portal/lib/auth-client";
-import { requestJson } from "../lib/api";
-import type { ApplicationIntakeResponse } from "../../shared/applications";
-
-type IntakeState =
-  | { status: "loading" }
-  | { status: "ready"; payload: ApplicationIntakeResponse }
-  | { status: "error"; message: string };
+import { useApplicationIntake } from "../lib/use-application-intake";
+import { Notice, StatusBadge } from "../components/ui";
+import { getApplicationWindowLabel } from "../../shared/windows";
 
 export function ApplyPage() {
-  const sessionQuery = authClient.useSession();
-  const [intake, setIntake] = useState<IntakeState>({ status: "loading" });
-
-  useEffect(() => {
-    void requestJson<ApplicationIntakeResponse>("/api/applications/intake")
-      .then((payload) => setIntake({ status: "ready", payload }))
-      .catch((error: Error) =>
-        setIntake({
-          status: "error",
-          message: error.message || "无法读取当前报名状态。",
-        }),
-      );
-  }, []);
-
-  const loggedIn = Boolean(sessionQuery.data);
-  const applicationOpen = intake.status === "ready" ? intake.payload.isOpen : false;
-  const ctaTo = loggedIn ? "/portal/application" : "/portal/login";
-  const windowLabel = intake.status === "ready" ? intake.payload.window?.label : null;
-  const windowText = intake.status === "ready"
-    ? intake.payload.isOpen
-      ? "当前可以进入参与者入口填写正式报名。"
-      : "当前未开放正式报名，开放后仍需先完成参与者登录。"
-    : intake.status === "error"
-      ? intake.message
-      : "正在读取窗口状态...";
-
+  const { data: session } = authClient.useSession();
+  const intake = useApplicationIntake();
+  const isOpen = intake.status === "ready" && intake.payload.isOpen;
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-8 relative z-10 py-8">
-      <div className="mb-12">
-        <Link className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-6" to="/">
-          <ArrowRight className="w-4 h-4 rotate-180" /> 返回首页
+    <div className="guide-layout">
+      <aside className="guide-aside">
+        <p className="eyebrow">PARTICIPATION / 2026</p>
+        <h1>参与指南</h1>
+        <p>让故事从这里开始。了解报名方式与后续安排，准备你的创作接力。</p>
+        <Link to="/" className="text-link guide-back-link">
+          返回活动首页 <ArrowRight size={15} />
         </Link>
-        <h1 className="text-4xl font-headline tracking-tight mb-4">报名须知</h1>
-        <p className="text-lg text-on-surface-variant">正式报名已经统一收口到参与者入口内提交。公共页面只负责说明规则、窗口状态与下一步入口。</p>
-      </div>
-
-      <div className="space-y-6">
-        <div className="p-6 border-l-4 border-tertiary bg-surface-container-low/80 rounded-r-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Sparkles className="w-5 h-5 text-tertiary" />
-            <h2 className="text-lg font-medium">当前窗口：{applicationOpen ? "正式报名开放中" : "报名暂未开放"}</h2>
+      </aside>
+      <div>
+        <section className="guide-section">
+          <h2>当前报名状态</h2>
+          <StatusBadge tone={isOpen ? "success" : "muted"}>
+            {intake.status === "loading"
+              ? "正在读取"
+              : intake.status === "error"
+                ? "状态读取失败"
+                : getApplicationWindowLabel(intake.payload.window)}
+          </StatusBadge>
+          <div className="mt-5">
+            <Notice>
+              {intake.status === "ready" ? (
+                isOpen ? (
+                  "现在可以登录创作者空间，完善资料并提交报名。"
+                ) : intake.payload.window?.state === "ended" ? (
+                  "本轮报名已结束。已报名的创作者可以登录查看审核进度。"
+                ) : (
+                  "你可以先建立账号、完善个人档案，等待报名窗口开放。"
+                )
+              ) : intake.status === "error" ? (
+                intake.message
+              ) : (
+                <>&nbsp;</>
+              )}
+            </Notice>
           </div>
-          <p className="text-sm text-on-surface-variant font-mono">
-            {windowLabel ?? "报名开放"}
-            {windowLabel ? " · " : ""}
-            {windowText}
-          </p>
-        </div>
-
-        <div className="p-8 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-4">
-          <h3 className="text-xl font-headline">报名条件</h3>
-          <ul className="space-y-3 text-on-surface-variant list-disc list-inside">
-            <li>正式报名必须绑定参与者入口账号。</li>
-            <li>匿名仅表示不公开或不填写笔名，不表示匿名账号提交。</li>
-            <li>主催识别与联系依赖邮箱、主联系渠道与主联系标识。</li>
-            <li>报名窗口是否可提交，由活动窗口设置统一控制。</li>
+        </section>
+        <section className="guide-section">
+          <h2>接下来，只需三步</h2>
+          <div className="guide-steps">
+            <div>
+              <span>01</span>
+              <div>
+                <h3>建立账号</h3>
+                <p>使用邮箱和密码注册，已有账号可以直接登录。</p>
+              </div>
+            </div>
+            <div>
+              <span>02</span>
+              <div>
+                <h3>完善个人档案</h3>
+                <p>填写联系方式，并选择你希望对外展示的署名方式。</p>
+              </div>
+            </div>
+            <div>
+              <span>03</span>
+              <div>
+                <h3>提交创作意向</h3>
+                <p>
+                  在报名页填写参加形式、创作简介与作品链接，提交后等待审核。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="guide-section">
+          <h2>报名前，请先了解</h2>
+          <ul>
+            <li>
+              <strong>账号与进度</strong>
+              报名需要一个创作者账号。后续的审核进度、作品资料和接力日程，都可以在同一个空间查看。
+            </li>
+            <li>
+              <strong>署名与联系方式</strong>
+              可以选择不公开署名。主催仍需要有效的邮箱和联系方式，以便与你沟通。
+            </li>
+            <li>
+              <strong>审核与认领</strong>
+              提交报名后，由主催审核参与资格。时间段认领等操作在审核通过及对应窗口开放后进行。
+            </li>
+            <li>
+              <strong>已有账号</strong>
+              请直接登录，继续维护原有资料。
+            </li>
           </ul>
-        </div>
-
-        <div className="pt-6">
-          <Link className="w-full block text-center px-6 py-4 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-colors text-lg" to={ctaTo}>
-            {loggedIn ? "前往当前账号的报名页" : "我已了解，前往报名登录"}
+        </section>
+        <div className="pt-8">
+          <Link
+            className="button button--primary w-full"
+            to={session ? "/portal/application" : "/portal/login"}
+          >
+            {session ? "前往我的报名" : "进入创作者空间"}
+            <ArrowRight size={16} />
           </Link>
         </div>
       </div>

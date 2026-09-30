@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WorkPublicationFields } from "./works";
 import {
   portalSegmentStatusSchema,
   projectDraftStatusSchema,
@@ -15,11 +16,18 @@ export const adminParticipantStatusValues = [
   "completed",
 ] as const;
 
-export const adminParticipantStatusSchema = z.enum(adminParticipantStatusValues);
+export const adminParticipantStatusSchema = z.enum(
+  adminParticipantStatusValues,
+);
 
-export type AdminParticipantStatus = z.infer<typeof adminParticipantStatusSchema>;
+export type AdminParticipantStatus = z.infer<
+  typeof adminParticipantStatusSchema
+>;
 
-export const adminParticipantStatusLabels: Record<AdminParticipantStatus, string> = {
+export const adminParticipantStatusLabels: Record<
+  AdminParticipantStatus,
+  string
+> = {
   pending: "待审核",
   approved: "已批准",
   withdrawn: "已撤回",
@@ -27,6 +35,7 @@ export const adminParticipantStatusLabels: Record<AdminParticipantStatus, string
 };
 
 export type AdminParticipantItem = {
+  isAnonymous: boolean;
   id: string;
   displayName: string;
   inviteEmail: string;
@@ -53,12 +62,13 @@ export type AdminParticipantDetailResponse = {
 };
 
 export const updateParticipantInputSchema = z.object({
-  displayName: z.string().trim().min(1).max(80),
   contactHandle: z.string().trim().max(120).optional(),
   status: adminParticipantStatusSchema,
 });
 
-export type UpdateParticipantInput = z.infer<typeof updateParticipantInputSchema>;
+export type UpdateParticipantInput = z.infer<
+  typeof updateParticipantInputSchema
+>;
 
 export type AdminParticipantInviteResponse = {
   ok: true;
@@ -104,7 +114,9 @@ export const bootstrapSegmentsInputSchema = z.object({
   count: z.number().int().min(1).max(120),
 });
 
-export type BootstrapSegmentsInput = z.infer<typeof bootstrapSegmentsInputSchema>;
+export type BootstrapSegmentsInput = z.infer<
+  typeof bootstrapSegmentsInputSchema
+>;
 
 export type AdminSegmentBootstrapResponse = {
   ok: true;
@@ -118,13 +130,14 @@ export type AdminSegmentMutationResponse = {
   item: AdminSegmentItem;
 };
 
-export const adminProjectDraftStatusLabels: Record<ProjectDraftStatus, string> = {
-  not_started: "未开始",
-  draft: "草稿",
-  submitted: "已提交",
-  changes_requested: "需修改",
-  approved: "已通过",
-};
+export const adminProjectDraftStatusLabels: Record<ProjectDraftStatus, string> =
+  {
+    not_started: "未开始",
+    draft: "草稿",
+    submitted: "已提交",
+    changes_requested: "需修改",
+    approved: "已通过",
+  };
 
 export type AdminProjectDraftItem = {
   id: string;
@@ -142,7 +155,7 @@ export type AdminProjectDraftListResponse = {
   items: AdminProjectDraftItem[];
 };
 
-export type AdminProjectDraftDetail = AdminProjectDraftItem & {
+export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFields & {
   participantInviteEmail: string;
   participantContactHandle: string | null;
   participantStatus: ParticipantPortalStatus;
@@ -161,6 +174,7 @@ export type AdminProjectDraftDetail = AdminProjectDraftItem & {
 };
 
 export type AdminProjectDraftDetailResponse = {
+  publicationWindow: EventWindowSummary;
   draft: AdminProjectDraftDetail;
 };
 
@@ -170,7 +184,9 @@ export const updateProjectDraftInputSchema = z.object({
   adminFeedback: z.string().trim().max(2000).nullable().optional(),
 });
 
-export type UpdateProjectDraftInput = z.infer<typeof updateProjectDraftInputSchema>;
+export type UpdateProjectDraftInput = z.infer<
+  typeof updateProjectDraftInputSchema
+>;
 
 export type AdminProjectDraftMutationResponse = {
   ok: true;

@@ -1,9 +1,26 @@
-import { useEffect, useState, type ReactNode } from "react";
 import { Link, getRouteApi } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Clock, XCircle } from "../../app/components/icons";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  XCircle,
+} from "../../app/components/icons";
+import {
+  ReadError,
+  DetailBlock,
+  DetailItem,
+  PageHeading,
+  Notice as SidebarNotice,
+} from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
+import {
+  adminParticipantStatusLabels,
+  type AdminParticipantInviteResponse,
+} from "../../shared/admin";
+import { resolveApplicationDisplayName } from "../../shared/application-identity";
 import {
   applicationInterestFormatLabels,
   applicationStatusLabels,
@@ -11,11 +28,6 @@ import {
   type ApplicationStatus,
   type UpdateApplicationReviewInput,
 } from "../../shared/applications";
-import { resolveApplicationDisplayName } from "../../shared/application-identity";
-import {
-  adminParticipantStatusLabels,
-  type AdminParticipantInviteResponse,
-} from "../../shared/admin";
 import {
   listAvailableApplicationReviewStatuses,
   summarizeApplicationReviewState,
@@ -23,12 +35,6 @@ import {
 import { getReviewNoteTemplates } from "../lib/review-note";
 
 const applicationRouteApi = getRouteApi("/admin/applications/$applicationId");
-
-const publicCreditModeLabels = {
-  named: "使用笔名公开",
-  pseudonymous: "使用单独署名",
-  anonymous: "匿名参与",
-} as const;
 
 type ActionNotice = {
   tone: "success" | "error";
@@ -53,16 +59,12 @@ const reviewActionConfigs = {
   },
 };
 
-function resolvePublicCreditLabel(profile: NonNullable<AdminApplicationDetailResponse["application"]["portalProfile"]>) {
-  if (profile.publicCreditMode === "anonymous") {
-    return "不公开";
-  }
-
-  if (profile.publicCreditMode === "pseudonymous") {
-    return profile.publicCreditName ?? "未填写";
-  }
-
-  return profile.penName ?? "未填写";
+function resolvePublicCreditLabel(
+  profile: NonNullable<
+    AdminApplicationDetailResponse["application"]["portalProfile"]
+  >,
+) {
+  return profile.isAnonymous ? "匿名" : profile.creditName;
 }
 
 export function AdminApplicationDetailPage() {
@@ -73,7 +75,9 @@ export function AdminApplicationDetailPage() {
     | { status: "error"; message: string }
   >({ status: "loading" });
   const [adminNote, setAdminNote] = useState("");
-  const [submitting, setSubmitting] = useState<UpdateApplicationReviewInput["status"] | null>(null);
+  const [submitting, setSubmitting] = useState<
+    UpdateApplicationReviewInput["status"] | null
+  >(null);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [actionNotice, setActionNotice] = useState<ActionNotice | null>(null);
 
@@ -85,7 +89,9 @@ export function AdminApplicationDetailPage() {
     setState({ status: "loading" });
 
     try {
-      const payload = await requestJson<AdminApplicationDetailResponse>(`/api/admin/applications/${applicationId}`);
+      const payload = await requestJson<AdminApplicationDetailResponse>(
+        `/api/admin/applications/${applicationId}`,
+      );
       setState({ status: "ready", payload });
       setAdminNote(payload.application.adminNote ?? "");
     } catch (error) {
@@ -101,23 +107,27 @@ export function AdminApplicationDetailPage() {
     setActionNotice(null);
 
     try {
-      const payload = await requestJson<AdminApplicationDetailResponse>(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
+      const payload = await requestJson<AdminApplicationDetailResponse>(
+        `/api/admin/applications/${applicationId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            status,
+            adminNote: adminNote.trim() || undefined,
+          } satisfies UpdateApplicationReviewInput),
         },
-        body: JSON.stringify({
-          status,
-          adminNote: adminNote.trim() || undefined,
-        } satisfies UpdateApplicationReviewInput),
-      });
+      );
 
       setState({ status: "ready", payload });
       setAdminNote(payload.application.adminNote ?? "");
       setActionNotice(
         payload.notification
           ? {
-              tone: payload.notification.status === "failed" ? "error" : "success",
+              tone:
+                payload.notification.status === "failed" ? "error" : "success",
               message: payload.notification.message,
             }
           : {
@@ -153,7 +163,8 @@ export function AdminApplicationDetailPage() {
     } catch (error) {
       setActionNotice({
         tone: "error",
-        message: error instanceof Error ? error.message : "发送通过提醒邮件失败。",
+        message:
+          error instanceof Error ? error.message : "发送通过提醒邮件失败。",
       });
     } finally {
       setSendingInvite(false);
@@ -165,89 +176,137 @@ export function AdminApplicationDetailPage() {
   }
 
   if (state.status === "error") {
-    return <ApplicationDetailShell description={state.message} />;
+    return (
+      <div className="page-content">
+        <PageHeading title="报名详情" />
+        <ReadError message={state.message} />
+      </div>
+    );
   }
 
   const application = state.payload.application;
   const participant = application.participant;
   const summary = summarizeApplicationReviewState(application);
-  const availableReviewStatuses = listAvailableApplicationReviewStatuses(application.status);
+  const availableReviewStatuses = listAvailableApplicationReviewStatuses(
+    application.status,
+  );
 
   return (
-    <div className="w-full max-w-5xl mx-auto relative z-10 py-6 space-y-6">
+    <div className="page-content">
       <div className="mb-4">
         <Link
-          className="text-sm font-mono text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 mb-4"
+          className="text-base font-mono text-on-surface-variant hover:text-primary transition-colors flex min-h-11 items-center gap-2 mb-4"
           to="/admin/applications"
         >
           <ArrowRight className="w-4 h-4 rotate-180" /> 返回队列
         </Link>
-        <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
-          <div>
-            <h1 className="text-2xl font-headline tracking-tight mb-1">报名详情</h1>
-            <p className="text-sm text-on-surface-variant font-mono">ID: {applicationId}</p>
-          </div>
+        <PageHeading
+          title={<>报名详情</>}
+          description={<>ID: {applicationId}</>}
+        >
           <ApplicationStatusBadge status={application.status} />
-        </div>
+        </PageHeading>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
-            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2 space-y-6">
+          <section className="panel space-y-6">
+            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
               基础信息
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <DetailItem label="社团 / 笔名" value={resolveApplicationDisplayName({
-                displayName: application.displayName,
-                contactHandle: application.contactHandle,
-                contactEmail: application.contactEmail,
-              })} />
-              <DetailItem label="联系方式备注" value={application.contactHandle ?? "未填写"} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-base">
+              <DetailItem
+                label="署名"
+                value={resolveApplicationDisplayName({
+                  displayName: application.displayName,
+                  contactHandle: application.contactHandle,
+                  contactEmail: application.contactEmail,
+                })}
+              />
+              <DetailItem
+                label="联系方式备注"
+                value={application.contactHandle ?? "未填写"}
+              />
               <DetailItem label="联系邮箱" value={application.contactEmail} />
-              <DetailItem label="提交时间" value={formatDateTime(application.createdAt)} />
-              <DetailItem label="报名方向" value={applicationInterestFormatLabels[application.interestFormat]} />
-              <DetailItem label="作品链接" value={application.portfolioUrl ?? "未填写"} />
-              <DetailItem label="门户账号" value={application.authUser?.email ?? "尚未建立入口"} />
-              <DetailItem label="审核时间" value={formatDateTime(application.reviewedAt)} />
+              <DetailItem
+                label="提交时间"
+                value={formatDateTime(application.createdAt)}
+              />
+              <DetailItem
+                label="报名方向"
+                value={
+                  applicationInterestFormatLabels[application.interestFormat]
+                }
+              />
+              <DetailItem
+                label="作品链接"
+                value={application.portfolioUrl ?? "未填写"}
+              />
+              <DetailItem
+                label="门户账号"
+                value={application.authUser?.email ?? "尚未建立入口"}
+              />
+              <DetailItem
+                label="审核时间"
+                value={formatDateTime(application.reviewedAt)}
+              />
             </div>
           </section>
 
-          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
-            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+          <section className="panel space-y-6">
+            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
               联系资料与公开署名
             </h2>
             {application.portalProfile ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <DetailItem label="笔名" value={application.portalProfile.penName ?? "未填写"} />
-                <DetailItem label="联系邮箱" value={application.portalProfile.contactEmail} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-base">
                 <DetailItem
-                  label="主联系渠道"
+                  label="署名"
+                  value={application.portalProfile.creditName ?? "未填写"}
+                />
+                <DetailItem
+                  label="联系邮箱"
+                  value={application.portalProfile.contactEmail}
+                />
+                <DetailItem
+                  label="联系渠道"
                   value={`${application.portalProfile.primaryContactChannel} / ${application.portalProfile.primaryContactHandle}`}
                 />
-                <DetailItem label="备用联系" value={application.portalProfile.backupContact ?? "未填写"} />
-                <DetailItem label="署名模式" value={publicCreditModeLabels[application.portalProfile.publicCreditMode]} />
-                <DetailItem label="公开署名" value={resolvePublicCreditLabel(application.portalProfile)} />
+                <DetailItem
+                  label="备用联系"
+                  value={application.portalProfile.backupContact ?? "未填写"}
+                />
+                <DetailItem
+                  label="对外署名"
+                  value={resolvePublicCreditLabel(application.portalProfile)}
+                />
               </div>
             ) : (
-              <EmptyBlock>该报名尚未补充门户联系资料。</EmptyBlock>
+              <EmptyBlock>该报名尚未补充个人档案。</EmptyBlock>
             )}
           </section>
 
-          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-6">
-            <h2 className="text-sm font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
+          <section className="panel space-y-6">
+            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
               参企问卷
             </h2>
             <div className="space-y-4">
-              <DetailBlock title="自我介绍 / 参加意向" value={application.introText ?? "未填写"} />
-              <DetailBlock title="给主催的话" value={application.messageToHosts ?? "未填写"} />
+              <DetailBlock
+                title="自我介绍 / 参加意向"
+                value={application.introText ?? "未填写"}
+              />
+              <DetailBlock
+                title="给主催的话"
+                value={application.messageToHosts ?? "未填写"}
+              />
             </div>
           </section>
         </div>
 
         <div className="space-y-6">
-          <section className="p-6 border border-outline-variant bg-surface-container-low/80 rounded-xl shadow-lg">
-            <h2 className="text-sm font-mono text-on-surface-variant uppercase mb-4">审核决议</h2>
+          <section className="panel">
+            <h2 className="text-base font-mono text-on-surface-variant uppercase mb-4">
+              报名审核
+            </h2>
             <div className="space-y-3">
               {availableReviewStatuses.map((status) => {
                 const config = reviewActionConfigs[status];
@@ -267,14 +326,17 @@ export function AdminApplicationDetailPage() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-outline-variant space-y-4">
-              <label className="text-xs font-medium text-on-surface-variant block" htmlFor="application-admin-note">
-                内部备注
+              <label
+                className="text-sm font-medium text-on-surface-variant block"
+                htmlFor="application-admin-note"
+              >
+                审核意见（创作者可见）
               </label>
               <textarea
-                className="w-full bg-surface-variant border border-outline-variant rounded-md px-3 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-xs resize-y min-h-32"
+                className="field-input"
                 id="application-admin-note"
                 onChange={(event) => setAdminNote(event.target.value)}
-                placeholder="添加审核意见..."
+                placeholder="填写会展示给创作者的审核意见..."
                 rows={6}
                 value={adminNote}
               />
@@ -283,7 +345,7 @@ export function AdminApplicationDetailPage() {
                 {getReviewNoteTemplates().map((template) => (
                   <button
                     key={template.id}
-                    className="px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-xs hover:bg-surface-bright transition-colors"
+                    className="min-h-11 px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-sm hover:bg-surface-bright transition-colors"
                     onClick={() => setAdminNote(template.body)}
                     type="button"
                   >
@@ -292,13 +354,23 @@ export function AdminApplicationDetailPage() {
                 ))}
               </div>
 
-              <SidebarNotice>模板只会写入备注框，不会自动提交。可以先套用，再按实际沟通结果微调。</SidebarNotice>
-              {actionNotice ? <SidebarNotice tone={actionNotice.tone}>{actionNotice.message}</SidebarNotice> : null}
+              <SidebarNotice>
+                这段意见会显示在创作者的报名页。模板只会写入输入框，不会自动提交。
+              </SidebarNotice>
+              {actionNotice ? (
+                <SidebarNotice tone={actionNotice.tone}>
+                  {actionNotice.message}
+                </SidebarNotice>
+              ) : null}
 
               {participant ? (
                 <div className="space-y-3 border-t border-outline-variant pt-4">
                   <ActionButton
-                    disabled={submitting !== null || sendingInvite || !summary.inviteAction.enabled}
+                    disabled={
+                      submitting !== null ||
+                      sendingInvite ||
+                      !summary.inviteAction.enabled
+                    }
                     onClick={() => void handleSendInvite(participant.id)}
                     tone="neutral"
                   >
@@ -311,31 +383,44 @@ export function AdminApplicationDetailPage() {
                   >
                     查看参与者详情
                   </Link>
-                  <p className="text-xs text-on-surface-variant">
-                    关联创作者: {participant.id} / {adminParticipantStatusLabels[participant.status]}
+                  <p className="text-sm text-on-surface-variant">
+                    关联创作者: {participant.id} /{" "}
+                    {adminParticipantStatusLabels[participant.status]}
                   </p>
                 </div>
               ) : null}
             </div>
           </section>
 
-          <section className="p-6 border border-outline-variant bg-surface-container-low/50 rounded-xl space-y-4">
-            <h2 className="text-sm font-mono text-on-surface-variant uppercase">审核上下文</h2>
+          <section className="panel space-y-4">
+            <h2 className="text-base font-mono text-on-surface-variant uppercase">
+              审核上下文
+            </h2>
             <div className="space-y-3">
               {summary.items.map((item) => (
-                <div key={item.key} className="rounded-lg border border-outline-variant bg-surface-variant/30 p-4">
+                <div
+                  key={item.key}
+                  className="rounded-lg border border-outline-variant bg-surface-variant/30 p-4"
+                >
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                      item.tone === "success" && "border-tertiary/20 bg-tertiary/10 text-tertiary",
-                      item.tone === "warn" && "border-primary/20 bg-primary/10 text-primary",
-                      item.tone === "info" && "border-outline-variant bg-surface-variant text-on-surface-variant",
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm font-medium",
+                      item.tone === "success" &&
+                        "border-tertiary/20 bg-tertiary/10 text-tertiary",
+                      item.tone === "warn" &&
+                        "border-primary/20 bg-primary/10 text-primary",
+                      item.tone === "info" &&
+                        "border-outline-variant bg-surface-variant text-on-surface-variant",
                     )}
                   >
                     {item.statusLabel}
                   </span>
-                  <p className="mt-3 text-sm font-medium text-on-surface">{item.title}</p>
-                  <p className="mt-2 text-xs leading-6 text-on-surface-variant">{item.hint}</p>
+                  <p className="mt-3 text-base font-medium text-on-surface">
+                    {item.title}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+                    {item.hint}
+                  </p>
                 </div>
               ))}
             </div>
@@ -350,13 +435,11 @@ export function AdminApplicationDetailPage() {
 
 function ApplicationDetailShell({ description }: { description: string }) {
   return (
-    <div className="w-full max-w-5xl mx-auto relative z-10 py-6 space-y-6">
-      <div className="flex items-end justify-between border-b border-outline-variant pb-4 gap-4">
-        <div>
-          <h1 className="text-2xl font-headline tracking-tight mb-1">报名详情</h1>
-          <p className="text-sm text-on-surface-variant font-mono">{description}</p>
-        </div>
-      </div>
+    <div className="page-content">
+      <PageHeading
+        title={<>报名详情</>}
+        description={<>{description}</>}
+      ></PageHeading>
     </div>
   );
 }
@@ -365,21 +448,22 @@ function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
   switch (status) {
     case "approved":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-xs font-medium">
-          <CheckCircle2 className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-sm font-medium">
+          <CheckCircle2 className="w-3.5 h-3.5" />{" "}
+          {applicationStatusLabels[status]}
         </span>
       );
     case "rejected":
     case "withdrawn":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-xs font-medium">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-sm font-medium">
           <XCircle className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
         </span>
       );
     case "pending":
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-sm font-medium">
           <Clock className="w-3.5 h-3.5" /> {applicationStatusLabels[status]}
         </span>
       );
@@ -401,9 +485,12 @@ function ActionButton({
     <button
       className={cn(
         "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors font-medium disabled:cursor-not-allowed disabled:opacity-60",
-        tone === "success" && "bg-tertiary/10 text-tertiary border border-tertiary/30 hover:bg-tertiary/20",
-        tone === "error" && "bg-error/10 text-error border border-error/30 hover:bg-error/20",
-        tone === "neutral" && "bg-surface-variant text-on-surface border border-outline-variant hover:bg-outline-variant",
+        tone === "success" &&
+          "bg-tertiary/10 text-tertiary border border-tertiary/30 hover:bg-tertiary/20",
+        tone === "error" &&
+          "bg-error/10 text-error border border-error/30 hover:bg-error/20",
+        tone === "neutral" &&
+          "bg-surface-variant text-on-surface border border-outline-variant hover:bg-outline-variant",
       )}
       disabled={disabled}
       onClick={onClick}
@@ -414,52 +501,9 @@ function ActionButton({
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-on-surface-variant mb-1">{label}</div>
-      <div className="font-medium text-on-surface break-words">{value}</div>
-    </div>
-  );
-}
-
-function DetailBlock({ title, value }: { title: string; value: string }) {
-  return (
-    <div>
-      <h3 className="text-sm font-medium text-on-surface mb-2">{title}</h3>
-      <p className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50 whitespace-pre-wrap">
-        {value}
-      </p>
-    </div>
-  );
-}
-
 function EmptyBlock({ children }: { children: ReactNode }) {
   return (
-    <div className="text-sm text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50">
-      {children}
-    </div>
-  );
-}
-
-function SidebarNotice({
-  children,
-  tone = "info",
-}: {
-  children: ReactNode;
-  tone?: "info" | "success" | "error";
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-md border px-3 py-2 text-xs leading-6",
-        tone === "success"
-          ? "border-tertiary/25 bg-tertiary/10 text-tertiary"
-          : tone === "error"
-            ? "border-error/25 bg-error/10 text-error"
-          : "border-outline-variant bg-surface-variant/30 text-on-surface-variant",
-      )}
-    >
+    <div className="text-base text-on-surface-variant leading-relaxed bg-surface-variant/30 p-3 rounded-md border border-outline-variant/50">
       {children}
     </div>
   );

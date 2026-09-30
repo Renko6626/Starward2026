@@ -5,7 +5,6 @@ import { getTurnstileSiteKey, normalizeApplicationInput } from "./apply-form";
 describe("normalizeApplicationInput", () => {
   it("preserves a trimmed optional display name and turnstile token when present", () => {
     const input: CreateApplicationInput = {
-      displayName: "  Alice  ",
       contactEmail: "  alice@example.com  ",
       contactHandle: "  Discord: alice  ",
       interestFormat: "novel",
@@ -16,7 +15,6 @@ describe("normalizeApplicationInput", () => {
     };
 
     expect(normalizeApplicationInput(input)).toEqual({
-      displayName: "Alice",
       contactEmail: "alice@example.com",
       contactHandle: "Discord: alice",
       interestFormat: "novel",
@@ -29,7 +27,6 @@ describe("normalizeApplicationInput", () => {
 
   it("drops empty optional fields, including an empty display name and turnstile token", () => {
     const input: CreateApplicationInput = {
-      displayName: "   ",
       contactEmail: "alice@example.com",
       contactHandle: "   ",
       interestFormat: "illustration",
@@ -40,7 +37,6 @@ describe("normalizeApplicationInput", () => {
     };
 
     expect(normalizeApplicationInput(input)).toEqual({
-      displayName: undefined,
       contactEmail: "alice@example.com",
       contactHandle: undefined,
       interestFormat: "illustration",

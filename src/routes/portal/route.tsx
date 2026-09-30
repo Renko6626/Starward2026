@@ -1,3 +1,4 @@
+import { WorkspaceLayout } from "../../app/layouts/WorkspaceLayout";
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/portal")({
@@ -5,5 +6,9 @@ export const Route = createFileRoute("/portal")({
 });
 
 function PortalRouteOutlet() {
-  return <Outlet />;
+  return (
+    <WorkspaceLayout kind="portal">
+      <Outlet />
+    </WorkspaceLayout>
+  );
 }

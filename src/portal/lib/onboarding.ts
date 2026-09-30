@@ -12,7 +12,7 @@ export function resolvePortalEntryDestination(state: PortalMeResponse): PortalEn
   }
 
   if (state.participant?.status === "pending") {
-    return "/portal/project";
+    return "/portal/application";
   }
 
   return "/portal";

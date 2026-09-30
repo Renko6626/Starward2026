@@ -7,7 +7,9 @@
 BETTER_AUTH_SECRET="replace-with-a-32-plus-character-local-secret"
 
 # Dev-only admin bypass. When "true" AND the request host is loopback,
-# /api/admin/* trusts the `x-admin-email` header instead of Cloudflare Access.
+# /api/admin/* uses local-admin@starward.local without Cloudflare Access.
+# Debug scripts may override this identity with the `x-admin-email` header.
+# Restart dev after changing this flag, then open http://localhost:20262/admin.
 # Leave unset (or remove) to disable. MUST stay out of deployed environments.
 ALLOW_LOCAL_ADMIN_BYPASS="true"
 

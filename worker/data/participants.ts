@@ -27,7 +27,10 @@ export function isParticipantPortalEligible(status: ParticipantPortalStatus) {
   return status === "approved" || status === "completed";
 }
 
-export async function getParticipantByInviteEmail(db: D1Database, email: string) {
+export async function getParticipantByInviteEmail(
+  db: D1Database,
+  email: string,
+) {
   const normalizedEmail = normalizeEmailAddress(email);
 
   return db
@@ -36,7 +39,7 @@ export async function getParticipantByInviteEmail(db: D1Database, email: string)
         participants.id,
         participants.user_id,
         participants.invite_email,
-        participants.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
         participants.contact_handle,
         participants.status,
         participants.activated_at,
@@ -44,6 +47,7 @@ export async function getParticipantByInviteEmail(db: D1Database, email: string)
         schedule_segments.code AS current_segment_code,
         schedule_segments.name AS current_segment_name
       FROM participants
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
        AND schedule_segments.status = 'held'
@@ -67,7 +71,7 @@ export async function getParticipantByUserId(db: D1Database, userId: string) {
         participants.id,
         participants.user_id,
         participants.invite_email,
-        participants.display_name,
+        COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
         participants.contact_handle,
         participants.status,
         participants.activated_at,
@@ -75,6 +79,7 @@ export async function getParticipantByUserId(db: D1Database, userId: string) {
         schedule_segments.code AS current_segment_code,
         schedule_segments.name AS current_segment_name
       FROM participants
+      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
        AND schedule_segments.status = 'held'
@@ -96,7 +101,6 @@ export async function ensureParticipantForAuthUser(
   input: {
     email: string;
     userId: string;
-    displayName?: string | null;
   },
 ): Promise<ParticipantLinkResult> {
   const participant =
@@ -109,7 +113,6 @@ export async function ensureParticipantForAuthUser(
 
   const now = nowIso();
   const normalizedEmail = normalizeEmailAddress(input.email);
-  const displayName = resolveCreatorDisplayName(input.displayName, normalizedEmail);
 
   if (!participant) {
     const participantId = createPrefixedId("part");
@@ -121,16 +124,15 @@ export async function ensureParticipantForAuthUser(
             id,
             user_id,
             invite_email,
-            display_name,
             contact_handle,
             status,
             invited_at,
             activated_at,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, NULL, 'pending', NULL, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, NULL, 'pending', NULL, ?, ?, ?)`,
         )
-        .bind(participantId, input.userId, normalizedEmail, displayName, now, now, now),
+        .bind(participantId, input.userId, normalizedEmail, now, now, now),
       db
         .prepare(
           `INSERT INTO participant_events (
@@ -215,15 +217,4 @@ export async function ensureParticipantForAuthUser(
     participantId: participant.id,
     activated,
   };
-}
-
-function resolveCreatorDisplayName(displayName: string | null | undefined, email: string) {
-  const trimmedDisplayName = displayName?.trim();
-
-  if (trimmedDisplayName) {
-    return trimmedDisplayName;
-  }
-
-  const localPart = email.split("@")[0]?.trim();
-  return localPart || "参与者";
 }

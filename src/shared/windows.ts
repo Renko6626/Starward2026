@@ -13,11 +13,31 @@ export const eventWindowKeySchema = z.enum(eventWindowKeys);
 
 export type EventWindowKey = z.infer<typeof eventWindowKeySchema>;
 
+export type EventWindowState = "disabled" | "scheduled" | "open" | "ended";
+
+export const eventWindowStateLabels: Record<EventWindowState, string> = {
+  disabled: "未启用",
+  scheduled: "尚未开始",
+  open: "开放中",
+  ended: "已结束",
+};
+
+export function getApplicationWindowLabel(window: EventWindowSummary | null | undefined) {
+  if (!window || window.state === "disabled") return "报名未开放";
+  return `报名${eventWindowStateLabels[window.state]}`;
+}
+
+export function getWindowLabel(items: EventWindowSummary[], key: EventWindowKey) {
+  const window = items.find((item) => item.key === key);
+  return eventWindowStateLabels[window?.state ?? "disabled"];
+}
+
 export type EventWindowSummary = {
   key: EventWindowKey;
   label: string;
   isEnabled: boolean;
   isOpen: boolean;
+  state: EventWindowState;
   opensAt: string | null;
   closesAt: string | null;
   updatedAt: string;

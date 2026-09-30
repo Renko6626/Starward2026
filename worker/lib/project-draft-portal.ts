@@ -1,7 +1,9 @@
 import type { ProjectDraftStatus } from "../../src/shared/portal";
 import { normalizeOptionalText } from "./strings";
 
-export function resolvePortalProjectDraftSaveStatus(currentStatus: ProjectDraftStatus): ProjectDraftStatus {
+export function resolvePortalProjectDraftSaveStatus(
+  currentStatus: ProjectDraftStatus,
+): ProjectDraftStatus {
   if (currentStatus === "changes_requested") {
     return "changes_requested";
   }
@@ -18,7 +20,7 @@ export function collectMissingPreviewSubmissionFields(input: {
   return [
     [normalizeOptionalText(input.previewTitle), "预告标题"],
     [normalizeOptionalText(input.previewSummary), "预告简介"],
-    [normalizeOptionalText(input.publicAuthorName), "公开作者名"],
+    [normalizeOptionalText(input.publicAuthorName), "个人档案署名"],
     [normalizeOptionalText(input.formatLabel), "作品形式"],
   ]
     .filter(([value]) => !value)

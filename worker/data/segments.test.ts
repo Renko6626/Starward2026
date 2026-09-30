@@ -134,6 +134,7 @@ const baseWindow: EventWindowSummary = {
   label: "报名开放",
   isEnabled: false,
   isOpen: false,
+  state: "disabled",
   opensAt: null,
   closesAt: null,
   updatedAt: "2026-04-12T00:00:00.000Z",
@@ -155,6 +156,7 @@ function buildWindows(openKeys: EventWindowSummary["key"][]) {
     label: key,
     isEnabled: openKeys.includes(key),
     isOpen: openKeys.includes(key),
+    state: openKeys.includes(key) ? "open" as const : "disabled" as const,
   }));
 }
 

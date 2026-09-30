@@ -1,3 +1,5 @@
+import { setWorkPublication } from "../data/works";
+import { getWindowOrFallback } from "../lib/windows";
 import { Hono } from "hono";
 import type {
   AdminApplicationDetailResponse,
@@ -326,6 +328,7 @@ adminApi.get("/project-drafts/:draftId", async (c) => {
   }
 
   const response: AdminProjectDraftDetailResponse = {
+    publicationWindow: getWindowOrFallback(await listEventWindows(getRequiredDb(c)), "public_release_open"),
     draft,
   };
 
@@ -360,6 +363,14 @@ adminApi.patch("/project-drafts/:draftId", async (c) => {
   return c.json(response);
 });
 
+for (const action of ["publish", "unpublish"] as const) {
+  adminApi.post(`/project-drafts/:draftId/${action}`, async (c) => {
+    const result = await setWorkPublication(getRequiredDb(c), c.req.param("draftId"), action === "publish", getAdminIdentity(c));
+    if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+    return c.json(result);
+  });
+}
+
 adminApi.get("/event-windows", async (c) => {
   const response: AdminEventWindowListResponse = {
     items: await listEventWindows(getRequiredDb(c)),
@@ -372,20 +383,20 @@ adminApi.patch("/event-windows/:key", async (c) => {
   const parsedKey = eventWindowKeySchema.safeParse(c.req.param("key"));
 
   if (!parsedKey.success) {
-    return jsonError(c, 422, "invalid_request", "动作窗口键不正确。", parsedKey.error.flatten());
+    return jsonError(c, 422, "invalid_request", "开放窗口键不正确。", parsedKey.error.flatten());
   }
 
   const body = await c.req.json().catch(() => null);
   const parsed = updateEventWindowInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "动作窗口更新参数不正确。", parsed.error.flatten());
+    return jsonError(c, 422, "invalid_request", "开放窗口更新参数不正确。", parsed.error.flatten());
   }
 
   const item = await updateEventWindow(getRequiredDb(c), parsedKey.data, parsed.data);
 
   if (!item) {
-    return jsonError(c, 404, "not_found", "未找到对应动作窗口。");
+    return jsonError(c, 404, "not_found", "未找到对应开放窗口。");
   }
 
   const response: AdminEventWindowMutationResponse = {

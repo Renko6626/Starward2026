@@ -52,13 +52,12 @@ describe("resolvePortalEntryDestination", () => {
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         profile: {
-          penName: "示例",
+          creditName: "示例",
           contactEmail: "profiled@example.com",
           primaryContactChannel: "Discord",
           primaryContactHandle: "@sample",
           backupContact: null,
-          publicCreditMode: "named",
-          publicCreditName: null,
+          isAnonymous: false,
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         application: null,
@@ -66,7 +65,7 @@ describe("resolvePortalEntryDestination", () => {
     ).toEqual("/portal/application");
   });
 
-  it("sends pending creators with profile and application into the project workspace", async () => {
+  it("sends pending creators with profile and application to application progress", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -89,13 +88,12 @@ describe("resolvePortalEntryDestination", () => {
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         profile: {
-          penName: "示例",
+          creditName: "示例",
           contactEmail: "ready@example.com",
           primaryContactChannel: "Discord",
           primaryContactHandle: "@ready",
           backupContact: null,
-          publicCreditMode: "named",
-          publicCreditName: null,
+          isAnonymous: false,
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         application: {
@@ -109,7 +107,7 @@ describe("resolvePortalEntryDestination", () => {
           reviewedAt: null,
         },
       }),
-    ).toEqual("/portal/project");
+    ).toEqual("/portal/application");
   });
 
   it("keeps approved creators with profile and application on the dashboard", async () => {
@@ -135,13 +133,12 @@ describe("resolvePortalEntryDestination", () => {
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         profile: {
-          penName: "示例",
+          creditName: "示例",
           contactEmail: "approved@example.com",
           primaryContactChannel: "Discord",
           primaryContactHandle: "@approved",
           backupContact: null,
-          publicCreditMode: "named",
-          publicCreditName: null,
+          isAnonymous: false,
           updatedAt: "2026-04-12T00:00:00.000Z",
         },
         application: {

@@ -8,6 +8,7 @@ const baseWindow: EventWindowSummary = {
   label: "报名开放",
   isEnabled: false,
   isOpen: false,
+  state: "disabled",
   opensAt: null,
   closesAt: null,
   updatedAt: "2026-04-11T00:00:00.000Z",
@@ -55,6 +56,7 @@ describe("buildPortalSegmentActions", () => {
         segment_claim_open: {
           isEnabled: true,
           isOpen: true,
+          state: "open",
         },
       }),
     });
@@ -82,6 +84,7 @@ describe("buildPortalSegmentActions", () => {
         segment_change_open: {
           isEnabled: true,
           isOpen: true,
+          state: "open",
         },
       }),
     });

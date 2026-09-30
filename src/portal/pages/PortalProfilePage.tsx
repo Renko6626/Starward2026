@@ -1,20 +1,24 @@
-import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { Field, Notice, PageHeading, ReadError } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
-import type { PortalProfileMutationResponse, PortalProfileResponse, UpdatePortalProfileInput } from "../../shared/portal";
+import type {
+  PortalProfileMutationResponse,
+  PortalProfileResponse,
+  UpdatePortalProfileInput,
+} from "../../shared/portal";
 import { updatePortalProfileInputSchema } from "../../shared/portal";
 import { PasswordSettings } from "../components/PasswordSettings";
 import { authClient } from "../lib/auth-client";
 import { normalizePortalProfileInput } from "../lib/profile-form";
 
 const defaultFormState: UpdatePortalProfileInput = {
-  penName: "",
+  creditName: "",
   contactEmail: "",
   primaryContactChannel: "Email",
   primaryContactHandle: "",
   backupContact: "",
-  publicCreditMode: "anonymous",
-  publicCreditName: "",
+  isAnonymous: true,
 };
 
 export function PortalProfilePage() {
@@ -25,6 +29,7 @@ export function PortalProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileState, setProfileState] = useState<PortalProfileResponse | null>(null);
 
   useEffect(() => {
     if (!sessionQuery.isPending && !sessionQuery.data) {
@@ -44,6 +49,7 @@ export function PortalProfilePage() {
       .then((response) => {
         if (!cancelled) {
           setForm(buildInitialProfileForm(response));
+          setProfileState(response);
           setIsLoading(false);
         }
       })
@@ -57,7 +63,9 @@ export function PortalProfilePage() {
           return;
         }
 
-        setError(caught instanceof Error ? caught.message : "无法读取当前联系资料。");
+        setError(
+          caught instanceof Error ? caught.message : "无法读取当前联系资料。",
+        );
         setIsLoading(false);
       });
 
@@ -75,22 +83,32 @@ export function PortalProfilePage() {
     const parsed = updatePortalProfileInputSchema.safeParse(normalized);
 
     if (!parsed.success) {
-      setError("请先补全主联系资料；若选择常用笔名公开或单独署名，请补足对应署名字段。");
+      setError("请填写署名、联系邮箱和联系账号。");
       return;
     }
 
     setIsSaving(true);
 
     try {
-      const response = await requestJson<PortalProfileMutationResponse>("/api/portal/profile", {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
+      const response = await requestJson<PortalProfileMutationResponse>(
+        "/api/portal/profile",
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(parsed.data),
         },
-        body: JSON.stringify(parsed.data),
-      });
+      );
 
       setForm(buildInitialProfileFormFromMutation(parsed.data));
+      if (profileState && !profileState.profile && !profileState.application) {
+        await navigate({ to: "/portal/application" });
+        return;
+      }
+      setProfileState((current) =>
+        current ? { ...current, profile: response.profile } : current,
+      );
       setMessage(response.message);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "资料保存失败。");
@@ -101,123 +119,160 @@ export function PortalProfilePage() {
 
   if (sessionQuery.isPending || isLoading) {
     return (
-      <div className="w-full max-w-3xl mx-auto relative z-10 py-6 space-y-8">
-        <div>
-          <h1 className="text-2xl font-headline tracking-tight mb-1">创作者档案</h1>
-          <p className="text-sm text-on-surface-variant">正在读取当前资料。</p>
-        </div>
+      <PageHeading
+        title={<>个人档案</>}
+        description={<>正在读取当前资料。</>}
+      ></PageHeading>
+    );
+  }
+
+  if (!profileState) {
+    return (
+      <div className="page-content">
+        <PageHeading title="个人档案" />
+        <ReadError message={error || "暂时无法读取个人档案。"} />
       </div>
     );
   }
 
+  const continueToApplication = !profileState.profile && !profileState.application;
+
   return (
-    <div className="w-full max-w-3xl mx-auto relative z-10 py-6 space-y-8">
-      <div>
-        <h1 className="text-2xl font-headline tracking-tight mb-1">创作者档案</h1>
-        <p className="text-sm text-on-surface-variant">更新您的参企信息与展示资料。对外匿名，不等于对主催匿名。</p>
-      </div>
-      <form className="space-y-6 bg-surface-container-low/50 border border-outline-variant rounded-xl p-6" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Field label="常用昵称/社团名">
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm" onChange={(event) => setForm({ ...form, penName: event.target.value })} type="text" value={form.penName ?? ""} />
+    <div className="page-content">
+      <PageHeading
+        eyebrow="PROFILE / 01"
+        title="个人档案"
+        description="让主催找到你，也让作品以你希望的名字被看见。"
+      />
+      <form className="panel space-y-6" onSubmit={handleSubmit}>
+        <fieldset className="form-section">
+          <legend>署名</legend>
+          <p>报名与作品统一使用这里的设置。</p>
+          <Field label="署名" hint="填写你希望使用的名字，笔名或社团名均可。">
+            <input
+              className="field-input"
+              required
+              maxLength={80}
+              value={form.creditName}
+              onChange={(event) =>
+                setForm({ ...form, creditName: event.target.value })
+              }
+            />
           </Field>
-          <Field label="联系邮箱">
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm" onChange={(event) => setForm({ ...form, contactEmail: event.target.value })} type="email" value={form.contactEmail} />
-          </Field>
-          <Field label="主联系渠道">
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm" onChange={(event) => setForm({ ...form, primaryContactChannel: event.target.value })} placeholder="Email / QQ / Telegram / Discord / Bluesky" type="text" value={form.primaryContactChannel} />
-          </Field>
-          <Field label="主联系标识">
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm" onChange={(event) => setForm({ ...form, primaryContactHandle: event.target.value })} placeholder="@handle / 号码 / 邮箱" type="text" value={form.primaryContactHandle} />
-          </Field>
-          <Field label="备用联系方式">
-            <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm" onChange={(event) => setForm({ ...form, backupContact: event.target.value })} type="text" value={form.backupContact ?? ""} />
-          </Field>
-          <Field label="公开署名模式">
-            <select
-              className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm"
-              onChange={(event) => {
-                const publicCreditMode = event.target.value as UpdatePortalProfileInput["publicCreditMode"];
-                setForm({
-                  ...form,
-                  publicCreditMode,
-                  publicCreditName: publicCreditMode === "pseudonymous" ? form.publicCreditName : "",
-                });
-              }}
-              value={form.publicCreditMode}
-            >
-              <option value="named">使用常用笔名</option>
-              <option value="pseudonymous">使用单独署名</option>
-              <option value="anonymous">匿名参与</option>
-            </select>
-          </Field>
-        </div>
-        <Field label="公开署名 / 备用名义">
-          <input className="w-full bg-surface-variant border border-outline-variant rounded-md px-4 py-2 focus:outline-none focus:border-primary font-mono text-sm disabled:opacity-50" disabled={form.publicCreditMode !== "pseudonymous"} onChange={(event) => setForm({ ...form, publicCreditName: event.target.value })} placeholder="例如：境界观测者" type="text" value={form.publicCreditName ?? ""} />
-          <p className="text-xs text-on-surface-variant mt-2">选择“单独署名”时必须填写；匿名参与时不会对外显示署名。</p>
-        </Field>
-        <div className="flex justify-end pt-4 border-t border-outline-variant gap-3 flex-wrap">
-          <Link className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors" to="/portal">
+          <label className="flex items-center gap-3 mt-6 min-h-11">
+            <input
+              type="checkbox"
+              checked={form.isAnonymous}
+              onChange={(event) =>
+                setForm({ ...form, isAnonymous: event.target.checked })
+              }
+            />
+            匿名展示
+          </label>
+          <p>匿名只影响公开展示。开启后，对外显示“匿名”；主催仍可查看你填写的署名和联系方式。</p>
+        </fieldset>
+        <fieldset className="form-section">
+          <legend>联系与沟通</legend>
+          <p>联系方式仅用于主催与你沟通。</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Field label="联系邮箱">
+              <input
+                className="field-input"
+                onChange={(event) =>
+                  setForm({ ...form, contactEmail: event.target.value })
+                }
+                type="email"
+                value={form.contactEmail}
+              />
+            </Field>
+            <Field label="联系渠道">
+              <input
+                className="field-input"
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    primaryContactChannel: event.target.value,
+                  })
+                }
+                placeholder="Email / QQ / Telegram / Discord / Bluesky"
+                type="text"
+                value={form.primaryContactChannel}
+              />
+            </Field>
+            <Field label="联系账号">
+              <input
+                className="field-input"
+                onChange={(event) =>
+                  setForm({ ...form, primaryContactHandle: event.target.value })
+                }
+                placeholder="@handle / 号码 / 邮箱"
+                type="text"
+                value={form.primaryContactHandle}
+              />
+            </Field>
+            <Field label="备用联系方式（选填）">
+              <input
+                className="field-input"
+                onChange={(event) =>
+                  setForm({ ...form, backupContact: event.target.value })
+                }
+                type="text"
+                value={form.backupContact ?? ""}
+              />
+            </Field>
+          </div>
+        </fieldset>
+        {message ? <Notice tone="success">{message}</Notice> : null}
+        {error ? <Notice tone="error">{error}</Notice> : null}
+        <div className="form-actions">
+          <Link className="button button--secondary" to="/portal">
             返回工作台
           </Link>
-          <Link className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors" to="/portal/application">
-            前往报名页
-          </Link>
-          <button className="px-6 py-2 bg-primary text-on-primary rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50" disabled={isSaving} type="submit">
-            {isSaving ? "保存中..." : "保存更改"}
+          <button
+            className="button button--primary"
+            disabled={isSaving}
+            aria-busy={isSaving}
+            type="submit"
+          >
+            {isSaving ? "保存中..." : continueToApplication ? "保存并继续报名" : "保存更改"}
           </button>
         </div>
       </form>
       <PasswordSettings />
-      {message ? <Notice tone="success">{message}</Notice> : null}
-      {error ? <Notice tone="error">{error}</Notice> : null}
     </div>
   );
 }
 
-function Field({ children, label }: { children: React.ReactNode; label: string }) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-on-surface-variant">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Notice({ children, tone }: { children: string; tone: "success" | "error" }) {
-  const toneClass = tone === "success" ? "border-tertiary/20 bg-tertiary/10 text-tertiary" : "border-error/20 bg-error/10 text-error";
-  return <div className={`rounded-xl border px-4 py-3 text-sm leading-6 ${toneClass}`}>{children}</div>;
-}
-
-function buildInitialProfileForm(response: PortalProfileResponse): UpdatePortalProfileInput {
+function buildInitialProfileForm(
+  response: PortalProfileResponse,
+): UpdatePortalProfileInput {
   if (response.profile) {
     return {
-      penName: response.profile.penName ?? "",
+      creditName: response.profile.creditName ?? "",
       contactEmail: response.profile.contactEmail,
       primaryContactChannel: response.profile.primaryContactChannel,
       primaryContactHandle: response.profile.primaryContactHandle,
       backupContact: response.profile.backupContact ?? "",
-      publicCreditMode: response.profile.publicCreditMode,
-      publicCreditName: response.profile.publicCreditName ?? "",
+      isAnonymous: response.profile.isAnonymous,
     };
   }
 
   return {
-    penName: "",
+    creditName: "",
     contactEmail: response.user.email,
     primaryContactChannel: "Email",
     primaryContactHandle: response.user.email,
     backupContact: "",
-    publicCreditMode: "anonymous",
-    publicCreditName: "",
+    isAnonymous: true,
   };
 }
 
-function buildInitialProfileFormFromMutation(input: UpdatePortalProfileInput): UpdatePortalProfileInput {
+function buildInitialProfileFormFromMutation(
+  input: UpdatePortalProfileInput,
+): UpdatePortalProfileInput {
   return {
     ...input,
     backupContact: input.backupContact ?? "",
-    publicCreditName: input.publicCreditName ?? "",
-    penName: input.penName ?? "",
+    creditName: input.creditName ?? "",
   };
 }

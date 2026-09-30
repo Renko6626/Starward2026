@@ -1,22 +1,18 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-
 class SqlitePreparedStatement {
   constructor(
     private readonly database: DatabaseSync,
     private readonly sql: string,
     private readonly params: any[] = [],
   ) {}
-
   bind(...params: any[]) {
     return new SqlitePreparedStatement(this.database, this.sql, params);
   }
-
   async first<T>() {
     const row = this.database.prepare(this.sql).get(...this.params);
     return (row as T | undefined) ?? null;
   }
-
   async all<T>() {
     const rows = this.database.prepare(this.sql).all(...this.params);
     return {
@@ -28,7 +24,6 @@ class SqlitePreparedStatement {
       },
     };
   }
-
   async run() {
     const result = this.database.prepare(this.sql).run(...this.params);
     return {
@@ -40,10 +35,8 @@ class SqlitePreparedStatement {
     };
   }
 }
-
 class SqliteD1Database {
   readonly sqlite = new DatabaseSync(":memory:");
-
   async batch(statements: SqlitePreparedStatement[]) {
     this.sqlite.exec("BEGIN");
     try {
@@ -58,7 +51,6 @@ class SqliteD1Database {
       throw error;
     }
   }
-
   constructor() {
     this.sqlite.exec(`
       CREATE TABLE "user" (
@@ -105,19 +97,17 @@ class SqliteD1Database {
 
       CREATE TABLE portal_profiles (
         user_id TEXT PRIMARY KEY,
-        pen_name TEXT,
+        credit_name TEXT,
         contact_email TEXT NOT NULL,
         primary_contact_channel TEXT NOT NULL,
         primary_contact_handle TEXT NOT NULL,
         backup_contact TEXT,
-        public_credit_mode TEXT NOT NULL,
-        public_credit_name TEXT
+        is_anonymous INTEGER NOT NULL
       );
 
       CREATE TABLE applications (
         id TEXT PRIMARY KEY,
         user_id TEXT,
-        display_name TEXT NOT NULL,
         contact_email TEXT NOT NULL,
         contact_handle TEXT,
         interest_format TEXT NOT NULL,
@@ -137,7 +127,6 @@ class SqliteD1Database {
         user_id TEXT UNIQUE,
         application_id TEXT,
         invite_email TEXT NOT NULL UNIQUE,
-        display_name TEXT NOT NULL,
         contact_handle TEXT,
         status TEXT NOT NULL,
         invited_at TEXT,
@@ -150,29 +139,27 @@ class SqliteD1Database {
         ON applications(user_id) WHERE user_id IS NOT NULL;
     `);
   }
-
   prepare(sql: string) {
     return new SqlitePreparedStatement(this.sqlite, sql);
   }
 }
-
-function seedPendingWorkspaceWithoutApplicationLink(database: SqliteD1Database) {
+function seedPendingWorkspaceWithoutApplicationLink(
+  database: SqliteD1Database,
+) {
   database.sqlite
     .prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`)
     .run("user_creator", "creator@example.com");
-
   database.sqlite
     .prepare(
       `INSERT INTO portal_profiles (
         user_id,
-        pen_name,
+        credit_name,
         contact_email,
         primary_contact_channel,
         primary_contact_handle,
         backup_contact,
-        public_credit_mode,
-        public_credit_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_anonymous
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       "user_creator",
@@ -181,34 +168,15 @@ function seedPendingWorkspaceWithoutApplicationLink(database: SqliteD1Database) 
       "Discord",
       "@creator",
       null,
-      "anonymous",
-      null,
+      1,
     );
-
   database.sqlite
     .prepare(
-      `INSERT INTO applications (
-        id,
-        user_id,
-        display_name,
-        contact_email,
-        contact_handle,
-        interest_format,
-        status,
-        created_at,
-        reviewed_at,
-        intro_text,
-        portfolio_url,
-        message_to_hosts,
-        admin_note,
-        reviewed_by,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO applications (id, user_id, contact_email, contact_handle, interest_format, status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts, admin_note, reviewed_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       "app_creator",
       "user_creator",
-      "境界观测者",
       "creator@example.com",
       "@creator",
       "novel",
@@ -222,29 +190,15 @@ function seedPendingWorkspaceWithoutApplicationLink(database: SqliteD1Database) 
       null,
       "2026-04-12T00:00:00.000Z",
     );
-
   database.sqlite
     .prepare(
-      `INSERT INTO participants (
-        id,
-        user_id,
-        application_id,
-        invite_email,
-        display_name,
-        contact_handle,
-        status,
-        invited_at,
-        activated_at,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO participants (id, user_id, application_id, invite_email, contact_handle, status, invited_at, activated_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       "part_creator",
       "user_creator",
       null,
       "creator@example.com",
-      "境界观测者",
       "@creator",
       "pending",
       null,
@@ -253,17 +207,17 @@ function seedPendingWorkspaceWithoutApplicationLink(database: SqliteD1Database) 
       "2026-04-12T08:00:00.000Z",
     );
 }
-
 describe("application workspace association", () => {
   it("associates pending workspaces by portal identity before approval fills application_id", async () => {
     const database = new SqliteD1Database();
-    const { getApplicationDetail, listApplications } = await import("./applications");
-
+    const { getApplicationDetail, listApplications } =
+      await import("./applications");
     seedPendingWorkspaceWithoutApplicationLink(database);
-
-    const detail = await getApplicationDetail(database as unknown as D1Database, "app_creator");
+    const detail = await getApplicationDetail(
+      database as unknown as D1Database,
+      "app_creator",
+    );
     const list = await listApplications(database as unknown as D1Database);
-
     expect(detail?.participant).toEqual({
       id: "part_creator",
       inviteEmail: "creator@example.com",
@@ -279,24 +233,17 @@ describe("application workspace association", () => {
     });
   });
 });
-
 function seedApprovedParticipantHoldingSegment(database: SqliteD1Database) {
   database.sqlite
     .prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`)
     .run("user_appr", "approved@example.com");
-
   database.sqlite
     .prepare(
-      `INSERT INTO applications (
-        id, user_id, display_name, contact_email, contact_handle, interest_format,
-        status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts,
-        admin_note, reviewed_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO applications (id, user_id, contact_email, contact_handle, interest_format, status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts, admin_note, reviewed_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       "app_appr",
       "user_appr",
-      "已批准创作者",
       "approved@example.com",
       "@appr",
       "novel",
@@ -310,27 +257,21 @@ function seedApprovedParticipantHoldingSegment(database: SqliteD1Database) {
       "admin@example.com",
       "2026-04-12T01:00:00.000Z",
     );
-
   database.sqlite
     .prepare(
-      `INSERT INTO participants (
-        id, user_id, application_id, invite_email, display_name, contact_handle,
-        status, invited_at, activated_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?)`,
+      `INSERT INTO participants (id, user_id, application_id, invite_email, contact_handle, status, invited_at, activated_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?)`,
     )
     .run(
       "part_appr",
       "user_appr",
       "app_appr",
       "approved@example.com",
-      "已批准创作者",
       "@appr",
       "2026-04-12T01:00:00.000Z",
       "2026-04-12T01:00:00.000Z",
       "2026-04-12T01:00:00.000Z",
       "2026-04-12T01:00:00.000Z",
     );
-
   database.sqlite
     .prepare(
       `INSERT INTO schedule_segments (
@@ -347,78 +288,79 @@ function seedApprovedParticipantHoldingSegment(database: SqliteD1Database) {
       "2026-04-12T00:00:00.000Z",
       "2026-04-12T02:00:00.000Z",
     );
-
   database.sqlite
     .prepare(
-      `INSERT INTO project_drafts (
-        id, participant_id, segment_id, preview_status, review_status, created_at, updated_at
-      ) VALUES (?, ?, ?, 'not_started', 'not_started', ?, ?)`,
+      `INSERT INTO project_drafts (id, participant_id, segment_id, preview_status, review_status, created_at, updated_at) VALUES (?, ?, ?, 'not_started', 'not_started', ?, ?)`,
     )
-    .run("draft_appr", "part_appr", "seg_held", "2026-04-12T02:00:00.000Z", "2026-04-12T02:00:00.000Z");
+    .run(
+      "draft_appr",
+      "part_appr",
+      "seg_held",
+      "2026-04-12T02:00:00.000Z",
+      "2026-04-12T02:00:00.000Z",
+    );
 }
-
 describe("reviewApplication lifecycle", () => {
   it("revokes the participant and releases their held segment when an approved application is rejected", async () => {
     const database = new SqliteD1Database();
     const { reviewApplication } = await import("./applications");
     seedApprovedParticipantHoldingSegment(database);
-
     await reviewApplication(
       database as unknown as D1Database,
       "app_appr",
       { status: "rejected", adminNote: undefined },
       "admin@example.com",
     );
-
     const participant = database.sqlite
       .prepare(`SELECT status FROM participants WHERE id = ?`)
-      .get("part_appr") as { status: string };
+      .get("part_appr") as {
+      status: string;
+    };
     const segment = database.sqlite
-      .prepare(`SELECT status, current_participant_id FROM schedule_segments WHERE id = ?`)
-      .get("seg_held") as { status: string; current_participant_id: string | null };
-
+      .prepare(
+        `SELECT status, current_participant_id FROM schedule_segments WHERE id = ?`,
+      )
+      .get("seg_held") as {
+      status: string;
+      current_participant_id: string | null;
+    };
     expect(participant.status).toBe("withdrawn");
     expect(segment.status).toBe("released");
     expect(segment.current_participant_id).toBeNull();
   });
-
   it("does not approve a participant owned by a different user that merely shares the contact email", async () => {
     const database = new SqliteD1Database();
     const { reviewApplication } = await import("./applications");
-
     // Bob already has a pending participant tied to his own account.
-    database.sqlite.prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`).run("user_bob", "shared@example.com");
+    database.sqlite
+      .prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`)
+      .run("user_bob", "shared@example.com");
     database.sqlite
       .prepare(
-        `INSERT INTO participants (
-          id, user_id, application_id, invite_email, display_name, contact_handle,
-          status, invited_at, activated_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+        `INSERT INTO participants (id, user_id, application_id, invite_email, contact_handle, status, invited_at, activated_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
       )
       .run(
         "part_bob",
         "user_bob",
         null,
         "shared@example.com",
-        "Bob",
         null,
         null,
         null,
         "2026-04-12T00:00:00.000Z",
         "2026-04-12T00:00:00.000Z",
       );
-
     // An anonymous application typed Bob's email as its contact email.
     database.sqlite
       .prepare(
-        `INSERT INTO applications (
-          id, user_id, display_name, contact_email, contact_handle, interest_format,
-          status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts,
-          admin_note, reviewed_by, updated_at
-        ) VALUES (?, NULL, ?, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
+        `INSERT INTO applications (id, user_id, contact_email, contact_handle, interest_format, status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts, admin_note, reviewed_by, updated_at) VALUES (?, NULL, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
       )
-      .run("app_anon", "匿名", "shared@example.com", "2026-04-12T00:00:00.000Z", "2026-04-12T00:00:00.000Z");
-
+      .run(
+        "app_anon",
+        "shared@example.com",
+        "2026-04-12T00:00:00.000Z",
+        "2026-04-12T00:00:00.000Z",
+      );
     await expect(
       reviewApplication(
         database as unknown as D1Database,
@@ -427,60 +369,64 @@ describe("reviewApplication lifecycle", () => {
         "admin@example.com",
       ),
     ).rejects.toThrow();
-
-    const bob = database.sqlite.prepare(`SELECT status FROM participants WHERE id = ?`).get("part_bob") as {
+    const bob = database.sqlite
+      .prepare(`SELECT status FROM participants WHERE id = ?`)
+      .get("part_bob") as {
       status: string;
     };
     expect(bob.status).toBe("pending");
   });
 });
-
 describe("getPortalApplicationByUserId", () => {
   it("is read-only and never claims an unlinked application by contact email", async () => {
     const database = new SqliteD1Database();
     const { getPortalApplicationByUserId } = await import("./applications");
-
-    database.sqlite.prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`).run("user_x", "x@example.com");
+    database.sqlite
+      .prepare(`INSERT INTO "user" (id, email) VALUES (?, ?)`)
+      .run("user_x", "x@example.com");
     database.sqlite
       .prepare(
-        `INSERT INTO applications (
-          id, user_id, display_name, contact_email, contact_handle, interest_format,
-          status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts,
-          admin_note, reviewed_by, updated_at
-        ) VALUES (?, NULL, ?, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
+        `INSERT INTO applications (id, user_id, contact_email, contact_handle, interest_format, status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts, admin_note, reviewed_by, updated_at) VALUES (?, NULL, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
       )
-      .run("app_unlinked", "导入", "x@example.com", "2026-04-12T00:00:00.000Z", "2026-04-12T00:00:00.000Z");
-
-    const application = await getPortalApplicationByUserId(database as unknown as D1Database, "user_x");
-
+      .run(
+        "app_unlinked",
+        "x@example.com",
+        "2026-04-12T00:00:00.000Z",
+        "2026-04-12T00:00:00.000Z",
+      );
+    const application = await getPortalApplicationByUserId(
+      database as unknown as D1Database,
+      "user_x",
+    );
     expect(application).toBeNull();
     const row = database.sqlite
       .prepare(`SELECT user_id FROM applications WHERE id = ?`)
-      .get("app_unlinked") as { user_id: string | null };
+      .get("app_unlinked") as {
+      user_id: string | null;
+    };
     expect(row.user_id).toBeNull();
   });
 });
-
 describe("createApplication conflicts", () => {
   it("raises a typed conflict when a user already has an application", async () => {
     const database = new SqliteD1Database();
-    const { createApplication, DuplicateApplicationError } = await import("./applications");
-
+    const { createApplication, DuplicateApplicationError } =
+      await import("./applications");
     database.sqlite
       .prepare(
-        `INSERT INTO applications (
-          id, user_id, display_name, contact_email, contact_handle, interest_format,
-          status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts,
-          admin_note, reviewed_by, updated_at
-        ) VALUES (?, ?, ?, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
+        `INSERT INTO applications (id, user_id, contact_email, contact_handle, interest_format, status, created_at, reviewed_at, intro_text, portfolio_url, message_to_hosts, admin_note, reviewed_by, updated_at) VALUES (?, ?, ?, NULL, 'novel', 'pending', ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
       )
-      .run("app_first", "user_dup", "首个", "dup@example.com", "2026-04-12T00:00:00.000Z", "2026-04-12T00:00:00.000Z");
-
+      .run(
+        "app_first",
+        "user_dup",
+        "dup@example.com",
+        "2026-04-12T00:00:00.000Z",
+        "2026-04-12T00:00:00.000Z",
+      );
     await expect(
       createApplication(
         database as unknown as D1Database,
         {
-          displayName: "重复",
           contactEmail: "dup@example.com",
           interestFormat: "novel",
         },
