@@ -56,22 +56,28 @@
 }
 
 .star-chart-pause {
+  position: absolute;
+  right: 2%;
+  bottom: 2%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-width: 58px;
-  min-height: 44px;
-  margin: -8px auto 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #98a7bf;
-  font: 11px var(--font-body);
+  color: #657389;
+  transition: color 180ms ease;
   cursor: pointer;
 }
-.star-chart-pause:hover { color: #edce94; }
-.star-chart-pause:focus-visible { outline: 1px solid #edce94; outline-offset: 2px; }
+@media (hover: hover) {
+  .star-chart:hover .star-chart-pause { color: #98a7bf; }
+}
+.star-chart .star-chart-pause:hover,
+.star-chart .star-chart-pause:focus-visible { color: #c8d2e4; }
+.star-chart-pause:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
 .star-chart--compact .star-chart-grid { opacity: 0.16; }
 .star-chart--compact .star-chart-dial { opacity: 0.4; }
 

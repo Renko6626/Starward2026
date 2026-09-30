@@ -193,8 +193,7 @@ export function StarChart({
         aria-label={paused ? "播放星图动画" : "暂停星图动画"}
         onClick={() => setPaused((current) => !current)}
       >
-        {paused ? <Play size={12} aria-hidden="true" /> : <Pause size={12} aria-hidden="true" />}
-        <span>{paused ? "播放" : "暂停"}</span>
+        {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
       </button>}
     </div>
   );
