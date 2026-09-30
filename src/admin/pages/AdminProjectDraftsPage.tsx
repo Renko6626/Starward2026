@@ -6,8 +6,9 @@ import {
   FileText,
   XCircle,
 } from "../../app/components/icons";
-import { PageHeading, StateNotice } from "../../app/components/ui";
+import { ReadError, PageHeading, StateNotice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
+import { summarizeProjectProgress } from "../lib/project-progress";
 import {
   adminProjectDraftStatusLabels,
   type AdminProjectDraftListResponse,
@@ -31,27 +32,21 @@ export function AdminProjectDraftsPage() {
       );
   }, []);
 
-  const submittedCount =
-    state.status === "ready"
-      ? state.payload.items.filter(
-          (item) =>
-            item.previewStatus !== "not_started" ||
-            item.reviewStatus !== "not_started",
-        ).length
-      : 0;
+  const progress = summarizeProjectProgress(
+    state.status === "ready" ? state.payload.items : [],
+  );
 
   return (
     <div className="page-content">
       <PageHeading
-        title={<>项目草案库</>}
+        title={<>作品审核</>}
         description={
           <>集中查看参与者的预告资料与审查说明，并在详情页执行审核。</>
         }
       >
         {state.status === "ready" ? (
           <div className="text-sm font-mono text-on-surface-variant">
-            已有 {submittedCount}/{state.payload.items.length}{" "}
-            份资料进入提交流程
+            草稿中 {progress.drafts} 份 · 已有正式提交 {progress.submitted}/{state.payload.items.length} 份
           </div>
         ) : null}
       </PageHeading>
@@ -60,10 +55,10 @@ export function AdminProjectDraftsPage() {
         <StateNotice message="正在读取资料列表。" />
       ) : null}
       {state.status === "error" ? (
-        <StateNotice message={state.message} tone="error" />
+        <ReadError message={state.message} />
       ) : null}
       {state.status === "ready" && state.payload.items.length === 0 ? (
-        <StateNotice message="还没有草案资料。当报名被批准时，系统会自动创建空白的资料记录。" />
+        <StateNotice message="还没有作品资料记录。审核通过后，创作者可以在这里填写作品资料。" />
       ) : null}
 
       {state.status === "ready" && state.payload.items.length > 0 ? (
@@ -74,7 +69,7 @@ export function AdminProjectDraftsPage() {
             role="region"
             aria-label="数据列表"
           >
-            <table className="data-table">
+            <table className="data-table admin-compact-table admin-projects-table">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium">参与者</th>
@@ -101,9 +96,11 @@ export function AdminProjectDraftsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
+                      <span className="mobile-field-label">预告</span>
                       <DraftStatusBadge status={item.previewStatus} />
                     </td>
                     <td className="px-4 py-3">
+                      <span className="mobile-field-label">审查</span>
                       <DraftStatusBadge status={item.reviewStatus} />
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">

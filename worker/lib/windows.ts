@@ -3,6 +3,7 @@ import {
   eventWindowLabels,
   type EventWindowKey,
   type EventWindowSummary,
+  type EventWindowState,
 } from "../../src/shared/windows";
 
 export type EventWindowRow = {
@@ -22,12 +23,14 @@ export function mapEventWindowRow(row: EventWindowRow): EventWindowSummary | nul
   }
 
   const key = parsedKey.data;
+  const state = computeWindowState(row.is_enabled, row.opens_at, row.closes_at);
 
   return {
     key,
     label: row.label || eventWindowLabels[key],
     isEnabled: Boolean(row.is_enabled),
-    isOpen: computeIsWindowOpen(row.is_enabled, row.opens_at, row.closes_at),
+    isOpen: state === "open",
+    state,
     opensAt: row.opens_at,
     closesAt: row.closes_at,
     updatedAt: row.updated_at,
@@ -39,21 +42,28 @@ export function computeIsWindowOpen(
   opensAt: string | null,
   closesAt: string | null,
 ) {
+  return computeWindowState(isEnabled, opensAt, closesAt) === "open";
+}
+
+export function computeWindowState(
+  isEnabled: number | boolean,
+  opensAt: string | null,
+  closesAt: string | null,
+  now = Date.now(),
+): EventWindowState {
   if (!isEnabled) {
-    return false;
-  }
-
-  const now = Date.now();
-
-  if (opensAt && Date.parse(opensAt) > now) {
-    return false;
+    return "disabled";
   }
 
   if (closesAt && Date.parse(closesAt) <= now) {
-    return false;
+    return "ended";
   }
 
-  return true;
+  if (opensAt && Date.parse(opensAt) > now) {
+    return "scheduled";
+  }
+
+  return "open";
 }
 
 export function getWindowOrFallback(
@@ -66,6 +76,7 @@ export function getWindowOrFallback(
       label: eventWindowLabels[key],
       isEnabled: false,
       isOpen: false,
+      state: "disabled",
       opensAt: null,
       closesAt: null,
       updatedAt: new Date(0).toISOString(),

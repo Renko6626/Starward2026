@@ -1,4 +1,5 @@
 import {
+  ReadError,
   MetricCard,
   Notice,
   PageHeading,
@@ -23,6 +24,7 @@ import {
 } from "../../app/components/icons";
 import { requestJson } from "../../app/lib/api";
 import { formatDateTime } from "../../app/lib/format";
+import { summarizeProjectProgress } from "../lib/project-progress";
 import type {
   AdminParticipantListResponse,
   AdminProjectDraftListResponse,
@@ -73,7 +75,12 @@ export function AdminOverviewPage() {
   }
 
   if (state.status === "error") {
-    return <AdminOverviewShell description={state.message} />;
+    return (
+      <div className="page-content">
+        <PageHeading title="活动总览" />
+        <ReadError message={state.message} />
+      </div>
+    );
   }
 
   const pendingApplications = state.applications.filter(
@@ -92,11 +99,7 @@ export function AdminOverviewPage() {
     state.segments.length > 0
       ? Math.round((assignedSegments / state.segments.length) * 100)
       : 0;
-  const submittedDrafts = state.drafts.filter(
-    (item) =>
-      item.previewStatus !== "not_started" ||
-      item.reviewStatus !== "not_started",
-  ).length;
+  const projectProgress = summarizeProjectProgress(state.drafts);
   const recentFeed = buildFeedItems(state);
 
   return (
@@ -106,7 +109,7 @@ export function AdminOverviewPage() {
         title="活动总览"
         description="从报名到交稿，跟进每一位创作者的参与进度。"
       />
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         <MetricCard label="待审核报名" value={pendingApplications} />
         <MetricCard label="已确认创作者" value={confirmedParticipants} />
         <MetricCard
@@ -114,8 +117,12 @@ export function AdminOverviewPage() {
           value={state.segments.length ? `${scheduleProgress}%` : "—"}
         />
         <MetricCard
-          label="已有提交 / 全部作品"
-          value={`${submittedDrafts} / ${state.drafts.length}`}
+          label="草稿中"
+          value={projectProgress.drafts}
+        />
+        <MetricCard
+          label="已有正式提交 / 全部作品"
+          value={`${projectProgress.submitted} / ${state.drafts.length}`}
         />
       </div>
       <div className="dashboard-welcome">
@@ -153,25 +160,25 @@ export function AdminOverviewPage() {
           <QuickLink
             description="维护参与者状态与入口提醒。"
             icon={<UserRound className="w-5 h-5" />}
-            label="参与者名册"
+            label="创作者名册"
             to="/admin/participants"
           />
           <QuickLink
             description="查看并修正时间段占用。"
             icon={<Clock3 className="w-5 h-5" />}
-            label="时间段状态"
+            label="接力排期"
             to="/admin/schedule"
           />
           <QuickLink
             description="审阅预告资料与内容说明。"
             icon={<FileText className="w-5 h-5" />}
-            label="资料审阅"
+            label="作品审核"
             to="/admin/project-drafts"
           />
           <QuickLink
-            description="控制报名与门户动作开放时间。"
+            description="控制报名、时间段认领与资料提交的开放时间。"
             icon={<Sparkles className="w-5 h-5" />}
-            label="动作窗口"
+            label="开放窗口"
             to="/admin/settings/windows"
           />
         </div>

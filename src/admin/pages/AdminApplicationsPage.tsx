@@ -7,7 +7,7 @@ import {
   Search,
   XCircle,
 } from "../../app/components/icons";
-import { PageHeading, StateNotice } from "../../app/components/ui";
+import { ReadError, PageHeading, StateNotice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
@@ -122,7 +122,7 @@ export function AdminApplicationsPage() {
         <StateNotice message="正在读取报名列表。" />
       ) : null}
       {state.status === "error" ? (
-        <StateNotice message={state.message} tone="error" />
+        <ReadError message={state.message} />
       ) : null}
       {state.status === "ready" && state.payload.items.length === 0 ? (
         <StateNotice message="还没有正式报名记录。待参与者完成入口登录、资料补充与报名提交后，这里才会出现队列。" />
@@ -141,7 +141,7 @@ export function AdminApplicationsPage() {
             role="region"
             aria-label="数据列表"
           >
-            <table className="data-table">
+            <table className="data-table admin-compact-table admin-applications-table">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium">ID</th>

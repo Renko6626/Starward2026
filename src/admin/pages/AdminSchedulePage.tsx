@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Clock, Clock3, UserRound } from "../../app/components/icons";
 import {
+  ReadError,
   Field as FormField,
   SummaryCard as MetaCard,
   MetricCard,
@@ -269,7 +270,7 @@ export function AdminSchedulePage() {
         <StateNotice message="正在读取时间段状态。" />
       ) : null}
       {state.status === "error" ? (
-        <StateNotice message={state.message} tone="error" />
+        <ReadError message={state.message} />
       ) : null}
       {bootstrap.status === "success" ? (
         <StateNotice message={bootstrap.message} tone="success" />
@@ -317,9 +318,7 @@ export function AdminSchedulePage() {
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
           <div className="panel text-base text-on-surface-variant">
-            如果把某位参与者改到新的 `held`
-            时间段，系统会自动释放其原先持有的时间段，并同步
-            `project_drafts.segment_id`。
+            为创作者分配新的时间段后，原时间段会自动释放，作品资料会同步关联新的时间段。
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">

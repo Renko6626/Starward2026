@@ -6,6 +6,7 @@ import {
   PageHeading,
   StatusBadge,
   SummaryCard,
+  ReadError,
 } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
 import { formatDateTime } from "../../app/lib/format";
@@ -17,13 +18,13 @@ import type {
   UpdatePortalProjectReviewInput,
 } from "../../shared/portal";
 import { projectDraftStatusLabels } from "../../shared/portal";
-import { buildWindowFlagMap } from "../../shared/windows";
+import { buildWindowFlagMap, getWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
 
 type ProjectPageState =
   | { status: "loading" }
   | { status: "ready"; project: PortalProjectResponse }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; forbidden: boolean };
 
 type PreviewFormState = {
   previewTitle: string;
@@ -89,6 +90,7 @@ export function PortalProjectPage() {
 
       setState({
         status: "error",
+        forbidden: caught instanceof ApiError && caught.status === 403,
         message:
           caught instanceof Error ? caught.message : "无法读取作品资料。",
       });
@@ -255,10 +257,19 @@ export function PortalProjectPage() {
 
   if (state.status === "error") {
     return (
-      <PageHeading
-        title={<>作品资料</>}
-        description={<>{state.message}</>}
-      ></PageHeading>
+      <div className="page-content">
+        <PageHeading title="作品资料" />
+        {state.forbidden ? (
+          <>
+            <Notice>{state.message}</Notice>
+            <Link className="text-link" to="/portal/application">
+              查看报名进度
+            </Link>
+          </>
+        ) : (
+          <ReadError message={state.message} />
+        )}
+      </div>
     );
   }
 
@@ -270,8 +281,7 @@ export function PortalProjectPage() {
         title={<>作品资料</>}
         description={
           <>
-            {state.project.participant.displayName}
-            ，先把可公开预告和给主催看的审查说明分别补全，再在开放窗口内提交。
+            填写公开预告和给主催的审查说明，再在开放窗口内提交。
           </>
         }
       >
@@ -296,11 +306,11 @@ export function PortalProjectPage() {
         />
         <SummaryCard
           label="预告提交"
-          value={flags.previewSubmitOpen ? "已开放" : "未开放"}
+          value={getWindowLabel(state.project.windows, "preview_submit_open")}
         />
         <SummaryCard
           label="审查提交"
-          value={flags.reviewSubmitOpen ? "已开放" : "未开放"}
+          value={getWindowLabel(state.project.windows, "review_submit_open")}
         />
         <SummaryCard
           label="最近更新"

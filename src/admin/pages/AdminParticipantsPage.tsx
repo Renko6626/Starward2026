@@ -6,7 +6,7 @@ import {
   Search,
   XCircle,
 } from "../../app/components/icons";
-import { MetricCard, PageHeading, StateNotice } from "../../app/components/ui";
+import { ReadError, MetricCard, PageHeading, StateNotice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { formatDateTime } from "../../app/lib/format";
 import {
@@ -53,8 +53,8 @@ export function AdminParticipantsPage() {
   return (
     <div className="page-content">
       <PageHeading
-        title={<>参与者名册</>}
-        description={<>维护参与者邮箱、当前状态、时间段占用与后续管理入口。</>}
+        title={<>创作者名册</>}
+        description={<>查看创作者的联系方式、参与状态和接力时间段。</>}
       >
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -86,10 +86,10 @@ export function AdminParticipantsPage() {
         <StateNotice message="正在读取参与者列表。" />
       ) : null}
       {state.status === "error" ? (
-        <StateNotice message={state.message} tone="error" />
+        <ReadError message={state.message} />
       ) : null}
       {state.status === "ready" && state.payload.items.length === 0 ? (
-        <StateNotice message="还没有参与者。当主催批准报名后，这里会自动出现已转入的参与者记录。" />
+        <StateNotice message="还没有创作者记录。创作者建立账号后会显示在这里。" />
       ) : null}
       {state.status === "ready" &&
       state.payload.items.length > 0 &&
@@ -105,7 +105,7 @@ export function AdminParticipantsPage() {
             role="region"
             aria-label="数据列表"
           >
-            <table className="data-table">
+            <table className="data-table admin-compact-table admin-participants-table">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium">参与者</th>

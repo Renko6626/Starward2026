@@ -65,7 +65,7 @@ describe("resolvePortalEntryDestination", () => {
     ).toEqual("/portal/application");
   });
 
-  it("sends pending creators with profile and application into the project workspace", async () => {
+  it("sends pending creators with profile and application to application progress", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -107,7 +107,7 @@ describe("resolvePortalEntryDestination", () => {
           reviewedAt: null,
         },
       }),
-    ).toEqual("/portal/project");
+    ).toEqual("/portal/application");
   });
 
   it("keeps approved creators with profile and application on the dashboard", async () => {

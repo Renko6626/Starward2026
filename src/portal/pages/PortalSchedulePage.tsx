@@ -14,7 +14,7 @@ import type {
   PortalSegmentMutationResponse,
   PortalSegmentSummary,
 } from "../../shared/portal";
-import { buildWindowFlagMap } from "../../shared/windows";
+import { getWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
 
 type SchedulePageState =
@@ -159,7 +159,6 @@ export function PortalSchedulePage() {
     );
   }
 
-  const windowFlags = buildWindowFlagMap(state.schedule.windows);
   const modeLabel = state.schedule.currentSegment
     ? "变更 / 释放时间段"
     : "初次认领";
@@ -194,11 +193,11 @@ export function PortalSchedulePage() {
         <SummaryCard label="当前模式" value={modeLabel} />
         <SummaryCard
           label="时间段认领"
-          value={windowFlags.segmentClaimOpen ? "已开放" : "未开放"}
+          value={getWindowLabel(state.schedule.windows, "segment_claim_open")}
         />
         <SummaryCard
           label="变更 / 释放"
-          value={windowFlags.segmentChangeOpen ? "已开放" : "未开放"}
+          value={getWindowLabel(state.schedule.windows, "segment_change_open")}
         />
         <SummaryCard
           label="可选时间段数量"

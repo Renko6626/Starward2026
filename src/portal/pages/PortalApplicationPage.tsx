@@ -6,6 +6,7 @@ import {
   PageHeading,
   StatusBadge,
   SummaryCard,
+  ReadError,
 } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
 import {
@@ -25,6 +26,7 @@ import {
   type PortalApplicationMutationResponse,
   type PortalApplicationResponse,
 } from "../../shared/portal";
+import { getApplicationWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
 
 const defaultFormState: UpsertPortalApplicationInput = {
@@ -225,12 +227,21 @@ export function PortalApplicationPage() {
     }
   }
 
-  if (sessionQuery.isPending || isLoading || !pageState) {
+  if (sessionQuery.isPending || isLoading) {
     return (
       <PageHeading
         title={<>参与报名</>}
         description={<>正在读取当前报名状态。</>}
       ></PageHeading>
+    );
+  }
+
+  if (!pageState) {
+    return (
+      <div className="page-content">
+        <PageHeading title="参与报名" />
+        <ReadError message={error || "暂时无法读取报名状态。"} />
+      </div>
     );
   }
 
@@ -243,13 +254,13 @@ export function PortalApplicationPage() {
       <PageHeading
         title={<>参与报名</>}
         description={
-          <>正式报名会绑定当前登录邮箱，并以当前联系资料作为维护依据。</>
+          <>填写创作意向并提交报名，在这里查看审核进度与反馈。</>
         }
       >
         <StatusBadge tone={resolveApplicationTone(pageState)}>
           {pageState.application
             ? applicationStatusLabels[pageState.application.status]
-            : "未提交"}
+            : "报名未提交"}
         </StatusBadge>
       </PageHeading>
 
@@ -259,17 +270,17 @@ export function PortalApplicationPage() {
           value={
             pageState.application
               ? applicationStatusLabels[pageState.application.status]
-              : "未提交"
+              : "报名未提交"
           }
         />
         <SummaryCard
           label="资料可编辑"
           value={
-            editable ? (profileReady ? "可以编辑" : "待先补联系资料") : "已锁定"
+            editable ? (profileReady ? "可以编辑" : "待完善个人档案") : "暂不可修改"
           }
         />
         <SummaryCard
-          label="联系资料"
+          label="个人档案"
           value={profileReady ? "已填写" : "待补充"}
         />
         <SummaryCard
@@ -282,15 +293,26 @@ export function PortalApplicationPage() {
         />
       </div>
 
-      {pageState.message ? <Notice>{pageState.message}</Notice> : null}
+      {profileReady && pageState.message ? (
+        <Notice>{pageState.application?.status === "approved"
+          ? "报名已审核通过，暂时不能修改报名。"
+          : !pageState.window.isOpen
+            ? `${getApplicationWindowLabel(pageState.window)}，暂时不能${pageState.application ? "修改" : "提交"}报名。`
+            : pageState.message}</Notice>
+      ) : null}
       {pageState.application?.adminNote ? (
         <Notice tone="warning">
-          主催备注：{pageState.application.adminNote}
+          审核意见：{pageState.application.adminNote}
         </Notice>
       ) : null}
       {!profileReady ? (
-        <Notice tone="error">
-          当前账号还没有完成联系资料。请先前往联系资料页补充署名和联系方式，再返回这里提交报名。
+        <Notice>
+          {pageState.application?.status === "approved"
+            ? "报名已通过，请补充个人档案。"
+            : pageState.application
+              ? "报名已提交，请补充个人档案中的署名和联系方式。"
+              : "请先完善个人档案，再提交报名。"}
+          <Link className="text-link" to="/portal/profile">完善个人档案</Link>
         </Notice>
       ) : null}
 
@@ -302,7 +324,7 @@ export function PortalApplicationPage() {
               对外展示：
               {pageState.profile?.isAnonymous
                 ? "匿名"
-                : pageState.profile?.creditName}
+                : pageState.profile?.creditName ?? "未填写"}
             </p>
             <Link className="text-link" to="/portal/profile">
               修改个人档案
@@ -392,7 +414,7 @@ export function PortalApplicationPage() {
           />
         </Field>
 
-        {turnstileRequired ? (
+        {turnstileRequired && canSubmit ? (
           <Field label="人机验证" hint="提交前请完成下方的人机验证。">
             <div ref={turnstileContainerRef} />
           </Field>
@@ -413,10 +435,10 @@ export function PortalApplicationPage() {
                 : "更新报名"}
           </button>
           <Link className="button button--secondary" to="/portal/profile">
-            {profileReady ? "返回联系资料" : "先补联系资料"}
+            {profileReady ? "编辑个人档案" : "完善个人档案"}
           </Link>
           <Link className="button button--secondary" to="/portal">
-            返回总览
+            返回工作台
           </Link>
         </div>
       </form>

@@ -16,7 +16,7 @@ export const participantPortalStatusLabels: Record<
   string
 > = {
   pending: "待审核",
-  approved: "已获得参与资格",
+  approved: "审核已通过",
   withdrawn: "已撤回",
   completed: "已完成",
 };
@@ -199,6 +199,7 @@ export type PortalProfileMutationResponse = {
 };
 
 export type PortalApplicationResponse = PortalSessionSummary & {
+  window: EventWindowSummary;
   application: PortalApplicationDetail | null;
   editable: boolean;
   editState: "create" | "update" | "locked";

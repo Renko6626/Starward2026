@@ -3,7 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   DetailItem,
-  Notice,
+  ReadError,
   PageHeading,
   StatusBadge,
 } from "../../app/components/ui";
@@ -14,7 +14,7 @@ import {
   projectDraftStatusLabels,
   type PortalDashboardResponse,
 } from "../../shared/portal";
-import { buildWindowFlagMap } from "../../shared/windows";
+import { buildWindowFlagMap, getApplicationWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
 
 export function PortalOverviewPage() {
@@ -72,7 +72,7 @@ export function PortalOverviewPage() {
     return (
       <div className="page-content">
         <PageHeading eyebrow="CREATOR WORKSPACE" title="我的工作台" />
-        <Notice>正在读取你的创作进度。</Notice>
+        <p>正在读取你的创作进度。</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function PortalOverviewPage() {
     return (
       <div className="page-content">
         <PageHeading title="我的工作台" />
-        <Notice tone="error">{error || "暂时无法读取工作台。"}</Notice>
+        <ReadError message={error || "暂时无法读取工作台。"} />
       </div>
     );
   }
@@ -89,56 +89,45 @@ export function PortalOverviewPage() {
     dashboard.participant?.status === "approved" ||
     dashboard.participant?.status === "completed";
   const windowFlags = buildWindowFlagMap(dashboard.windows);
-  const displayName = dashboard.profile?.creditName || dashboard.user.email;
-  const tasks = isApprovedParticipant
-    ? [
-        {
-          title: "确认接力时段",
-          description: dashboard.currentSegment
-            ? `当前持有 ${dashboard.currentSegment.code} · ${dashboard.currentSegment.name}`
-            : "查看并确认当前可用时间段，必要时执行变更或释放。",
-          actionLabel: "前往日程",
-          to: "/portal/schedule" as const,
-        },
-        {
-          title: "整理作品资料",
-          description: dashboard.projectDraft
-            ? `预告 ${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]} / 审查 ${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}`
-            : "填写作品预告、审查说明与相关链接。",
-          actionLabel: "编辑作品资料",
-          to: "/portal/project" as const,
-        },
-      ]
-    : [
-        {
-          title: "完善报名信息",
-          description: dashboard.profile
-            ? "联系资料已存在，可继续检查公开署名设置。"
-            : "先补充主联系资料和署名设置。",
-          actionLabel: "编辑资料",
-          to: "/portal/profile" as const,
-        },
-        {
-          title: "填写正式报名",
-          description: dashboard.application
-            ? windowFlags.applicationOpen
-              ? "报名已提交，可继续修改至审核通过前。"
-              : "报名已提交；当前报名窗口关闭，需等待主催重新开放后再修改。"
-            : windowFlags.applicationOpen
-              ? "补全报名正文、参加形式与作品链接。"
-              : "当前报名窗口关闭，可先补齐联系资料并等待主催开启。",
-          actionLabel: "查看报名表",
-          to: "/portal/application" as const,
-        },
-        {
-          title: "提前整理作品资料",
-          description: dashboard.projectDraft
-            ? `预告 ${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]} / 审查 ${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}`
-            : "现在就可以先填写预告与审查说明，审核通过后继续进入排期与正式动作。",
-          actionLabel: "打开作品页",
-          to: "/portal/project" as const,
-        },
-      ];
+  const displayName = dashboard.profile?.creditName;
+  const applicationWindow = dashboard.windows.find((item) => item.key === "application_open");
+  const tasks = [
+    ...(!dashboard.profile ? [{
+      title: "完善个人档案",
+      description: "补充署名和联系方式，方便主催与你沟通。",
+      actionLabel: "完善个人档案",
+      to: "/portal/profile" as const,
+    }] : []),
+    ...(isApprovedParticipant ? [
+      {
+        title: "确认接力时间段",
+        description: dashboard.currentSegment
+          ? `当前持有 ${dashboard.currentSegment.code} · ${dashboard.currentSegment.name}`
+          : "查看可用时间段，并在开放期间认领。",
+        actionLabel: "前往日程",
+        to: "/portal/schedule" as const,
+      },
+      {
+        title: "整理作品资料",
+        description: dashboard.projectDraft
+          ? `预告：${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]}；审查：${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}`
+          : "填写作品预告、审查说明与相关链接。",
+        actionLabel: "编辑作品资料",
+        to: "/portal/project" as const,
+      },
+    ] : [{
+      title: dashboard.application ? "查看报名进度" : "填写正式报名",
+      description: dashboard.application
+        ? windowFlags.applicationOpen
+          ? "查看审核结果与反馈，审核通过前可修改报名。"
+          : `${getApplicationWindowLabel(applicationWindow)}，暂时不能修改报名。可查看审核结果与反馈。`
+        : windowFlags.applicationOpen
+          ? "完善个人档案后，填写创作意向并提交报名。"
+          : `${getApplicationWindowLabel(applicationWindow)}，可以先完善个人档案。`,
+      actionLabel: "查看报名",
+      to: "/portal/application" as const,
+    }]),
+  ];
 
   return (
     <div className="page-content">
@@ -148,36 +137,40 @@ export function PortalOverviewPage() {
         description="在这里跟进报名、整理作品，准备下一次接力。"
       >
         <StatusBadge tone={isApprovedParticipant ? "success" : "muted"}>
-          {isApprovedParticipant ? "参与资格已开放" : "创作准备中"}
+          {isApprovedParticipant ? "审核已通过" : dashboard.application ? applicationStatusLabels[dashboard.application.status] : "报名未提交"}
         </StatusBadge>
       </PageHeading>
       <section className="dashboard-welcome">
         <div>
           <p className="eyebrow">HELLO, CREATOR</p>
-          <h2>{displayName}，欢迎回来。</h2>
+          <h2>{displayName ? `${displayName}，欢迎回来。` : "欢迎回来。"}</h2>
           <p>
-            {isApprovedParticipant
+            {!dashboard.profile
+              ? dashboard.application?.status === "approved"
+                ? "报名已通过，请补充个人档案。"
+                : "请先完善个人档案中的署名和联系方式。"
+              : isApprovedParticipant
               ? "你的参与资格已经通过审核，可以继续确认接力日程和完善作品。"
               : dashboard.application
-                ? `你的报名目前${applicationStatusLabels[dashboard.application.status]}。等待期间，也可以先整理作品资料。`
+                ? `报名状态：${applicationStatusLabels[dashboard.application.status]}。审核通过后可填写作品资料。`
                 : "先完善个人档案，再提交你的创作意向。你的故事，从这里开始。"}
           </p>
         </div>
         <Link
           className="button button--secondary"
           to={
-            isApprovedParticipant
-              ? "/portal/project"
-              : dashboard.profile
-                ? "/portal/application"
-                : "/portal/profile"
+            !dashboard.profile
+              ? "/portal/profile"
+              : isApprovedParticipant
+                ? "/portal/project"
+                : "/portal/application"
           }
         >
-          {isApprovedParticipant
-            ? "继续整理作品"
-            : dashboard.profile
-              ? "查看我的报名"
-              : "完善个人档案"}
+          {!dashboard.profile
+            ? "完善个人档案"
+            : isApprovedParticipant
+              ? "继续整理作品"
+              : "查看我的报名"}
           <ArrowUpRight size={16} />
         </Link>
       </section>
@@ -202,7 +195,7 @@ export function PortalOverviewPage() {
           <section className="panel">
             <h2 className="panel-title">我的档案</h2>
             <div className="space-y-5">
-              <DetailItem label="署名" value={displayName} />
+              <DetailItem label="署名" value={displayName ?? "未填写"} />
               <DetailItem
                 label="联系邮箱"
                 value={dashboard.profile?.contactEmail ?? dashboard.user.email}

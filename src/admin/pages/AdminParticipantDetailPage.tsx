@@ -7,6 +7,7 @@ import {
   XCircle,
 } from "../../app/components/icons";
 import {
+  ReadError,
   DetailBlock,
   DetailItem,
   Field as FormField,
@@ -141,7 +142,12 @@ export function AdminParticipantDetailPage() {
   }
 
   if (state.status === "error") {
-    return <ParticipantDetailShell description={state.message} />;
+    return (
+      <div className="page-content">
+        <PageHeading title="创作者详情" />
+        <ReadError message={state.message} />
+      </div>
+    );
   }
 
   const participant = state.payload.participant;
@@ -218,11 +224,11 @@ export function AdminParticipantDetailPage() {
             <div className="space-y-4">
               <DetailBlock
                 title="入口说明"
-                value="当前项目只有一套参与者入口。提醒邮件不会创建第二套账号体系，而是提醒对方继续使用当前邮箱通过 /portal/login 登录。"
+                value="提醒邮件会引导创作者使用当前邮箱登录创作者空间。"
               />
               <DetailBlock
                 title="资格说明"
-                value="验证码登录会自动建立创作者工作台；参与资格是否开放，由这里的状态字段控制。只有已批准状态才应进入时间段等正式动作。"
+                value="账号建立后即可完善个人档案和报名；审核通过后可以填写作品资料，并在开放期间认领时间段。"
               />
               <DetailBlock
                 title="维护建议"
@@ -230,7 +236,7 @@ export function AdminParticipantDetailPage() {
                   participant.status === "withdrawn"
                     ? "该创作者已撤回。可以保留记录用于追踪，但不建议继续发送通过提醒。"
                     : participant.currentSegmentCode
-                      ? `当前已持有 ${participant.currentSegmentCode}，如需改坑或释放，应转到时间段页处理。`
+                      ? `当前已持有 ${participant.currentSegmentCode}，如需调整时间段或释放，应转到时间段页处理。`
                       : participant.status === "pending"
                         ? "当前仍处于待审核状态，可继续观察作品与资料准备情况。"
                         : "当前尚未持有时间段，可在时间段页完成认领或人工分配。"

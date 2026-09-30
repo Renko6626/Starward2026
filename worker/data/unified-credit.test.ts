@@ -123,6 +123,7 @@ it("uses one live profile credit across application, participant and draft reads
             label: "预告提交",
             isEnabled: true,
             isOpen: true,
+            state: "open",
             opensAt: null,
             closesAt: null,
             updatedAt: "2026-09-29T00:00:00Z",

@@ -7,6 +7,7 @@ import {
   XCircle,
 } from "../../app/components/icons";
 import {
+  ReadError,
   DetailBlock,
   DetailItem,
   PageHeading,
@@ -175,7 +176,12 @@ export function AdminApplicationDetailPage() {
   }
 
   if (state.status === "error") {
-    return <ApplicationDetailShell description={state.message} />;
+    return (
+      <div className="page-content">
+        <PageHeading title="报名详情" />
+        <ReadError message={state.message} />
+      </div>
+    );
   }
 
   const application = state.payload.application;
@@ -262,7 +268,7 @@ export function AdminApplicationDetailPage() {
                   value={application.portalProfile.contactEmail}
                 />
                 <DetailItem
-                  label="主联系渠道"
+                  label="联系渠道"
                   value={`${application.portalProfile.primaryContactChannel} / ${application.portalProfile.primaryContactHandle}`}
                 />
                 <DetailItem
@@ -275,7 +281,7 @@ export function AdminApplicationDetailPage() {
                 />
               </div>
             ) : (
-              <EmptyBlock>该报名尚未补充门户联系资料。</EmptyBlock>
+              <EmptyBlock>该报名尚未补充个人档案。</EmptyBlock>
             )}
           </section>
 
@@ -299,7 +305,7 @@ export function AdminApplicationDetailPage() {
         <div className="space-y-6">
           <section className="panel">
             <h2 className="text-base font-mono text-on-surface-variant uppercase mb-4">
-              审核决议
+              报名审核
             </h2>
             <div className="space-y-3">
               {availableReviewStatuses.map((status) => {
@@ -324,13 +330,13 @@ export function AdminApplicationDetailPage() {
                 className="text-sm font-medium text-on-surface-variant block"
                 htmlFor="application-admin-note"
               >
-                内部备注
+                审核意见（创作者可见）
               </label>
               <textarea
                 className="field-input"
                 id="application-admin-note"
                 onChange={(event) => setAdminNote(event.target.value)}
-                placeholder="添加审核意见..."
+                placeholder="填写会展示给创作者的审核意见..."
                 rows={6}
                 value={adminNote}
               />
@@ -349,7 +355,7 @@ export function AdminApplicationDetailPage() {
               </div>
 
               <SidebarNotice>
-                模板只会写入备注框，不会自动提交。可以先套用，再按实际沟通结果微调。
+                这段意见会显示在创作者的报名页。模板只会写入输入框，不会自动提交。
               </SidebarNotice>
               {actionNotice ? (
                 <SidebarNotice tone={actionNotice.tone}>

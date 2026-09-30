@@ -33,7 +33,7 @@ const adminItems = [
   { to: "/admin/participants", label: "创作者名册", icon: Users },
   { to: "/admin/project-drafts", label: "作品审核", icon: FilePenLine },
   { to: "/admin/schedule", label: "接力排期", icon: CalendarDays },
-  { to: "/admin/settings/windows", label: "活动窗口", icon: Settings2 },
+  { to: "/admin/settings/windows", label: "开放窗口", icon: Settings2 },
 ] as const;
 
 export function WorkspaceLayout({

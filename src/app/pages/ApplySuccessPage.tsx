@@ -8,7 +8,7 @@ export function ApplySuccessPage() {
       <span className="eyebrow">APPLICATION RECEIVED</span>
       <h1>已收到你的创作意向。</h1>
       <p>
-        报名已提交，接下来请等待主催审核。你可以回到创作者空间查看进度，也可以先整理作品资料。
+        报名已提交，接下来请等待主催审核。你可以回到创作者空间查看进度，审核通过后可填写作品资料。
       </p>
       <div className="hero-actions">
         <Link className="button button--primary" to="/portal">

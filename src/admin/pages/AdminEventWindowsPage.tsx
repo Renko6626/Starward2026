@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock3, Sparkles } from "../../app/components/icons";
 import {
+  ReadError,
   Field as FormField,
   SummaryCard as MetaCard,
   PageHeading,
@@ -14,6 +15,7 @@ import type {
   AdminEventWindowMutationResponse,
 } from "../../shared/admin";
 import type { EventWindowKey, EventWindowSummary } from "../../shared/windows";
+import { eventWindowStateLabels } from "../../shared/windows";
 
 type PageState =
   | { status: "loading" }
@@ -57,7 +59,7 @@ export function AdminEventWindowsPage() {
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "无法读取动作窗口。",
+        message: error instanceof Error ? error.message : "无法读取开放窗口。",
       });
     }
   }
@@ -123,7 +125,7 @@ export function AdminEventWindowsPage() {
         [key]: {
           tone: "error",
           message:
-            error instanceof Error ? error.message : "保存动作窗口失败。",
+            error instanceof Error ? error.message : "保存开放窗口失败。",
         },
       }));
     } finally {
@@ -134,15 +136,15 @@ export function AdminEventWindowsPage() {
   return (
     <div className="page-content">
       <PageHeading
-        title={<>事件窗口设置</>}
-        description={<>设置报名、时段认领与作品资料提交的开放时间。</>}
+        title={<>开放窗口</>}
+        description={<>设置报名、时间段认领与作品资料提交的开放时间。</>}
       ></PageHeading>
 
       {state.status === "loading" ? (
-        <StateNotice message="正在读取动作窗口。" />
+        <StateNotice message="正在读取开放窗口。" />
       ) : null}
       {state.status === "error" ? (
-        <StateNotice message={state.message} tone="error" />
+        <ReadError message={state.message} />
       ) : null}
 
       {state.status === "ready" ? (
@@ -165,10 +167,7 @@ export function AdminEventWindowsPage() {
                       {item.key}
                     </p>
                   </div>
-                  <WindowStatusBadge
-                    isEnabled={item.isEnabled}
-                    isOpen={item.isOpen}
-                  />
+                  <WindowStatusBadge state={item.state} />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 text-base">
@@ -315,15 +314,9 @@ function toIsoDateTimeOrNull(value: string) {
   return new Date(trimmed).toISOString();
 }
 
-function WindowStatusBadge({
-  isEnabled,
-  isOpen,
-}: {
-  isEnabled: boolean;
-  isOpen: boolean;
-}) {
-  const tone = isOpen ? "success" : isEnabled ? "info" : "warn";
-  const label = isOpen ? "当前开放" : isEnabled ? "等待时间到达" : "已关闭";
+function WindowStatusBadge({ state }: { state: EventWindowSummary["state"] }) {
+  const tone = state === "open" ? "success" : state === "scheduled" ? "info" : "warn";
+  const label = eventWindowStateLabels[state];
 
   return (
     <span

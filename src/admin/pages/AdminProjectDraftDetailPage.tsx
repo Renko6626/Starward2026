@@ -7,6 +7,7 @@ import {
   XCircle,
 } from "../../app/components/icons";
 import {
+  ReadError,
   DetailBlock,
   DetailItem,
   Field as FormField,
@@ -113,7 +114,12 @@ export function AdminProjectDraftDetailPage() {
   }
 
   if (state.status === "error") {
-    return <DraftDetailShell description={state.message} />;
+    return (
+      <div className="page-content">
+        <PageHeading title="作品审核详情" />
+        <ReadError message={state.message} />
+      </div>
+    );
   }
 
   const draft = state.payload.draft;
@@ -128,7 +134,7 @@ export function AdminProjectDraftDetailPage() {
           <ArrowRight className="w-4 h-4 rotate-180" /> 返回草案库
         </Link>
         <PageHeading
-          title={<>项目草案详情</>}
+          title={<>作品审核详情</>}
           description={<>ID: {draft.id}</>}
         >
           <div className="flex flex-wrap gap-2 justify-end">
@@ -270,7 +276,7 @@ export function AdminProjectDraftDetailPage() {
                 </select>
               </FormField>
 
-              <FormField label="审查审核状态">
+              <FormField label="审查状态">
                 <select
                   className="field-input"
                   disabled={saving}
@@ -336,7 +342,7 @@ function DraftDetailShell({ description }: { description: string }) {
   return (
     <div className="page-content">
       <PageHeading
-        title={<>项目草案详情</>}
+        title={<>作品审核详情</>}
         description={<>{description}</>}
       ></PageHeading>
     </div>

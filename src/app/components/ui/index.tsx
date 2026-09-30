@@ -71,6 +71,17 @@ export function StateNotice({
   return <Notice tone={tone}>{message}</Notice>;
 }
 
+export function ReadError({ message }: { message: string }) {
+  return (
+    <div className="space-y-4">
+      <Notice tone="error">{message}</Notice>
+      <button className="button button--secondary" type="button" onClick={() => window.location.reload()}>
+        重新加载
+      </button>
+    </div>
+  );
+}
+
 export function StatusBadge({
   children,
   tone = "muted",

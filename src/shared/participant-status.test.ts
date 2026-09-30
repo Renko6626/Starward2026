@@ -16,7 +16,7 @@ describe("participant status model", () => {
   it("shows creator qualification labels independently from portal activation", () => {
     expect(participantPortalStatusLabels).toEqual({
       pending: "待审核",
-      approved: "已获得参与资格",
+      approved: "审核已通过",
       withdrawn: "已撤回",
       completed: "已完成",
     });

@@ -192,6 +192,7 @@ portalApi.get("/application", async (c) => {
   );
 
   const response: PortalApplicationResponse = {
+    window: applicationWindow,
     user: mapPortalAuthUser(access.session.user),
     participant: access.participant ? mapPortalParticipant(access.participant) : null,
     profile,

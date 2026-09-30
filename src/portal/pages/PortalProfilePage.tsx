@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Field, Notice, PageHeading } from "../../app/components/ui";
+import { Field, Notice, PageHeading, ReadError } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type {
   PortalProfileMutationResponse,
@@ -29,6 +29,7 @@ export function PortalProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileState, setProfileState] = useState<PortalProfileResponse | null>(null);
 
   useEffect(() => {
     if (!sessionQuery.isPending && !sessionQuery.data) {
@@ -48,6 +49,7 @@ export function PortalProfilePage() {
       .then((response) => {
         if (!cancelled) {
           setForm(buildInitialProfileForm(response));
+          setProfileState(response);
           setIsLoading(false);
         }
       })
@@ -81,7 +83,7 @@ export function PortalProfilePage() {
     const parsed = updatePortalProfileInputSchema.safeParse(normalized);
 
     if (!parsed.success) {
-      setError("请填写署名和主联系资料。");
+      setError("请填写署名、联系邮箱和联系账号。");
       return;
     }
 
@@ -100,6 +102,13 @@ export function PortalProfilePage() {
       );
 
       setForm(buildInitialProfileFormFromMutation(parsed.data));
+      if (profileState && !profileState.profile && !profileState.application) {
+        await navigate({ to: "/portal/application" });
+        return;
+      }
+      setProfileState((current) =>
+        current ? { ...current, profile: response.profile } : current,
+      );
       setMessage(response.message);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "资料保存失败。");
@@ -111,11 +120,22 @@ export function PortalProfilePage() {
   if (sessionQuery.isPending || isLoading) {
     return (
       <PageHeading
-        title={<>创作者档案</>}
+        title={<>个人档案</>}
         description={<>正在读取当前资料。</>}
       ></PageHeading>
     );
   }
+
+  if (!profileState) {
+    return (
+      <div className="page-content">
+        <PageHeading title="个人档案" />
+        <ReadError message={error || "暂时无法读取个人档案。"} />
+      </div>
+    );
+  }
+
+  const continueToApplication = !profileState.profile && !profileState.application;
 
   return (
     <div className="page-content">
@@ -149,7 +169,7 @@ export function PortalProfilePage() {
             />
             匿名展示
           </label>
-          <p>开启后，对外显示“匿名”；主催仍可查看你的署名和联系方式。</p>
+          <p>匿名只影响公开展示。开启后，对外显示“匿名”；主催仍可查看你填写的署名和联系方式。</p>
         </fieldset>
         <fieldset className="form-section">
           <legend>联系与沟通</legend>
@@ -165,7 +185,7 @@ export function PortalProfilePage() {
                 value={form.contactEmail}
               />
             </Field>
-            <Field label="主联系渠道">
+            <Field label="联系渠道">
               <input
                 className="field-input"
                 onChange={(event) =>
@@ -179,7 +199,7 @@ export function PortalProfilePage() {
                 value={form.primaryContactChannel}
               />
             </Field>
-            <Field label="主联系标识">
+            <Field label="联系账号">
               <input
                 className="field-input"
                 onChange={(event) =>
@@ -190,7 +210,7 @@ export function PortalProfilePage() {
                 value={form.primaryContactHandle}
               />
             </Field>
-            <Field label="备用联系方式">
+            <Field label="备用联系方式（选填）">
               <input
                 className="field-input"
                 onChange={(event) =>
@@ -208,16 +228,13 @@ export function PortalProfilePage() {
           <Link className="button button--secondary" to="/portal">
             返回工作台
           </Link>
-          <Link className="button button--secondary" to="/portal/application">
-            前往报名页
-          </Link>
           <button
             className="button button--primary"
             disabled={isSaving}
             aria-busy={isSaving}
             type="submit"
           >
-            {isSaving ? "保存中..." : "保存更改"}
+            {isSaving ? "保存中..." : continueToApplication ? "保存并继续报名" : "保存更改"}
           </button>
         </div>
       </form>

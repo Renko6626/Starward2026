@@ -372,20 +372,20 @@ adminApi.patch("/event-windows/:key", async (c) => {
   const parsedKey = eventWindowKeySchema.safeParse(c.req.param("key"));
 
   if (!parsedKey.success) {
-    return jsonError(c, 422, "invalid_request", "动作窗口键不正确。", parsedKey.error.flatten());
+    return jsonError(c, 422, "invalid_request", "开放窗口键不正确。", parsedKey.error.flatten());
   }
 
   const body = await c.req.json().catch(() => null);
   const parsed = updateEventWindowInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "动作窗口更新参数不正确。", parsed.error.flatten());
+    return jsonError(c, 422, "invalid_request", "开放窗口更新参数不正确。", parsed.error.flatten());
   }
 
   const item = await updateEventWindow(getRequiredDb(c), parsedKey.data, parsed.data);
 
   if (!item) {
-    return jsonError(c, 404, "not_found", "未找到对应动作窗口。");
+    return jsonError(c, 404, "not_found", "未找到对应开放窗口。");
   }
 
   const response: AdminEventWindowMutationResponse = {

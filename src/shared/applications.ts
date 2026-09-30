@@ -148,8 +148,8 @@ export const applicationInterestFormatLabels: Record<
 };
 
 export const applicationStatusLabels: Record<ApplicationStatus, string> = {
-  pending: "待审核",
-  approved: "已通过",
+  pending: "报名审核中",
+  approved: "审核已通过",
   rejected: "已拒绝",
   withdrawn: "已撤回",
 };

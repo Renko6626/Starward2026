@@ -783,6 +783,16 @@
     flex: 1;
     padding: 42px 40px 64px;
     min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .workspace-content .panel,
+  .dashboard-grid > *,
+  .dashboard-welcome > *,
+  .task-row > div {
+    min-width: 0;
+  }
+  .mobile-field-label {
+    display: none;
   }
   .workspace-footer {
     display: flex;
@@ -1087,7 +1097,7 @@
   }
   .dashboard-welcome {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 24px;
     align-items: center;
     padding: 30px;
@@ -1098,6 +1108,7 @@
   .dashboard-welcome h2 {
     font: 27px var(--font-headline);
     margin: 12px 0;
+    overflow-wrap: anywhere;
   }
   .dashboard-welcome p:not(.eyebrow) {
     color: var(--color-on-surface-variant);
@@ -1111,7 +1122,7 @@
   }
   .task-row {
     display: grid;
-    grid-template-columns: 32px 1fr auto;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
     gap: 18px;
     align-items: start;
     padding: 25px 0;
@@ -1195,6 +1206,57 @@
   }
 }
 @media (max-width: 800px) {
+  .admin-compact-table,
+  .admin-compact-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .admin-compact-table thead {
+    display: none;
+  }
+  .admin-compact-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+  .admin-compact-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    overflow-wrap: anywhere;
+  }
+  .admin-applications-table td:nth-child(1),
+  .admin-applications-table td:nth-child(3),
+  .admin-applications-table td:nth-child(4),
+  .admin-participants-table td:nth-child(3),
+  .admin-participants-table td:nth-child(4),
+  .admin-projects-table td:nth-child(4) {
+    display: none;
+  }
+  .admin-applications-table td:nth-child(2),
+  .admin-participants-table td:first-child,
+  .admin-projects-table td:first-child,
+  .admin-compact-table td:last-child {
+    grid-column: 1 / -1;
+  }
+  .admin-applications-table td:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+  .admin-compact-table td:last-child {
+    text-align: left;
+  }
+  .admin-compact-table td:last-child a {
+    width: 100%;
+  }
+  .admin-compact-table .mobile-field-label {
+    display: block;
+    color: var(--color-on-surface-variant);
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
   .schedule-constellation { grid-template-columns: 1fr; gap: 24px; }
   .schedule-track-item > div { grid-template-columns: 58px minmax(0, 1fr); }
   .schedule-track-item > div > span:last-child { grid-column: 2; }
