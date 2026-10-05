@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1430" viewBox="0 0 1720 1430" role="img" aria-labelledby="title desc">
+<title id="title">鸟船科研站两种体块布局比较</title><desc id="desc">A 纵向主梁与错位生态单元；B 紧凑服务核心与分叉生态单元。两者都标示通路、桁架、安装与维护候选空间、能源热控展开区和推进喷流避让区。布局和尺寸尚未定稿。</desc>
+<defs><style>text{font-family:"Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei",sans-serif;fill:#263748}.title{font-size:31px;font-weight:650}.heading{font-size:24px;font-weight:600}.label{font-size:20px;font-weight:550}.note{font-size:17px;fill:#617484}.small{font-size:15px;fill:#617484}</style></defs><rect width="1720" height="1430" fill="#fafbfd"/>
+<text class="title" x="55" y="56">科研站体块：先比较连接与操作空间</text>
+<text class="note" x="55" y="89">同一组功能区的两种放置方式；框形和相对位置为候选，不标注未经推算的整站尺寸。</text>
+<text class="note" x="55" y="119">灰线为承力结构候选；蓝线为压力通路；橙色虚线为装配、维护、展开或喷流需要保留的空间。</text>
+<text class="heading" x="55" y="177">A　纵向主梁 + 错位生态单元（当前选用）</text>
+<text class="note" x="55" y="208">轴向组织清楚，便于分批扩建；生态单元之间的通路和管线更长。</text>
+<rect x="50" y="321" width="110" height="136" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="62" y="348">对接</text>
+<text class="note" x="67" y="385">接近区</text>
+<path d="M160 386 H200 M420 386 H460 M630 386 H675 V306 H750 M650 386 H910 V532 H945 M630 400 H660 V531 H690" fill="none" stroke="#648198" stroke-width="4"/>
+<path d="M205 445 H1255 M205 468 H1255" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<path d="M205 445 L253 468 L301 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M253 445 L301 468 L349 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M301 445 L349 468 L397 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M349 445 L397 468 L445 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M397 445 L445 468 L493 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M445 445 L493 468 L541 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M493 445 L541 468 L589 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M541 445 L589 468 L637 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M589 445 L637 468 L685 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M637 445 L685 468 L733 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M685 445 L733 468 L781 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M733 445 L781 468 L829 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M781 445 L829 468 L877 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M829 445 L877 468 L925 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M877 445 L925 468 L973 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M925 445 L973 468 L1021 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M973 445 L1021 468 L1069 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1021 445 L1069 468 L1117 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1069 445 L1117 468 L1165 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1117 445 L1165 468 L1213 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1165 445 L1213 468 L1261 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1213 445 L1261 468 L1309 445" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M790 325 V445 M1060 490 V445 M535 425 V445 M1130 435 V445" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<rect x="200" y="339" width="220" height="92" rx="8" fill="#edf3f8" stroke="#91a8ba" stroke-width="1.8"/>
+<text class="label" x="215" y="372">服务组 D / H / M</text>
+<text class="note" x="215" y="401">对接、维护、短期支持</text>
+<rect x="460" y="347" width="170" height="78" rx="8" fill="#fff0d7" stroke="#c4a779" stroke-width="1.8"/>
+<text class="label" x="475" y="380">Q / N 节点</text>
+<text class="note" x="475" y="409">隔离、分配</text>
+<rect x="696" y="248" width="460" height="127" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="708" y="275">安装与外部检修候选位</text>
+<rect x="750" y="275" width="360" height="113" rx="8" fill="#e4f0e7" stroke="#85a68e" stroke-width="1.8"/>
+<text class="label" x="765" y="308">林地 E-A</text>
+<text class="note" x="765" y="337">沿主梁错位安装</text>
+<rect x="690" y="495" width="190" height="72" rx="8" fill="#edf0f3" stroke="#9faab5" stroke-width="1.8"/>
+<text class="label" x="705" y="528">循环处理 R</text>
+<text class="note" x="705" y="557">靠近生态接口</text>
+<rect x="905" y="479" width="354" height="147" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="917" y="506">安装与设备抽取候选位</text>
+<rect x="945" y="506" width="240" height="105" rx="8" fill="#e4f0e7" stroke="#85a68e" stroke-width="1.8"/>
+<text class="label" x="960" y="539">湿地 E-B</text>
+<text class="note" x="960" y="568">独立关断分区</text>
+<rect x="1260" y="347" width="155" height="90" rx="8" fill="#edf0f3" stroke="#9faab5" stroke-width="1.8"/>
+<text class="label" x="1275" y="380">推进平台 P</text>
+<text class="note" x="1275" y="409">贮箱与喷嘴</text>
+<path d="M1428 357 L1630 277 V502 L1428 427 Z" fill="#fff4e8" stroke="#cba273" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text class="note" x="1456" y="382">喷流避让区</text>
+<text class="small" x="1456" y="408">角度 / 范围待算</text>
+<path d="M1205 445 V386 H1260" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<rect x="1167" y="228" width="258" height="110" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="1179" y="255"></text>
+<rect x="1185" y="246" width="220" height="62" rx="8" fill="#e5edf5" stroke="#93a6b7" stroke-width="1.8"/>
+<text class="label" x="1197" y="283">能源翼 W</text>
+<rect x="1282" y="509" width="258" height="110" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="1179" y="536"></text>
+<rect x="1300" y="527" width="220" height="62" rx="8" fill="#e5edf5" stroke="#93a6b7" stroke-width="1.8"/>
+<text class="label" x="1312" y="564">散热器 W</text>
+<path d="M1220 445 V558 H1300 M1220 445 V308" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<text class="note" x="200" y="655">推进平台位置仍需质心与喷流校准；生态舱换件先收拢影响搬运的板翼。</text>
+<path d="M55 689 H1665" fill="none" stroke="#d1dbe4" stroke-width="1"/>
+<text class="heading" x="55" y="737">B　紧凑服务核心 + 分叉生态单元（备选）</text>
+<text class="note" x="55" y="768">生态接口较集中；装配入口、机械臂与设备展开空间更容易互相挤占。</text>
+<rect x="50" y="934" width="110" height="136" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="62" y="961">对接</text>
+<text class="note" x="67" y="997">接近区</text>
+<path d="M160 999 H200 M420 999 H460 M630 975 H675 V880 H710 M630 1020 H675 V1152 H710 M630 999 H890" fill="none" stroke="#648198" stroke-width="4"/>
+<path d="M435 1070 H1255 M435 1093 H1255" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<path d="M435 1070 L483 1093 L531 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M483 1070 L531 1093 L579 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M531 1070 L579 1093 L627 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M579 1070 L627 1093 L675 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M627 1070 L675 1093 L723 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M675 1070 L723 1093 L771 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M723 1070 L771 1093 L819 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M771 1070 L819 1093 L867 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M819 1070 L867 1093 L915 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M867 1070 L915 1093 L963 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M915 1070 L963 1093 L1011 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M963 1070 L1011 1093 L1059 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1011 1070 L1059 1093 L1107 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1059 1070 L1107 1093 L1155 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1107 1070 L1155 1093 L1203 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1155 1070 L1203 1093 L1251 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M1203 1070 L1251 1093 L1299 1070" fill="none" stroke="#a6b1bb" stroke-width="1.4"/>
+<path d="M850 927 V1070 M835 1114 V1070 M550 1040 V1070 M980 1040 V1070" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<rect x="200" y="952" width="220" height="92" rx="8" fill="#edf3f8" stroke="#91a8ba" stroke-width="1.8"/>
+<text class="label" x="215" y="985">服务组 D / H / M</text>
+<text class="note" x="215" y="1014">保持通往对接口的退路</text>
+<rect x="460" y="952" width="170" height="88" rx="8" fill="#fff0d7" stroke="#c4a779" stroke-width="1.8"/>
+<text class="label" x="475" y="985">Q / N 核心</text>
+<text class="note" x="475" y="1014">两生态入口近邻</text>
+<rect x="673" y="798" width="442" height="145" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="685" y="825">安装与外部检修候选位</text>
+<rect x="710" y="832" width="360" height="113" rx="8" fill="#e4f0e7" stroke="#85a68e" stroke-width="1.8"/>
+<text class="label" x="725" y="865">林地 E-A</text>
+<text class="note" x="725" y="894">与 E-B 分开接入节点</text>
+<rect x="673" y="1089" width="326" height="149" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="685" y="1116">安装与设备抽取候选位</text>
+<rect x="710" y="1115" width="240" height="105" rx="8" fill="#e4f0e7" stroke="#85a68e" stroke-width="1.8"/>
+<text class="label" x="725" y="1148">湿地 E-B</text>
+<text class="note" x="725" y="1177">功能范围仍为提案</text>
+<rect x="890" y="972" width="210" height="74" rx="8" fill="#edf0f3" stroke="#9faab5" stroke-width="1.8"/>
+<text class="label" x="905" y="1005">循环处理 R</text>
+<text class="note" x="905" y="1034">公共管路保持可达</text>
+<rect x="1260" y="952" width="155" height="90" rx="8" fill="#edf0f3" stroke="#9faab5" stroke-width="1.8"/>
+<text class="label" x="1275" y="985">推进平台 P</text>
+<text class="note" x="1275" y="1014">贮箱与喷嘴</text>
+<path d="M1428 962 L1630 882 V1107 L1428 1032 Z" fill="#fff4e8" stroke="#cba273" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text class="note" x="1456" y="987">喷流避让区</text>
+<text class="small" x="1456" y="1013">角度 / 范围待算</text>
+<path d="M1205 1070 V999 H1260" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<rect x="1167" y="830" width="258" height="110" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="1179" y="857"></text>
+<rect x="1185" y="848" width="220" height="62" rx="8" fill="#e5edf5" stroke="#93a6b7" stroke-width="1.8"/>
+<text class="label" x="1197" y="885">能源翼 W</text>
+<rect x="1282" y="1109" width="258" height="110" rx="8" fill="none" stroke="#cba273" stroke-width="1.8" stroke-dasharray="7 5"/>
+<text class="note" x="1179" y="1136"></text>
+<rect x="1300" y="1127" width="220" height="62" rx="8" fill="#e5edf5" stroke="#93a6b7" stroke-width="1.8"/>
+<text class="label" x="1312" y="1164">散热器 W</text>
+<path d="M1215 1070 V1158 H1300 M1215 1070 V910" fill="none" stroke="#93a0ac" stroke-width="3"/>
+<text class="note" x="200" y="1270">生态入口聚集在核心：需逐项检查搬运路径、设备更换、隔离舱门与人员通行。</text>
+<text class="note" x="55" y="1337">比较顺序：先保持生态空间与任务一致，再比较连接长度、安装顺序、检修可达性与质心；不以剪影好看直接选方案。</text>
+<text class="note" x="55" y="1374">两方案均无旋转环；人工重力为分区黑箱设备。压力结构 / 运载路线、动力、质量与功率预算尚未完成。</text>
+</svg>

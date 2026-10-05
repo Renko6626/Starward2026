@@ -49,6 +49,13 @@ docs/
 - [design/ui-redesign-handoff.md](./design/ui-redesign-handoff.md)
 - [design/works-page-wireframe.md](./design/works-page-wireframe.md)
 - [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)
+- [design/torifune-session-handoff.md](./design/torifune-session-handoff.md)
+- [design/torifune-design-progress.md](./design/torifune-design-progress.md)
+- [design/torifune-structure-draft.md](./design/torifune-structure-draft.md)
+- [design/torifune-functional-layout.svg](./design/torifune-functional-layout.svg)
+- [design/torifune-ecology-section.svg](./design/torifune-ecology-section.svg)
+- [design/torifune-layout-comparison.svg](./design/torifune-layout-comparison.svg)
+- [design/torifune-axial-spine.svg](./design/torifune-axial-spine.svg)
 
 ## File Map
 

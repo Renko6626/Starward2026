@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05080d" />
+    <link rel="icon" href="data:," />
+    <title>鸟船科研站 — A 布局体块</title>
+  </head>
+  <body>
+    <main id="observatory" aria-label="秘封空间站三维外景">
+      <div id="viewport"></div>
+      <div class="shade" aria-hidden="true"></div>
+      <header>
+        <div class="identity"><span class="emblem" aria-hidden="true"></span><span>STARWARD<span class="identity-sub">秘封观测站</span></span></div>
+        <span class="edition">科研站样稿 <span>A / 19</span></span>
+      </header>
+      <section class="caption" aria-label="场景说明">
+        <p class="caption-kicker">TORIFUNE / 结构研究</p>
+        <h1>纵向骨架与侧接生态舱</h1>
+        <p class="caption-note">生态净高暂取 8 m；模型单位为米，舱长、外径与设备包络均为试算占位。</p>
+        <p class="caption-note">骨架沿通道两侧贯通，生态舱通过端部承力环连接；推进骨架收在贮箱之间。</p>
+      </section>
+      <footer>
+        <p class="hint">拖动观察<span>滚轮拉近</span><span class="keyboard-hint">方向键转动</span></p>
+        <div class="controls" aria-label="场景控制">
+          <button id="motion" type="button" aria-pressed="false">暂停运动</button>
+          <button id="envelopes" type="button" aria-pressed="false">操作包络</button>
+          <button id="reset" type="button">初始视角</button>
+          <button id="clean" type="button" aria-pressed="false">纯净画面</button>
+        </div>
+      </footer>
+      <div id="loading" role="status"><span class="loading-mark"></span><span>正在接近观测站</span></div>
+      <div id="failure" role="alert" hidden>三维场景未能启动，请启用浏览器硬件加速后刷新页面。</div>
+      <noscript>请启用 JavaScript 以查看空间站。</noscript>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

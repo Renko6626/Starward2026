@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">鸟船生态舱截面几何试算：局部净高八米</title>
+  <desc id="desc">圆筒内径十米，地面位于圆心下三米，最高点净高八米，地面弦宽八米。中央植被与两侧通路占位，下方示意基质和服务空间。所有尺寸为比较布局的试算。</desc>
+  <defs>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; fill: #263748; }
+      .title { font-size: 31px; font-weight: 650; }
+      .heading { font-size: 22px; font-weight: 600; }
+      .body { font-size: 19px; }
+      .small { font-size: 16px; fill: #657787; }
+      .dim { stroke: #6b8296; stroke-width: 1.5; fill: none; }
+      .label { font-size: 18px; fill: #496275; }
+    </style>
+    <clipPath id="interior"><circle cx="450" cy="475" r="250"/></clipPath>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#6b8296"/></marker>
+  </defs>
+  <rect width="1600" height="1040" fill="#fafbfd"/>
+  <text class="title" x="55" y="58">生态舱截面：先检查空间，再决定外壳与发射路线</text>
+  <text class="small" x="55" y="91">工作范围 5–10 m；本图按 8 m 局部净高比较。圆筒是几何候选，不代表已选定压力结构。</text>
+
+  <circle cx="450" cy="475" r="265" fill="none" stroke="#aab6c1" stroke-width="2" stroke-dasharray="7 6"/>
+  <circle cx="450" cy="475" r="250" fill="#eef5f8" stroke="#597e96" stroke-width="3"/>
+  <g clip-path="url(#interior)">
+    <rect x="185" y="625" width="530" height="43" fill="#cfbda0"/>
+    <rect x="185" y="668" width="530" height="90" fill="#e4e9ee"/>
+    <rect x="245" y="225" width="410" height="57" fill="#e8e1c7"/>
+    <rect x="325" y="325" width="250" height="300" rx="9" fill="#dcecdf" stroke="#78a586" stroke-width="2" stroke-dasharray="6 5"/>
+    <rect x="256" y="495" width="40" height="130" fill="#d2e2ee" stroke="#86a4b9"/>
+    <rect x="604" y="495" width="40" height="130" fill="#d2e2ee" stroke="#86a4b9"/>
+    <rect x="372" y="680" width="156" height="26" rx="5" fill="#c3dce6" stroke="#89a8b8"/>
+    <path d="M250 625 H650" stroke="#637687" stroke-width="3"/>
+  </g>
+  <path d="M450 210 V740" stroke="#bdcbd6" stroke-width="1" stroke-dasharray="5 5"/>
+  <circle cx="450" cy="475" r="4" fill="#6b8296"/>
+  <text class="small" x="465" y="490">圆心</text>
+  <text class="heading" x="347" y="378">植被包络</text>
+  <text class="body" x="347" y="411">高度 4–6 m（提案）</text>
+  <text class="body" x="347" y="444">中央占宽约 5 m</text>
+  <text class="small" x="339" y="575">实际植被、水体及步行路径另排</text>
+  <text class="small" x="343" y="253">照明与顶部设备包络</text>
+  <text class="small" x="355" y="653">基质层：本图占位约 0.85 m</text>
+  <text class="small" x="321" y="715">底部剩余空间非完整检修走廊</text>
+  <text class="label" x="245" y="611" transform="rotate(-90 245 611)">侧向通路 0.8 m</text>
+  <text class="label" x="665" y="611" transform="rotate(-90 665 611)">侧向通路 0.8 m</text>
+
+  <path class="dim" d="M155 225 V625" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path class="dim" d="M145 225 H450 M145 625 H250"/>
+  <text class="label" x="125" y="495" transform="rotate(-90 125 495)">最高点净高 8 m</text>
+  <path class="dim" d="M750 625 V725" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path class="dim" d="M650 625 H760 M450 725 H760"/>
+  <text class="label" x="783" y="724" transform="rotate(-90 783 724)">底部最大深度 2 m</text>
+  <path class="dim" d="M200 780 H700" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path class="dim" d="M200 475 V790 M700 475 V790"/>
+  <text class="label" x="315" y="814">压力边界内径 10 m（试算）</text>
+  <path class="dim" d="M250 850 H650" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path class="dim" d="M250 625 V860 M650 625 V860"/>
+  <text class="label" x="328" y="886">地面弦宽 8 m（几何值）</text>
+
+  <rect x="865" y="155" width="670" height="322" rx="12" fill="#f0f5f9" stroke="#d0dbe4"/>
+  <text class="heading" x="890" y="195">这个截面解决了什么</text>
+  <text class="body" x="890" y="237">地面在圆心下方 3 m，得到 8 m 的最高点净高。</text>
+  <text class="body" x="890" y="275">地面并非穿过直径：可用弦宽只有 8 m。</text>
+  <text class="body" x="890" y="313">两侧各留 0.8 m 通路，中央植被包络暂取 5 m。</text>
+  <text class="body" x="890" y="351">剩余宽度留给分隔、护栏及局部技术接口。</text>
+  <text class="body" x="890" y="389">重力设备放在可达的侧向设备位，位置待排布。</text>
+  <text class="small" x="890" y="436">地面弦宽 ≠ 实际可种植宽度；最高净高 ≠ 全舱等高。</text>
+
+  <rect x="865" y="510" width="670" height="360" rx="12" fill="#fff5e5" stroke="#dac8a9"/>
+  <text class="heading" x="890" y="550">由试算暴露的结构约束</text>
+  <text class="body" x="890" y="592">8 m 净高在这个圆筒方案中已需要 10 m 内径。</text>
+  <text class="body" x="890" y="630">压力壳、防护、隔热与安装座还在此边界之外。</text>
+  <text class="body" x="890" y="668">这不证明整舱能装进某一种火箭整流罩。</text>
+  <text class="body" x="890" y="706">底部只有中央最深处达到 2 m，不宜画成整层走廊。</text>
+  <text class="body" x="890" y="744">基质、储液和设备占位仍需核对质量与维护方式。</text>
+  <text class="small" x="890" y="796">外圈虚线仅表示未定的外部包络。</text>
+  <text class="small" x="890" y="828">间距不代表壳厚；未进行承压、质量或防护设计。</text>
+
+  <text class="body" x="55" y="961">下一步：用同一生态空间尺度比较布局；同时讨论刚性模块与可展开空间，避免先画巨大压力舱再补发射理由。</text>
+  <text class="small" x="55" y="1000">几何关系：R = 5 m；地面相对圆心 −3 m；H = 5 − (−3) = 8 m；地面弦宽 = 2√(5² − 3²) = 8 m。</text>
+</svg>

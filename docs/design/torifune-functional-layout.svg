@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1060" viewBox="0 0 1720 1060" role="img" aria-labelledby="title desc">
+  <title id="title">鸟船科研站功能连接与装配阶段草案</title>
+  <desc id="desc">服务舱经过隔离节点连接林地、湿地与循环处理。飞控、能源与桁架是基础支撑系统。下方列出六个装配阶段。此图不表达尺度或最终外形。</desc>
+  <defs>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; fill: #253442; }
+      .title { font-size: 33px; font-weight: 650; }
+      .sub { font-size: 18px; fill: #667787; }
+      .zone { font-size: 19px; font-weight: 600; }
+      .name { font-size: 22px; font-weight: 600; }
+      .note { font-size: 17px; fill: #5b6c79; }
+      .stage { font-size: 19px; font-weight: 600; }
+      .small { font-size: 16px; fill: #5b6c79; }
+      .service { fill: #edf3f8; stroke: #889eae; stroke-width: 1.5; }
+      .bio { fill: #e3f0e7; stroke: #82a58f; stroke-width: 1.5; }
+      .buffer { fill: #fff1d9; stroke: #c4a774; stroke-width: 1.5; }
+      .external { fill: #f0f1f3; stroke: #a2aab3; stroke-width: 1.5; }
+      .passage { fill: none; stroke: #6b8599; stroke-width: 4; }
+      .support { fill: none; stroke: #9aa9b4; stroke-width: 2; stroke-dasharray: 7 6; }
+    </style>
+  </defs>
+  <rect width="1720" height="1060" fill="#fafbfd"/>
+  <text class="title" x="60" y="56">鸟船科研站：功能连接与装配阶段</text>
+  <text class="sub" x="60" y="89">结构草案 01　　功能编号不等同于独立舱体或发射次数；位置、大小不代表最终几何布局。</text>
+
+  <text class="zone" x="60" y="135">基础支撑系统</text>
+  <rect class="external" x="60" y="155" width="350" height="94" rx="9"/>
+  <text class="name" x="80" y="187">P　推进与安全飞控</text>
+  <text class="note" x="80" y="215">贮箱、阀组、喷嘴、导航与独立控制</text>
+  <rect class="external" x="465" y="155" width="350" height="94" rx="9"/>
+  <text class="name" x="485" y="187">W　能源与热控</text>
+  <text class="note" x="485" y="215">光伏翼、电池、配电、冷却与散热</text>
+  <rect class="external" x="870" y="155" width="350" height="94" rx="9"/>
+  <text class="name" x="890" y="187">T　主结构与维护设施</text>
+  <text class="note" x="890" y="215">承力接口、支臂、抓取点与设备平台</text>
+  <text class="note" x="1280" y="183">三类支撑各有职责</text>
+  <text class="note" x="1280" y="213">实物安装位由载荷与维护需求决定</text>
+  <path class="support" d="M235 249 V298 M640 249 V298 M1045 249 V298"/>
+
+  <rect x="45" y="298" width="794" height="390" rx="14" fill="#f1f5f9"/>
+  <rect x="868" y="298" width="802" height="390" rx="14" fill="#f0f7f1"/>
+  <text class="zone" x="65" y="330">工作人员服务区</text>
+  <text class="zone" x="890" y="330">主生态系统：可隔离的功能分区</text>
+
+  <path class="passage" d="M300 412 H360 M610 412 H660 M840 412 H900 M1100 412 H1135 V393 H1190 M1135 412 V523 H1190 M1060 464 V620 H1190 M180 464 V538"/>
+  <rect class="service" x="60" y="360" width="240" height="104" rx="9"/>
+  <text class="name" x="80" y="396">D　对接与货运</text>
+  <text class="note" x="80" y="426">接近、卸货、暂存与出入</text>
+  <rect class="service" x="360" y="360" width="250" height="104" rx="9"/>
+  <text class="name" x="380" y="396">M　维护与取样</text>
+  <text class="note" x="380" y="426">维修、封闭样品与记录</text>
+  <rect class="buffer" x="660" y="360" width="180" height="104" rx="9"/>
+  <text class="name" x="680" y="396">Q　隔离节点</text>
+  <text class="note" x="680" y="426">清洁、缓冲、传递</text>
+  <rect class="bio" x="900" y="360" width="200" height="104" rx="9"/>
+  <text class="name" x="920" y="396">N　分配节点</text>
+  <text class="note" x="920" y="426">入口与关断接口</text>
+
+  <rect class="service" x="60" y="538" width="240" height="116" rx="9"/>
+  <text class="name" x="80" y="576">H　人员支持</text>
+  <text class="note" x="80" y="606">短期住宿与独立保障</text>
+  <text class="note" x="80" y="632">人数、周期未定</text>
+  <rect x="360" y="520" width="465" height="134" rx="9" fill="#fafbfd" stroke="#c4d0da"/>
+  <text class="name" x="380" y="554">局部对照实验：设于 M</text>
+  <text class="note" x="380" y="584">同类对象、密封容器、可记录条件</text>
+  <text class="note" x="380" y="612">主林地与湿地若共享循环，</text>
+  <text class="note" x="380" y="638">就不能直接当作相互独立的对照组。</text>
+
+  <rect class="bio" x="1190" y="350" width="450" height="100" rx="9"/>
+  <text class="name" x="1210" y="385">E-A　林地生态单元</text>
+  <text class="note" x="1210" y="414">生物空间、步行路径、G-A 重力设备服务层</text>
+  <rect class="bio" x="1190" y="480" width="450" height="100" rx="9"/>
+  <text class="name" x="1210" y="515">E-B　湿地生态单元（提案）</text>
+  <text class="note" x="1210" y="544">水体、循环实验、G-B 重力设备服务层</text>
+  <rect class="bio" x="1190" y="600" width="450" height="66" rx="9"/>
+  <text class="name" x="1210" y="629">R　循环处理设备</text>
+  <text class="note" x="1210" y="654">处理与储液；介质接口连接 E-A / E-B</text>
+
+  <text class="note" x="65" y="726">实线：通行 / 节点连接关系　　虚线：基础支撑关系　　实验流体另行敷设，不绕行人员生活区。</text>
+  <text class="zone" x="60" y="778">装配阶段：每阶段均可由多次发射与作业完成</text>
+
+  <g>
+    <rect x="60" y="805" width="250" height="115" rx="8" fill="#edf3f8" stroke="#c7d2db"/>
+    <text class="stage" x="76" y="838">A　基础服务</text>
+    <text class="small" x="76" y="868">航控、必要能源、对接节点</text>
+    <text class="small" x="76" y="894">初始主梁</text>
+    <rect x="330" y="805" width="250" height="115" rx="8" fill="#edf3f8" stroke="#c7d2db"/>
+    <text class="stage" x="346" y="838">B　人员与装配</text>
+    <text class="small" x="346" y="868">支持舱、维修舱、隔离节点</text>
+    <text class="small" x="346" y="894">机械臂、桁架扩展</text>
+    <rect x="600" y="805" width="250" height="115" rx="8" fill="#e3f0e7" stroke="#b9cfc0"/>
+    <text class="stage" x="616" y="838">C　空载生态结构</text>
+    <text class="small" x="616" y="868">压力模块、节点、重力设备</text>
+    <text class="small" x="616" y="894">先密封与环境调试</text>
+    <rect x="870" y="805" width="250" height="115" rx="8" fill="#e3f0e7" stroke="#b9cfc0"/>
+    <text class="stage" x="886" y="838">D　循环与热控</text>
+    <text class="small" x="886" y="868">处理装置、接口、储液</text>
+    <text class="small" x="886" y="894">扩容能源与散热</text>
+    <rect x="1140" y="805" width="250" height="115" rx="8" fill="#e3f0e7" stroke="#b9cfc0"/>
+    <text class="stage" x="1156" y="838">E　建立生态</text>
+    <text class="small" x="1156" y="868">分阶段投入水、基质、生物</text>
+    <text class="small" x="1156" y="894">逐步闭合循环</text>
+    <rect x="1410" y="805" width="250" height="115" rx="8" fill="#fff1d9" stroke="#d6c49e"/>
+    <text class="stage" x="1426" y="838">F　长期科研</text>
+    <text class="small" x="1426" y="868">持续观测、记录维护行为</text>
+    <text class="small" x="1426" y="894">验证自主安全转移</text>
+  </g>
+  <text class="note" x="60" y="974">已确认：科研主导、虚构人工重力、无大型旋转环。工作提案：林地 / 湿地分区、短期驻留、此连接拓扑。</text>
+  <text class="note" x="60" y="1008">未确定：具体舱数与尺寸、运载路线、人员规模、生态物种、功率与热预算、推进方式和转移储备。</text>
+</svg>

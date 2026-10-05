@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1140" viewBox="0 0 1600 1140" role="img" aria-labelledby="title desc">
+<title id="title">鸟船 A / 19 纵向承力骨架关系图</title><desc id="desc">侧视和端向投影展示通道外侧骨架、生态舱端部承力环、贮箱之间的后段骨架与上移后的运输轨道。旧底架用虚线表示。尺寸为建模工作值，未计算质心与载荷。</desc>
+<style>text{font-family:'Noto Sans CJK SC','Noto Sans SC',sans-serif;fill:#273847;font-size:18px}.title{font-size:32px;font-weight:700}.head{font-size:23px;font-weight:650}.small{font-size:16px;fill:#637684}.structure{stroke:#b07836;stroke-width:4;fill:none}.old{stroke:#bd8790;stroke-width:2;stroke-dasharray:8 7;fill:none}.passage{fill:#dce9f1;stroke:#6589a4;stroke-width:2}.eco{fill:#e4eee7;stroke:#7b9984;stroke-width:2}.tank{fill:#e9e9e1;stroke:#90958d;stroke-width:2}.node{fill:#b07836;stroke:#fff;stroke-width:1}</style>
+<rect width="1600" height="1140" fill="#fafbfd"/>
+
+<text x="52" y="57" class="title">鸟船：纵向骨架与侧接舱段</text>
+<text x="52" y="94" class="small">A / 19　沿用前后功能顺序和错位生态舱；承力连接从底部托架转向舱段端部环。</text>
+<text x="52" y="142" class="head">01　侧视投影  X–Y</text>
+<text x="52" y="174" class="small">不同 Z 位置的舱段会重叠；橙色表示结构位置，蓝色表示压力通路。</text>
+<rect x="201.00" y="328.80" width="153.90" height="67.20" rx="27" class="passage"/>
+<rect x="381.50" y="334.40" width="146.30" height="56.00" rx="20" class="passage"/>
+<rect x="522.10" y="343.20" width="324.90" height="38.40" rx="14" class="passage"/>
+<rect x="489.80" y="253.60" width="315.40" height="172.80" rx="32" class="eco"/>
+<rect x="736.80" y="253.60" width="220.40" height="172.80" rx="32" class="eco"/>
+<rect x="1011.35" y="312.80" width="127.30" height="73.60" rx="24" class="tank"/>
+<rect x="1151.95" y="312.80" width="127.30" height="73.60" rx="24" class="tank"/>
+<path d="M201.00,400.80 L1310.60,400.80" class="structure" />
+<path d="M201.00,319.20 L1310.60,319.20" class="structure" />
+<circle cx="201.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="201.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="353.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="353.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="410.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="410.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="505.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="505.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="529.70" cy="400.80" r="3.60" class="node"/>
+<circle cx="529.70" cy="319.20" r="3.60" class="node"/>
+<circle cx="638.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="638.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="765.30" cy="400.80" r="3.60" class="node"/>
+<circle cx="765.30" cy="319.20" r="3.60" class="node"/>
+<circle cx="776.70" cy="400.80" r="3.60" class="node"/>
+<circle cx="776.70" cy="319.20" r="3.60" class="node"/>
+<circle cx="917.30" cy="400.80" r="3.60" class="node"/>
+<circle cx="917.30" cy="319.20" r="3.60" class="node"/>
+<circle cx="961.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="961.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="999.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="999.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="1037.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="1037.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="1113.00" cy="400.80" r="3.60" class="node"/>
+<circle cx="1113.00" cy="319.20" r="3.60" class="node"/>
+<circle cx="1177.60" cy="400.80" r="3.60" class="node"/>
+<circle cx="1177.60" cy="319.20" r="3.60" class="node"/>
+<circle cx="1253.60" cy="400.80" r="3.60" class="node"/>
+<circle cx="1253.60" cy="319.20" r="3.60" class="node"/>
+<circle cx="1310.60" cy="400.80" r="3.60" class="node"/>
+<circle cx="1310.60" cy="319.20" r="3.60" class="node"/>
+<path d="M529.70,251.68 L529.70,428.32" class="structure" stroke-width="2"/>
+<path d="M765.30,251.68 L765.30,428.32" class="structure" stroke-width="2"/>
+<path d="M776.70,251.68 L776.70,428.32" class="structure" stroke-width="2"/>
+<path d="M917.30,251.68 L917.30,428.32" class="structure" stroke-width="2"/>
+<path d="M201.00,423.20 L961.00,423.20" class="passage" fill="none" stroke-width="5"/>
+<path d="M125.00,447.20 L1341.00,447.20" class="old" />
+<path d="M1310.60,364.00 L1436.00,364.00" class="structure" stroke-dasharray="6 4"/>
+<text x="201" y="224" class="">服务舱</text>
+<text x="543" y="224" class="">林地舱</text>
+<text x="799.5" y="224" class="">湿地舱</text>
+<text x="1094" y="276" class="">贮箱组</text>
+<text x="1316.3" y="303" class="">发动机</text>
+<text x="130" y="483" class="small">蓝线：运输轨道由 Y −9.5 m 上移至 −5.2 m</text>
+<text x="130" y="510" class="small">红虚线：已撤下的旧主梁中心高度 Y −6.7 m</text>
+<text x="910" y="483" class="small">端部环承担连接；观察窗区域保持开放</text>
+<text x="910" y="510" class="small">推力轴线仍为 Y −1.5 m；整站质心未计算</text>
+<path d="M52.00,546.00 L1548.00,546.00" class="passage" />
+<text x="52" y="590" class="head">02　生态段端向投影  Z–Y</text>
+<text x="52" y="621" class="small">两座生态舱在 X 方向错位，此图叠加显示横截面关系。</text>
+<circle cx="303.00" cy="800.00" r="124.20" class="eco"/>
+<circle cx="303.00" cy="800.00" r="126.96" class="structure"/>
+<circle cx="717.00" cy="800.00" r="124.20" class="eco"/>
+<circle cx="717.00" cy="800.00" r="126.96" class="structure"/>
+<rect x="446.75" y="770.10" width="126.50" height="117.30" rx="0" class="structure"/>
+<circle cx="510.00" cy="832.20" r="27.60" class="passage"/>
+<path d="M446.75,887.40 L426.92,827.60" class="structure" />
+<circle cx="426.92" cy="827.60" r="5.00" class="node"/>
+<path d="M446.75,770.10 L426.92,772.40" class="structure" />
+<circle cx="426.92" cy="772.40" r="5.00" class="node"/>
+<path d="M573.25,887.40 L593.08,827.60" class="structure" />
+<circle cx="593.08" cy="827.60" r="5.00" class="node"/>
+<path d="M573.25,770.10 L593.08,772.40" class="structure" />
+<circle cx="593.08" cy="772.40" r="5.00" class="node"/>
+<rect x="575.00" y="916.60" width="8.00" height="6.00" rx="0" class="passage"/>
+<rect x="611.80" y="916.60" width="8.00" height="6.00" rx="0" class="passage"/>
+<text x="250" y="804" class="">林地</text>
+<text x="688" y="804" class="">湿地</text>
+<text x="453" y="753" class="">骨架</text>
+<text x="450" y="852" class="small">人员通路</text>
+<text x="168" y="982" class="small">端部环侧接，取消贯穿舱底的长托架</text>
+<text x="168" y="1011" class="small">圆环表示候选加强接口，未指定实际压力壳构造</text>
+<text x="1040" y="590" class="head">03　推进段端向投影</text>
+<text x="1040" y="621" class="small">前后两排贮箱叠加显示</text>
+<circle cx="1177.60" cy="814.20" r="73.60" class="tank"/>
+<path d="M1262.40,916.60 L1244.41,849.40" class="structure" />
+<circle cx="1244.41" cy="849.40" r="4.00" class="node"/>
+<path d="M1262.40,753.40 L1244.41,779.00" class="structure" />
+<circle cx="1244.41" cy="779.00" r="4.00" class="node"/>
+<circle cx="1382.40" cy="814.20" r="73.60" class="tank"/>
+<path d="M1297.60,916.60 L1315.59,849.40" class="structure" />
+<circle cx="1315.59" cy="849.40" r="4.00" class="node"/>
+<path d="M1297.60,753.40 L1315.59,779.00" class="structure" />
+<circle cx="1315.59" cy="779.00" r="4.00" class="node"/>
+<rect x="1262.40" y="753.40" width="35.20" height="163.20" rx="0" class="structure"/>
+<text x="1060" y="965" class="small">窄骨架位于贮箱之间</text>
+<text x="1060" y="995" class="small">设备托盘和能源支臂另接骨架节点</text>
+<path d="M52.00,1050.00 L1548.00,1050.00" class="passage" />
+<text x="52" y="1091" class="small">工作尺寸仅用于建模与静态空间检查；承力、质心、推进、热控及机械臂全程可达性仍待核算。</text>
+<text x="52" y="1120" class="small">光伏翼法线 Y、散热器法线 X；原有轴向和尺寸沿用。图中省略板翼、天线与部分局部设备。</text>
+</svg>

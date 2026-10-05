@@ -1,0 +1,13 @@
+{
+  "name": "starward-station-study",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 26105 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 26105 --strictPort"
+  },
+  "dependencies": { "three": "0.180.0" },
+  "devDependencies": { "vite": "7.3.2" }
+}
