@@ -1,0 +1,21 @@
+{
+  "model": {
+    "distance_km": 384748.91,
+    "earth_gm": 398600.435507,
+    "moon_gm": 4902.800118,
+    "earth_radius_km": 6378.1363,
+    "moon_radius_km": 1738.1,
+    "parking_altitude_km": 200.0,
+    "flyby_altitude_km": 150.0
+  },
+  "inbound_days": 3.4,
+  "outbound_seed_days": 16.0,
+  "minimum_lunar_altitude_km": 100.0,
+  "position_tolerance_km": 0.1,
+  "velocity_tolerance_km_s": 0.000001,
+  "jacobi_drift_tolerance": 0.00000002,
+  "rtol": 0.00000000002,
+  "atol": 0.0000000000002,
+  "check_rtol": 0.000000000001,
+  "check_atol": 0.00000000000001
+}

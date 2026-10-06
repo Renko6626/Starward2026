@@ -6,6 +6,7 @@ node_modules/
 # === Build output ===
 dist/
 dist-ssr/
+dist-vps/
 build/
 
 # === Python ===
@@ -55,6 +56,17 @@ htmlcov/
 # === Misc ===
 *.local
 *.sqlite3
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 .wrangler/
 .dev.vars
 .tmp-*.png
+
+# Station capture staging
+.station-build-*/
+public/.station-assets-*/
+
+# Local trajectory generation
+.orbit-build-*/
+.venv-orbit/

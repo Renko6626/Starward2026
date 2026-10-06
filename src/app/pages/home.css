@@ -1,0 +1,188 @@
+/* The homepage lives in the same space as the station. Other routes retain their shell. */
+.public-site--home { background: #000; --color-primary: #eee; }
+.public-site--home .public-main { width: 100%; max-width: none; padding: 0; }
+.public-site--home .public-header { position: absolute; z-index: 12; inset: 0 0 auto; width: 100%; max-width: none; padding: 32px 4.3vw; border: 0; background: linear-gradient(#000000c4, transparent); }
+.public-site--home .brand { color: #dcdcdc; }
+.public-site--home .brand > span { font-family: var(--font-body); font-size: 17px; font-weight: 500; letter-spacing: .2em; }
+.public-site--home .brand small { color: #979797; font-size: 10px; letter-spacing: .1em; }
+.public-site--home .brand > svg { width: 24px; color: #a6a6a6; }
+.public-site--home .public-nav { gap: 34px; font-size: 13px; }
+.public-site--home .public-nav a { color: #bfbfbf; }
+.public-site--home .public-nav a[data-status="active"] { color: #eeeeee; }
+.public-site--home .nav-entry { border-color: #bfbfbf38; background: #0d0d0d80; }
+.public-site--home .public-footer { margin-top: 0; width: 91.4%; max-width: none; border-color: #c5c5c51a; padding: 30px 0; font-size: 11px; color: #858585; }
+.station-home { color: #e6e6e6; }
+.orbital-hero { position: relative; isolation: isolate; min-height: 820px; height: 100svh; max-height: 1200px; overflow: hidden; background: #000000; }
+.station-backdrop, .station-canvas, .station-poster, .orbital-shade { position: absolute; inset: 0; }
+.station-backdrop { z-index: -3; }
+.station-poster { display: block; }
+.station-poster img { width: 100%; height: 100%; object-fit: cover; }
+.station-canvas { opacity: 0; transition: opacity 700ms ease; }
+.station-canvas canvas { width: 100%; height: 100%; display: block; }
+.station-backdrop.is-ready .station-canvas { opacity: 1; }
+.orbital-shade { z-index: -1; pointer-events: none; background: linear-gradient(90deg, #00000085 0%, #00000018 43%, transparent 65%), linear-gradient(0deg, #000000 0%, #00000055 12%, transparent 38%); }
+.orbital-copy { position: absolute; left: 6.3vw; bottom: 19%; max-width: 560px; }
+.orbital-edition { margin: 0 0 25px; font: 12px/1.5 var(--font-body); letter-spacing: .08em; color: #bcbcbc; }
+.orbital-copy h1 { margin: 0 0 12px; font: 400 clamp(45px, 5.25vw, 84px)/1.2 var(--font-headline); letter-spacing: .08em; color: #efefef; }
+.orbital-subtitle { margin: 0; font: 400 22px/1.6 var(--font-headline); letter-spacing: .25em; color: #d7d7d7; }
+.orbital-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 28px; margin-top: 32px; }
+.orbital-actions a { display: inline-flex; align-items: center; gap: 20px; min-height: 44px; font-size: 12px; letter-spacing: .05em; }
+.orbital-primary { border: 1px solid #c3c3c355; padding: 0 18px; color: #e5e5e5; background: #10101088; }
+.orbital-primary:hover { border-color: #e5e5e5; background: #1e1e1ecc; }
+.orbital-secondary { color: #adadad; }
+.orbital-secondary:hover { color: #efefef; }
+.station-motion { position: absolute; bottom: 13%; right: 4.4vw; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 44px; color: #a0a0a0; padding: 0 10px; font-size: 10px; letter-spacing: .04em; }
+.station-motion:hover { color: #eaeaea; }
+.orbital-bottom { position: absolute; bottom: 42px; left: 4.3vw; right: 4.3vw; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #c3c3c326; padding-top: 20px; gap: 16px; }
+.orbital-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: #8e8e8e; font-size: 10px; }
+.orbital-status strong { font-weight: 400; color: #c6c6c6; }
+.orbital-status-light { width: 5px; height: 5px; border: 1px solid #979797; border-radius: 50%; }
+.orbital-status-light.is-open { background: #bfbfbf; border-color: #bfbfbf; box-shadow: 0 0 10px #bfbfbf33; }
+.orbital-status-error { flex-basis: 100%; }
+.orbital-scroll { display: inline-flex; align-items: center; gap: 20px; white-space: nowrap; font-size: 10px; color: #9c9c9c; min-height: 30px; }
+.relay-intro { width: 87.4%; max-width: 1320px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10%; padding: 130px 0 120px; scroll-margin-top: 40px; }
+.relay-heading h2 { margin: 0; font: 400 clamp(28px, 3vw, 43px)/1.65 var(--font-headline); letter-spacing: .06em; }
+.relay-statement { padding-top: 8px; }
+.relay-statement p { font-size: 14px; line-height: 2.1; color: #9c9c9c; margin: 0; max-width: 32em; }
+.relay-route a { display: inline-flex; align-items: center; gap: 22px; color: #c8c8c8; font-size: 12px; min-height: 44px; }
+.relay-route a:hover { color: #d8d8d8; }
+.relay-route { width: 87.4%; max-width: 1320px; margin: auto; padding-bottom: 85px; }
+.relay-route-heading { border-top: 1px solid #c3c3c326; padding-top: 32px; display: flex; align-items: center; gap: 32px; }
+.relay-route-heading h2 { font: 400 21px/1.6 var(--font-headline); margin: 0; }
+.relay-route-heading > a { margin-left: auto; }
+.relay-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 60px; padding: 62px 0; }
+.relay-steps article > span { font: 11px/1.5 var(--font-label); color: #848484; display: block; margin-bottom: 24px; }
+.relay-steps h3 { font-size: 16px; font-weight: 400; margin: 0 0 14px; letter-spacing: .06em; }
+.relay-steps p { color: #909090; font-size: 12px; line-height: 2; max-width: 26em; margin: 0; }
+.relay-return { border-top: 1px solid #c3c3c318; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.relay-return > span { color: #858585; font-size: 11px; }
+.design-references { width: 87.4%; max-width: 1320px; margin: auto; padding: 0 0 70px; }
+.design-references > h2 { border-top: 1px solid #c3c3c326; padding-top: 32px; margin: 0 0 30px; font: 400 21px/1.6 var(--font-headline); }
+.design-reference-list { list-style: none; padding: 0; margin: 0; }
+.design-reference-list li + li { border-top: 1px solid #c3c3c315; }
+.design-reference-list a { display: grid; grid-template-columns: 200px 1fr 16px; align-items: start; gap: 28px; padding: 24px 0; color: #bdbdbd; }
+.design-reference-source { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+.design-reference-source small { font-size: 10px; color: #777; }
+.design-reference-content h3 { margin: 0 0 9px; font: 500 14px/1.6 "Starward Orbital", sans-serif; color: #c9c9c9; }
+.design-reference-content p { margin: 0; color: #858585; font-size: 11px; line-height: 1.9; }
+.design-reference-list a > svg { margin-top: 4px; color: #858585; }
+.design-reference-list a:hover h3, .design-reference-list a:hover > svg { color: #fff; }
+@media (max-width: 699px) {
+  .design-references { width: calc(100% - 52px); padding-bottom: 42px; }
+  .design-references > h2 { font-size: 19px; padding-top: 26px; margin-bottom: 15px; }
+  .design-reference-list a { grid-template-columns: 1fr 16px; gap: 14px; padding: 22px 0; }
+  .design-reference-source { grid-column: 1; flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+  .design-reference-content { grid-column: 1; }
+  .design-reference-content h3 { font-size: 12px; }
+  .design-reference-content p { font-size: 10px; }
+  .design-reference-list a > svg { grid-column: 2; grid-row: 1; }
+}
+.mission-countdown { width: 87.4%; max-width: 1320px; margin: auto; padding: 70px 0 64px; border-bottom: 1px solid #c3c3c326; }
+.mission-countdown-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 42px; }
+.mission-countdown-heading h2 { margin: 0; font: 400 18px/1.5 var(--font-body); color: #bdbdbd; }
+.mission-countdown-heading > span { font: 500 9px/1.5 "Starward Orbital", sans-serif; letter-spacing: .14em; color: #777; }
+.mission-countdown-body { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
+.mission-clock { display: flex; align-items: flex-start; gap: clamp(16px, 2.2vw, 36px); font-family: "Courier New", monospace; }
+.mission-clock-prefix { font-size: clamp(24px, 3vw, 44px); line-height: 1.35; color: #777; padding-top: 6px; }
+.mission-clock-unit { position: relative; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.mission-clock-unit + .mission-clock-unit::before { content: ':'; position: absolute; top: 0; left: calc(-1 * clamp(16px, 2.2vw, 36px) / 2 - .2em); font-size: clamp(36px, 5vw, 72px); line-height: 1; color: #555; }
+.mission-clock-value { font-size: clamp(36px, 5vw, 72px); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; color: #e6e6e6; }
+.mission-clock-started { font: 400 clamp(28px, 3vw, 42px)/1.5 var(--font-headline); }
+.mission-clock-label { font: 9px/1.5 var(--font-body); color: #777; letter-spacing: .04em; }
+.mission-start { display: flex; flex-direction: column; gap: 12px; color: #858585; font-size: 10px; white-space: nowrap; }
+.mission-start time { font: 500 21px/1.3 "Starward Orbital", sans-serif; letter-spacing: .06em; color: #c7c7c7; }
+@media (max-width: 1000px) {
+  .mission-countdown-body { flex-direction: column; align-items: flex-start; gap: 38px; }
+  .mission-start { gap: 8px; }
+}
+@media (max-width: 699px) {
+  .mission-countdown { width: calc(100% - 52px); padding: 46px 0; }
+  .mission-countdown-heading { margin-bottom: 32px; gap: 12px; }
+  .mission-countdown-heading h2 { font-size: 15px; }
+  .mission-countdown-heading > span { font-size: 8px; }
+  .mission-clock { width: 100%; gap: 14px; }
+  .mission-clock-prefix { font-size: 19px; padding-top: 3px; }
+  .mission-clock-value, .mission-clock-unit + .mission-clock-unit::before { font-size: clamp(25px, 7.5vw, 44px); }
+  .mission-clock-unit + .mission-clock-unit::before { left: -10px; }
+  .mission-clock-label { font-size: 7px; letter-spacing: 0; }
+  .mission-start time { font-size: 19px; }
+}
+@media (min-width: 1800px) { .orbital-copy { left: 8vw; } }
+@media (max-width: 1000px) and (min-width: 700px) {
+  .orbital-copy { left: 4.3vw; bottom: 16%; }
+  .orbital-copy h1 { font-size: 51px; }
+  .orbital-subtitle { font-size: 19px; }
+  .orbital-shade { background: linear-gradient(90deg, #000000b0, #00000022 65%, transparent), linear-gradient(0deg, #000000, transparent 45%); }
+  .public-site--home .public-nav { gap: 18px; }
+}
+@media (max-width: 699px) {
+  .public-site--home .public-header { padding: 24px 22px; }
+  .public-site--home .public-nav.is-open { background: #101010f5; top: 82px; }
+  .public-site--home .public-footer { margin-top: 0; width: calc(100% - 44px); padding: 24px 0; gap: 14px; }
+  .orbital-hero { height: 100svh; min-height: 840px; max-height: 1100px; }
+  .orbital-copy { left: 26px; right: 26px; bottom: 15%; max-width: none; }
+  .orbital-copy h1 { font-size: clamp(37px, 11.5vw, 66px); letter-spacing: .02em; }
+  .orbital-edition { font-size: 11px; margin-bottom: 15px; letter-spacing: .1em; }
+  .orbital-subtitle { font-size: 17px; letter-spacing: .22em; }
+  .orbital-actions { margin-top: 22px; gap: 22px; }
+  .orbital-actions a { font-size: 11px; gap: 14px; }
+  .orbital-shade { background: linear-gradient(0deg, #000000 0%, #000000ba 20%, #00000033 42%, transparent 60%); }
+  .orbital-bottom { left: 26px; right: 26px; bottom: 27px; padding-top: 16px; }
+  .orbital-status { font-size: 9px; gap: 8px; }
+  .orbital-scroll { font-size: 0; gap: 0; }
+  .station-motion { right: 20px; bottom: auto; top: 49%; font-size: 9px; }
+  .relay-intro { width: calc(100% - 52px); grid-template-columns: 1fr; gap: 32px; padding: 76px 0 66px; }
+  .relay-heading h2 { font-size: 30px; line-height: 1.6; }
+  .relay-statement { padding: 0; }
+  .relay-statement p { font-size: 12px; }
+  .relay-route { width: calc(100% - 52px); padding-bottom: 54px; }
+  .relay-route-heading { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding-top: 26px; }
+  .relay-route-heading h2 { font-size: 19px; }
+  .relay-route-heading > a { font-size: 10px; gap: 9px; }
+  .relay-steps { grid-template-columns: 1fr; gap: 30px; padding: 30px 0; }
+  .relay-steps article { position: relative; padding-left: 40px; }
+  .relay-steps article > span { position: absolute; top: 4px; left: 0; font-size: 9px; }
+  .relay-steps h3 { font-size: 14px; margin-bottom: 9px; }
+  .relay-steps p { font-size: 11px; max-width: none; }
+  .relay-return { display: block; }
+  .relay-return > span { display: block; line-height: 1.9; font-size: 10px; }
+  .relay-return a { margin-top: 10px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { .station-canvas { transition: none; } }
+
+@font-face {
+  font-family: "Starward Orbital";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../assets/fonts/quicksand-latin-500.woff2") format("woff2");
+}
+
+/* Earth-to-L4 transfer chart: fixed white strokes, quieter construction lines. */
+.orbital-artwork { position: absolute; inset: 0; z-index: -2; pointer-events: none; color: #fff; overflow: hidden; }
+.orbital-artwork > svg { width: 100%; height: 100%; display: block; }
+.orbital-artwork .orbital-artwork-mobile { display: none; }
+.orbital-artwork g { fill: none; stroke: currentColor; stroke-width: .85; }
+.orbital-artwork .orbit-construction { opacity: .17; stroke-width: .65; }
+.orbital-artwork .orbit-guides { opacity: .12; stroke-width: .6; }
+.orbital-artwork .orbit-track { opacity: .32; }
+.orbital-artwork .orbit-reference { opacity: .23; stroke-width: .8; }
+.orbital-artwork .orbit-maneuvers { opacity: .32; }
+.orbital-artwork text { fill: currentColor; stroke: none; font: 500 8.5px/1.5 "Starward Orbital", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.orbital-artwork .orbit-maneuvers text { font-size: 8px; }
+.orbital-artwork .orbit-metadata { opacity: .38; stroke-width: .55; }
+.orbital-artwork .orbit-metadata text { font-size: 8px; }
+.orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 9px; }
+.orbital-artwork .station-annotation { opacity: .45; stroke-width: .6; }
+.orbital-artwork .station-annotation circle { fill: currentColor; stroke: none; }
+@media (max-width: 699px) {
+  .orbital-artwork .orbital-artwork-desktop { display: none; }
+  .orbital-artwork .orbital-artwork-mobile { display: block; }
+  .orbital-artwork .orbit-construction { opacity: .14; }
+  .orbital-artwork .orbit-guides { opacity: .10; }
+  .orbital-artwork .orbit-track { opacity: .24; }
+  .orbital-artwork .orbit-reference { opacity: .19; }
+  .orbital-artwork .orbit-maneuvers { opacity: .25; }
+  .orbital-artwork .orbit-metadata { opacity: .36; }
+  .orbital-artwork .orbit-metadata-detail { display: none; }
+}

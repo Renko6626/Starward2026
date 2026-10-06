@@ -118,6 +118,33 @@ npm run dev
 - 保留邮箱验证码登录和审核通知，只有这些邮件功能需要 Resend；此次不提供邮件找回密码。
 - 原验证码账号若已退出且邮件不可用，需要先恢复身份验证渠道才能设置密码；重新注册不会覆盖原账号。已有未关联账号的邀请也需先验证邮箱后领取。
 
+## 没有 VPS 时的测试入口
+
+项目不要求先拥有 VPS 才能跑测试。推荐合作者从统一入口开始：
+
+```bash
+npm run test:env -- help
+```
+
+常用路径：
+
+```bash
+# 推荐：本地 D1 示例数据 + Vite 前端 + Worker API
+npm run test:env -- local
+
+# 本机 Docker：Node + SQLite + Caddy（需先准备 .env）
+npm run test:env -- docker
+
+# 只检查并展示 Cloudflare staging 命令，不会误部署
+npm run test:env -- staging
+```
+
+`local` 会在缺少 `.dev.vars` 时生成一个被 Git 忽略的本地密钥，重建示例数据后启动
+`http://localhost:20262`。页面、Worker API、本地 D1、门户样本和管理员 smoke 流程都能
+运行；Resend 邮件和 Turnstile 没有配置时会在启动报告中标为 `[offline]`，对应的 OTP
+或验证码功能会显示不可用，不影响其它页面浏览和 seeded 数据流程。完整说明见
+[docs/development/local-d1.md](./docs/development/local-d1.md)。
+
 ## 环境部署
 
 仓库当前采用以下 Wrangler 环境划分：
@@ -142,3 +169,7 @@ npm run deploy:staging
 ## License
 
 TBD
+
+## 主页鸟船场景
+
+首页复用 `experiments/station/ring-romantic/` 的 R/06 模型。修改后运行 `npm run station:update` 更新静态预览并构建；普通构建会检查预览是否过期。首次安装、单独生成及故障处理见 [更新说明](docs/development/station-homepage.md)。

@@ -15,3 +15,7 @@
 修改这些标题时，通过 `https://fonts.googleapis.com/css2` 的
 `family=Noto Serif SC:wght@500`、`display=swap` 和 `text=<完整标题文字>`
 重新获取 WOFF2 子集，同时更新 `src/index.css` 中的 `unicode-range`。
+
+## 轨道标注字体
+
+`quicksand-latin-500.woff2` 为 Quicksand 500 的 Latin 子集，供首页轨道 metadata 和飞船标注使用。字体通过 Google Fonts 获取并本地托管，以圆润无衬线、小字号和全大写排版。许可为 SIL OFL 1.1，见 `quicksand-OFL.txt`。来源：https://github.com/google/fonts/tree/main/ofl/quicksand

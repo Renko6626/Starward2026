@@ -13,9 +13,19 @@
     "db:local:reset": "node ./scripts/local-dev-bootstrap.mjs bootstrap",
     "db:local:seed": "node ./scripts/local-dev-bootstrap.mjs seed",
     "db:local:print-portals": "node ./scripts/local-dev-bootstrap.mjs print",
+    "test:env": "node ./scripts/test-env.mjs",
     "cf-typegen": "wrangler types",
     "check": "tsc -b --pretty false",
-    "test": "vitest run"
+    "test": "vitest run",
+    "station:assets": "node scripts/station-assets.mjs",
+    "station:check": "node scripts/station-assets.mjs --check",
+    "station:update": "npm run station:assets && npm run build",
+    "test:station": "node --test scripts/station-assets.test.mjs",
+    "prebuild": "npm run station:check && npm run orbit:check",
+    "orbit:generate": "node scripts/orbit-assets.mjs",
+    "orbit:check": "node scripts/orbit-assets.mjs --check",
+    "orbit:update": "npm run orbit:generate && npm run build",
+    "test:orbit": "python3 -m unittest discover -s scripts/orbit-transfer -p 'test_*.py'"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.133.28",
@@ -29,6 +39,7 @@
     "react-dom": "^19.2.0",
     "resend": "^6.10.0",
     "tailwind-merge": "^3.3.1",
+    "three": "0.180.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -38,7 +49,9 @@
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.1.1",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",

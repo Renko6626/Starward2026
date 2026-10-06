@@ -1,0 +1,107 @@
+{
+  "coasts": [
+    {
+      "jacobi_drift": 3.865497255617356e-09,
+      "minimum_earth": {
+        "altitude_km": 199.99999999424654,
+        "time_nd": 0.0
+      },
+      "minimum_moon": {
+        "altitude_km": 149.99986665418487,
+        "time_nd": 0.7818979475242075
+      }
+    },
+    {
+      "jacobi_drift": 3.3019365019981706e-11,
+      "minimum_earth": {
+        "altitude_km": 273656.61167191237,
+        "time_nd": 0.9607145624211536
+      },
+      "minimum_moon": {
+        "altitude_km": 149.99986665415622,
+        "time_nd": 3.263815867148457e-10
+      }
+    }
+  ],
+  "burns": [
+    {
+      "name": "departure",
+      "position_gap_km": 5.754557533251083e-09,
+      "delta_v_km_s": 3.142171703487089
+    },
+    {
+      "name": "lunar_assist",
+      "position_gap_km": 0.0,
+      "delta_v_km_s": 0.18457179599266027
+    },
+    {
+      "name": "arrival",
+      "position_gap_km": 0.0,
+      "delta_v_km_s": 0.21646017519090413
+    }
+  ],
+  "node_gap_km": 0.0,
+  "target_error_km": 3.3249294001964397e-07,
+  "post_insertion_speed_km_s": 0.0,
+  "lunar_radial_rate_nd": -8.687481303292865e-10,
+  "independent_replay": {
+    "lunar_position_error_km": 3.8042097535175174e-05,
+    "terminal_position_error_km": 0.01418747216173052,
+    "post_insertion_speed_km_s": 1.3642136834039607e-08
+  },
+  "accepted": true,
+  "failures": [],
+  "inputFingerprint": "b8cfd28842f7d56e42e7664d9c7871e973152afcf347080f4474b6919e808058",
+  "config": {
+    "model": {
+      "distance_km": 384748.91,
+      "earth_gm": 398600.435507,
+      "moon_gm": 4902.800118,
+      "earth_radius_km": 6378.1363,
+      "moon_radius_km": 1738.1,
+      "parking_altitude_km": 200.0,
+      "flyby_altitude_km": 150.0
+    },
+    "inbound_days": 3.4,
+    "outbound_seed_days": 16.0,
+    "minimum_lunar_altitude_km": 100.0,
+    "position_tolerance_km": 0.1,
+    "velocity_tolerance_km_s": 1e-06,
+    "jacobi_drift_tolerance": 2e-08,
+    "rtol": 2e-11,
+    "atol": 2e-13,
+    "check_rtol": 1e-12,
+    "check_atol": 1e-14
+  },
+  "dependencies": {
+    "numpy": "2.4.3",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.0"
+  },
+  "solver": {
+    "inbound": {
+      "evaluations": 13,
+      "residual_norm": 8.749684095293145e-13,
+      "lunar_phase_rad": 5.9747980388604685,
+      "lunar_incoming_speed_nd": 2.4073996438717864
+    },
+    "outbound": {
+      "evaluations": 19,
+      "residual_norm": 8.641816295714625e-13,
+      "lunar_outgoing_speed_nd": 2.2271682868257883
+    }
+  },
+  "total_days": 14.033218722524921,
+  "total_delta_v_km_s": 3.5432036746706532,
+  "assumptions": [
+    "Planar circular Earth–Moon model; no solar perturbation or ephemeris.",
+    "Instantaneous impulses; target ideal L4 with zero rotating velocity.",
+    "Feasible corrected trajectory; no global-optimum or calendar launch-window claim."
+  ],
+  "sha256": {
+    "trajectory.json": "7a340f874e17d0aff95998de277e958ffeec38284a20a130a1ecea806d5d0e96",
+    "preview.svg": "0559cf86feb703b782e919822efa6c6cf386bc10877c1f1247656fe53396d2d2",
+    "preview.png": "5b97cb8bcb7281d80c93ea530132cd87485dabff2af36873d2ec840c270659ce"
+  },
+  "frontendSha256": "dde450a1460f5e12278d7ecebe27f94171a80667f03052982259164d69bbcdeb"
+}

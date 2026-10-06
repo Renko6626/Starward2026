@@ -5,10 +5,10 @@ import { ScrollProgress } from "../components/ScrollProgress";
 
 export function Brand() {
   return (
-    <Link to="/" className="brand" aria-label="Starward 首页">
+    <Link to="/" className="brand" aria-label="逐星巡礼首页">
       <Compass size={27} strokeWidth={1.2} />
       <span>
-        STARWARD<small>秘封 · 创作接力 2026</small>
+        逐星巡礼<small>Starward2026</small>
       </span>
     </Link>
   );
@@ -50,7 +50,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
     pathname.startsWith("/admin");
   if (isWorkspace) return <>{children}</>;
   return (
-    <div className="public-site">
+    <div className={`public-site ${pathname === "/" ? "public-site--home" : ""}`}>
       <ScrollProgress key={pathname} />
       <a className="skip-link" href="#main-content">
         跳至正文
@@ -99,11 +99,8 @@ export function SiteLayout({ children }: PropsWithChildren) {
         </div>
       </main>
       <footer className="public-footer">
-        <span>
-          STARWARD 2026 <span className="footer-divider">/</span>{" "}
-          秘封组同人创作接力
-        </span>
-        <span>在故事交汇之处，继续观测。</span>
+        <span>逐星巡礼</span>
+        <span>Starward2026</span>
       </footer>
     </div>
   );

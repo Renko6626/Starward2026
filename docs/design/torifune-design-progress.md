@@ -1,5 +1,6 @@
 # 鸟船科研站设计进展
 
+> 2026-10-06 已实施归档：[A/19 独立旧稿](../../experiments/station/archive/torifune-a19-axial-spine/README.md)。新稿见 [环形站样稿](../../experiments/station/ring-romantic/README.md)。下文保留当时的路径与运行状态。
 更新日期：2026-10-06。
 
 此文档记录当前设计依据、已完成的样稿与已经撤回的方向。功能与装配方案详见 [结构草案](./torifune-structure-draft.md)，关系图见 [科研站功能连接示意](./torifune-functional-layout.svg)。

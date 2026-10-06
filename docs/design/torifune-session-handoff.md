@@ -1,5 +1,6 @@
 # 鸟船设计会话交接
 
+> 2026-10-06 已实施归档：[A/19 独立旧稿](../../experiments/station/archive/torifune-a19-axial-spine/README.md)。新稿见 [环形站样稿](../../experiments/station/ring-romantic/README.md)。下文保留当时的路径与运行状态。
 > 本文保留 A/19 写实稿的历史交接。新环形版本的工作入口见 [环形站会话交接](./torifune-ring-handoff.md)，按其链接的结构基线与实施计划继续；下文无大型旋转环、黑箱重力及旧部件数量仅适用于旧稿。2026-10-06 新方案尚在文档阶段，旧源代码仍在 experiments/station/，未执行归档迁移。
 
 更新：2026-10-06。阶段性收工，当前默认模型为 **A / 19**。

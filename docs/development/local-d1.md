@@ -13,6 +13,35 @@
 
 ## 2. Commands
 
+### 2.1 一键本地体验（推荐给合作者）
+
+在仓库根目录执行：
+
+```bash
+npm run test:env -- local
+```
+
+这个入口会依次完成：
+
+1. 如果没有 `.dev.vars`，生成一个只用于本机、且被 Git 忽略的 Better Auth 密钥，并打开
+   loopback 管理员 bypass 与本地 origin trust；已有 `.dev.vars` 不会覆盖。
+2. 删除并重建本地 D1，应用全部迁移并写入 seeded 门户、参与者、时间段和 session。
+3. 打印外部服务状态，然后启动 Vite + Cloudflare Worker 开发服务器。
+
+浏览器打开 `http://localhost:20262`。启动报告中的 `[ready]` / `[offline]` 是有意设计的：
+
+| 服务 | 未配置时的表现 | 本地是否仍可继续跑页面 |
+| --- | --- | --- |
+| Wrangler D1 local | 无 | 可以，核心 API 使用本地数据库 |
+| 本地管理员入口 | 需要 `.dev.vars` 中的 bypass | 可以；入口脚本会为新环境打开它 |
+| Resend 邮件 OTP | 登录发送验证码接口返回不可用 | 可以浏览 seeded 页面；用打印出的本地 session 做 smoke |
+| Turnstile | 验证码校验关闭 | 可以；提交流程不要求外部验证码 |
+
+本地入口不会打印密钥值，也不会触发 Cloudflare、ACR 或 VPS 部署。停止服务器按 `Ctrl-C`；
+再次启动会重新 reset seeded 数据。
+
+### 2.2 手动本地 D1 命令
+
 推荐命令如下：
 
 ```bash
@@ -36,6 +65,37 @@ npm run dev
 - `npm run db:local:print-portals`
   - 不修改数据库
   - 仅打印门户样本账号的已签名 cookie
+
+### 2.3 本机 Docker 运行时
+
+想体验 Node + SQLite + Caddy，而不是 Worker 本地模拟时：
+
+```bash
+cp .env.example .env
+# 填入本机测试用的 BETTER_AUTH_SECRET、BETTER_AUTH_URL、Resend 等变量
+npm run test:env -- docker
+```
+
+该路径需要 Docker Engine 和 Compose v2，默认通过 `http://localhost` 访问。它使用独立的
+Docker named volumes，不会复用本地 D1；停止可执行：
+
+```bash
+docker compose --env-file .env -f deploy/docker-compose.yml down
+```
+
+### 2.4 Cloudflare staging
+
+没有 VPS 也可以把 Worker 部署到 Cloudflare staging，但需要 Cloudflare 账号、D1 binding、
+域名和 secrets：
+
+```bash
+npm run test:env -- staging
+npm run build:staging
+npm run deploy:staging
+```
+
+`test:env -- staging` 只展示检查和部署命令，不会替合作者执行远程部署。Staging 与本地 D1
+和 Docker SQLite 是三套独立数据，不要把测试账号或备份混用。
 
 ## 3. Seed Coverage
 

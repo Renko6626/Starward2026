@@ -1,0 +1,82 @@
+* { box-sizing: border-box; }
+:root { font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; color: #e7e9e6; background: #05080d; font-synthesis: none; }
+body { margin: 0; overflow: hidden; }
+button { font: inherit; }
+#observatory, #viewport { position: fixed; inset: 0; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+canvas:focus-visible { outline: 1px solid #c4cfd4; outline-offset: -3px; }
+.shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, #03070be8, transparent 28%, transparent 88%, #03070b66), radial-gradient(ellipse at 0% 80%, #03070b88, transparent 42%); }
+header { position: absolute; top: 38px; left: 44px; right: 44px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+.identity { display: flex; gap: 15px; align-items: center; font-size: 17px; letter-spacing: .16em; font-weight: 500; }
+.identity-sub { display: block; margin-top: 5px; font-size: 10px; letter-spacing: .3em; color: #a3adb5; }
+.emblem { width: 28px; height: 36px; position: relative; }
+.emblem::before, .emblem::after { content: ""; position: absolute; width: 19px; height: 32px; border: 1px solid #cbd5d8; border-radius: 50%; transform: rotate(35deg); }
+.emblem::after { left: 7px; transform: rotate(-35deg); border-color: #89929c; }
+.edition { color: #abb4bb; font-size: 11px; letter-spacing: .12em; }
+.edition span { margin-left: 12px; color: #eff3f3; }
+.caption { position: absolute; left: 44px; bottom: 112px; pointer-events: none; }
+.activity-links { display: flex; gap: 12px; margin-top: 27px; pointer-events: auto; }
+.activity-links a { display: inline-flex; align-items: center; padding: 12px 23px; border: 1px solid #b2c3ce55; color: #dfe6e9; background: #101923aa; text-decoration: none; font-size: 13px; border-radius: 3px; }
+.activity-links a:first-child { background: #d0d9da; color: #17212b; border-color: #d0d9da; }
+.activity-links a:hover { border-color: #e5eff4; }
+.activity-links a:focus-visible { outline: 2px solid #d1e7ed; outline-offset: 4px; }
+.caption-kicker { margin: 0 0 15px; color: #a4b4c1; font-size: 12px; letter-spacing: .18em; }
+h1 { margin: 0; font-size: clamp(27px, 3.1vw, 48px); font-weight: 400; line-height: 1.45; letter-spacing: .09em; text-shadow: 0 2px 24px #0009; }
+.caption-note { color: #8f9ba6; font-size: 11px; margin: 17px 0 0; letter-spacing: .08em; }
+.model-labels { position: absolute; inset: 0; pointer-events: none; }
+.model-labels span { position: absolute; transform: translate(-50%, -100%); padding: 4px 7px; color: #d9e1e6; background: #070c13c7; border-bottom: 1px solid #8298aa66; font-size: 11px; white-space: nowrap; }
+.model-labels span[hidden] { display: none; }
+.clean .model-labels, .clean #envelopes { opacity: 0; pointer-events: none; }
+h1 { font-size: clamp(22px, 2.2vw, 34px); }
+footer { position: absolute; bottom: 28px; left: 44px; right: 44px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.hint { margin: 0; font-size: 11px; color: #9ba8b3; }
+.hint span { margin-left: 23px; color: #7d8996; }
+.controls { display: flex; gap: 8px; }
+button { padding: 10px 15px; min-height: 40px; border: 1px solid #8e9ca22b; background: #0a10189c; color: #c4cdd2; font-size: 11px; cursor: pointer; border-radius: 3px; backdrop-filter: blur(8px); transition: background .2s, border-color .2s; }
+button:hover { background: #182433cc; border-color: #b5ccd063; }
+button:focus-visible { outline: 2px solid #d1e7ed; outline-offset: 4px; }
+button[aria-pressed="true"] { border-color: #92aab67a; color: #fff; }
+#loading { position: absolute; inset: 0; display: flex; gap: 18px; justify-content: center; align-items: center; background: #05080d; font-size: 13px; color: #b7c5d0; transition: opacity .7s; pointer-events: none; }
+#loading.ready { opacity: 0; }
+#loading[hidden] { display: none; }
+.loading-mark { height: 26px; width: 26px; border: 1px solid #829aa055; border-top-color: #dfebee; border-radius: 50%; animation: loading 1.5s linear infinite; }
+#failure { position: absolute; top: 50%; left: 12%; right: 12%; text-align: center; line-height: 1.8; }
+.clean header, .clean .caption, .clean .hint, .clean .shade, .clean #motion, .clean #reset { opacity: 0; pointer-events: none; }
+header, .caption, .hint, .shade, .controls button { transition: opacity .35s; }
+.clean #clean { opacity: .4; }
+.clean #clean:hover, .clean #clean:focus-visible { opacity: 1; }
+@keyframes loading { to { transform: rotate(360deg); } }
+@media (max-width: 700px) {
+  header { top: 24px; left: 22px; right: 22px; }
+  .identity { font-size: 14px; gap: 11px; }
+  .edition { font-size: 10px; }
+  .caption { left: 24px; bottom: 138px; }
+  .caption-kicker { font-size: 10px; margin-bottom: 10px; }
+  h1 { font-size: 30px; }
+  .caption-note { font-size: 10px; margin-top: 10px; }
+  .activity-links { margin-top: 18px; }
+  .activity-links a { font-size: 11px; padding: 9px 16px; }
+  footer { left: 22px; right: 22px; bottom: max(22px, env(safe-area-inset-bottom)); align-items: flex-start; flex-direction: column; gap: 14px; }
+  .controls { width: 100%; }
+  .controls button { flex: 1; }
+  .controls { flex-wrap: wrap; }
+  .controls button { min-width: 42%; }
+  .model-labels span { font-size: 9px; padding: 3px 5px; }
+  .model-labels span[data-priority="secondary"] { display: none; }
+  .caption { bottom: 184px; right: 24px; }
+  h1 { font-size: 23px; }
+  .keyboard-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Keep the exterior central; secondary annotations stay sparse on narrow screens. */
+.caption { max-width: 560px; }
+.caption-note { line-height: 1.7; letter-spacing: .02em; }
+@media (max-width: 700px) {
+  .edition { font-size: 9px; }
+  .edition span { margin-left: 5px; }
+  .caption { bottom: 179px; }
+  h1 { font-size: 25px; }
+  .caption-note { max-width: 330px; }
+  .model-labels span[data-priority="primary"] { font-size: 9px; background: #070c139c; }
+}
