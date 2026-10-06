@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1220" viewBox="0 0 1800 1220" role="img" aria-labelledby="title desc">
+<title id="title">环形低重力生态实验站：功能与旋转分组</title>
+<desc id="desc">固定核心、生态主环与反向配平副环的功能清单及待设计的跨组接口。框图不表示真实设备位置或比例。</desc>
+<style>text{font-family:"Noto Sans CJK SC","Noto Sans CJK",sans-serif}</style>
+<rect x="0" y="0" width="1800" height="1220" rx="0" fill="#101923"/>
+<text x="45" y="33" dominant-baseline="text-before-edge" font-size="43" font-weight="700" fill="#edf0ef">环形低重力生态实验站</text>
+<text x="47" y="97" dominant-baseline="text-before-edge" font-size="25" font-weight="400" fill="#a9b7c2">功能与旋转分组草图   /   地月 L4   /   浪漫工业风格</text>
+<rect x="40" y="155" width="660" height="915" rx="10" fill="#172431" stroke="#8db3d1" stroke-width="2"/>
+<text x="65" y="178" dominant-baseline="text-before-edge" font-size="30" font-weight="700" fill="#8db3d1">固定核心与外挂设备</text>
+<text x="65" y="218" dominant-baseline="text-before-edge" font-size="21" font-weight="400" fill="#a9b7c2">各功能模块逐个装配；相邻顺序待布局确认</text>
+<rect x="75" y="275" width="280" height="112" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="92" y="288" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">载人接口与人员支持</text>
+<text x="92" y="324" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">前端载人接口</text>
+<text x="92" y="353" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">4 人 / 驻留 2–3 个月</text>
+<rect x="380" y="275" width="285" height="112" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="397" y="288" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">侧向货运接口</text>
+<text x="397" y="324" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">检查、暂存与转运</text>
+<text x="397" y="353" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">外部托盘与抓取点</text>
+<rect x="75" y="423" width="280" height="112" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="92" y="436" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">主分析实验室</text>
+<text x="92" y="472" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">样品处理、分析与保存</text>
+<text x="92" y="501" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">固定轴线 / 微重力工况</text>
+<rect x="380" y="423" width="285" height="112" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="397" y="436" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">能源与热控</text>
+<text x="397" y="472" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">4 组光伏翼 / 2 组散热板</text>
+<text x="397" y="501" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">板面垂直 / 独立根部机构</text>
+<rect x="75" y="571" width="280" height="130" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="92" y="584" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">独立挂接推进尾段</text>
+<text x="92" y="620" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">6 主贮箱 / 4 主发动机</text>
+<text x="92" y="649" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">双组元化学主推进</text>
+<text x="92" y="678" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">支座、推力框与供给设备</text>
+<rect x="380" y="571" width="285" height="130" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="397" y="584" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">通信与姿控</text>
+<text x="397" y="620" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">一面主碟与辅助传感器</text>
+<text x="397" y="649" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">前后分组单组元 RCS</text>
+<text x="397" y="678" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">短支架、阀箱与管路</text>
+<rect x="75" y="752" width="590" height="125" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="92" y="765" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">移动机械臂系统</text>
+<text x="92" y="801" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">两支机械臂：货运/装配与设备检修</text>
+<text x="92" y="830" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">导轨、移动底座、转接基座与空闲停靠位</text>
+<text x="75" y="922" dominant-baseline="text-before-edge" font-size="25" font-weight="700" fill="#8db3d1">大型板翼安装在固定组</text>
+<text x="75" y="964" dominant-baseline="text-before-edge" font-size="23" font-weight="400" fill="#a9b7c2">光伏追日与散热定向分别设计</text>
+<text x="75" y="1005" dominant-baseline="text-before-edge" font-size="23" font-weight="400" fill="#a9b7c2">装配接口与来访飞船对接口分别表达</text>
+<rect x="1080" y="155" width="680" height="565" rx="10" fill="#172431" stroke="#8dc8b5" stroke-width="2"/>
+<text x="1105" y="177" dominant-baseline="text-before-edge" font-size="30" font-weight="700" fill="#8dc8b5">生态主环旋转组</text>
+<text x="1105" y="219" dominant-baseline="text-before-edge" font-size="22" font-weight="400" fill="#a9b7c2">外壳外径约 100 米 / 地面重力目标约 0.16 g</text>
+<rect x="1110" y="277" width="620" height="100" rx="7" fill="#203241" stroke="#8dc8b5" stroke-width="2"/>
+<text x="1127" y="290" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8dc8b5">分段生态压力空间</text>
+<text x="1127" y="326" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">闭合主环 / 舱段与桁架节点交错 / 不直接展示植被</text>
+<rect x="1110" y="400" width="620" height="115" rx="7" fill="#203241" stroke="#8dc8b5" stroke-width="2"/>
+<text x="1127" y="413" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8dc8b5">生态与技术服务空间</text>
+<text x="1127" y="449" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">8 米局部净高 / 16 米轴向可用总宽度</text>
+<text x="1127" y="478" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">两侧各约 2 米可隔离服务带 / 样品采集与进入节点</text>
+<rect x="1110" y="539" width="620" height="140" rx="7" fill="#203241" stroke="#8dc8b5" stroke-width="2"/>
+<text x="1127" y="552" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8dc8b5">环上循环、结构与作业节点</text>
+<text x="1127" y="588" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">水、气体、营养与废物处理主要随环旋转</text>
+<text x="1127" y="617" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">四组辐条 / 交错周向桁架 / 舱段安装座</text>
+<text x="1127" y="646" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">转接基座、抓取点与服务管路</text>
+<rect x="1080" y="765" width="680" height="305" rx="10" fill="#172431" stroke="#d5b47b" stroke-width="2"/>
+<text x="1105" y="788" dominant-baseline="text-before-edge" font-size="30" font-weight="700" fill="#d5b47b">反向配平副环旋转组</text>
+<text x="1105" y="835" dominant-baseline="text-before-edge" font-size="24" font-weight="400" fill="#a9b7c2">外径先比较 70–80 米，较大而纤细</text>
+<text x="1105" y="879" dominant-baseline="text-before-edge" font-size="24" font-weight="400" fill="#a9b7c2">共轴、轴向错开；独立旋转结构</text>
+<text x="1105" y="923" dominant-baseline="text-before-edge" font-size="24" font-weight="400" fill="#a9b7c2">桁架、配重与设备节点形成工业轮廓</text>
+<text x="1105" y="988" dominant-baseline="text-before-edge" font-size="22" font-weight="400" fill="#d5b47b">质量分布、转速与接口方案待定</text>
+<text x="740" y="170" dominant-baseline="text-before-edge" font-size="28" font-weight="700" fill="#edf0ef">跨组接口</text>
+<text x="740" y="211" dominant-baseline="text-before-edge" font-size="21" font-weight="400" fill="#a9b7c2">虚线：方案仍需明确</text>
+<rect x="745" y="285" width="285" height="118" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="762" y="298" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">人员与封装样品</text>
+<text x="762" y="334" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">压力 / 污染隔离</text>
+<text x="762" y="363" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">转接设施待定</text>
+<polyline points="700,343 745,343" fill="none" stroke="#8db3d1" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="745,343 734.8683290659683,347.28360176539513 734.8683290659683,338.71639823460487" fill="#8db3d1" stroke="#8db3d1" stroke-width="2"/>
+<polyline points="1030,343 1080,330" fill="none" stroke="#8db3d1" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="1080,330 1071.272240050325,336.6952375806128 1069.116441627018,328.403705183278" fill="#8db3d1" stroke="#8db3d1" stroke-width="2"/>
+<rect x="745" y="430" width="285" height="118" rx="7" fill="#203241" stroke="#8dc8b5" stroke-width="2"/>
+<text x="762" y="443" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8dc8b5">补给与物料交换</text>
+<text x="762" y="479" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">桁架附挂管路</text>
+<text x="762" y="508" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">流体转接 / 关断</text>
+<polyline points="700,488 745,488" fill="none" stroke="#8dc8b5" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="745,488 734.8683290659683,492.28360176539513 734.8683290659683,483.71639823460487" fill="#8dc8b5" stroke="#8dc8b5" stroke-width="2"/>
+<polyline points="1030,488 1080,465" fill="none" stroke="#8dc8b5" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="1080,465 1072.585614887943,473.12569341103307 1069.0053324855594,465.3424707971559" fill="#8dc8b5" stroke="#8dc8b5" stroke-width="2"/>
+<rect x="745" y="575" width="285" height="118" rx="7" fill="#203241" stroke="#8db3d1" stroke-width="2"/>
+<text x="762" y="588" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8db3d1">电力与数据服务</text>
+<text x="762" y="624" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">旋转转接与供电</text>
+<text x="762" y="653" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">监测 / 驱动接口</text>
+<polyline points="700,633 745,633" fill="none" stroke="#8db3d1" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="745,633 734.8683290659683,637.2836017653951 734.8683290659683,628.7163982346049" fill="#8db3d1" stroke="#8db3d1" stroke-width="2"/>
+<polyline points="1030,633 1080,605" fill="none" stroke="#8db3d1" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="1080,605 1073.253038412169,613.6878368615169 1069.0670739047,606.2129002410367" fill="#8db3d1" stroke="#8db3d1" stroke-width="2"/>
+<rect x="745" y="745" width="285" height="118" rx="7" fill="#203241" stroke="#8dc8b5" stroke-width="2"/>
+<text x="762" y="758" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#8dc8b5">生态侧热控接口</text>
+<text x="762" y="794" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">环上换热与固定散热</text>
+<text x="762" y="823" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">介质路径待定</text>
+<polyline points="700,803 745,803" fill="none" stroke="#8dc8b5" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="745,803 734.8683290659683,807.2836017653951 734.8683290659683,798.7163982346049" fill="#8dc8b5" stroke="#8dc8b5" stroke-width="2"/>
+<polyline points="1030,803 1080,690" fill="none" stroke="#8dc8b5" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="1080,690 1079.8176179547165,700.9984879319641 1071.9831008967071,697.5318874638183" fill="#8dc8b5" stroke="#8dc8b5" stroke-width="2"/>
+<rect x="745" y="920" width="285" height="118" rx="7" fill="#203241" stroke="#d5b47b" stroke-width="2"/>
+<text x="762" y="933" dominant-baseline="text-before-edge" font-size="23" font-weight="700" fill="#d5b47b">副环独立旋转接口</text>
+<text x="762" y="969" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">承力 / 驱动 / 服务</text>
+<text x="762" y="998" dominant-baseline="text-before-edge" font-size="20" font-weight="400" fill="#a9b7c2">惯量配平关系</text>
+<polyline points="700,978 745,978" fill="none" stroke="#d5b47b" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="745,978 734.8683290659683,982.2836017653951 734.8683290659683,973.7163982346049" fill="#d5b47b" stroke="#d5b47b" stroke-width="2"/>
+<polyline points="1030,978 1080,972" fill="none" stroke="#d5b47b" stroke-width="2" stroke-dasharray="8 7"/>
+<polygon points="1080,972 1070.4508692718082,977.4602291468311 1069.4301279170493,968.954051190506" fill="#d5b47b" stroke="#d5b47b" stroke-width="2"/>
+<polyline points="45,1115 1755,1115" fill="none" stroke="#526775" stroke-width="2"/>
+<text x="45" y="1140" dominant-baseline="text-before-edge" font-size="23" font-weight="400" fill="#a9b7c2">跨组箭头连接结构组，组内功能框为清单；不表示实际模块位置或比例。</text>
+<text x="45" y="1175" dominant-baseline="text-before-edge" font-size="22" font-weight="400" fill="#a9b7c2">尺寸为讨论工作值，接口与作业覆盖尚未完成工程验证。</text>
+</svg>
