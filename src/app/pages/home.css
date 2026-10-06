@@ -56,26 +56,19 @@
 .relay-steps p { color: #909090; font-size: 12px; line-height: 2; max-width: 26em; margin: 0; }
 .relay-return { border-top: 1px solid #c3c3c318; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .relay-return > span { color: #858585; font-size: 11px; }
-.design-references { width: 87.4%; max-width: 1320px; margin: auto; padding: 0 0 70px; }
-.design-references > h2 { border-top: 1px solid #c3c3c326; padding-top: 32px; margin: 0 0 30px; font: 400 21px/1.6 var(--font-headline); }
-.design-reference-list { list-style: none; padding: 0; margin: 0; }
-.design-reference-list li + li { border-top: 1px solid #c3c3c315; }
-.design-reference-list a { display: grid; grid-template-columns: 200px 1fr 16px; align-items: start; gap: 28px; padding: 24px 0; color: #bdbdbd; }
-.design-reference-source { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
-.design-reference-source small { font-size: 10px; color: #777; }
-.design-reference-content h3 { margin: 0 0 9px; font: 500 14px/1.6 "Starward Orbital", sans-serif; color: #c9c9c9; }
-.design-reference-content p { margin: 0; color: #858585; font-size: 11px; line-height: 1.9; }
-.design-reference-list a > svg { margin-top: 4px; color: #858585; }
-.design-reference-list a:hover h3, .design-reference-list a:hover > svg { color: #fff; }
+.design-references { width: 87.4%; max-width: 1320px; margin: auto; padding: 0 0 44px; }
+.design-references > h2 { border-top: 1px solid #c3c3c326; padding-top: 26px; margin: 0 0 20px; font: 400 18px/1.6 var(--font-headline); }
+.design-reference-list { list-style: none; padding: 0; margin: 0; color: #858585; font-size: 11px; line-height: 1.75; }
+.design-reference-list li { display: grid; grid-template-columns: 25px 1fr; gap: 5px; margin: 0 0 7px; }
+.design-reference-number { color: #666; font-variant-numeric: tabular-nums; }
+.design-reference-list p { margin: 0; }
+.design-reference-list a { color: #b5b5b5; text-decoration: underline; text-decoration-color: #ffffff26; text-underline-offset: 3px; }
+.design-reference-list a:hover { color: #fff; text-decoration-color: #ffffff80; }
 @media (max-width: 699px) {
-  .design-references { width: calc(100% - 52px); padding-bottom: 42px; }
-  .design-references > h2 { font-size: 19px; padding-top: 26px; margin-bottom: 15px; }
-  .design-reference-list a { grid-template-columns: 1fr 16px; gap: 14px; padding: 22px 0; }
-  .design-reference-source { grid-column: 1; flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 12px; }
-  .design-reference-content { grid-column: 1; }
-  .design-reference-content h3 { font-size: 12px; }
-  .design-reference-content p { font-size: 10px; }
-  .design-reference-list a > svg { grid-column: 2; grid-row: 1; }
+  .design-references { width: calc(100% - 52px); padding-bottom: 32px; }
+  .design-references > h2 { font-size: 16px; padding-top: 22px; margin-bottom: 16px; }
+  .design-reference-list { font-size: 10px; line-height: 1.8; }
+  .design-reference-list li { grid-template-columns: 22px 1fr; margin-bottom: 9px; }
 }
 .mission-countdown { width: 87.4%; max-width: 1320px; margin: auto; padding: 70px 0 64px; border-bottom: 1px solid #c3c3c326; }
 .mission-countdown-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 42px; }
