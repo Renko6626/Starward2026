@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { WorkspaceApplicationInput } from "../../src/shared/collaboration";
+import { workspaceApplicationInputSchema, type WorkspaceApplicationInput } from "../../src/shared/collaboration";
+import { updatePortalProfileInputSchema } from "../../src/shared/portal";
+import { getPortalProfileByUserId, upsertPortalProfile } from "./portal-profiles";
 import { SqliteD1Fixture } from "../test/sqlite-d1";
 import {
   CollaborationConflict,
   createSwap,
   getCollaboration,
+  getPortalNeighbors,
   respondSwap,
   saveWorkspaceApplication,
   withdrawApplication,
@@ -31,6 +34,7 @@ const input = (
   segmentId,
   profile: {
     creditName: "署名",
+    bilibiliUid: "202600001",
     contactEmail: "contact@example.com",
     primaryContactChannel: "email",
     primaryContactHandle: "contact@example.com",
@@ -205,14 +209,15 @@ describe("ownership and concurrent edits", () => {
       );
     const changed = input("s2");
     changed.profile.creditName = "未保存署名";
+    changed.profile.bilibiliUid = "999999999";
     await expect(
       saveWorkspaceApplication(f.db, "u1", "one@example.com", changed),
     ).rejects.toThrow(CollaborationConflict);
     expect(
       f.sqlite
-        .prepare("SELECT credit_name FROM portal_profiles WHERE user_id='u1'")
+        .prepare("SELECT credit_name,bilibili_uid FROM portal_profiles WHERE user_id='u1'")
         .get(),
-    ).toMatchObject({ credit_name: "署名" });
+    ).toMatchObject({ credit_name: "署名", bilibili_uid: "202600001" });
     expect((await getCollaboration(f.db, "u1")).segments[0].status).toBe(
       "reserved",
     );
@@ -383,5 +388,97 @@ describe("swap eligibility and replay", () => {
     expect((await getCollaboration(f.db, "u1")).requests[0].status).toBe(
       "expired",
     );
+  });
+});
+
+
+describe("Bilibili profiles and private neighbors", () => {
+  it("requires the same numeric UID for profile and workspace writes and persists both paths", async () => {
+    const f = fixture();
+    const saved = input("s1");
+    for (const bilibiliUid of [undefined, "", "0", "0123", "abc", "https://space.bilibili.com/123", "1".repeat(21)]) {
+      const profile = { ...saved.profile, bilibiliUid };
+      expect(updatePortalProfileInputSchema.safeParse(profile).success).toBe(false);
+      expect(workspaceApplicationInputSchema.safeParse({ ...saved, profile }).success).toBe(false);
+    }
+    await saveWorkspaceApplication(f.db, "u1", "one@example.com", saved);
+    expect((await getPortalProfileByUserId(f.db, "u1"))?.bilibiliUid).toBe("202600001");
+    await upsertPortalProfile(f.db, { userId: "u1", data: { ...saved.profile, bilibiliUid: "987654321" } });
+    expect((await getPortalProfileByUserId(f.db, "u1"))?.bilibiliUid).toBe("987654321");
+    const updated = input("s1");
+    updated.profile.bilibiliUid = "123456789";
+    await saveWorkspaceApplication(f.db, "u1", "one@example.com", updated);
+    expect((await getPortalProfileByUserId(f.db, "u1"))?.bilibiliUid).toBe("123456789");
+  });
+
+  it("returns only immediate slots, including empty slots and boundaries, in active sort order", async () => {
+    const f = fixture();
+    const first = await saveWorkspaceApplication(f.db, "u1", "one@example.com", input("s1"));
+    const last = await saveWorkspaceApplication(f.db, "u2", "two@example.com", input("s3"));
+    await reviewApplication(f.db, first.id, { status: "approved" }, "admin");
+    await reviewApplication(f.db, last.id, { status: "approved" }, "admin");
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual({
+      currentSegmentId: "s1", previous: null,
+      next: { segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
+    });
+    expect(await getPortalNeighbors(f.db, "u2")).toEqual({
+      currentSegmentId: "s3", next: null,
+      previous: { segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
+    });
+    f.sqlite.exec("UPDATE schedule_segments SET sort_order=4 WHERE id='s1'");
+    expect((await getPortalNeighbors(f.db, "u1")).previous?.segmentId).toBe("s3");
+  });
+
+  it("enforces caller eligibility and exposes only a confirmed neighbor's UID and anonymous public name", async () => {
+    const f = fixture();
+    const a = await saveWorkspaceApplication(f.db, "u1", "one@example.com", input("s1"));
+    const b = await saveWorkspaceApplication(f.db, "u2", "two@example.com", input("s2", true));
+    const empty = { currentSegmentId: null, previous: null, next: null };
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual(empty);
+    expect(await getPortalNeighbors(f.db, "u3")).toEqual(empty);
+    await reviewApplication(f.db, a.id, { status: "approved" }, "admin");
+    expect((await getPortalNeighbors(f.db, "u1")).next).toEqual({
+      segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "reserved", publicName: "匿名创作者", bilibiliUid: null,
+    });
+    await reviewApplication(f.db, b.id, { status: "approved" }, "admin");
+    const neighbors = await getPortalNeighbors(f.db, "u1");
+    expect(neighbors.next).toEqual({
+      segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001",
+    });
+    expect(JSON.stringify(neighbors)).not.toContain("@example.com");
+    expect((await getCollaboration(f.db, "u1")).segments[1]).not.toHaveProperty("bilibiliUid");
+    f.sqlite.exec("UPDATE schedule_segments SET status='locked' WHERE id='s2'");
+    expect((await getPortalNeighbors(f.db, "u1")).next).toMatchObject({ status: "unavailable", bilibiliUid: null });
+    f.sqlite.exec("UPDATE schedule_segments SET status='held' WHERE id='s2'; UPDATE portal_profiles SET bilibili_uid=NULL WHERE user_id='u2'");
+    expect((await getPortalNeighbors(f.db, "u1")).next?.bilibiliUid).toBeNull();
+    f.sqlite.exec("UPDATE participants SET status='completed' WHERE user_id='u1'");
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual(empty);
+    f.sqlite.exec("UPDATE participants SET status='approved' WHERE user_id='u1'; UPDATE schedule_segments SET status='released',current_participant_id=NULL WHERE id='s1'");
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual(empty);
+  });
+
+  it("keeps completed approved neighbors visible but excludes inactive schedules and unapproved completed peers", async () => {
+    const f = fixture();
+    await approvedPair(f);
+    f.sqlite.exec("UPDATE participants SET status='completed' WHERE user_id='u2'; UPDATE schedule_segments SET status='completed' WHERE id='s2'");
+    expect((await getPortalNeighbors(f.db, "u1")).next).toMatchObject({ status: "confirmed", bilibiliUid: "202600001" });
+    f.sqlite.exec("UPDATE applications SET status='pending' WHERE user_id='u2'");
+    expect((await getPortalNeighbors(f.db, "u1")).next).toMatchObject({ status: "unavailable", bilibiliUid: null });
+    f.sqlite.exec("UPDATE schedule_versions SET status='archived' WHERE id='schedule_default'");
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual({ currentSegmentId: null, previous: null, next: null });
+  });
+
+  it("recalculates both authors' neighbors from current ownership after an accepted swap", async () => {
+    const f = fixture();
+    const { one, two } = await approvedPair(f);
+    expect((await getPortalNeighbors(f.db, "u1")).currentSegmentId).toBe("s1");
+    const request = await createSwap(f.db, one, "s2");
+    await respondSwap(f.db, two, request.id, "accept");
+    expect(await getPortalNeighbors(f.db, "u1")).toEqual({
+      currentSegmentId: "s2",
+      previous: { segmentId: "s1", segmentCode: "A", segmentName: "早场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001" },
+      next: { segmentId: "s3", segmentCode: "C", segmentName: "加场", status: "available", publicName: null, bilibiliUid: null },
+    });
+    expect((await getPortalNeighbors(f.db, "u2")).next).toMatchObject({ segmentId: "s2", publicName: "署名", bilibiliUid: "202600001" });
   });
 });

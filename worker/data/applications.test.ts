@@ -98,6 +98,7 @@ class SqliteD1Database {
       CREATE TABLE portal_profiles (
         user_id TEXT PRIMARY KEY,
         credit_name TEXT,
+        bilibili_uid TEXT,
         contact_email TEXT NOT NULL,
         primary_contact_channel TEXT NOT NULL,
         primary_contact_handle TEXT NOT NULL,

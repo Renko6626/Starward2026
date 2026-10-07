@@ -4,7 +4,8 @@ import { Button, Notice, PageHeading, ReadError, StatusBadge, WorkspaceSection }
 import { ApiError, requestJson } from "../../app/lib/api";
 import { applicationStatusLabels } from "../../shared/applications";
 import type { CollaborationResponse } from "../../shared/collaboration";
-import { projectDraftStatusLabels, type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
+import { type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
+import { NeighborSlots } from "../components/NeighborSlots";
 import { RegistrationSection } from "../components/RegistrationSection";
 import { ScheduleSection } from "../components/ScheduleSection";
 import { ScheduleGrid } from "../components/ScheduleGrid";
@@ -64,33 +65,29 @@ export function PortalOverviewPage() {
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
   const pendingRequests = collaboration.requests.filter(request => request.status === "pending");
   return <div className="page-content creator-workspace">
-    <PageHeading title="我的工作台" description="查看报名进度、调整排期，整理作品资料。"><StatusBadge tone={approved ? "success" : application.application?.status === "pending" ? "warning" : "muted"}>{application.application ? applicationStatusLabels[application.application.status] : "报名未提交"}</StatusBadge><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
-    <section className="workspace-summary" aria-label="我的计划与时段">
-      <div><p className="eyebrow">我的创作计划</p><h2>{dashboard.profile?.creditName ?? "填写你的报名资料"}</h2><p>{application.application?.introText || "填写创作计划后，报名和时段预留会一起提交。"}</p></div>
-      <div><p className="eyebrow">{current?.status === "reserved" ? "预留时段" : "当前时段"}</p><h2>{current ? `${current.code} ${current.name}` : "尚未选择"}</h2><p>{current?.status === "reserved" ? "审核中，时段已为你预留。" : current?.status === "confirmed" ? "报名已通过，时段已确认。" : approved ? "可以在排期区块认领空闲时段。" : "报名时选择一个可用时段。"}</p><div className="workspace-actions"><a className="text-link" href="#schedule">查看完整排期</a><a className="text-link" href={approved ? "#schedule" : "#plan"}>{approved ? "调整时间" : application.application ? "查看报名计划" : "填写报名"}</a></div></div>
-    </section>
+    <PageHeading title="我的工作台"><StatusBadge tone={approved ? "success" : application.application?.status === "pending" ? "warning" : "muted"}>{application.application ? applicationStatusLabels[application.application.status] : "报名未提交"}</StatusBadge><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
-    <WorkspaceSection id="tasks" title="待办与反馈" summary={pendingRequests.length ? `${pendingRequests.length} 个换期请求待处理` : approved ? "继续整理作品资料" : "报名进度与审核意见"} defaultOpen={Boolean(application.application) || pendingRequests.length > 0}>
+    {application.application?.adminNote || pendingRequests.length ? <div className="compact-feedback">
       {application.application?.adminNote ? <Notice tone="warning">主催意见：{application.application.adminNote}</Notice> : null}
-      {approved ? <p>{dashboard.projectDraft ? `预告${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]}，审查${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}。` : "请补充作品预告和审查说明。"} <a className="text-link" href="#project">整理作品资料</a></p> : <p>{application.application?.status === "pending" ? "报名正在审核，审核结果会显示在这里。开放期间可以修改计划与预留时段。" : application.application ? "查看审核意见，在报名开放期间更新计划与时段。" : "先填写报名计划，提交后可在这里查看审核结果。"}</p>}
-      <SwapRequests collaboration={collaboration} onSaved={refresh} />
-    </WorkspaceSection>
-    <WorkspaceSection id="plan" title="报名计划" summary={approved ? "已通过，报名资料锁定" : application.application ? "创作计划与预留时段" : "联系方式、创作计划与时段一起提交"} defaultOpen={!application.application}>
-      <RegistrationSection application={application} collaboration={collaboration} onSaved={refresh} />
+      {pendingRequests.length ? <SwapRequests collaboration={{ ...collaboration, requests: pendingRequests }} onSaved={refresh} /> : null}
+    </div> : null}
+    {approved ? <div className="creator-board">
+      <PortalProfilePage embedded compact onSaved={refresh} />
+      <section className="creator-card creator-work-card" id="project">
+        <header className="creator-card-header"><h2 className="creator-card-title">当前作品</h2><a className="text-link" href="#schedule">调整时段</a></header>
+        <div className="creator-card-body">
+          <div className="workspace-actions"><p>当前时段：{current ? `${current.code} ${current.name}` : "尚未选择"}</p><a className="text-link" href="#schedule">调整</a></div>
+          <PortalProjectPage embedded compact onSaved={refresh} revision={revision} />
+          <NeighborSlots revision={revision} />
+        </div>
+      </section>
+    </div> : <><span id="project" /><RegistrationSection compact application={application} collaboration={collaboration} onSaved={refresh} /></>}
+    <WorkspaceSection id={approved ? "plan" : "registration-status"} title="报名记录" summary={approved ? "已通过，报名计划锁定" : application.application?.status === "pending" ? "审核中，时段已预留" : "报名与时段一起提交"}>
+      {approved ? <RegistrationSection application={application} collaboration={collaboration} onSaved={refresh} /> : <p>{application.application?.introText || "填写右侧创作计划并选择时段后，即可提交报名。"}</p>}
       {application.application?.status === "pending" ? <div className="space-y-4">{confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留时段，并保留参与记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放时段"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : <Button variant="secondary" onClick={() => setConfirmWithdraw(true)}>撤回报名</Button>}</div> : null}
     </WorkspaceSection>
-    <WorkspaceSection id="schedule" title="日程安排" summary={current ? `${current.code} ${current.name}` : "尚未选择时段"}>
-      {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <>
-        <Notice>{dashboard.participant?.status === "completed" ? "参与已完成，可以查看排期。" : "可以查看所有时段；报名与预留时间在报名计划中一起提交。"}</Notice>
-        <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId}
-          renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往报名计划选择时段</a>} />
-      </>}
-    </WorkspaceSection>
-    <WorkspaceSection id="project" title="作品资料" summary={approved ? "公开预告与审查说明分别保存" : "报名通过后填写"} defaultOpen={approved}>
-      {approved ? <PortalProjectPage embedded onSaved={refresh} revision={revision} /> : <Notice>报名审核通过后，可以在这里维护作品资料。</Notice>}
-    </WorkspaceSection>
-    <WorkspaceSection id="profile" title="署名与联系方式" summary={dashboard.profile?.contactEmail ?? dashboard.user.email}>
-      {approved ? <PortalProfilePage embedded onSaved={refresh} /> : <Notice>署名和联系方式在报名计划中填写，与计划和时段一起保存。<a className="text-link" href="#plan">编辑报名资料</a></Notice>}
+    <WorkspaceSection id="schedule" title="完整排期" summary={current ? `${current.code} ${current.name}` : "尚未选择时段"}>
+      {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId} renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往创作计划选择时段</a>} />}
     </WorkspaceSection>
     <WorkspaceSection id="history" title="参与记录" summary="报名、排期和作品提交的进展">
       {dashboard.participant ? <PortalHistoryPage embedded revision={revision} /> : <p className="workspace-empty">提交报名后，参与记录会显示在这里。</p>}

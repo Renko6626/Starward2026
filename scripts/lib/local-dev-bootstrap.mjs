@@ -34,6 +34,7 @@ export const localDevSeedFixtures = {
     {
       user_id: "usr_seed_pending",
       credit_name: "宇佐见莲子",
+      bilibili_uid: "202600001",
       contact_email: "portal-pending@seed.starward.local",
       primary_contact_channel: "Discord",
       primary_contact_handle: "renko#2026",
@@ -45,6 +46,7 @@ export const localDevSeedFixtures = {
     {
       user_id: "usr_seed_active",
       credit_name: "结界观测者",
+      bilibili_uid: "202600002",
       contact_email: "portal-approved@seed.starward.local",
       primary_contact_channel: "Bluesky",
       primary_contact_handle: "@merry-seed",
@@ -372,6 +374,7 @@ export function buildLocalSeedSql() {
       [
         "user_id",
         "credit_name",
+        "bilibili_uid",
         "contact_email",
         "primary_contact_channel",
         "primary_contact_handle",

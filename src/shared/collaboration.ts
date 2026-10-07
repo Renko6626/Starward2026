@@ -46,3 +46,17 @@ export const createSwapInputSchema = z.object({
 });
 export const respondSwapInputSchema = z.object({ action: z.enum(["accept", "reject", "cancel"]) });
 export type CollaborationMutationResponse = { ok: true; message: string; notification?: "sent" | "failed" | "not_configured" };
+
+export type PortalNeighbor = {
+  segmentId: string;
+  segmentCode: string;
+  segmentName: string;
+  status: CollaborationSegment["status"];
+  publicName: string | null;
+  bilibiliUid: string | null;
+};
+export type PortalNeighborsResponse = {
+  currentSegmentId: string | null;
+  previous: PortalNeighbor | null;
+  next: PortalNeighbor | null;
+};

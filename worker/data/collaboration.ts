@@ -1,5 +1,7 @@
 import type {
   CollaborationResponse,
+  PortalNeighbor,
+  PortalNeighborsResponse,
   SwapRequest,
   WorkspaceApplicationInput,
 } from "../../src/shared/collaboration";
@@ -123,10 +125,11 @@ export async function saveWorkspaceApplication(
     ),
     db
       .prepare(
-        `INSERT INTO portal_profiles(user_id,credit_name,contact_email,primary_contact_channel,primary_contact_handle,backup_contact,is_anonymous,created_at,updated_at)
-        VALUES(?,?,?,?,?,?,?,?,?)
+        `INSERT INTO portal_profiles(user_id,credit_name,bilibili_uid,contact_email,primary_contact_channel,primary_contact_handle,backup_contact,is_anonymous,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(user_id)
         DO UPDATE SET credit_name=excluded.credit_name,
+        bilibili_uid=excluded.bilibili_uid,
         contact_email=excluded.contact_email,
         primary_contact_channel=excluded.primary_contact_channel,
         primary_contact_handle=excluded.primary_contact_handle,
@@ -137,6 +140,7 @@ export async function saveWorkspaceApplication(
       .bind(
         userId,
         p.creditName,
+        p.bilibiliUid,
         p.contactEmail.toLowerCase(),
         p.primaryContactChannel,
         p.primaryContactHandle,
@@ -232,6 +236,62 @@ export async function saveWorkspaceApplication(
 }
 
 const publicName = `CASE WHEN pp.is_anonymous = 1 THEN '匿名创作者' ELSE COALESCE(pp.credit_name, '未填写署名') END`;
+
+/** Read eligibility and adjacency in one snapshot; contact fields never enter this response. */
+export async function getPortalNeighbors(
+  db: D1Database,
+  userId: string,
+): Promise<PortalNeighborsResponse> {
+  const rows = await db
+    .prepare(
+      `SELECT s.id AS segmentId, s.code AS segmentCode, s.name AS segmentName,
+        CASE
+          WHEN s.status IN ('held','completed') AND
+            (p.status='approved' OR (p.status='completed' AND a.status='approved')) THEN 'confirmed'
+          WHEN s.status='held' THEN 'reserved'
+          WHEN s.current_participant_id IS NULL AND s.status IN ('open','released') THEN 'available'
+          ELSE 'unavailable'
+        END AS status,
+        CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName,
+        CASE WHEN s.status IN ('held','completed') AND
+          (p.status='approved' OR (p.status='completed' AND a.status='approved'))
+          THEN pp.bilibili_uid ELSE NULL END AS bilibiliUid,
+        CASE WHEN p.user_id=? AND p.status='approved' AND s.status='held' THEN 1 ELSE 0 END AS isCurrent
+      FROM schedule_segments s
+      JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
+      LEFT JOIN participants p ON p.id=s.current_participant_id
+      LEFT JOIN applications a ON a.id=p.application_id
+      LEFT JOIN portal_profiles pp ON pp.user_id=p.user_id
+      WHERE EXISTS (
+        SELECT 1 FROM schedule_segments own
+        JOIN participants owner ON owner.id=own.current_participant_id
+        WHERE own.schedule_version_id=v.id AND own.status='held'
+          AND owner.user_id=? AND owner.status='approved'
+      )
+      ORDER BY s.sort_order, s.id`,
+    )
+    .bind(userId, userId)
+    .all<PortalNeighbor & { isCurrent: number }>();
+  const index = rows.results.findIndex((row) => row.isCurrent === 1);
+  if (index < 0) return { currentSegmentId: null, previous: null, next: null };
+  const neighbor = (row: (typeof rows.results)[number] | undefined): PortalNeighbor | null =>
+    row
+      ? {
+          segmentId: row.segmentId,
+          segmentCode: row.segmentCode,
+          segmentName: row.segmentName,
+          status: row.status,
+          publicName: row.publicName,
+          bilibiliUid: row.bilibiliUid,
+        }
+      : null;
+  return {
+    currentSegmentId: rows.results[index].segmentId,
+    previous: neighbor(rows.results[index - 1]),
+    next: neighbor(rows.results[index + 1]),
+  };
+}
+
 type SegmentRow = {
   id: string;
   code: string;

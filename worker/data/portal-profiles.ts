@@ -7,6 +7,7 @@ import { nowIso } from "../lib/time";
 
 type PortalProfileRow = {
   credit_name: string;
+  bilibili_uid: string | null;
   contact_email: string;
   primary_contact_channel: string;
   primary_contact_handle: string;
@@ -20,6 +21,7 @@ export async function getPortalProfileByUserId(db: D1Database, userId: string) {
     .prepare(
       `SELECT
         credit_name,
+        bilibili_uid,
         contact_email,
         primary_contact_channel,
         primary_contact_handle,
@@ -49,6 +51,7 @@ export async function upsertPortalProfile(
       `INSERT INTO portal_profiles (
         user_id,
         credit_name,
+        bilibili_uid,
         contact_email,
         primary_contact_channel,
         primary_contact_handle,
@@ -56,9 +59,10 @@ export async function upsertPortalProfile(
         is_anonymous,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         credit_name = excluded.credit_name,
+        bilibili_uid = excluded.bilibili_uid,
         contact_email = excluded.contact_email,
         primary_contact_channel = excluded.primary_contact_channel,
         primary_contact_handle = excluded.primary_contact_handle,
@@ -69,6 +73,7 @@ export async function upsertPortalProfile(
     .bind(
       input.userId,
       input.data.creditName.trim(),
+      input.data.bilibiliUid,
       input.data.contactEmail.trim().toLowerCase(),
       input.data.primaryContactChannel.trim(),
       input.data.primaryContactHandle.trim(),
@@ -85,6 +90,7 @@ export async function upsertPortalProfile(
 function mapPortalProfile(row: PortalProfileRow): PortalProfile {
   return {
     creditName: row.credit_name,
+    bilibiliUid: row.bilibili_uid,
     contactEmail: row.contact_email,
     primaryContactChannel: row.primary_contact_channel,
     primaryContactHandle: row.primary_contact_handle,

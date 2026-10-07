@@ -10,6 +10,7 @@ import {
   CollaborationConflict,
   saveWorkspaceApplication,
   getCollaboration,
+  getPortalNeighbors,
   createSwap,
   respondSwap,
   withdrawApplication,
@@ -270,6 +271,12 @@ portalApi.get("/collaboration", async (c) => {
   const access = await getPortalSessionAccess(c);
   if ("response" in access) return access.response;
   return c.json(await getCollaboration(access.db, access.session.user.id));
+});
+
+portalApi.get("/neighbors", async (c) => {
+  const access = await getPortalSessionAccess(c);
+  if ("response" in access) return access.response;
+  return c.json(await getPortalNeighbors(access.db, access.session.user.id));
 });
 
 portalApi.post("/swaps", async (c) => {

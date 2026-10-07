@@ -79,6 +79,7 @@ it("uses one live profile credit across application, participant and draft reads
         data: {
           ...profile!,
           creditName: "统一署名",
+          bilibiliUid: "202600002",
           isAnonymous,
           backupContact: undefined,
         },

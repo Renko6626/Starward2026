@@ -56,7 +56,7 @@ const inputClassName = "field-input";
 
 const textareaClassName = "field-input min-h-32 resize-y";
 
-export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: { embedded?: boolean; onSaved?: () => Promise<void>; revision?: number } = {}) {
+export function PortalProjectPage({ embedded = false, compact = false, onSaved, revision = 0 }: { embedded?: boolean; compact?: boolean; onSaved?: () => Promise<void>; revision?: number } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const initialized = useRef(false);
@@ -337,7 +337,13 @@ export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: {
         </div>
       </PageHeading> : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {compact ? <div className="creator-work-summary">
+        <div className="workspace-actions"><StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}</StatusBadge><StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}</StatusBadge></div>
+        <h3>{state.project.draft.previewTitle || "作品尚未命名"}</h3>
+        <p>{state.project.draft.workType ? workTypeLabels[state.project.draft.workType] : "类型待填写"}</p>
+        <p>{state.project.draft.previewSummary || "保存作品简介后会显示在这里。"}</p>
+        {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">查看作品</a> : <p className="field-hint">作品链接待填写</p>}
+      </div> : <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
           label="当前时间段"
           value={
@@ -358,7 +364,7 @@ export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: {
           label="最近更新"
           value={formatDateTime(state.project.draft.updatedAt)}
         />
-      </div>
+      </div>}
 
       {state.project.draft.adminFeedback ? (
         <Notice tone="warning">
@@ -371,8 +377,9 @@ export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: {
       ) : null}
 
       <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "作品尚未公开。资料审核通过并由主催发布后，将出现在观测集中。"}</Notice>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="panel space-y-6">
+      <details className="compact-editor" open={compact ? undefined : true}><summary>编辑作品资料</summary>
+      <div className={compact ? "space-y-6" : "grid grid-cols-1 xl:grid-cols-2 gap-6"}>
+        <section className={compact ? "space-y-6" : "panel space-y-6"}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-medium text-on-surface">预告信息</h2>
@@ -508,7 +515,7 @@ export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: {
           </p>
         </section>
 
-        <section className="panel space-y-6">
+        <section className={compact ? "space-y-6" : "panel space-y-6"}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-medium text-on-surface">审查说明</h2>
@@ -597,6 +604,7 @@ export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: {
         </section>
       </div>
 
+      </details>
       {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
       {notice ? <Notice tone={noticeError ? "error" : "success"}>{notice}</Notice> : null}
     </div>

@@ -58,3 +58,12 @@ the collaboration API. The internal `collaboration_guards` table has no retained
 rows: its CHECK constraint aborts a whole D1 batch if a concurrent edit violates
 an operation's preconditions. Swap acceptance clears both owners before assigning
 them again, preserving the existing unique held-slot constraint.
+
+## Neighbor contact
+
+`0015_bilibili_uid.sql` adds an optional stored Bilibili UID without replacing
+existing profiles. New profile saves and applications require a numeric UID;
+legacy profiles remain readable until their next save. The authenticated neighbor
+API shares this UID only with the adjacent confirmed creator, alongside public
+credit and slot details. Other contact fields remain private. Apply this migration
+with the compact creator workspace version.

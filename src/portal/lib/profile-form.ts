@@ -5,6 +5,7 @@ export function normalizePortalProfileInput(
 ): UpdatePortalProfileInput {
   return {
     creditName: input.creditName.trim(),
+    bilibiliUid: input.bilibiliUid.trim(),
     contactEmail: input.contactEmail.trim().toLowerCase(),
     primaryContactChannel: input.primaryContactChannel.trim(),
     primaryContactHandle: input.primaryContactHandle.trim(),

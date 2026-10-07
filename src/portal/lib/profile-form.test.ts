@@ -4,6 +4,7 @@ import { normalizePortalProfileInput } from "./profile-form";
 
 const profile = {
   creditName: "  境界观测者  ",
+  bilibiliUid: "  12345678  ",
   isAnonymous: true,
   contactEmail: "  MERRY@example.com  ",
   primaryContactChannel: "  Discord  ",
@@ -12,9 +13,16 @@ const profile = {
 };
 
 describe("unified credit settings", () => {
+  it("requires a numeric Bilibili UID instead of a nickname", () => {
+    const normalized = normalizePortalProfileInput(profile);
+    expect(updatePortalProfileInputSchema.safeParse({ ...normalized, bilibiliUid: "" }).success).toBe(false);
+    expect(updatePortalProfileInputSchema.safeParse({ ...normalized, bilibiliUid: "境界观测者" }).success).toBe(false);
+    expect(updatePortalProfileInputSchema.safeParse({ ...normalized, bilibiliUid: "12345678" }).success).toBe(true);
+  });
   it("normalizes one credit name without discarding it for anonymous display", () => {
     expect(normalizePortalProfileInput(profile)).toEqual({
       creditName: "境界观测者",
+      bilibiliUid: "12345678",
       isAnonymous: true,
       contactEmail: "merry@example.com",
       primaryContactChannel: "Discord",

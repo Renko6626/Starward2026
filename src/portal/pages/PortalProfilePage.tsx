@@ -14,6 +14,7 @@ import { normalizePortalProfileInput } from "../lib/profile-form";
 
 const defaultFormState: UpdatePortalProfileInput = {
   creditName: "",
+  bilibiliUid: "",
   contactEmail: "",
   primaryContactChannel: "Email",
   primaryContactHandle: "",
@@ -21,7 +22,7 @@ const defaultFormState: UpdatePortalProfileInput = {
   isAnonymous: true,
 };
 
-export function PortalProfilePage({ embedded = false, onSaved }: { embedded?: boolean; onSaved?: () => Promise<void> } = {}) {
+export function PortalProfilePage({ embedded = false, compact = false, onSaved }: { embedded?: boolean; compact?: boolean; onSaved?: () => Promise<void> } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const initialized = useRef(false);
@@ -89,7 +90,7 @@ export function PortalProfilePage({ embedded = false, onSaved }: { embedded?: bo
     const parsed = updatePortalProfileInputSchema.safeParse(normalized);
 
     if (!parsed.success) {
-      setError("请填写署名、联系邮箱和联系账号。");
+      setError("请填写署名、B站 UID、联系邮箱和联系账号。");
       return;
     }
 
@@ -144,108 +145,29 @@ export function PortalProfilePage({ embedded = false, onSaved }: { embedded?: bo
 
   const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
-  return (
-    <div className={embedded ? "space-y-6" : "page-content"}>
-      {!embedded ? <PageHeading
-        eyebrow="PROFILE / 01"
-        title="个人档案"
-        description="让主催找到你，也让作品以你希望的名字被看见。"
-      /> : null}
-      <form className="panel space-y-6" onSubmit={handleSubmit}>
-        <fieldset className="form-section">
-          <legend>署名</legend>
-          <p>报名与作品统一使用这里的设置。</p>
-          <Field label="署名" hint="填写你希望使用的名字，笔名或社团名均可。">
-            <input
-              className="field-input"
-              required
-              maxLength={80}
-              value={form.creditName}
-              onChange={(event) =>
-                setForm({ ...form, creditName: event.target.value })
-              }
-            />
-          </Field>
-          <label className="flex items-center gap-3 mt-6 min-h-11">
-            <input
-              type="checkbox"
-              checked={form.isAnonymous}
-              onChange={(event) =>
-                setForm({ ...form, isAnonymous: event.target.checked })
-              }
-            />
-            匿名展示
-          </label>
-          <p>匿名只影响公开展示。开启后，对外显示“匿名”；主催仍可查看你填写的署名和联系方式。</p>
-        </fieldset>
-        <fieldset className="form-section">
-          <legend>联系与沟通</legend>
-          <p>联系方式仅用于主催与你沟通。</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Field label="联系邮箱">
-              <input
-                className="field-input"
-                onChange={(event) =>
-                  setForm({ ...form, contactEmail: event.target.value })
-                }
-                type="email"
-                value={form.contactEmail}
-              />
-            </Field>
-            <Field label="联系渠道">
-              <input
-                className="field-input"
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    primaryContactChannel: event.target.value,
-                  })
-                }
-                placeholder="Email / QQ / Telegram / Discord / Bluesky"
-                type="text"
-                value={form.primaryContactChannel}
-              />
-            </Field>
-            <Field label="联系账号">
-              <input
-                className="field-input"
-                onChange={(event) =>
-                  setForm({ ...form, primaryContactHandle: event.target.value })
-                }
-                placeholder="@handle / 号码 / 邮箱"
-                type="text"
-                value={form.primaryContactHandle}
-              />
-            </Field>
-            <Field label="备用联系方式（选填）">
-              <input
-                className="field-input"
-                onChange={(event) =>
-                  setForm({ ...form, backupContact: event.target.value })
-                }
-                type="text"
-                value={form.backupContact ?? ""}
-              />
-            </Field>
-          </div>
-        </fieldset>
+  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} hint={key === "bilibiliUid" ? "数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input className="field-input" type={type} required={key !== "backupContact"} inputMode={key === "bilibiliUid" ? "numeric" : undefined} pattern={key === "bilibiliUid" ? "[0-9]+" : undefined} maxLength={key === "bilibiliUid" ? 20 : undefined} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} /></Field>;
+  return <div className={compact ? "creator-card creator-profile-card" : embedded ? "space-y-6" : "page-content"} id={compact ? "profile" : undefined}>
+    {compact ? <header className="creator-card-header"><h2 className="creator-card-title">我的信息</h2></header> : !embedded ? <PageHeading title="个人档案" /> : null}
+    <div className={compact ? "creator-card-body" : undefined}>
+      <form className={compact ? "space-y-4" : "panel space-y-6"} onSubmit={handleSubmit}>
+        {profileField("creditName", "署名")}
+        <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示</label>
+        {profileField("bilibiliUid", "B站 UID")}
+        {profileField("contactEmail", "联系邮箱", "email")}
+        {profileField("primaryContactChannel", "联系渠道")}
+        {profileField("primaryContactHandle", "联系账号")}
+        {profileField("backupContact", "备用联系方式（选填）")}
         {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <div className="form-actions">
           {!embedded ? <Link className="button button--secondary" to="/portal">返回工作台</Link> : null}
-          <Button
-            disabled={isSaving}
-            aria-busy={isSaving}
-            type="submit"
-          >
-            {isSaving ? "保存中..." : continueToApplication ? "保存并继续报名" : "保存更改"}
-          </Button>
+          <Button disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存信息"}</Button>
         </div>
       </form>
-      <PasswordSettings />
+      <details className="compact-editor"><summary>登录与密码</summary><div className="space-y-4"><Field label="登录邮箱"><input className="field-input" type="email" readOnly value={profileState.user.email} /></Field><PasswordSettings /></div></details>
     </div>
-  );
+  </div>;
 }
 
 function buildInitialProfileForm(
@@ -254,6 +176,7 @@ function buildInitialProfileForm(
   if (response.profile) {
     return {
       creditName: response.profile.creditName ?? "",
+      bilibiliUid: response.profile.bilibiliUid ?? "",
       contactEmail: response.profile.contactEmail,
       primaryContactChannel: response.profile.primaryContactChannel,
       primaryContactHandle: response.profile.primaryContactHandle,
@@ -264,6 +187,7 @@ function buildInitialProfileForm(
 
   return {
     creditName: "",
+    bilibiliUid: "",
     contactEmail: response.user.email,
     primaryContactChannel: "Email",
     primaryContactHandle: response.user.email,

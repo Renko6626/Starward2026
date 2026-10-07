@@ -63,6 +63,7 @@ export type PortalParticipantSummary = {
 
 export type PortalProfile = {
   creditName: string;
+  bilibiliUid?: string | null;
   contactEmail: string;
   primaryContactChannel: string;
   primaryContactHandle: string;
@@ -235,6 +236,7 @@ export type PortalSegmentMutationResponse = {
 
 export const updatePortalProfileInputSchema = z.object({
   creditName: z.string().trim().min(1, "请填写署名。").max(80),
+  bilibiliUid: z.string().trim().regex(/^[1-9]\d{0,19}$/, "请填写 B站主页中的数字 UID。"),
   isAnonymous: z.boolean(),
   contactEmail: z.string().trim().email().max(320),
   primaryContactChannel: z.string().trim().min(1).max(40),
