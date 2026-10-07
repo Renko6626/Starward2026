@@ -8,7 +8,9 @@ type BuildPortalEventLabelInput = {
   payloadJson: string | null;
 };
 
-export function buildPortalEventActorLabel(actorType: PortalEventItem["actorType"]) {
+export function buildPortalEventActorLabel(
+  actorType: PortalEventItem["actorType"],
+) {
   switch (actorType) {
     case "participant":
       return "你";
@@ -23,6 +25,12 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
   const payload = parsePortalEventPayload(input.payloadJson);
 
   switch (input.eventType) {
+    case "application_segment_reserved":
+      return "已提交报名并预留时段，等待审核。";
+    case "application_withdrawn":
+      return "已撤回报名并释放时段。";
+    case "segment_swapped":
+      return "双方已同意交换，当前时段已更新。";
     case "portal_activated":
       return "创作者工作台已激活。";
     case "portal_invite_sent":
@@ -61,7 +69,9 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
   }
 }
 
-function parsePortalEventPayload(payloadJson: string | null): PortalEventPayload {
+function parsePortalEventPayload(
+  payloadJson: string | null,
+): PortalEventPayload {
   if (!payloadJson) {
     return {};
   }
@@ -99,5 +109,7 @@ function formatSegment(code: unknown, name: unknown) {
 }
 
 function normalizeOptionalText(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
 }

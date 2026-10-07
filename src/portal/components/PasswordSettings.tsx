@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { requestJson } from "../../app/lib/api";
 import { authClient } from "../lib/auth-client";
+import { Button, Field, Notice } from "../../app/components/ui";
 
 export function PasswordSettings() {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
@@ -77,8 +78,7 @@ export function PasswordSettings() {
       {hasPassword !== null ? (
         <>
           {hasPassword ? (
-            <label className="block space-y-2 text-base">
-              <span>当前密码</span>
+            <Field label="当前密码">
               <input
                 className="field-input"
                 type="password"
@@ -88,10 +88,9 @@ export function PasswordSettings() {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
-            </label>
+            </Field>
           ) : null}
-          <label className="block space-y-2 text-base">
-            <span>新密码（8–128 位）</span>
+          <Field label="新密码（8–128 位）">
             <input
               className="field-input"
               type="password"
@@ -103,25 +102,24 @@ export function PasswordSettings() {
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
             />
-          </label>
-          <button
-            className="button button--primary"
+          </Field>
+          <Button
             type="submit"
             disabled={isSaving}
           >
             {isSaving ? "保存中..." : hasPassword ? "修改密码" : "设置密码"}
-          </button>
+          </Button>
         </>
       ) : null}
       {message ? (
-        <p className="text-base text-tertiary" role="status">
+        <Notice tone="success">
           {message}
-        </p>
+        </Notice>
       ) : null}
       {error ? (
-        <p className="text-base text-error" role="alert">
+        <Notice tone="error">
           {error}
-        </p>
+        </Notice>
       ) : null}
     </form>
   );

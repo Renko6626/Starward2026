@@ -5,13 +5,11 @@ import {
   CalendarDays,
   ClipboardList,
   FilePenLine,
-  History,
   LayoutDashboard,
   LogOut,
   Menu,
   Settings2,
   ShieldCheck,
-  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -19,14 +17,6 @@ import { Brand } from "./SiteLayout";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { authClient } from "../../portal/lib/auth-client";
 
-const portalItems = [
-  { to: "/portal", label: "我的工作台", icon: LayoutDashboard },
-  { to: "/portal/profile", label: "个人档案", icon: UserRound },
-  { to: "/portal/application", label: "参与报名", icon: ClipboardList },
-  { to: "/portal/project", label: "作品资料", icon: FilePenLine },
-  { to: "/portal/schedule", label: "接力日程", icon: CalendarDays },
-  { to: "/portal/history", label: "参与记录", icon: History },
-] as const;
 const adminItems = [
   { to: "/admin", label: "活动总览", icon: LayoutDashboard },
   { to: "/admin/applications", label: "报名审核", icon: ClipboardList },
@@ -54,12 +44,27 @@ export function WorkspaceLayout({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
   const { pathname } = useLocation();
-  const items = kind === "admin" ? adminItems : portalItems;
+  const items = adminItems;
   const current = [...items]
     .reverse()
     .find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`));
+  if (kind === "portal") {
+    return <div className="creator-shell">
+      <a className="skip-link" href="#main-content">跳至正文</a>
+      <header className="creator-header">
+        <Brand />
+        <div className="creator-header-actions"><Link to="/apply">参与指南</Link><PortalAccount /></div>
+      </header>
+      <nav className="creator-section-nav" aria-label="工作台区块导航">
+        <a href="#plan">计划与时段</a><a href="#tasks">待办与反馈</a><a href="#project">作品资料</a><a href="#profile">署名与联系</a><a href="#history">参与记录</a>
+      </nav>
+      <main id="main-content" className="creator-content">{children}</main>
+      <footer className="creator-footer"><span>逐星巡礼 2026</span><Link to="/">返回活动首页 <ArrowUpRight size={14} /></Link></footer>
+    </div>;
+  }
   return (
     <div className={`workspace workspace--${kind}`}>
+
       <ScrollProgress key={pathname} />
       <a className="skip-link" href="#main-content">
         跳至正文
@@ -96,7 +101,7 @@ export function WorkspaceLayout({
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/portal" || to === "/admin" }}
+              activeOptions={{ exact: to === "/admin" }}
               className="workspace-nav-item"
               onClick={() => setOpen(false)}
             >

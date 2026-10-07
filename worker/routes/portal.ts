@@ -1,4 +1,19 @@
 import { Hono } from "hono";
+import { Resend } from "resend";
+import {
+  workspaceApplicationInputSchema,
+  createSwapInputSchema,
+  respondSwapInputSchema,
+  type CollaborationMutationResponse,
+} from "../../src/shared/collaboration";
+import {
+  CollaborationConflict,
+  saveWorkspaceApplication,
+  getCollaboration,
+  createSwap,
+  respondSwap,
+  withdrawApplication,
+} from "../data/collaboration";
 import { upsertPortalApplicationInputSchema } from "../../src/shared/applications";
 import type {
   PortalApplicationMutationResponse,
@@ -31,7 +46,10 @@ import {
   mapPortalAuthUser,
   mapPortalParticipant,
 } from "../data/portal";
-import { getPortalProfileByUserId, upsertPortalProfile } from "../data/portal-profiles";
+import {
+  getPortalProfileByUserId,
+  upsertPortalProfile,
+} from "../data/portal-profiles";
 import {
   getPortalProjectDraftDetail,
   submitPortalProjectPreview,
@@ -63,7 +81,9 @@ import { getWindowOrFallback } from "../lib/windows";
 
 const portalApi = new Hono<AppRouteConfig>();
 
-type PortalSessionState = NonNullable<Awaited<ReturnType<typeof requireParticipantSession>>>;
+type PortalSessionState = NonNullable<
+  Awaited<ReturnType<typeof requireParticipantSession>>
+>;
 
 type PortalSessionAccess =
   | {
@@ -117,11 +137,14 @@ portalApi.get("/dashboard", async (c) => {
     return access.response;
   }
 
-  const response: PortalDashboardResponse = await getPortalDashboard(access.db, {
-    user: mapPortalAuthUser(access.session.user),
-    participant: access.participant,
-    windows: await listEventWindows(access.db),
-  });
+  const response: PortalDashboardResponse = await getPortalDashboard(
+    access.db,
+    {
+      user: mapPortalAuthUser(access.session.user),
+      participant: access.participant,
+      windows: await listEventWindows(access.db),
+    },
+  );
 
   return c.json(response);
 });
@@ -135,9 +158,14 @@ portalApi.get("/profile", async (c) => {
 
   const response: PortalProfileResponse = {
     user: mapPortalAuthUser(access.session.user),
-    participant: access.participant ? mapPortalParticipant(access.participant) : null,
+    participant: access.participant
+      ? mapPortalParticipant(access.participant)
+      : null,
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+    ),
   };
 
   return c.json(response);
@@ -154,7 +182,13 @@ portalApi.patch("/profile", async (c) => {
   const parsed = updatePortalProfileInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "资料参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "资料参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const profile = await upsertPortalProfile(access.db, {
@@ -175,6 +209,165 @@ portalApi.patch("/profile", async (c) => {
   return c.json(response);
 });
 
+portalApi.post("/application-with-segment", async (c) => {
+  const access = await getPortalSessionAccess(c);
+  if ("response" in access) return access.response;
+  const parsed = workspaceApplicationInputSchema.safeParse(
+    await c.req.json().catch(() => null),
+  );
+  if (!parsed.success)
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "报名资料参数不正确。",
+      parsed.error.flatten(),
+    );
+  const submissionGuard = await enforceApplicationSubmissionGuards(c, {
+    contactEmail: parsed.data.application.contactEmail,
+    turnstileToken: parsed.data.turnstileToken,
+  });
+  if (!submissionGuard.ok)
+    return jsonError(
+      c,
+      submissionGuard.status,
+      submissionGuard.code,
+      submissionGuard.message,
+    );
+  try {
+    const application = await saveWorkspaceApplication(
+      access.db,
+      access.session.user.id,
+      access.session.user.email,
+      parsed.data,
+    );
+    return c.json({
+      ok: true,
+      message: "已提交报名并预留时段，等待主催审核。",
+      application,
+    } satisfies PortalApplicationMutationResponse);
+  } catch (error) {
+    if (error instanceof CollaborationConflict)
+      return jsonError(c, 409, "application_segment_conflict", error.message);
+    throw error;
+  }
+});
+
+portalApi.post("/application/withdraw", async (c) => {
+  const access = await getPortalSessionAccess(c);
+  if ("response" in access) return access.response;
+  try {
+    await withdrawApplication(access.db, access.session.user.id);
+    return c.json({ ok: true, message: "已撤回报名并释放时段。" });
+  } catch (error) {
+    if (error instanceof CollaborationConflict)
+      return jsonError(c, 409, "application_withdraw_conflict", error.message);
+    throw error;
+  }
+});
+
+portalApi.get("/collaboration", async (c) => {
+  const access = await getPortalSessionAccess(c);
+  if ("response" in access) return access.response;
+  return c.json(await getCollaboration(access.db, access.session.user.id));
+});
+
+portalApi.post("/swaps", async (c) => {
+  const access = await getParticipantActionAccess(c);
+  if ("response" in access) return access.response;
+  const parsed = createSwapInputSchema.safeParse(
+    await c.req.json().catch(() => null),
+  );
+  if (!parsed.success)
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "交换请求参数不正确。",
+      parsed.error.flatten(),
+    );
+  try {
+    const request = await createSwap(
+      access.db,
+      access.participant.id,
+      parsed.data.segmentId,
+      parsed.data.message,
+    );
+    let notification: CollaborationMutationResponse["notification"] =
+      "not_configured";
+    if (c.env.RESEND_API_KEY && c.env.RESEND_FROM_EMAIL && request.email) {
+      notification = "failed";
+      try {
+        const link = new URL(
+          "/portal",
+          c.env.BETTER_AUTH_URL || c.req.url,
+        ).toString();
+        const result = await new Resend(c.env.RESEND_API_KEY).emails.send({
+          from: `${c.env.RESEND_FROM_NAME?.trim() || "Starward2026"} <${c.env.RESEND_FROM_EMAIL}>`,
+          to: request.email,
+          subject: "你收到了一条时段交换请求",
+          text: `有创作者希望与你交换时段。请登录工作台查看请求并决定是否同意：${link}\n请求仅能在工作台内处理。`,
+        });
+        notification = result.error ? "failed" : "sent";
+      } catch {
+        notification = "failed";
+      }
+    }
+    return c.json(
+      {
+        ok: true,
+        message:
+          notification === "failed"
+            ? "已保存交换请求，邮件提醒发送失败，对方仍可在工作台查看。"
+            : "已发送交换请求，等待对方回复。",
+        notification,
+      } satisfies CollaborationMutationResponse,
+      201,
+    );
+  } catch (error) {
+    if (error instanceof CollaborationConflict)
+      return jsonError(c, 409, "swap_conflict", error.message);
+    throw error;
+  }
+});
+
+portalApi.post("/swaps/:requestId/respond", async (c) => {
+  const access = await getParticipantActionAccess(c);
+  if ("response" in access) return access.response;
+  const parsed = respondSwapInputSchema.safeParse(
+    await c.req.json().catch(() => null),
+  );
+  if (!parsed.success)
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "交换操作参数不正确。",
+      parsed.error.flatten(),
+    );
+  try {
+    await respondSwap(
+      access.db,
+      access.participant.id,
+      c.req.param("requestId"),
+      parsed.data.action,
+    );
+    return c.json({
+      ok: true,
+      message:
+        parsed.data.action === "accept"
+          ? "已完成时段交换。"
+          : parsed.data.action === "reject"
+            ? "已拒绝交换请求。"
+            : "已取消交换请求。",
+    } satisfies CollaborationMutationResponse);
+  } catch (error) {
+    if (error instanceof CollaborationConflict)
+      return jsonError(c, 409, "swap_conflict", error.message);
+    throw error;
+  }
+});
+
 portalApi.get("/application", async (c) => {
   const access = await getPortalSessionAccess(c);
 
@@ -182,11 +375,20 @@ portalApi.get("/application", async (c) => {
     return access.response;
   }
 
-  const application = await getPortalApplicationByUserId(access.db, access.session.user.id);
-  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const application = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+  );
+  const profile = await getPortalProfileByUserId(
+    access.db,
+    access.session.user.id,
+  );
   const windows = await listEventWindows(access.db);
   const applicationWindow = getWindowOrFallback(windows, "application_open");
-  const mutation = resolvePortalApplicationMutation(application?.status ?? null, applicationWindow.isOpen);
+  const mutation = resolvePortalApplicationMutation(
+    application?.status ?? null,
+    applicationWindow.isOpen,
+  );
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
@@ -194,14 +396,16 @@ portalApi.get("/application", async (c) => {
   const response: PortalApplicationResponse = {
     window: applicationWindow,
     user: mapPortalAuthUser(access.session.user),
-    participant: access.participant ? mapPortalParticipant(access.participant) : null,
+    participant: access.participant
+      ? mapPortalParticipant(access.participant)
+      : null,
     profile,
     application,
     editable: mutation.editable,
     editState: mutation.mode,
     message: !profileRequirement.ok
       ? profileRequirement.message
-      : mutation.message ?? null,
+      : (mutation.message ?? null),
   };
 
   return c.json(response);
@@ -214,8 +418,14 @@ portalApi.post("/application", async (c) => {
     return access.response;
   }
 
-  const existing = await getPortalApplicationByUserId(access.db, access.session.user.id);
-  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const existing = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+  );
+  const profile = await getPortalProfileByUserId(
+    access.db,
+    access.session.user.id,
+  );
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
@@ -223,13 +433,26 @@ portalApi.post("/application", async (c) => {
   const applicationWindow = getWindowOrFallback(windows, "application_open");
 
   if (!profileRequirement.ok) {
-    return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
+    return jsonError(
+      c,
+      profileRequirement.status,
+      profileRequirement.code,
+      profileRequirement.message,
+    );
   }
 
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, applicationWindow.isOpen);
+  const mutation = resolvePortalApplicationMutation(
+    existing?.status ?? null,
+    applicationWindow.isOpen,
+  );
 
   if (mutation.mode !== "create") {
-    return jsonError(c, 409, "portal_application_exists", "当前账号已有报名记录，请使用更新操作。");
+    return jsonError(
+      c,
+      409,
+      "portal_application_exists",
+      "当前账号已有报名记录，请使用更新操作。",
+    );
   }
 
   if (!mutation.editable) {
@@ -245,7 +468,13 @@ portalApi.post("/application", async (c) => {
   const parsed = upsertPortalApplicationInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "报名资料参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
@@ -283,8 +512,14 @@ portalApi.patch("/application", async (c) => {
     return access.response;
   }
 
-  const existing = await getPortalApplicationByUserId(access.db, access.session.user.id);
-  const profile = await getPortalProfileByUserId(access.db, access.session.user.id);
+  const existing = await getPortalApplicationByUserId(
+    access.db,
+    access.session.user.id,
+  );
+  const profile = await getPortalProfileByUserId(
+    access.db,
+    access.session.user.id,
+  );
   const profileRequirement = resolvePortalApplicationProfileRequirement(
     profile ? { userId: access.session.user.id } : null,
   );
@@ -292,20 +527,35 @@ portalApi.patch("/application", async (c) => {
   const applicationWindow = getWindowOrFallback(windows, "application_open");
 
   if (!profileRequirement.ok) {
-    return jsonError(c, profileRequirement.status, profileRequirement.code, profileRequirement.message);
+    return jsonError(
+      c,
+      profileRequirement.status,
+      profileRequirement.code,
+      profileRequirement.message,
+    );
   }
 
-  const mutation = resolvePortalApplicationMutation(existing?.status ?? null, applicationWindow.isOpen);
+  const mutation = resolvePortalApplicationMutation(
+    existing?.status ?? null,
+    applicationWindow.isOpen,
+  );
 
   if (mutation.mode === "create") {
-    return jsonError(c, 404, "portal_application_missing", "当前账号还没有报名记录。");
+    return jsonError(
+      c,
+      404,
+      "portal_application_missing",
+      "当前账号还没有报名记录。",
+    );
   }
 
   if (!mutation.editable) {
     return jsonError(
       c,
       mutation.reason === "window_closed" ? 403 : 409,
-      mutation.reason === "window_closed" ? "portal_application_closed" : "portal_application_locked",
+      mutation.reason === "window_closed"
+        ? "portal_application_closed"
+        : "portal_application_locked",
       mutation.message ?? "当前报名不可修改。",
     );
   }
@@ -314,7 +564,13 @@ portalApi.patch("/application", async (c) => {
   const parsed = upsertPortalApplicationInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "报名资料参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "报名资料参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
@@ -361,7 +617,10 @@ const getCurrentSegmentHandler = async (c: AppContext) => {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+    ),
     currentSegment: segmentState.currentSegment,
     actions: segmentState.actions,
     windows: segmentState.windows,
@@ -395,7 +654,13 @@ const claimSegmentHandler = async (c: AppContext) => {
   const parsed = segmentMutationInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "时间段认领参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "时间段认领参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const result = await claimParticipantSegment(access.db, {
@@ -422,7 +687,13 @@ const changeSegmentHandler = async (c: AppContext) => {
   const parsed = segmentMutationInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "时间段变更参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "时间段变更参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const result = await changeParticipantSegment(access.db, {
@@ -471,7 +742,10 @@ portalApi.get("/project", async (c) => {
   }
 
   const windows = await listEventWindows(access.db);
-  const draft = await getPortalProjectDraftDetail(access.db, access.participant.id);
+  const draft = await getPortalProjectDraftDetail(
+    access.db,
+    access.participant.id,
+  );
 
   if (!draft) {
     return jsonError(c, 404, "project_draft_missing", "未找到当前作品资料。");
@@ -481,7 +755,10 @@ portalApi.get("/project", async (c) => {
     user: mapPortalAuthUser(access.session.user),
     participant: mapPortalParticipant(access.participant),
     profile: await getPortalProfileByUserId(access.db, access.session.user.id),
-    application: await getPortalApplicationByUserId(access.db, access.session.user.id),
+    application: await getPortalApplicationByUserId(
+      access.db,
+      access.session.user.id,
+    ),
     draft,
     windows,
   };
@@ -500,7 +777,13 @@ portalApi.patch("/project/preview", async (c) => {
   const parsed = updatePortalProjectPreviewInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "预告信息参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "预告信息参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const result = await updatePortalProjectPreview(access.db, {
@@ -557,7 +840,13 @@ portalApi.patch("/project/review", async (c) => {
   const parsed = updatePortalProjectReviewInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "审查说明参数不正确。", parsed.error.flatten());
+    return jsonError(
+      c,
+      422,
+      "invalid_request",
+      "审查说明参数不正确。",
+      parsed.error.flatten(),
+    );
   }
 
   const result = await updatePortalProjectReview(access.db, {
@@ -604,11 +893,19 @@ portalApi.post("/project/review/submit", async (c) => {
 });
 
 portalApi.get("/history", async (c) => {
-  const access = await getParticipantActionAccess(c);
+  const access = await getPortalSessionAccess(c);
 
   if ("response" in access) {
     return access.response;
   }
+
+  if (!access.participant)
+    return jsonError(
+      c,
+      404,
+      "portal_creator_missing",
+      "当前账号还没有参与记录。",
+    );
 
   const response: PortalHistoryResponse = await getPortalHistory(access.db, {
     user: mapPortalAuthUser(access.session.user),
@@ -631,12 +928,19 @@ function readTurnstileToken(body: unknown): string | undefined {
   return undefined;
 }
 
-async function getPortalSessionAccess(c: AppContext): Promise<PortalSessionAccess> {
+async function getPortalSessionAccess(
+  c: AppContext,
+): Promise<PortalSessionAccess> {
   const sessionState = await requireParticipantSession(c);
 
   if (!sessionState?.session) {
     return {
-      response: jsonError(c, 401, "portal_not_authenticated", "请先完成参与者登录。"),
+      response: jsonError(
+        c,
+        401,
+        "portal_not_authenticated",
+        "请先完成参与者登录。",
+      ),
     };
   }
 
@@ -647,7 +951,9 @@ async function getPortalSessionAccess(c: AppContext): Promise<PortalSessionAcces
   };
 }
 
-async function getParticipantActionAccess(c: AppContext): Promise<ParticipantActionAccess> {
+async function getParticipantActionAccess(
+  c: AppContext,
+): Promise<ParticipantActionAccess> {
   const access = await getPortalSessionAccess(c);
 
   if ("response" in access) {
@@ -665,7 +971,12 @@ async function getParticipantActionAccess(c: AppContext): Promise<ParticipantAct
 
   if (!participant) {
     return {
-      response: jsonError(c, 403, "portal_creator_missing", "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。"),
+      response: jsonError(
+        c,
+        403,
+        "portal_creator_missing",
+        "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+      ),
     };
   }
 
@@ -676,7 +987,9 @@ async function getParticipantActionAccess(c: AppContext): Promise<ParticipantAct
   };
 }
 
-async function getProjectWorkspaceAccess(c: AppContext): Promise<ProjectWorkspaceAccess> {
+async function getProjectWorkspaceAccess(
+  c: AppContext,
+): Promise<ProjectWorkspaceAccess> {
   const access = await getPortalSessionAccess(c);
 
   if ("response" in access) {
@@ -694,7 +1007,12 @@ async function getProjectWorkspaceAccess(c: AppContext): Promise<ProjectWorkspac
 
   if (!participant) {
     return {
-      response: jsonError(c, 403, "portal_creator_missing", "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。"),
+      response: jsonError(
+        c,
+        403,
+        "portal_creator_missing",
+        "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+      ),
     };
   }
 

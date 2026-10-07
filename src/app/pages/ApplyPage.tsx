@@ -8,7 +8,7 @@ import "./apply.css";
 const steps = [
   { title: "建立创作者账号", body: "使用邮箱注册，已有账号可以直接登录。这个账号将用于查看审核进度、维护作品资料和安排发布日程。" },
   { title: "完善联系方式与署名", body: "填写有效的联系邮箱和主联系渠道，再选择希望公开展示的名字。公开署名可以与账号资料不同，也可以选择不公开。" },
-  { title: "提交你的创作计划", body: "选择参加形式，说明准备创作的内容。如果有已有作品，可以附上链接供主催参考；作品链接为选填。提交后，在工作台查看审核结果。" },
+  { title: "提交你的创作计划", body: "选择参加形式，说明准备创作的内容，并选择一个空闲发布时段。如果有已有作品，可以附上链接供主催参考；作品链接为选填。提交后，在工作台查看审核结果。" },
 ];
 
 export function ApplyPage() {
@@ -22,7 +22,7 @@ export function ApplyPage() {
     : intake.status === "error" ? intake.message
     : isOpen ? "现在可以建立账号、完善资料并提交创作计划。"
     : intake.payload.window?.state === "ended" ? "本轮报名已结束。已报名的创作者可继续登录，查看审核进度与后续安排。"
-    : "你可以先建立账号、完善资料，等待报名窗口开放后再提交创作计划。";
+    : "你可以先建立账号，等待报名窗口开放后一起填写联系资料、创作计划和发布时段。";
 
   return (
     <div className="participation-guide">
@@ -46,7 +46,7 @@ export function ApplyPage() {
             <h2 id="participation-status-title"><span className={`participation-status-dot${isOpen ? " is-open" : ""}`} aria-hidden="true" />{status}</h2>
             <p>{statusNote}</p>
           </div>
-          <Link to={session ? "/portal/application" : "/portal/login"} className="participation-action">
+          <Link to={session ? "/portal" : "/portal/login"} className="participation-action">
             {session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={18} />
           </Link>
           <p className="participation-action-note">{session ? "继续查看或维护当前账号的报名资料。" : "已有账号可直接登录，首次参与请先注册。"}</p>
@@ -63,9 +63,9 @@ export function ApplyPage() {
         </section>
         <section className="participation-section" aria-labelledby="participation-next-title">
           <div className="participation-section-heading"><span aria-hidden="true">02</span><h2 id="participation-next-title">审核通过后，安排你的发布</h2></div>
-          <p className="participation-section-lead">报名审核与发布时段认领分开进行。审核通过后，请留意工作台中的开放窗口和主催反馈。</p>
+          <p className="participation-section-lead">创作计划与发布时段一起提交。提交报名时一并选择发布时段，时段会先为你预留。主催审核通过后，正式确认占坑。</p>
           <dl className="participation-followup">
-            <div><dt>认领发布时段</dt><dd>时段认领窗口开放后，选择你的发布时段。后续调整也需在对应窗口开放时进行。</dd></div>
+            <div><dt>认领发布时段</dt><dd>报名时选择空闲时段，提交成功后预留；审核未通过或撤回报名后释放。通过后可在调整窗口内换期。</dd></div>
             <div><dt>补充作品资料</dt><dd>按开放安排提交预告资料与审查说明，根据反馈完善内容。</dd></div>
             <div><dt>按日程发布作品</dt><dd>在约定的时段发布。作品资料、审核进度与发布日程，都可以回到工作台查看。</dd></div>
           </dl>
@@ -79,7 +79,7 @@ export function ApplyPage() {
         </section>
         <div className="participation-closing">
           <p>准备好了，就从你的创作计划开始。</p>
-          <Link to={session ? "/portal/application" : "/portal/login"}>{session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={16} /></Link>
+          <Link to={session ? "/portal" : "/portal/login"}>{session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={16} /></Link>
         </div>
       </div>
     </div>

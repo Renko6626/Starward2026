@@ -46,3 +46,15 @@ fields to existing drafts without replacing existing data. Existing works remain
 unpublished. Apply this migration with the works gallery version. The public release
 window controls new publication only; closing it does not remove the archive.
 Unpublish a work before returning approved material for edits.
+
+## Collaboration and reservations
+
+`0014_collaboration.sql` adds bilateral swap requests, indexes and invalidation
+triggers. Slot ownership, participant eligibility, schedule retirement and window
+closure invalidate pending requests permanently. Application reservations use the
+existing held-slot model: pending participants reserve, approved participants
+confirm, rejected or withdrawn applications release. Deploy this migration with
+the collaboration API. The internal `collaboration_guards` table has no retained
+rows: its CHECK constraint aborts a whole D1 batch if a concurrent edit violates
+an operation's preconditions. Swap acceptance clears both owners before assigning
+them again, preserving the existing unique held-slot constraint.

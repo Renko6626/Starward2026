@@ -538,7 +538,10 @@ export function readBetterAuthSecret(repoRoot) {
       const value = trimmed.slice(separator + 1).trim();
 
       if (key === "BETTER_AUTH_SECRET" && value) {
-        return value;
+        const quote = value[0];
+        return (quote === '"' || quote === "'") && value.endsWith(quote)
+          ? value.slice(1, -1)
+          : value;
       }
     }
   } catch {

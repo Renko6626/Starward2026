@@ -11,7 +11,7 @@ type HistoryPageState =
   | { status: "ready"; history: PortalHistoryResponse }
   | { status: "error"; message: string };
 
-export function PortalHistoryPage() {
+export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded?: boolean; revision?: number } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [state, setState] = useState<HistoryPageState>({ status: "loading" });
@@ -27,7 +27,7 @@ export function PortalHistoryPage() {
     }
 
     void loadHistoryPage();
-  }, [navigate, sessionQuery.data, sessionQuery.isPending]);
+  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision]);
 
   async function loadHistoryPage() {
     setState({ status: "loading" });
@@ -51,27 +51,12 @@ export function PortalHistoryPage() {
     }
   }
 
-  if (sessionQuery.isPending || state.status === "loading") {
-    return (
-      <PageHeading
-        title={<>参与记录</>}
-        description={<>正在读取参与者历史记录。</>}
-      ></PageHeading>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <PageHeading
-        title={<>参与记录</>}
-        description={<>{state.message}</>}
-      ></PageHeading>
-    );
-  }
+  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取参与记录。</p>;
+  if (state.status === "error") return <Notice tone="error">{state.message}</Notice>;
 
   return (
-    <div className="page-content">
-      <PageHeading
+    <div className={embedded ? "space-y-4" : "page-content"}>
+      {!embedded ? <PageHeading
         title={<>参与记录</>}
         description={
           <>
@@ -83,7 +68,7 @@ export function PortalHistoryPage() {
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant border border-outline-variant text-sm font-mono font-medium">
           {state.history.items.length} 条记录
         </span>
-      </PageHeading>
+      </PageHeading> : null}
 
       <section className="panel">
         {state.history.items.length > 0 ? (
@@ -105,14 +90,14 @@ export function PortalHistoryPage() {
         )}
       </section>
 
-      <div className="flex flex-wrap gap-3">
+      {!embedded ? <div className="flex flex-wrap gap-3">
         <Link className="button button--secondary" to="/portal">
           返回工作台
         </Link>
         <Link className="button button--secondary" to="/portal/project">
           前往作品资料
         </Link>
-      </div>
+      </div> : null}
     </div>
   );
 }

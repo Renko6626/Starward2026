@@ -10,9 +10,9 @@ import { getApplicationWindowLabel } from '../../shared/windows';
 import './home.css';
 
 const steps = [
-  { number: '01', title: '提交创作计划', body: '建立账号，填写联系资料并提交创作计划。' },
+  { number: '01', title: '提交创作计划', body: '建立账号，一次填写联系资料、创作计划和发布时段。' },
   { number: '02', title: '准备作品', body: '整理预告与作品说明，根据审核反馈完善内容。' },
-  { number: '03', title: '认领发布时段', body: '审核通过后，在开放窗口中认领时段，按日程发布作品。' },
+  { number: '03', title: '确认发布时段', body: '报名时预留时段，审核通过后确认，按日程发布作品。' },
 ];
 
 export function HomePage() {

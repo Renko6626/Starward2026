@@ -448,7 +448,24 @@ export async function reviewApplication(
       ? await buildParticipantSyncPlan(db, existing, reviewedAt)
       : input.status === "rejected" || input.status === "withdrawn"
         ? await buildParticipantDemotionPlan(db, existing, reviewedAt)
-        : { participantId: null, statements: [] as D1PreparedStatement[] };
+        : {
+            participantId: null,
+            statements: [
+              db
+                .prepare(
+                  `UPDATE participants
+              SET status = 'pending', updated_at = ?
+              WHERE application_id = ?
+                 OR (? IS NOT NULL AND user_id = ?)`,
+                )
+                .bind(
+                  reviewedAt,
+                  applicationId,
+                  existing.user_id,
+                  existing.user_id,
+                ),
+            ],
+          };
   const statements = [
     ...participantPlan.statements,
     db

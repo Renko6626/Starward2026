@@ -42,6 +42,25 @@ npm run test:env -- local
 
 ### 2.2 手动本地 D1 命令
 
+`npm run dev` 使用本地 Worker 和 `.wrangler/state` 中的 D1；Vite 配置已设置
+`remoteBindings: false`。终端出现 `Proxy environment variables detected` 仅表示检测到代理变量，
+启动失败需查看具体错误。本地 `.dev.vars` 中的 `BETTER_AUTH_URL` 使用
+`http://localhost:20262`。
+
+`npm run dev` 不会自动应用数据库迁移。更新代码后，如果接口报
+`no such column` 或 `no such table`，先检查本地迁移状态：
+
+```bash
+npx wrangler d1 migrations list starward2026 --local
+curl --noproxy '*' http://localhost:20262/api/health
+curl --noproxy '*' http://localhost:20262/api/works
+```
+
+健康接口只验证 Worker 可访问；作品接口还会验证当前数据库字段可查询。
+`0012_unified_credit.sql` 会重建个人档案表，已有资料的库应先备份并转换资料，
+再升级；需要保留数据时不要直接使用 reset。2026-10-07 的本地修复已保留
+账号、会话、报名、排期、作品与联系资料，升级前完整备份位于 `.wrangler/backups/`。
+
 推荐命令如下：
 
 ```bash

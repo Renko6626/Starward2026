@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useState,
   type ReactNode,
   type ButtonHTMLAttributes,
   type PropsWithChildren,
@@ -8,6 +10,45 @@ import { cn } from "../../lib/cn";
 type Tone = "muted" | "info" | "warning" | "warn" | "success" | "error";
 const toneClass = (tone: Tone) =>
   tone === "warn" ? "warning" : tone === "info" ? "muted" : tone;
+
+/** Collapsing a section keeps its form mounted, preserving unsaved input. */
+export function WorkspaceSection({ id, title, summary, defaultOpen = false, children }: PropsWithChildren<{
+  id: string;
+  title: string;
+  summary?: ReactNode;
+  defaultOpen?: boolean;
+}>) {
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+  useEffect(() => {
+    function reveal() {
+      setOpen(true);
+      requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    }
+    function revealTarget() {
+      if (window.location.hash === `#${id}`) {
+        reveal();
+      }
+    }
+    function revealClickedTarget(event: MouseEvent) {
+      const anchor = event.target instanceof Element ? event.target.closest("a") : null;
+      if (anchor?.getAttribute("href") === `#${id}`) reveal();
+    }
+    revealTarget();
+    window.addEventListener("hashchange", revealTarget);
+    window.addEventListener("click", revealClickedTarget);
+    return () => {
+      window.removeEventListener("hashchange", revealTarget);
+      window.removeEventListener("click", revealClickedTarget);
+    };
+  }, [id]);
+  return <details id={id} className="workspace-section" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary><span className="workspace-section-title">{title}</span>{summary ? <span className="workspace-section-summary">{summary}</span> : null}</summary>
+    <div className="workspace-section-body">{children}</div>
+  </details>;
+}
 
 export function PageHeading({
   title,

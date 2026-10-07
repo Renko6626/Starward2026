@@ -1,11 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildLocalSeedSql,
   createSignedSessionCookieValue,
   localDevSeedFixtures,
+  readBetterAuthSecret,
 } from "../../scripts/lib/local-dev-bootstrap.mjs";
 
 describe("local dev bootstrap fixtures", () => {
+  it("reads the same unquoted secret as Wrangler from .dev.vars", () => {
+    const directory = mkdtempSync(join(tmpdir(), "starward-dev-vars-"));
+    vi.stubEnv("BETTER_AUTH_SECRET", "");
+    try {
+      writeFileSync(join(directory, ".dev.vars"), 'BETTER_AUTH_SECRET="local-session-signing-secret"\n');
+      expect(readBetterAuthSecret(directory)).toBe("local-session-signing-secret");
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true });
+    }
+  });
   it("defines admin and portal smoke personas", () => {
     expect(localDevSeedFixtures.applications.map((item) => item.id)).toEqual([
       "app_seed_portal_pending",

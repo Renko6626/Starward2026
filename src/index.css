@@ -26,23 +26,23 @@
 }
 
 @theme {
-  --color-background: #0b1320;
-  --color-on-background: #eeeae0;
-  --color-surface: #0e1827;
-  --color-surface-dim: #0a1220;
-  --color-surface-container-lowest: #09111d;
-  --color-surface-container-low: #111e2e;
-  --color-surface-container: #162436;
-  --color-surface-container-high: #1b2b3e;
-  --color-surface-container-highest: #21334a;
-  --color-surface-variant: #18283b;
-  --color-surface-bright: #22364b;
-  --color-on-surface: #eeeae0;
-  --color-on-surface-variant: #a3b1c3;
-  --color-outline: #657890;
-  --color-outline-variant: #2b3b50;
-  --color-primary: #dcc394;
-  --color-on-primary: #172030;
+  --color-background: #090909;
+  --color-on-background: #e7e7e7;
+  --color-surface: #111111;
+  --color-surface-dim: #090909;
+  --color-surface-container-lowest: #0b0b0b;
+  --color-surface-container-low: #111111;
+  --color-surface-container: #171717;
+  --color-surface-container-high: #202020;
+  --color-surface-container-highest: #282828;
+  --color-surface-variant: #1b1b1b;
+  --color-surface-bright: #303030;
+  --color-on-surface: #e7e7e7;
+  --color-on-surface-variant: #a3a3a3;
+  --color-outline: #777777;
+  --color-outline-variant: #343434;
+  --color-primary: #e3e3e3;
+  --color-on-primary: #101010;
   --color-primary-container: #514731;
   --color-on-primary-container: #f3e5cc;
   --color-primary-fixed: #f3e5cc;
@@ -90,6 +90,8 @@
     --motion-fast: 160ms;
     --motion-panel: 240ms;
     --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --control-radius: 4px;
+    --space-field: 18px;
   }
   body {
     margin: 0;
@@ -254,7 +256,7 @@
     color: var(--color-on-primary);
   }
   .button--primary:hover {
-    background: #ead5b0;
+    background: #ffffff;
   }
   .button--secondary {
     border-color: var(--color-outline-variant);
@@ -277,9 +279,7 @@
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    background:
-      radial-gradient(ellipse at 70% 10%, #1b30493b, transparent 55%),
-      var(--color-background);
+    background: var(--color-background);
   }
   .public-site .eyebrow {
     font-size: 12px;
@@ -769,7 +769,7 @@
     left: 0;
     bottom: 0;
     width: 272px;
-    background: #0c1624;
+    background: var(--color-surface);
     border-right: 1px solid var(--color-outline-variant);
     padding: 34px 22px 24px;
     display: flex;

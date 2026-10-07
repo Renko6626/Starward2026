@@ -1,7 +1,8 @@
 import { workTypeLabels, type WorkType } from "../../shared/works";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Button,
   Field,
   Notice,
   PageHeading,
@@ -55,15 +56,19 @@ const inputClassName = "field-input";
 
 const textareaClassName = "field-input min-h-32 resize-y";
 
-export function PortalProjectPage() {
+export function PortalProjectPage({ embedded = false, onSaved, revision = 0 }: { embedded?: boolean; onSaved?: () => Promise<void>; revision?: number } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
+  const initialized = useRef(false);
+  const loadSequence = useRef(0);
+  const [refreshWarning, setRefreshWarning] = useState<string | null>(null);
   const [state, setState] = useState<ProjectPageState>({ status: "loading" });
   const [previewForm, setPreviewForm] =
     useState<PreviewFormState>(emptyPreviewForm);
   const [reviewForm, setReviewForm] =
     useState<ReviewFormState>(emptyReviewForm);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [noticeError, setNoticeError] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,23 +81,32 @@ export function PortalProjectPage() {
       return;
     }
 
-    void loadProjectPage();
-  }, [navigate, sessionQuery.data, sessionQuery.isPending]);
+    const sequence = ++loadSequence.current;
+    void loadProjectPage(sequence);
+    return () => { if (loadSequence.current === sequence) loadSequence.current += 1; };
+  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision]);
 
-  async function loadProjectPage() {
-    setState({ status: "loading" });
+  async function loadProjectPage(sequence: number) {
+    if (!initialized.current) setState({ status: "loading" });
 
     try {
       const project = await requestJson<PortalProjectResponse>(
         "/api/portal/project",
       );
+      if (sequence !== loadSequence.current) return;
+      setRefreshWarning(null);
       applyLoadedProject(project);
     } catch (caught) {
+      if (sequence !== loadSequence.current) return;
       if (caught instanceof ApiError && caught.status === 401) {
         void navigate({ to: "/portal/login" });
         return;
       }
 
+      if (initialized.current) {
+        setRefreshWarning("作品资料仍保留在页面上，但最新状态暂时无法读取，请稍后刷新。");
+        return;
+      }
       setState({
         status: "error",
         forbidden: caught instanceof ApiError && caught.status === 403,
@@ -103,14 +117,19 @@ export function PortalProjectPage() {
   }
 
   function applyLoadedProject(project: PortalProjectResponse) {
-    setPreviewForm(buildPreviewForm(project.draft));
-    setReviewForm(buildReviewForm(project.draft));
+    if (!initialized.current) {
+      setPreviewForm(buildPreviewForm(project.draft));
+      setReviewForm(buildReviewForm(project.draft));
+      initialized.current = true;
+    }
     setState({ status: "ready", project });
   }
 
-  function updateDraft(draft: PortalProjectDraftDetail) {
-    setPreviewForm(buildPreviewForm(draft));
-    setReviewForm(buildReviewForm(draft));
+  function updateDraft(draft: PortalProjectDraftDetail, section: "preview" | "review") {
+    // A saved draft is newer than any metadata request already in flight.
+    loadSequence.current += 1;
+    if (section === "preview") setPreviewForm(buildPreviewForm(draft));
+    else setReviewForm(buildReviewForm(draft));
     setState((current) =>
       current.status === "ready"
         ? {
@@ -145,7 +164,7 @@ export function PortalProjectPage() {
       },
     );
 
-    updateDraft(response.draft);
+    updateDraft(response.draft, "preview");
 
     if (!quiet) {
       setNotice(response.message);
@@ -168,20 +187,29 @@ export function PortalProjectPage() {
       },
     );
 
-    updateDraft(response.draft);
+    updateDraft(response.draft, "review");
 
     if (!quiet) {
       setNotice(response.message);
     }
   }
 
+  async function refreshSummary() {
+    try { await onSaved?.(); }
+    catch { setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"); }
+  }
+
   async function handlePreviewSave() {
     setPendingAction("preview-save");
     setNotice(null);
+    setNoticeError(false);
+    setRefreshWarning(null);
 
     try {
       await patchPreview();
+      await refreshSummary();
     } catch (caught) {
+      setNoticeError(true);
       setNotice(
         caught instanceof Error ? caught.message : "保存预告信息失败。",
       );
@@ -193,6 +221,8 @@ export function PortalProjectPage() {
   async function handlePreviewSubmit() {
     setPendingAction("preview-submit");
     setNotice(null);
+    setNoticeError(false);
+    setRefreshWarning(null);
 
     try {
       await patchPreview(true);
@@ -204,9 +234,11 @@ export function PortalProjectPage() {
         },
       );
 
-      updateDraft(response.draft);
+      updateDraft(response.draft, "preview");
       setNotice(response.message);
+      await refreshSummary();
     } catch (caught) {
+      setNoticeError(true);
       setNotice(
         caught instanceof Error ? caught.message : "提交预告资料失败。",
       );
@@ -218,10 +250,14 @@ export function PortalProjectPage() {
   async function handleReviewSave() {
     setPendingAction("review-save");
     setNotice(null);
+    setNoticeError(false);
+    setRefreshWarning(null);
 
     try {
       await patchReview();
+      await refreshSummary();
     } catch (caught) {
+      setNoticeError(true);
       setNotice(
         caught instanceof Error ? caught.message : "保存审查说明失败。",
       );
@@ -233,6 +269,8 @@ export function PortalProjectPage() {
   async function handleReviewSubmit() {
     setPendingAction("review-submit");
     setNotice(null);
+    setNoticeError(false);
+    setRefreshWarning(null);
 
     try {
       await patchReview(true);
@@ -244,9 +282,11 @@ export function PortalProjectPage() {
         },
       );
 
-      updateDraft(response.draft);
+      updateDraft(response.draft, "review");
       setNotice(response.message);
+      await refreshSummary();
     } catch (caught) {
+      setNoticeError(true);
       setNotice(
         caught instanceof Error ? caught.message : "提交审查说明失败。",
       );
@@ -255,18 +295,11 @@ export function PortalProjectPage() {
     }
   }
 
-  if (sessionQuery.isPending || state.status === "loading") {
-    return (
-      <PageHeading
-        title={<>作品资料</>}
-        description={<>正在读取当前作品资料状态。</>}
-      ></PageHeading>
-    );
-  }
+  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取作品资料。</p>;
 
   if (state.status === "error") {
     return (
-      <div className="page-content">
+      <div className={embedded ? "space-y-6" : "page-content"}>
         <PageHeading title="作品资料" />
         {state.forbidden ? (
           <>
@@ -285,8 +318,8 @@ export function PortalProjectPage() {
   const flags = buildWindowFlagMap(state.project.windows);
 
   return (
-    <div className="page-content">
-      <PageHeading
+    <div className={embedded ? "space-y-6" : "page-content"}>
+      {!embedded ? <PageHeading
         title={<>作品资料</>}
         description={
           <>
@@ -302,14 +335,14 @@ export function PortalProjectPage() {
             审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
           </StatusBadge>
         </div>
-      </PageHeading>
+      </PageHeading> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
           label="当前时间段"
           value={
             state.project.participant.currentSegmentCode
-              ? `${state.project.participant.currentSegmentCode} · ${state.project.participant.currentSegmentName ?? "未命名"}`
+              ? `${state.project.participant.currentSegmentCode} ${state.project.participant.currentSegmentName ?? "未命名"}`
               : "尚未认领"
           }
         />
@@ -375,9 +408,7 @@ export function PortalProjectPage() {
               <p>
                 对外署名：{state.project.draft.publicAuthorName ?? "未填写"}
               </p>
-              <Link className="text-link" to="/portal/profile">
-                修改署名设置
-              </Link>
+              {embedded ? <a className="text-link" href="#profile">修改署名设置</a> : <Link className="text-link" to="/portal/profile">修改署名设置</Link>}
             </div>
 
             <Field label="作品类型">
@@ -448,17 +479,15 @@ export function PortalProjectPage() {
           </div>
 
           <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
-            <button
-              className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
+            <Button variant="secondary"
               disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
               aria-busy={pendingAction === "preview-save"}
               onClick={() => void handlePreviewSave()}
               type="button"
             >
               {pendingAction === "preview-save" ? "保存中..." : "保存预告草稿"}
-            </button>
-            <button
-              className="button button--primary"
+            </Button>
+            <Button
               disabled={pendingAction !== null || !flags.previewSubmitOpen || state.project.draft.previewStatus === "approved"}
               aria-busy={pendingAction === "preview-submit"}
               onClick={() => void handlePreviewSubmit()}
@@ -467,7 +496,7 @@ export function PortalProjectPage() {
               {pendingAction === "preview-submit"
                 ? "提交中..."
                 : "提交预告资料"}
-            </button>
+            </Button>
           </div>
 
           <p className="text-sm text-on-surface-variant">
@@ -496,7 +525,7 @@ export function PortalProjectPage() {
             <Field label="内容概述">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -511,7 +540,7 @@ export function PortalProjectPage() {
             <Field label="内容警示">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -526,7 +555,7 @@ export function PortalProjectPage() {
             <Field label="给主催的补充说明">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -540,35 +569,36 @@ export function PortalProjectPage() {
           </div>
 
           <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
-            <button
-              className="px-6 py-2 bg-surface-variant text-on-surface rounded-md font-medium hover:bg-outline-variant transition-colors disabled:opacity-50"
-              disabled={pendingAction !== null}
+            <Button variant="secondary"
+              disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
               aria-busy={pendingAction === "review-save"}
               onClick={() => void handleReviewSave()}
               type="button"
             >
               {pendingAction === "review-save" ? "保存中..." : "保存审查草稿"}
-            </button>
-            <button
-              className="button button--primary"
-              disabled={pendingAction !== null || !flags.reviewSubmitOpen}
+            </Button>
+            <Button
+              disabled={pendingAction !== null || !flags.reviewSubmitOpen || state.project.draft.reviewStatus === "approved"}
               aria-busy={pendingAction === "review-submit"}
               onClick={() => void handleReviewSubmit()}
               type="button"
             >
               {pendingAction === "review-submit" ? "提交中..." : "提交审查说明"}
-            </button>
+            </Button>
           </div>
 
           <p className="text-sm text-on-surface-variant">
-            {flags.reviewSubmitOpen
+            {state.project.draft.reviewStatus === "approved"
+              ? "审查说明已通过，如需修改请联系主催退回。"
+              : flags.reviewSubmitOpen
               ? "当前可以提交审查说明。"
               : "当前只可先保存草稿。"}
           </p>
         </section>
       </div>
 
-      {notice ? <Notice tone="success">{notice}</Notice> : null}
+      {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
+      {notice ? <Notice tone={noticeError ? "error" : "success"}>{notice}</Notice> : null}
     </div>
   );
 }

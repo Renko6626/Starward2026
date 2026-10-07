@@ -5,6 +5,7 @@
 
 # Signs the local Better Auth session cookies emitted by db:local:reset.
 BETTER_AUTH_SECRET="replace-with-a-32-plus-character-local-secret"
+BETTER_AUTH_URL="http://localhost:20262"
 
 # Dev-only admin bypass. When "true" AND the request host is loopback,
 # /api/admin/* uses local-admin@starward.local without Cloudflare Access.

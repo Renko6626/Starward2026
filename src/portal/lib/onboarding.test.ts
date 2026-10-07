@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("resolvePortalEntryDestination", () => {
-  it("sends first-time accounts to profile completion", async () => {
+  it("keeps first-time accounts in the single workspace", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -26,10 +26,10 @@ describe("resolvePortalEntryDestination", () => {
         profile: null,
         application: null,
       }),
-    ).toEqual("/portal/profile");
+    ).toEqual("/portal");
   });
 
-  it("sends profiled accounts without an application to the application page", async () => {
+  it("keeps profiled applicants in the single workspace", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -62,10 +62,10 @@ describe("resolvePortalEntryDestination", () => {
         },
         application: null,
       }),
-    ).toEqual("/portal/application");
+    ).toEqual("/portal");
   });
 
-  it("sends pending creators with profile and application to application progress", async () => {
+  it("keeps pending creators in the single workspace", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -107,7 +107,7 @@ describe("resolvePortalEntryDestination", () => {
           reviewedAt: null,
         },
       }),
-    ).toEqual("/portal/application");
+    ).toEqual("/portal");
   });
 
   it("keeps approved creators with profile and application on the dashboard", async () => {

@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   resolve: { dedupe: ["three"] },
-  plugins: [TanStackRouterVite({ autoCodeSplitting: true }), react(), tailwindcss(), cloudflare()],
+  plugins: [TanStackRouterVite({ autoCodeSplitting: true }), react(), tailwindcss(), cloudflare({ remoteBindings: false })],
   server: {
     host: "0.0.0.0",
     port: 20262,

@@ -1,234 +1,99 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  DetailItem,
-  ReadError,
-  PageHeading,
-  StatusBadge,
-} from "../../app/components/ui";
+import { useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Notice, PageHeading, ReadError, StatusBadge, WorkspaceSection } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
 import { applicationStatusLabels } from "../../shared/applications";
-import {
-  projectDraftStatusLabels,
-  type PortalDashboardResponse,
-} from "../../shared/portal";
-import { buildWindowFlagMap, getApplicationWindowLabel } from "../../shared/windows";
+import type { CollaborationResponse } from "../../shared/collaboration";
+import { projectDraftStatusLabels, type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
+import { RegistrationSection } from "../components/RegistrationSection";
+import { ScheduleSection } from "../components/ScheduleSection";
+import { ScheduleGrid } from "../components/ScheduleGrid";
+import { SwapRequests } from "../components/SwapRequests";
 import { authClient } from "../lib/auth-client";
+import { PortalHistoryPage } from "./PortalHistoryPage";
+import { PortalProfilePage } from "./PortalProfilePage";
+import { PortalProjectPage } from "./PortalProjectPage";
 
+type WorkspaceState = { dashboard: PortalDashboardResponse; application: PortalApplicationResponse; collaboration: CollaborationResponse };
 export function PortalOverviewPage() {
   const navigate = useNavigate();
-  const sessionQuery = authClient.useSession();
-  const [dashboard, setDashboard] = useState<PortalDashboardResponse | null>(
-    null,
-  );
+  const session = authClient.useSession();
+  const [state, setState] = useState<WorkspaceState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!sessionQuery.isPending && !sessionQuery.data) {
-      void navigate({ to: "/portal/login" });
-      return;
-    }
-
-    if (!sessionQuery.data) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
+  const [revision, setRevision] = useState(0);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const refreshSequence = useRef(0);
+  const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
+    const [dashboard, application, collaboration] = await Promise.all([
+      requestJson<PortalDashboardResponse>("/api/portal/dashboard"),
+      requestJson<PortalApplicationResponse>("/api/portal/application"),
+      requestJson<CollaborationResponse>("/api/portal/collaboration"),
+    ]);
+    if (sequence !== refreshSequence.current) return;
+    setState({ dashboard, application, collaboration });
+    setRevision(value => value + 1);
     setError(null);
-
-    void requestJson<PortalDashboardResponse>("/api/portal/dashboard")
-      .then((response) => {
-        if (!cancelled) {
-          setDashboard(response);
-          setIsLoading(false);
-        }
-      })
-      .catch((caught) => {
-        if (cancelled) {
-          return;
-        }
-
-        if (caught instanceof ApiError && caught.status === 401) {
-          void navigate({ to: "/portal/login" });
-          return;
-        }
-
-        setError(
-          caught instanceof Error ? caught.message : "参与者门户数据加载失败。",
-        );
-        setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate, sessionQuery.data, sessionQuery.isPending]);
-
-  if (sessionQuery.isPending || isLoading) {
-    return (
-      <div className="page-content">
-        <PageHeading eyebrow="CREATOR WORKSPACE" title="我的工作台" />
-        <p>正在读取你的创作进度。</p>
-      </div>
-    );
+  }, []);
+  useEffect(() => {
+    if (!session.isPending && !session.data) { void navigate({ to: "/portal/login" }); return; }
+    if (!session.data) return;
+    let cancelled = false;
+    void refresh().catch(caught => {
+      if (cancelled) return;
+      if (caught instanceof ApiError && caught.status === 401) { void navigate({ to: "/portal/login" }); return; }
+      setError(caught instanceof Error ? caught.message : "无法读取工作台。");
+    });
+    return () => { cancelled = true; refreshSequence.current += 1; };
+  }, [navigate, session.data, session.isPending, refresh]);
+  async function withdraw() {
+    setWithdrawing(true); setError(null);
+    try {
+      const response = await requestJson<{ ok: true; message: string }>("/api/portal/application/withdraw", { method: "POST" });
+      setMessage(response.message); setConfirmWithdraw(false);
+      try { await refresh(); }
+      catch { setError("报名已撤回并释放时段，但摘要暂未更新。请点击更新进度。"); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
+    finally { setWithdrawing(false); }
   }
-  if (!dashboard) {
-    return (
-      <div className="page-content">
-        <PageHeading title="我的工作台" />
-        <ReadError message={error || "暂时无法读取工作台。"} />
-      </div>
-    );
-  }
-
-  const isApprovedParticipant =
-    dashboard.participant?.status === "approved" ||
-    dashboard.participant?.status === "completed";
-  const windowFlags = buildWindowFlagMap(dashboard.windows);
-  const displayName = dashboard.profile?.creditName;
-  const applicationWindow = dashboard.windows.find((item) => item.key === "application_open");
-  const tasks = [
-    ...(!dashboard.profile ? [{
-      title: "完善个人档案",
-      description: "补充署名和联系方式，方便主催与你沟通。",
-      actionLabel: "完善个人档案",
-      to: "/portal/profile" as const,
-    }] : []),
-    ...(isApprovedParticipant ? [
-      {
-        title: "确认接力时间段",
-        description: dashboard.currentSegment
-          ? `当前持有 ${dashboard.currentSegment.code} · ${dashboard.currentSegment.name}`
-          : "查看可用时间段，并在开放期间认领。",
-        actionLabel: "前往日程",
-        to: "/portal/schedule" as const,
-      },
-      {
-        title: "整理作品资料",
-        description: dashboard.projectDraft
-          ? `预告：${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]}；审查：${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}`
-          : "填写作品预告、审查说明与相关链接。",
-        actionLabel: "编辑作品资料",
-        to: "/portal/project" as const,
-      },
-    ] : [{
-      title: dashboard.application ? "查看报名进度" : "填写正式报名",
-      description: dashboard.application
-        ? windowFlags.applicationOpen
-          ? "查看审核结果与反馈，审核通过前可修改报名。"
-          : `${getApplicationWindowLabel(applicationWindow)}，暂时不能修改报名。可查看审核结果与反馈。`
-        : windowFlags.applicationOpen
-          ? "完善个人档案后，填写创作意向并提交报名。"
-          : `${getApplicationWindowLabel(applicationWindow)}，可以先完善个人档案。`,
-      actionLabel: "查看报名",
-      to: "/portal/application" as const,
-    }]),
-  ];
-
-  return (
-    <div className="page-content">
-      <PageHeading
-        eyebrow="CREATOR WORKSPACE / 2026"
-        title="我的工作台"
-        description="在这里跟进报名、整理作品，准备下一次接力。"
-      >
-        <StatusBadge tone={isApprovedParticipant ? "success" : "muted"}>
-          {isApprovedParticipant ? "审核已通过" : dashboard.application ? applicationStatusLabels[dashboard.application.status] : "报名未提交"}
-        </StatusBadge>
-      </PageHeading>
-      <section className="dashboard-welcome">
-        <div>
-          <p className="eyebrow">HELLO, CREATOR</p>
-          <h2>{displayName ? `${displayName}，欢迎回来。` : "欢迎回来。"}</h2>
-          <p>
-            {!dashboard.profile
-              ? dashboard.application?.status === "approved"
-                ? "报名已通过，请补充个人档案。"
-                : "请先完善个人档案中的署名和联系方式。"
-              : isApprovedParticipant
-              ? "你的参与资格已经通过审核，可以继续确认接力日程和完善作品。"
-              : dashboard.application
-                ? `报名状态：${applicationStatusLabels[dashboard.application.status]}。审核通过后可填写作品资料。`
-                : "先完善个人档案，再提交你的创作意向。你的故事，从这里开始。"}
-          </p>
-        </div>
-        <Link
-          className="button button--secondary"
-          to={
-            !dashboard.profile
-              ? "/portal/profile"
-              : isApprovedParticipant
-                ? "/portal/project"
-                : "/portal/application"
-          }
-        >
-          {!dashboard.profile
-            ? "完善个人档案"
-            : isApprovedParticipant
-              ? "继续整理作品"
-              : "查看我的报名"}
-          <ArrowUpRight size={16} />
-        </Link>
-      </section>
-      <div className="dashboard-grid">
-        <section className="panel">
-          <h2 className="panel-title">接下来要做的事</h2>
-          {tasks.map((task, index) => (
-            <article className="task-row" key={task.title}>
-              <span>0{index + 1}</span>
-              <div>
-                <h3>{task.title}</h3>
-                <p>{task.description}</p>
-              </div>
-              <Link className="text-link" to={task.to}>
-                {task.actionLabel}
-                <ArrowUpRight size={14} />
-              </Link>
-            </article>
-          ))}
-        </section>
-        <div className="space-y-7">
-          <section className="panel">
-            <h2 className="panel-title">我的档案</h2>
-            <div className="space-y-5">
-              <DetailItem label="署名" value={displayName ?? "未填写"} />
-              <DetailItem
-                label="联系邮箱"
-                value={dashboard.profile?.contactEmail ?? dashboard.user.email}
-              />
-              <DetailItem
-                label="资料状态"
-                value={dashboard.profile ? "已填写" : "待补充"}
-              />
-            </div>
-            <Link className="text-link mt-6" to="/portal/profile">
-              编辑个人档案 <ArrowUpRight size={14} />
-            </Link>
-          </section>
-          <section className="panel">
-            <h2 className="panel-title">最近的进展</h2>
-            {dashboard.recentEvents.length ? (
-              <div className="timeline">
-                {dashboard.recentEvents.map((item) => (
-                  <article key={item.id}>
-                    <time>{formatDateTime(item.createdAt)}</time>
-                    <p>{item.label}</p>
-                    <small>{item.actorLabel}</small>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="text-base text-on-surface-variant leading-7">
-                还没有新的记录。完成资料或提交报名后，进展会显示在这里。
-              </p>
-            )}
-          </section>
-        </div>
-      </div>
-    </div>
-  );
+  if (!state) return <div className="page-content creator-workspace"><PageHeading eyebrow="CREATOR WORKSPACE" title="我的工作台" />{error ? <ReadError message={error} /> : <p>正在读取你的创作进度。</p>}</div>;
+  const { dashboard, application, collaboration } = state;
+  const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
+  const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
+  const pendingRequests = collaboration.requests.filter(request => request.status === "pending");
+  return <div className="page-content creator-workspace">
+    <PageHeading title="我的工作台" description="查看报名进度、调整排期，整理作品资料。"><StatusBadge tone={approved ? "success" : application.application?.status === "pending" ? "warning" : "muted"}>{application.application ? applicationStatusLabels[application.application.status] : "报名未提交"}</StatusBadge><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
+    <section className="workspace-summary" aria-label="我的计划与时段">
+      <div><p className="eyebrow">我的创作计划</p><h2>{dashboard.profile?.creditName ?? "填写你的报名资料"}</h2><p>{application.application?.introText || "填写创作计划后，报名和时段预留会一起提交。"}</p></div>
+      <div><p className="eyebrow">{current?.status === "reserved" ? "预留时段" : "当前时段"}</p><h2>{current ? `${current.code} ${current.name}` : "尚未选择"}</h2><p>{current?.status === "reserved" ? "审核中，时段已为你预留。" : current?.status === "confirmed" ? "报名已通过，时段已确认。" : approved ? "可以在排期区块认领空闲时段。" : "报名时选择一个可用时段。"}</p><div className="workspace-actions"><a className="text-link" href="#schedule">查看完整排期</a><a className="text-link" href={approved ? "#schedule" : "#plan"}>{approved ? "调整时间" : application.application ? "查看报名计划" : "填写报名"}</a></div></div>
+    </section>
+    {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
+    <WorkspaceSection id="tasks" title="待办与反馈" summary={pendingRequests.length ? `${pendingRequests.length} 个换期请求待处理` : approved ? "继续整理作品资料" : "报名进度与审核意见"} defaultOpen={Boolean(application.application) || pendingRequests.length > 0}>
+      {application.application?.adminNote ? <Notice tone="warning">主催意见：{application.application.adminNote}</Notice> : null}
+      {approved ? <p>{dashboard.projectDraft ? `预告${projectDraftStatusLabels[dashboard.projectDraft.previewStatus]}，审查${projectDraftStatusLabels[dashboard.projectDraft.reviewStatus]}。` : "请补充作品预告和审查说明。"} <a className="text-link" href="#project">整理作品资料</a></p> : <p>{application.application?.status === "pending" ? "报名正在审核，审核结果会显示在这里。开放期间可以修改计划与预留时段。" : application.application ? "查看审核意见，在报名开放期间更新计划与时段。" : "先填写报名计划，提交后可在这里查看审核结果。"}</p>}
+      <SwapRequests collaboration={collaboration} onSaved={refresh} />
+    </WorkspaceSection>
+    <WorkspaceSection id="plan" title="报名计划" summary={approved ? "已通过，报名资料锁定" : application.application ? "创作计划与预留时段" : "联系方式、创作计划与时段一起提交"} defaultOpen={!application.application}>
+      <RegistrationSection application={application} collaboration={collaboration} onSaved={refresh} />
+      {application.application?.status === "pending" ? <div className="space-y-4">{confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留时段，并保留参与记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放时段"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : <Button variant="secondary" onClick={() => setConfirmWithdraw(true)}>撤回报名</Button>}</div> : null}
+    </WorkspaceSection>
+    <WorkspaceSection id="schedule" title="日程安排" summary={current ? `${current.code} ${current.name}` : "尚未选择时段"}>
+      {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <>
+        <Notice>{dashboard.participant?.status === "completed" ? "参与已完成，可以查看排期。" : "可以查看所有时段；报名与预留时间在报名计划中一起提交。"}</Notice>
+        <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId}
+          renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往报名计划选择时段</a>} />
+      </>}
+    </WorkspaceSection>
+    <WorkspaceSection id="project" title="作品资料" summary={approved ? "公开预告与审查说明分别保存" : "报名通过后填写"} defaultOpen={approved}>
+      {approved ? <PortalProjectPage embedded onSaved={refresh} revision={revision} /> : <Notice>报名审核通过后，可以在这里维护作品资料。</Notice>}
+    </WorkspaceSection>
+    <WorkspaceSection id="profile" title="署名与联系方式" summary={dashboard.profile?.contactEmail ?? dashboard.user.email}>
+      {approved ? <PortalProfilePage embedded onSaved={refresh} /> : <Notice>署名和联系方式在报名计划中填写，与计划和时段一起保存。<a className="text-link" href="#plan">编辑报名资料</a></Notice>}
+    </WorkspaceSection>
+    <WorkspaceSection id="history" title="参与记录" summary="报名、排期和作品提交的进展">
+      {dashboard.participant ? <PortalHistoryPage embedded revision={revision} /> : <p className="workspace-empty">提交报名后，参与记录会显示在这里。</p>}
+    </WorkspaceSection>
+  </div>;
 }

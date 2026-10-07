@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PortalApplicationPage } from "../../portal/pages/PortalApplicationPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/portal/application")({
-  component: PortalApplicationPage,
+  beforeLoad: () => { throw redirect({ to: "/portal", hash: "plan", replace: true }); },
 });

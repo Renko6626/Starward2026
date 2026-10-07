@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
-import { Field, Notice, PageHeading, ReadError } from "../../app/components/ui";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Button, Field, Notice, PageHeading, ReadError } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type {
   PortalProfileMutationResponse,
@@ -21,12 +21,14 @@ const defaultFormState: UpdatePortalProfileInput = {
   isAnonymous: true,
 };
 
-export function PortalProfilePage() {
+export function PortalProfilePage({ embedded = false, onSaved }: { embedded?: boolean; onSaved?: () => Promise<void> } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
+  const initialized = useRef(false);
   const [form, setForm] = useState<UpdatePortalProfileInput>(defaultFormState);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [refreshWarning, setRefreshWarning] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profileState, setProfileState] = useState<PortalProfileResponse | null>(null);
@@ -42,13 +44,16 @@ export function PortalProfilePage() {
     }
 
     let cancelled = false;
-    setIsLoading(true);
+    if (!initialized.current) setIsLoading(true);
     setError(null);
 
     void requestJson<PortalProfileResponse>("/api/portal/profile")
       .then((response) => {
         if (!cancelled) {
-          setForm(buildInitialProfileForm(response));
+          if (!initialized.current) {
+            setForm(buildInitialProfileForm(response));
+            initialized.current = true;
+          }
           setProfileState(response);
           setIsLoading(false);
         }
@@ -77,6 +82,7 @@ export function PortalProfilePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    setRefreshWarning(null);
     setError(null);
 
     const normalized = normalizePortalProfileInput(form);
@@ -102,7 +108,7 @@ export function PortalProfilePage() {
       );
 
       setForm(buildInitialProfileFormFromMutation(parsed.data));
-      if (profileState && !profileState.profile && !profileState.application) {
+      if (!embedded && profileState && !profileState.profile && !profileState.application) {
         await navigate({ to: "/portal/application" });
         return;
       }
@@ -110,6 +116,7 @@ export function PortalProfilePage() {
         current ? { ...current, profile: response.profile } : current,
       );
       setMessage(response.message);
+      await onSaved?.().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "资料保存失败。");
     } finally {
@@ -128,22 +135,22 @@ export function PortalProfilePage() {
 
   if (!profileState) {
     return (
-      <div className="page-content">
+      <div className={embedded ? "space-y-6" : "page-content"}>
         <PageHeading title="个人档案" />
         <ReadError message={error || "暂时无法读取个人档案。"} />
       </div>
     );
   }
 
-  const continueToApplication = !profileState.profile && !profileState.application;
+  const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
   return (
-    <div className="page-content">
-      <PageHeading
+    <div className={embedded ? "space-y-6" : "page-content"}>
+      {!embedded ? <PageHeading
         eyebrow="PROFILE / 01"
         title="个人档案"
         description="让主催找到你，也让作品以你希望的名字被看见。"
-      />
+      /> : null}
       <form className="panel space-y-6" onSubmit={handleSubmit}>
         <fieldset className="form-section">
           <legend>署名</legend>
@@ -222,20 +229,18 @@ export function PortalProfilePage() {
             </Field>
           </div>
         </fieldset>
+        {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <div className="form-actions">
-          <Link className="button button--secondary" to="/portal">
-            返回工作台
-          </Link>
-          <button
-            className="button button--primary"
+          {!embedded ? <Link className="button button--secondary" to="/portal">返回工作台</Link> : null}
+          <Button
             disabled={isSaving}
             aria-busy={isSaving}
             type="submit"
           >
             {isSaving ? "保存中..." : continueToApplication ? "保存并继续报名" : "保存更改"}
-          </button>
+          </Button>
         </div>
       </form>
       <PasswordSettings />
