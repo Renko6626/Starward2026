@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d10">
+  <link rel="icon" href="data:,">
+  <title>逐星巡礼 — 座舱 HUD 原型</title>
+</head>
+<body>
+  <div id="viewport" aria-hidden="true"></div>
+  <div class="reading-shade" aria-hidden="true"></div>
+  <header class="mission-header">
+    <a class="identity" href="#top">逐星巡礼 <span>STARWARD PILGRIMAGE / 2026</span></a>
+    <div class="prototype">座舱视角研究 <span>C / 01</span></div>
+  </header>
+  <main id="top">
+    <section class="approach" aria-label="窗外目标">
+      <p class="eyebrow">FORWARD OBSERVATION / 前向观察窗</p>
+      <p class="target-name">鸟船生态实验站 <span>TORIFUNE</span></p>
+      <div class="target-mark" aria-hidden="true"><i></i><span>EARTH–MOON L₄</span></div>
+    </section>
+    <section class="hud" aria-labelledby="title">
+      <div class="hud-cap"><span>EVENT SCHEDULE</span><span>01 / 接力目录</span></div>
+      <header class="schedule-heading">
+        <div><p class="eyebrow">逐星巡礼 2026</p><h1 id="title">接力时间表</h1></div>
+        <p>10 月 17—18 日 <span>北京时间 UTC+8</span></p>
+      </header>
+      <div class="progress"><span>当前接力 <b>03</b> / 24</span><a href="#slot-3">定位当前接力 ↗</a><div class="ticks" aria-hidden="true"></div></div>
+      <div class="toolbar"><p><i></i>接力进行中 <span>共 24 棒</span></p><label><span class="sr-only">搜索示例作品或参与者</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="寻找作品或参与者"></label></div>
+      <nav class="dates" aria-label="按日期查看"><a href="#day-17">10 月 17 日 <small>12 棒</small></a><a href="#day-18">10 月 18 日 <small>12 棒</small></a><span>作品详情在接力结束后开放</span></nav>
+      <div id="schedule"></div>
+      <p id="empty" hidden>没有找到对应的示例作品或参与者。</p>
+      <footer class="hud-footer"><span>全部 24 棒</span><span>示例排期，用于构图研究</span></footer>
+    </section>
+    <footer class="study-note">C / 01 <span>转移飞行器座舱概念，固定观察视点；未模拟交会制导。</span></footer>
+  </main>
+  <div class="hardware-label left" aria-hidden="true">FWD WINDOW<br><span>INNER PRESSURE PANE</span></div>
+  <div class="hardware-label right" aria-hidden="true">DISPLAY<br><span>EVENT CHANNEL</span></div>
+  <button id="motion" type="button" aria-pressed="false">暂停场景</button>
+  <p id="failure" role="status" hidden>三维场景未能启动，仍可查看示例时间表。</p>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

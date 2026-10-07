@@ -1,0 +1,10 @@
+{
+  "name": "starward-relay-cockpit-study",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../node_modules/vite/bin/vite.js --host 0.0.0.0 --port 26107 --strictPort",
+    "build": "node ../../node_modules/vite/bin/vite.js build",
+    "preview": "node ../../node_modules/vite/bin/vite.js preview --host 0.0.0.0 --port 26107 --strictPort"
+  }
+}
