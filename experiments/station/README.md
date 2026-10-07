@@ -1,14 +1,16 @@
 # 鸟船空间站样稿
 
-这两个版本保留独立的 Three.js 外景查看器。当前 R/06 的模型源码已接入主页，A/19 继续归档；本轮未部署。
+这两个版本保留独立的 Three.js 外景查看器。当前 R/07 的模型源码已接入主页，A/19 继续归档；本轮未部署。
 
-修改 R/06 后，在仓库根目录运行 `npm run station:update`，即可重新生成主页静态背景、结构图版与纯线稿，并构建网站。流程见 [主页鸟船更新说明](../../docs/development/station-homepage.md)。
+修改 R/07 后，在仓库根目录运行 `npm run station:update`，即可重新生成主页静态背景、结构图版与纯线稿，并构建网站。流程见 [主页鸟船更新说明](../../docs/development/station-homepage.md)。
 
 | 版本 | 入口 | 本地端口 |
 | --- | --- | --- |
-| 当前环形站 R/06 | [ring-romantic/README.md](./ring-romantic/README.md) | 26106 |
+| 当前环形站 R/07 | [ring-romantic/README.md](./ring-romantic/README.md) | 26106 |
 | 写实纵向骨架 A/19 归档 | [archive/torifune-a19-axial-spine/README.md](./archive/torifune-a19-axial-spine/README.md) | 26105 |
 
 新稿采用地月 L4、112 米生态主环与前侧反转储备环的已确认方案；R/02 加入储备水罐/干货匣并拉长轴向层次，R/03 调整横向视角和沿 Y 展开的散热板，R/04 缩小两臂、RCS 与主发动机，核心舱及服务通道保留；R/05 增加主环两条人员升降设施、入口隔离舱和轴心独立转接舱，采用 NASA 概念的静态外景表达；R/06 将副环定为 84 米 / 目标 2 rpm，主环壳体内径扩为 90 米，加入两工作舱、两储备仓、人员通路和混合货物，并补主轴与环壳的金属覆板细节。[交接文档](../../docs/design/torifune-ring-handoff.md)与[实施计划](../../docs/superpowers/plans/2026-10-06-romantic-ring-station.md)记录结构基线和范围。
 
 两个包各自保留入口、锁文件、查看器和模型源文件；未提取跨版本模型库。现有 `node_modules/` 留在此目录供子目录解析，`dist/` 为旧构建缓存，不是当前入口。独立安装请使用对应子目录的锁文件。
+
+R/07 强化固定主轴的连续纵梁与两环轴承接口，补滑环、流体接头与数据耦合器外形；前端改为固定六向节点，光伏翼扩大为四组 10×45 m，石墨灰散热翼扩大为两组 6×40 m，RCS 增加双弦支臂和设备安装座。双环和六罐四机尺寸沿用 R/06。

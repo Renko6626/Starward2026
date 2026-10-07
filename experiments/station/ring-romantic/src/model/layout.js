@@ -3,7 +3,7 @@ export const layout = {
   confirmed: {
     location: 'Earth–Moon L4', mainOuterRadius: 56, ecologicalClearHeight: 8,
     usableAxialWidth: 16, serviceBandWidth: 2, gravityTarget: .16,
-    mainSpokes: 4, mainTanks: 6, mainEngines: 4, solarWings: 4, radiators: 2,
+    mainSpokes: 4, mainTanks: 6, mainEngines: 4, solarWings: 4, radiators: 4,
     counterDiameter: 84, counterRpmTarget: 2, crew: 4, residenceMonths: [2, 3],
     counterRole: 'Material reserves / angular momentum balancing',
     radiatorExtensionAxis: 'Y', radiatorMount: 'Fixed photovoltaic truss',
@@ -36,8 +36,8 @@ export const layout = {
     // fixed carriage. Inspection targets the fixed side of the front bearing.
     assemblyArmPose: [[-24, -7.5, 6.3], [-30, -12, 9], [-22, -16, 17], [-18, -11, 19]],
     inspectionArmPose: [[-7, -7.5, -6.3], [-8.5, -10.2, -6.5], [-12.5, -9.4, -5], [-15.3, -4.7, -4]],
-    solarPanelWidth: 7, solarWingLength: 30, solarRootZ: 40,
-    radiatorWidth: 5, radiatorLength: 22, radiatorRootX: 17, radiatorRootZ: 32,
-    radiatorStartY: 2.5, antennaDiameter: 9,
+    solarPanelWidth: 10, solarWingLength: 45, solarRootZ: 58,
+    radiatorWidth: 6, radiatorLength: 40, radiatorRootX: 17, radiatorRootZ: 32,
+    radiatorStartY: 4.5, antennaDiameter: 9,
   },
 };

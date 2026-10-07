@@ -1,4 +1,4 @@
-import { Assembly, anchor, polar } from './assembly.js';
+import { Assembly, anchor, polar, arcGeometry, pipe } from './assembly.js';
 
 export function createCore({ layout, resources }) {
   const a = new Assembly(resources), w = layout.working, axis = [0, 0, Math.PI / 2];
@@ -36,10 +36,20 @@ export function createCore({ layout, resources }) {
       }
       if (i % 2 === 0) {
         const tangent = 1.28;
-        a.beam('silver', at(x - length / 2 + .8, radius + .16, tangent), at(x + length / 2 - .8, radius + .16, tangent), .07);
+        a.beam('silver', at(x - length / 2 + .8, radius + .16, tangent), at(x + length / 2 - .8, radius + .16, tangent), .025);
       }
     }
     a.box('foil', [x, -radius - .55, 0], [length * .45, 1.1, 2.1]);
+  }
+  // Continuous fixed chords give the modular pressure core one readable spine.
+  // They remain inside both rotor bores and never attach to a rotating spoke.
+  for (let i = 0; i < 4; i++) {
+    const t = Math.PI / 4 + i * Math.PI / 2, r = 5.15;
+    a.beam('hull', polar(spineFront, r, t), polar(spineRear, r, t), .55, .55);
+    for (const x of [-57, -44, -36, -23, -10, 10, 23, 35, 44]) {
+      a.beam('silver', polar(x, 2.8, t), polar(x, r, t), .32);
+      a.box('silver', polar(x, r, t), [1.2, .8, .8], [t, 0, 0]);
+    }
   }
   for (const [x, radius, length] of [[w.mainX, 6.1, 12.4], [w.counterX, 5, 5.6]]) {
     a.cylinder('dark', [x, 0, 0], radius, length, axis);
@@ -51,6 +61,33 @@ export function createCore({ layout, resources }) {
         a.box('service', [end, (radius + .6) * Math.cos(t), (radius + .6) * Math.sin(t)], [1.1, 1, 1.3], [t, 0, 0]);
         a.box('silver', [end + side * .85, radius * Math.cos(t), radius * Math.sin(t)], [.4, .55, .8], [t, 0, 0]);
       }
+    }
+  }
+  // Fixed service collars sit outside the rotating hub's axial envelope.
+  // Annular geometry leaves the central pressure corridor continuous.
+  for (const [x, rotorRadius, halfLength] of [[w.mainX, 7.5, 6.2], [w.counterX, 6, 2.8]]) {
+    for (const side of [-1, 1]) {
+      // Front collars stay inside the existing rotating crew-guide bores.
+      const radius = rotorRadius - (side < 0 ? (x === w.mainX ? .8 : .35) : 0);
+      const end = x + side * (halfLength + .65);
+      a.part(arcGeometry(radius, 1.1, 1.1, Math.PI * 2, .16, 64), 'hull', [end, 0, 0]);
+      a.part(arcGeometry(radius, .22, 1.25, Math.PI * 2, .06, 64), 'silver', [end + side * .62, 0, 0]);
+      // Dark separation, conductive slip-ring bands and independent fluid ring.
+      for (const [offset, r, mat] of [[1, radius - .35, 'dark'], [1.35, radius - .4, 'foil'],
+        [1.65, radius - .4, 'silver'], [2, radius - .4, 'foil'], [2.5, radius - .65, 'reservePipe']])
+        a.part(arcGeometry(r, .2, .3, Math.PI * 2, .04, 64), mat, [end + side * offset, 0, 0]);
+      for (let i = 0; i < 8; i++) {
+        const t = i * Math.PI / 4;
+        a.beam('silver', polar(end, radius - 1.5, t), polar(end, radius, t), .4);
+        a.box('dark', polar(end + side * 1.65, radius, t), [1.7, .65, .85], [t, 0, 0]);
+        a.box('silver', polar(end, radius + .62, t), [.75, .32, .65], [t, 0, 0]);
+      }
+      const t = -Math.PI / 4;
+      a.box('service', polar(end + side * 2.5, radius, t), [1.2, 1.1, 1.8], [t, 0, 0]);
+      a.box('dark', polar(end + side * 1.1, radius + .85, t + .5), [1.1, .7, 1.1], [t + .5, 0, 0]);
+      for (const dr of [-.25, .25]) pipe(a, 'reservePipe', [
+        polar(end + side * 3.5, 4.9, t + dr), polar(end + side * 3.5, radius, t + dr),
+        polar(end + side * 2.5, radius, t + dr)], .1);
     }
   }
   // Exterior fixed-side supply lines stop at bearing service equipment.
@@ -75,7 +112,7 @@ export function createCore({ layout, resources }) {
   boarding.box('crewLabel', polar(bx - 1.45, tr, angle), [.08, .6, 1.6], [angle, 0, 0]);
   boarding.box('glass', polar(bx - 1.45, tr - .8, angle), [.08, .45, .8], [angle, 0, 0]);
   for (const dx of [-1.3, 1.3])
-    boarding.beam('silver', polar(bx + dx, 4.5, angle), polar(bx + dx, tr - 1.3, angle), .2);
+    boarding.beam('silver', polar(bx + dx, 4.5, angle), polar(bx + dx, tr - 1.3, angle), .06);
   object.add(boarding.build('Main fixed boarding vestibule / closed docking port'));
   const counterBoarding = new Assembly(resources), ca = w.counterPodCentreBay * Math.PI * 2 / w.counterStorageBays;
   const cr = w.counterTransferRadius, cx = w.counterX - 9;
@@ -85,7 +122,7 @@ export function createCore({ layout, resources }) {
   counterBoarding.cylinder('dark', polar(cx + 1.65, cr, ca), .82, .08, axis);
   counterBoarding.box('hullShade', polar(cx + 1.71, cr, ca), [.06, 1.18, 1.05], [ca, 0, 0]);
   counterBoarding.box('crewLabel', polar(cx - 1.45, cr, ca), [.08, .6, 1.6], [ca, 0, 0]);
-  for (const dx of [-1.3, 1.3]) counterBoarding.beam('silver', polar(cx + dx, 4.5, ca), polar(cx + dx, cr - 1.3, ca), .2);
+  for (const dx of [-1.3, 1.3]) counterBoarding.beam('silver', polar(cx + dx, 4.5, ca), polar(cx + dx, cr - 1.3, ca), .06);
   object.add(counterBoarding.build('Counter fixed boarding vestibule / closed docking port'));
   return { object, anchors: {
     lab: anchor(object, 'Analysis and sample preservation', [modules[2][0], 5.5, -2]),

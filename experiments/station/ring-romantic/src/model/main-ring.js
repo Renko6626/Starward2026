@@ -18,7 +18,7 @@ function crewAccess(resources, w, angle, index) {
   a.beam('hullShade', at(tx + 1.4, tr), at(-4.5, inner), 2.05, 2.1);
   a.beam('hullShade', at(-4.5, inner), at(x, inner), 2.05, 2.1);
   for (const r of [tr - 1.45, tr + 1.45])
-    a.beam('silver', at(-5.5, r), at(tx + 1.4, r), .24);
+    a.beam('silver', at(-5.5, r), at(tx + 1.4, r), .06);
   // Entry vestibule embeds into the existing junction pressure envelope.
   a.box('hull', at(x, outer + .6), [3, 3.1, 3.2], [angle, 0, 0]);
   a.box('dark', at(x, outer - 1.02), [2.45, .16, 2.35], [angle, 0, 0]);
@@ -67,7 +67,7 @@ export function createMainRing({ layout, resources }) {
         [side * 9.04, 0, 0], [1, 1, 1], [angle + panel * (pitch - .06) / 3, 0, 0]);
       for (const dt of [-1, 1]) {
         const t = angle + dt * (pitch - .06) / 6;
-        a.beam('frame', polar(side * 9.12, radius - 3.4, t), polar(side * 9.12, radius + 3.4, t), .07);
+        a.beam('frame', polar(side * 9.12, radius - 3.4, t), polar(side * 9.12, radius + 3.4, t), .025);
       }
       for (const dr of [-3.3, 3.3]) for (const dt of [-1.5, -.5, .5, 1.5]) {
         const t = angle + dt * (pitch - .06) / 3;
@@ -90,7 +90,7 @@ export function createMainRing({ layout, resources }) {
         [x, 0, 0], [1, 1, 1], [angle + dt * (pitch - .08) / 3, 0, 0]);
     for (const sign of [-1, 1]) {
       const t = angle + sign * (pitch / 2 - .055);
-      a.beam('silver', polar(-7, outer + .02, t), polar(7, outer + .02, t), .1);
+      a.beam('silver', polar(-7, outer + .02, t), polar(7, outer + .02, t), .025);
     }
     // End frames, fastening plates and segmented circumferential members lie
     // inside the same radial band as the pressure shell, not on a second ring.
@@ -98,10 +98,10 @@ export function createMainRing({ layout, resources }) {
     // Exposed circumferential truss bays alternate with hull segments. The
     // sealed joint lies underneath these bays within the same radial band as the enlarged shell.
     for (const x of [-9.1, 9.1]) {
-      for (const r of [41.5, 47.7].map(r => r + ringOffset)) a.beam('silver', polar(x, r, t - .032), polar(x, r, t + .032), .28);
-      for (const dt of [-.032, .032]) a.beam('silver', ringAt(x, 41.5, t + dt), ringAt(x, 47.7, t + dt), .28);
-      a.beam('frame', ringAt(x, 41.5, t - .032), ringAt(x, 47.7, t + .032), .19);
-      a.beam('frame', ringAt(x, 47.7, t - .032), ringAt(x, 41.5, t + .032), .19);
+      for (const r of [41.5, 47.7].map(r => r + ringOffset)) a.beam('silver', polar(x, r, t - .032), polar(x, r, t + .032), .14);
+      for (const dt of [-.032, .032]) a.beam('silver', ringAt(x, 41.5, t + dt), ringAt(x, 47.7, t + dt), .14);
+      a.beam('frame', ringAt(x, 41.5, t - .032), ringAt(x, 47.7, t + .032), .08);
+      a.beam('frame', ringAt(x, 47.7, t - .032), ringAt(x, 41.5, t + .032), .08);
     }
     for (const side of [-1, 1]) {
       a.beam('silver', ringAt(side * 8.2, 40.3, t), ringAt(side * 8.2, 48.7, t), .55, .7);
@@ -150,8 +150,8 @@ export function createMainRing({ layout, resources }) {
   }
   for (let i = 0; i < 8; i++) {
     const angle = i * Math.PI / 4;
-    transfer.beam('frame', polar(-5.5, 7.3, angle), polar(-6.9, w.mainTransferRadius - 1.45, angle), .2);
-    transfer.beam('frame', polar(-6.9, w.mainTransferRadius - 1.45, angle), polar(-6.9, w.mainTransferRadius + 1.45, angle), .2);
+    transfer.beam('frame', polar(-5.5, 7.3, angle), polar(-6.9, w.mainTransferRadius - 1.45, angle), .08);
+    transfer.beam('frame', polar(-6.9, w.mainTransferRadius - 1.45, angle), polar(-6.9, w.mainTransferRadius + 1.45, angle), .08);
     transfer.box('service', polar(-6.9, w.mainTransferRadius + 1.45, angle), [.65, .45, .55], [angle, 0, 0]);
   }
   object.add(transfer.build('Main rotating transfer cradle / guide and drive equipment'));

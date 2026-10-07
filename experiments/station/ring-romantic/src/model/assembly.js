@@ -22,7 +22,12 @@ export class Assembly {
     const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
     const direction = b.clone().sub(a), length = direction.length();
     if (length < .0001) return this;
-    return this.part(this.resources.geometries.rounded, material, a.add(b).multiplyScalar(.5).toArray(),
+    // Straight structural sections keep flat ends; stretching a rounded unit
+    // box would stretch its end radius by metres on long chords. Wide passage
+    // envelopes and utility covers retain their existing rounded profiles.
+    const structural = Math.max(width, depth) < 1 && ['silver', 'frame', 'hull'].includes(material);
+    const geometry = structural ? this.resources.geometries.box : this.resources.geometries.rounded;
+    return this.part(geometry, material, a.add(b).multiplyScalar(.5).toArray(),
       [width, length, depth], new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()));
   }
   cylinder(material, position, radius, length, rotation) {
@@ -107,12 +112,12 @@ export function radialTruss(a, angle, inner, outer, x = 0, halfDepth = 3, halfWi
     a.beam('silver', at(inner, dx, side), at(outer, dx, side), .38);
   for (let i = 0; i <= bays; i++) {
     const r = inner + (outer - inner) * i / bays;
-    for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, -halfWidth), at(r, dx, halfWidth), .22);
-    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(r, halfDepth, side), .22);
+    for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, -halfWidth), at(r, dx, halfWidth), .06);
+    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(r, halfDepth, side), .1);
     if (i === bays) continue;
     const next = r + (outer - inner) / bays;
-    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(next, halfDepth, side), .2);
-    for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, i % 2 ? halfWidth : -halfWidth), at(next, dx, i % 2 ? -halfWidth : halfWidth), .18);
+    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(next, halfDepth, side), .12);
+    for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, i % 2 ? halfWidth : -halfWidth), at(next, dx, i % 2 ? -halfWidth : halfWidth), .08);
   }
 }
 
@@ -127,16 +132,16 @@ export function crewLift(a, angle, { x, inner, outer, carRadius, trussDepth, tru
   // Two guide rails, continuous vented covers and truss saddles leave
   // the surrounding load-bearing truss open. The shaft is not pressurized.
   for (const side of [-1, 1]) {
-    a.beam('silver', at(x - 1.15, inner, side * 1.15), at(x - 1.15, outer, side * 1.15), .14);
-    a.beam('frame', at(x + 1.15, inner, side * 1.15), at(x + 1.15, outer, side * 1.15), .14);
+    a.beam('silver', at(x - 1.15, inner, side * 1.15), at(x - 1.15, outer, side * 1.15), .06);
+    a.beam('frame', at(x + 1.15, inner, side * 1.15), at(x + 1.15, outer, side * 1.15), .06);
   }
   const coverCount = Math.ceil((outer - inner) / 4), coverPitch = (outer - inner) / coverCount;
   for (let i = 0; i < coverCount; i++) {
     const r = inner + (i + .5) * coverPitch;
     for (const side of [-1, 1]) {
       a.box('hullShade', at(x, r, side * 1.22), [2.4, coverPitch - .025, .12], [angle, 0, 0]);
-      a.beam('silver', at(-trussDepth, r, side * trussWidth), at(x - 1.15, r, side * 1.15), .16);
-      a.beam('silver', at(x + 1.15, r, side * 1.15), at(trussDepth, r, side * trussWidth), .16);
+      a.beam('silver', at(-trussDepth, r, side * trussWidth), at(x - 1.15, r, side * 1.15), .04);
+      a.beam('silver', at(x + 1.15, r, side * 1.15), at(trussDepth, r, side * trussWidth), .04);
     }
     a.box('service', at(x + 1.22, r), [.12, coverPitch - .025, 2.4], [angle, 0, 0]);
   }

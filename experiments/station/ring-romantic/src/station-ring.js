@@ -43,11 +43,11 @@ export function createRingStation() {
     const box = new THREE.BoxGeometry(...size), edges = new THREE.EdgesGeometry(box); box.dispose();
     const line = new THREE.LineSegments(edges, outline); line.name = name; line.position.set(...position); envelopes.add(line);
   };
-  envelopeBox('Crew approach / drawing only', [layout.working.coreFront - 13, 0, 0], [24, 10, 10]);
-  envelopeBox('Cargo approach / drawing only', [-26 + layout.working.coreFront + 42, 0, 22], [12, 12, 24]);
+  envelopeBox('Crew approach / drawing only', [layout.working.coreFront - 23, 0, 0], [24, 10, 10]);
+  envelopeBox('Cargo approach / drawing only', [layout.working.coreFront - 4, 0, 22.4], [12, 12, 24]);
   envelopeBox('Fixed arm posture / drawing only', [-18 + layout.working.coreFront + 42, -11, 4], [34, 18, 28]);
   envelopeBox('Main propulsion aft region / not a plume calculation', [layout.working.engineExit + 12, 0, 0], [24, 28, 28]);
-  envelopeBox('Fixed wings / static deployed envelope', [23 + layout.working.energyAxialOffset, 10, 0], [28, 32, 144]);
+  envelopeBox('Fixed wings / static deployed envelope', [23 + layout.working.energyAxialOffset, 0, 0], [30, 90, 208]);
   const inverseRoot = new THREE.Matrix4();
   function update(time) {
     main.object.rotation.x = time * layout.working.mainDisplaySpeed;

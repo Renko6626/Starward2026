@@ -15,7 +15,7 @@ const station = createRingStation();
 station.update(0);
 const scene = new THREE.Scene();
 scene.add(station.object);
-const camera = new THREE.OrthographicCamera(-118, 118, 118 * height / width, -118 * height / width, 1, 1000);
+const camera = new THREE.OrthographicCamera(-160, 160, 160 * height / width, -160 * height / width, 1, 1000);
 // Look across the main X axis, keeping it horizontal with only a slight reveal.
 camera.position.set(-30, -300, 22);
 camera.up.set(0, 0, 1);

@@ -21,7 +21,7 @@ export function createPropulsion({ layout, resources }) {
       a.beam('silver', [x, 0, 0], [x, ...outer], .4);
       a.box('silver', [x, ...outer], [.32, 1.4, 1.4], [t, 0, 0]);
     }
-    a.beam('frame', [24.5, ...outer], [38, ...adjacent], .23);
+    a.beam('frame', [24.5, ...outer], [38, ...adjacent], .16);
     a.cylinder('tank', [31, y, z], w.tankRadius, w.tankBarrelLength, axis);
     for (const x of [26.5, 35.5]) a.part(resources.geometries.sphere, 'tank', [x, y, z], [2.5, w.tankRadius, w.tankRadius]);
     for (const x of [27.5, 34.5]) {
@@ -81,7 +81,7 @@ export function createPropulsion({ layout, resources }) {
       [x + side * halfBarrel, -5.7, -1.7], [.45, radius, radius]);
     for (const side of [-1, 1]) {
       a.cylinder('silver', [x + side * .5, -5.7, -1.7], radius + .04, .12, axis);
-      a.beam('silver', [x + side * .5, -4.5, -1.7], [x + side * .5, -5.2, -1.7], .18);
+      a.beam('silver', [x + side * .5, -4.5, -1.7], [x + side * .5, -5.2, -1.7], .04);
     }
     a.box('service', [x, -5.2, .7], [.9, .55, .7]);
   }
@@ -90,7 +90,13 @@ export function createPropulsion({ layout, resources }) {
     const x = nominalX < 0 ? nominalX + frontOffset - tailOffset : nominalX;
     const y = sign * (x < 0 ? 6.8 : 14.3), z = -2.5;
     const face = w.rcsPodSize / 2;
-    a.beam('silver', [x, sign * 3.7, 0], [x, y, z], .16);
+    // Paired chords and a light equipment saddle expose each nozzle cluster.
+    for (const dx of [-.45, .45]) {
+      a.beam('silver', [x + dx, sign * 3.7, 0], [x + dx, y, z], x < 0 ? .05 : .08);
+      a.beam('frame', [x + dx, sign * 4.5, -1], [x - dx, y, z], x < 0 ? .025 : .04);
+    }
+    a.box('silver', [x, y - sign * .45, z], [1.25, .22, 1]);
+    a.box('service', [x, y - sign * .8, z], [.8, .45, .65]);
     a.box('dark', [x, y, z], [w.rcsPodSize, w.rcsPodSize, w.rcsPodSize]);
     for (const dir of dirs) {
       // A compact nozzle cluster with different transverse / axial directions.

@@ -65,7 +65,7 @@ export function mountStationScene(container, options = {}) {
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.fov = narrow ? 43 : 37;
-    const position = new THREE.Vector3(-160, 80, 277.1).multiplyScalar(narrow ? 1.58 : .93);
+    const position = new THREE.Vector3(-120, 310, 170).multiplyScalar(narrow ? 1.58 : .93);
     camera.position.copy(position);
     camera.up.set(0, position.z, -position.y).normalize();
     camera.lookAt(0, 0, 0);

@@ -82,15 +82,17 @@ export function createEnvironment(renderer) {
 
 
 export function createSolarCellTexture() {
-  return canvasTexture(256, 512, (ctx, width, height) => {
-    ctx.fillStyle = '#182632'; ctx.fillRect(0, 0, width, height);
-    for (let row = 0; row < 12; row++) for (let col = 0; col < 6; col++) {
-      const x = col * width / 6 + 2, y = row * height / 12 + 2;
-      ctx.fillStyle = (row + col) % 4 === 0 ? '#304c61' : '#243f54';
-      ctx.fillRect(x, y, width / 6 - 4, height / 12 - 4);
-      ctx.fillStyle = '#6a7a83';
-      ctx.fillRect(x + 10, y, .8, height / 12 - 4);
-      ctx.fillRect(x + 27, y, .8, height / 12 - 4);
+  // Each roughly 4.8 m blanket tile contains thousands of small cells rather
+  // than a few oversized squares. Coarser joins come from the model geometry.
+  return canvasTexture(512, 512, (ctx, width, height) => {
+    ctx.fillStyle = '#1d303e'; ctx.fillRect(0, 0, width, height);
+    const columns = 64, rows = 64, dx = width / columns, dy = height / rows;
+    for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+      const x = col * dx + .3, y = row * dy + .3;
+      ctx.fillStyle = (row + col) % 5 === 0 ? '#426b83' : (row * 3 + col) % 7 === 0 ? '#365b72' : '#3e647c';
+      ctx.fillRect(x, y, dx - .6, dy - .6);
+      ctx.fillStyle = '#8d9fa7';
+      for (const fraction of [.3, .7]) ctx.fillRect(x + dx * fraction, y, .3, dy - .6);
     }
   });
 }

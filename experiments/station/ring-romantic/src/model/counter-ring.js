@@ -18,9 +18,9 @@ function liquidReserve(a, w, angle, x, radius, mount) {
     a.cylinder('silver', polar(x + dx, radius, angle), tank + .035, .1, axis);
     for (const side of [-1, 1]) {
       const saddle = offsetAt(x + dx, radius - tank, angle, side * .92);
-      a.beam('silver', polar(x + dx, radius - tank, angle), saddle, .12);
+      a.beam('silver', polar(x + dx, radius - tank, angle), saddle, .05);
       const foot = offsetAt(x + dx, w.counterInnerRadius, angle, side * .92);
-      a.beam('frame', saddle, foot, .12); mount(foot);
+      a.beam('frame', saddle, foot, .05); mount(foot);
     }
   }
   const end = halfBarrel + w.counterTankCapDepth;
@@ -49,11 +49,11 @@ function storagePod(a, w, angle, shell, facePlate, outerPlate, occupied, mount) 
   const ends = [-1, 1].map(sign => angle + sign * w.counterPodArcLength / (2 * r));
   for (const t of ends) {
     for (const x of [-face + .2, face - .2]) {
-      a.beam('silver', polar(x, r - 1.8, t), polar(x, r + 1.8, t), .2);
+      a.beam('silver', polar(x, r - 1.8, t), polar(x, r + 1.8, t), .08);
       const foot = polar(x, w.counterInnerRadius, t);
-      a.beam('frame', foot, polar(x, r - 1.8, t), .24); mount(foot);
+      a.beam('frame', foot, polar(x, r - 1.8, t), .06); mount(foot);
     }
-    for (const dr of [-1.8, 1.8]) a.beam('silver', polar(-face + .2, r + dr, t), polar(face - .2, r + dr, t), .2);
+    for (const dr of [-1.8, 1.8]) a.beam('silver', polar(-face + .2, r + dr, t), polar(face - .2, r + dr, t), .08);
   }
   a.box(occupied ? 'service' : 'frame', at(-face - .12, -1.05), [.1, .18, w.counterPodArcLength * .66], [angle, 0, 0]);
   // Closed maintenance hatch, thermal equipment and cartridge receiving neck.
@@ -85,8 +85,8 @@ function bulkReserve(a, w, angle, kind, positions, mount) {
   const r = w.counterStorageRadius, material = kind === 'substrate' ? 'foil' : kind === 'spares' ? 'service' : 'reserveCargo';
   for (const x of [-2.9, 2.9]) for (const dt of [-2.85, 2.85]) {
     const foot = at(x, w.counterInnerRadius, dt);
-    a.beam('frame', foot, at(x, r + 1.8, dt), .18); mount(foot);
-    a.beam('silver', at(x, r - 1.6, dt), at(x, r + 1.6, dt), .13);
+    a.beam('frame', foot, at(x, r + 1.8, dt), .08); mount(foot);
+    a.beam('silver', at(x, r - 1.6, dt), at(x, r + 1.6, dt), .05);
   }
   for (const x of [-1.6, 1.6]) for (const dr of [-1, 1]) for (const dt of [-1.5, 1.5]) {
     a.box(material, at(x, r + dr, dt), [2.5, 1.15, 2.1], [angle, 0, 0]);
@@ -101,12 +101,12 @@ function bulkReserve(a, w, angle, kind, positions, mount) {
     }
   }
   for (const x of [-2.9, 2.9]) for (const r0 of [r - 1.6, r + 1.6])
-    a.beam('silver', at(x, r0, -2.85), at(x, r0, 2.85), .16);
+    a.beam('silver', at(x, r0, -2.85), at(x, r0, 2.85), .08);
   for (const x of [-2.9, 2.9]) for (const r0 of [r - 1.65, r + .35])
-    a.beam('silver', at(x, r0, -2.85), at(x, r0, 2.85), .16);
+    a.beam('silver', at(x, r0, -2.85), at(x, r0, 2.85), .08);
   a.box(kind === 'substrate' ? 'substrateLabel' : kind === 'spares' ? 'sparesLabel' : 'cargoLabel',
     at(-w.counterDepth / 2 - .12, r), [.06, .5, 1.5], [angle, 0, 0]);
-  for (const dt of [-.5, .5]) a.beam('frame', at(-2.9, r - 1.6, dt), at(-w.counterDepth / 2 - .1, r, dt), .13);
+  for (const dt of [-.5, .5]) a.beam('frame', at(-2.9, r - 1.6, dt), at(-w.counterDepth / 2 - .1, r, dt), .05);
 }
 
 export function createCounterRing({ layout, resources }) {
@@ -122,10 +122,10 @@ export function createCounterRing({ layout, resources }) {
     const chordRadius = inner * Math.cos(pitch / 2) / Math.cos(t - bayAngle);
     const key = t.toFixed(7);
     if (!floorBeams.has(key)) {
-      a.beam('frame', polar(-depth, chordRadius, t), polar(depth, chordRadius, t), .18);
+      a.beam('frame', polar(-depth, chordRadius, t), polar(depth, chordRadius, t), .08);
       floorBeams.add(key);
     }
-    a.beam('silver', foot, polar(foot[0], chordRadius, t), .16);
+    a.beam('silver', foot, polar(foot[0], chordRadius, t), .08);
   };
 
   for (let i = 0; i < count; i++) {
@@ -133,10 +133,10 @@ export function createCounterRing({ layout, resources }) {
     for (const x of [-depth, depth]) for (const r of [inner, outer])
       a.beam('silver', polar(x, r, start), polar(x, r, end), .28);
     for (const r of [inner, outer]) {
-      a.beam('frame', polar(-depth, r, start), polar(depth, r, start), .2);
-      a.beam('frame', polar(-depth, r, start), polar(depth, r, end), .15);
+      a.beam('frame', polar(-depth, r, start), polar(depth, r, start), .08);
+      a.beam('frame', polar(-depth, r, start), polar(depth, r, end), .1);
     }
-    for (const x of [-depth, depth]) a.beam('frame', polar(x, inner, start), polar(x, outer, start), .2);
+    for (const x of [-depth, depth]) a.beam('frame', polar(x, inner, start), polar(x, outer, start), .08);
     if (i % 8 === 0 || i % 8 === 3) {
       // Only two bays per sector hold liquid; six small tanks in each bay.
       for (const dx of [-1.5, 1.5]) for (const dr of [0]) for (const dt of [-2, 0, 2]) {
@@ -145,7 +145,7 @@ export function createCounterRing({ layout, resources }) {
       }
 
       a.box('waterLabel', polar(-depth - .12, w.counterStorageRadius, angle), [.06, .5, 1.35], [angle, 0, 0]);
-      for (const dt of [-.4, .4]) a.beam('frame', offsetAt(-2.8, inner, angle, dt), offsetAt(-depth - .1, w.counterStorageRadius, angle, dt), .12);
+      for (const dt of [-.4, .4]) a.beam('frame', offsetAt(-2.8, inner, angle, dt), offsetAt(-depth - .1, w.counterStorageRadius, angle, dt), .05);
     } else if (i % 8 < 5) {
       const kind = i % 8 === 1 ? 'substrate' : i % 8 === 2 ? 'spares' : 'consumables';
       bulkReserve(a, w, angle, kind, dryPositions, mount); bulkPositions.push({ kind, position: polar(0, w.counterStorageRadius, angle) });
@@ -179,7 +179,7 @@ export function createCounterRing({ layout, resources }) {
     // interfaces stop at the hub service equipment on this rotating group.
     const cargoX = occupied ? 1.7 : -.65, fluidX = -1.5;
     a.beam('service', polar(cargoX, 6.5, angle), polar(cargoX, w.counterStorageRadius - w.counterPodRadialHeight / 2 + .2, angle), .7, .85);
-    a.beam('silver', polar(fluidX, 6.5, angle), polar(fluidX, inner - .3, angle), .13);
+    a.beam('silver', polar(fluidX, 6.5, angle), polar(fluidX, inner - .3, angle), .05);
     for (let j = 0; j < 4; j++) a.beam('reservePipe', polar(-2.8, inner - .3, (j + i * 8) * pitch), polar(-2.8, inner - .3, (j + 1 + i * 8) * pitch), .1);
     const sectorEnd = (4 + i * 8) * pitch;
     a.beam('reservePipe', polar(-2.8, inner - .3, sectorEnd), polar(-2.8, inner - .3, angle), .1);
@@ -188,7 +188,7 @@ export function createCounterRing({ layout, resources }) {
     // Local rotating tracks carry a small parked cart, not a fixed arm trying
     // to catch a passing storage unit. Empty grapple bases remain separate.
     for (const rail of rails) a.part(rail, 'silver', [-depth - .35, 0, 0], [1, 1, 1], [angle, 0, 0]);
-    for (const dt of [-.45, 0, .45]) a.beam('frame', polar(-depth, inner, angle + dt), polar(-depth - .35, railRadius, angle + dt), .18);
+    for (const dt of [-.45, 0, .45]) a.beam('frame', polar(-depth, inner, angle + dt), polar(-depth - .35, railRadius, angle + dt), .08);
     const cartAngle = angle + .28, cartX = -depth - .6;
     a.box('silver', polar(cartX, railRadius, cartAngle), [.6, 1.25, 1.5], [cartAngle, 0, 0]);
     a.box('silver', polar(cartX - .34, railRadius, cartAngle), [.2, .7, .9], [cartAngle, 0, 0]);
@@ -210,8 +210,8 @@ export function createCounterRing({ layout, resources }) {
   }
   for (let i = 0; i < 8; i++) {
     const t = i * Math.PI / 4;
-    a.beam('frame', polar(-2.05, 5.85, t), polar(tx + 1.6, tr - 1.45, t), .2);
-    a.beam('frame', polar(tx + 1.6, tr - 1.45, t), polar(tx + 1.6, tr + 1.45, t), .2);
+    a.beam('frame', polar(-2.05, 5.85, t), polar(tx + 1.6, tr - 1.45, t), .08);
+    a.beam('frame', polar(tx + 1.6, tr - 1.45, t), polar(tx + 1.6, tr + 1.45, t), .08);
   }
   const cabin = new Assembly(resources), cabinAngle = w.counterPodCentreBay * pitch;
   cabin.box('hullShade', polar(tx, tr, cabinAngle), [2.9, 2.8, 2.4], [cabinAngle, 0, 0]);

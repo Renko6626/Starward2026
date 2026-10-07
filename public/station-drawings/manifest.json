@@ -1,5 +1,5 @@
 {
-  "fingerprint": "687513635c56b3b1775bf8ca05f874326579b1fe909c3c430445b162324be019",
+  "fingerprint": "1a3076dcf1d4357658755972bab6eabcce7b6dc54baf6f8cb2070679eaa6d509",
   "dependencies": {
     "three": "0.180.0",
     "vite": "7.3.2",
@@ -11,16 +11,16 @@
       "file": "overview.png",
       "width": 1600,
       "height": 1100,
-      "sha256": "f13d1a9513e9e4f903285ac169901b3e7383bb8438c53942fb37bca48a032fb2",
-      "bytes": 168938
+      "sha256": "21dbc4579bb762b67ff4fd19f76fcd6a7a886207b76f513fcab440eab5cd0b5b",
+      "bytes": 122681
     },
     "sideElevation": {
       "name": "sideElevation",
       "file": "side-elevation.png",
       "width": 1260,
       "height": 850,
-      "sha256": "031cf119a2e57c0172a79af111a3017b3ef251e1f5b016bdebda8e3dfc3cd075",
-      "bytes": 115063
+      "sha256": "44c6a144ab3e3ac2bd01a21cc942d4c4b88493a58770ae66cfaa37be68d16890",
+      "bytes": 63265
     }
   }
 }

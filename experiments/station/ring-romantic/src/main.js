@@ -35,10 +35,7 @@ function mount() {
   // The station is tens of metres away even at minimum orbit distance. A 1 m
   // near plane preserves depth precision for thin cladding at the home view.
   const camera = new THREE.PerspectiveCamera(37, innerWidth / innerHeight, 1, 1800);
-  const sideAngle = THREE.MathUtils.degToRad(30), horizontalDistance = 320;
-  const desktopPosition = new THREE.Vector3(
-    -horizontalDistance * Math.sin(sideAngle), 80, horizontalDistance * Math.cos(sideAngle),
-  );
+  const desktopPosition = new THREE.Vector3(-120, 310, 170);
   // Keep the station's X axis horizontal while retaining a view of the XZ
   // photovoltaic surfaces. Controls and keyboard share this camera-up frame.
   camera.up.set(0, desktopPosition.z, -desktopPosition.y).normalize();
