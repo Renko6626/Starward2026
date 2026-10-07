@@ -50,7 +50,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
     pathname.startsWith("/admin");
   if (isWorkspace) return <>{children}</>;
   return (
-    <div className={`public-site ${pathname === "/" ? "public-site--home" : ""}`}>
+    <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" || pathname === "/apply/" ? "public-site--guide" : pathname === "/portal/login" || pathname === "/portal/login/" ? "public-site--entry" : ""}`}>
       <ScrollProgress key={pathname} />
       <a className="skip-link" href="#main-content">
         跳至正文

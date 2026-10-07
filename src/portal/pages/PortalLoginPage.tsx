@@ -1,6 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
-import { StarChart } from "../../app/components/StarChart";
-import { ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -15,6 +14,7 @@ import {
 import type { PortalMeResponse } from "../../shared/portal";
 import { authClient } from "../lib/auth-client";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
+import "./portal-login.css";
 
 export function PortalLoginPage() {
   const navigate = useNavigate();
@@ -180,23 +180,28 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="auth-layout">
+    <div className="auth-layout station-entry">
+      <div className="station-entry-artwork" aria-hidden="true">
+        <img src="/station-drawings/side-elevation.png" alt="" width={1260} height={850} />
+      </div>
       <div className="auth-intro">
-        <p className="eyebrow">YOUR NEXT OBSERVATION</p>
-        <h2>
-          欢迎回来，
-          <br />
-          故事仍在继续。
-        </h2>
-        <p>在这里，跟进报名、作品与接力日程。</p>
-        <StarChart variant="compact" />
+        <div className="station-entry-heading">
+          <p className="eyebrow">STARWARD PILGRIMAGE / 2026</p>
+          <h2>创作者入口</h2>
+          <p>在这里，跟进你的报名、<br />作品与接力日程。</p>
+        </div>
+        <div className="station-entry-caption">
+          <p>TORIFUNE / SIDE ELEVATION</p>
+          <Link to="/apply">首次参与？阅读参与指南 <ArrowUpRight size={14} /></Link>
+        </div>
       </div>
       <section className="auth-panel" aria-label="创作者账号">
-        <h1>{mode === "register" ? "建立创作者账号" : "进入创作者空间"}</h1>
+        <p className="station-entry-form-label">CREATOR ACCESS</p>
+        <h1>{mode === "register" ? "建立创作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录创作者账号"}</h1>
         <p>
           {mode === "register"
-            ? "使用邮箱注册，准备你的第一份创作。"
-            : "登录账号，接续你的创作。"}
+            ? "注册后，可完善个人资料并提交创作计划。"
+            : "使用报名时的邮箱，继续查看和维护你的资料。"}
         </p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
