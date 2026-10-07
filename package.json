@@ -19,13 +19,16 @@
     "test": "vitest run",
     "station:assets": "node scripts/station-assets.mjs",
     "station:check": "node scripts/station-assets.mjs --check",
-    "station:update": "npm run station:assets && npm run build",
-    "test:station": "node --test scripts/station-assets.test.mjs",
-    "prebuild": "npm run station:check && npm run orbit:check",
+    "station:update": "npm run station:generate && npm run build",
+    "test:station": "node --test scripts/station-assets.test.mjs scripts/station-drawings.test.mjs",
+    "prebuild": "npm run station:check && npm run station:drawings:check && npm run orbit:check",
     "orbit:generate": "node scripts/orbit-assets.mjs",
     "orbit:check": "node scripts/orbit-assets.mjs --check",
     "orbit:update": "npm run orbit:generate && npm run build",
-    "test:orbit": "python3 -m unittest discover -s scripts/orbit-transfer -p 'test_*.py'"
+    "test:orbit": "python3 -m unittest discover -s scripts/orbit-transfer -p 'test_*.py'",
+    "station:drawings": "node experiments/station/technical-study/capture.mjs",
+    "station:drawings:check": "node experiments/station/technical-study/capture.mjs --check",
+    "station:generate": "npm run station:assets && npm run station:drawings"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.133.28",

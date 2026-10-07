@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { layout } from '../ring-romantic/src/model/layout.js';
 import { createRingStation } from '../ring-romantic/src/station-ring.js';
 
 const width = 1260, height = 850;
@@ -114,8 +115,8 @@ const ringRim = index => {
   return p;
 };
 const labels = [
-  { title: 'MAIN ECOLOGY RING', detail: 'Ø 112 m', marker: 0, point: ringRim(0), x: 810, y: 218, side: 'top' },
-  { title: 'MATERIAL RESERVE RING', detail: 'Ø 84 m', marker: 1, point: ringRim(1), x: 535, y: 285, side: 'top' },
+  { title: 'MAIN ECOLOGY RING', detail: `Ø ${layout.confirmed.mainOuterRadius * 2} m`, marker: 0, point: ringRim(0), x: 810, y: 218, side: 'top' },
+  { title: 'MATERIAL RESERVE RING', detail: `Ø ${layout.confirmed.counterDiameter} m`, marker: 1, point: ringRim(1), x: 535, y: 285, side: 'top' },
   { title: 'FIXED ANALYSIS MODULE', marker: 2, x: 535, y: 680, side: 'left' },
   { title: 'CREW DOCKING PORT', marker: 4, x: 425, y: 570, side: 'left' },
   { title: 'CARGO DOCKING PORT', marker: 5, x: 425, y: 480, side: 'left' },

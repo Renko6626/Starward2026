@@ -17,17 +17,20 @@ Linux 缺少浏览器系统库时，按 Playwright 的安装提示准备运行�
 npm run station:update
 ```
 
-该命令先生成桌面、手机静态背景，再构建正式网站。生成从同一个首页场景捕获固定时间的首帧，不截取 experiment 的标签或控制面板，不需要启动报名 API、数据库或登录账号。
+该命令依次生成桌面、手机静态背景，以及空间站结构图版和不带标注的线稿，再构建正式网站。实时首页与这些素材复用同一份模型源码。生成从同一个首页场景捕获固定时间的首帧，不截取 experiment 的标签或控制面板，不需要启动报名 API、数据库或登录账号。
 
 单独生成、核对或验证脚本：
 
 ```sh
-npm run station:assets
+npm run station:generate       # 更新全部空间站素材，不构建网站
+npm run station:assets         # 只生成首页桌面、手机预览
+npm run station:drawings       # 只生成结构图版和纯线稿
 npm run station:check
+npm run station:drawings:check
 npm run test:station
 ```
 
-正常 `npm run build` 会先检查静态预览与源码是否一致，不会自动启动浏览器。模型、场景或截图设置改变后，先更新预览。仅改首页文字和布局，无需重新生成；如果改动影响镜头或背景，应在场景适配器中修改并更新预览。
+正常 `npm run build` 会先检查首页静态预览、线稿与源码是否一致，不会自动启动浏览器。模型、场景或截图设置改变后，先更新预览。仅改首页文字和布局，无需重新生成；如果改动影响镜头或背景，应在场景适配器中修改并更新预览。
 
 ## 产物
 
@@ -35,7 +38,24 @@ npm run test:station
 - `public/station/mobile.jpg`：390×844 CSS 视口、2 倍设备像素，产物 780×1688。
 - `public/station/manifest.json`：输入指纹、相关依赖版本、图片尺寸、字节数和 SHA-256。
 
-将这三个文件和模型/场景修改一起提交。临时构建与截图目录自动清理并已加入忽略规则；生成中任一视图失败时保留旧产物。捕获期间模型发生变化也会停止发布，以免清单与图片不一致。
+线稿产物还包括：
+
+- `public/station-drawings/overview.png`：1600×1100，英文标注结构图版。
+- `public/station-drawings/side-elevation.png`：1260×850，参与指南和创作者入口共用的纯线稿。
+- `public/station-drawings/manifest.json`：线稿输入指纹、依赖版本、尺寸和图片 SHA-256。
+
+将上述产物及两个 manifest 与模型/场景修改一起提交。临时构建与截图目录自动清理并已加入忽略规则；生成中任一视图失败时保留旧产物。捕获期间模型发生变化也会停止发布，以免清单与图片不一致。首页预览和线稿分别整组替换；若第二组失败，命令停止且不会继续构建，修复后重跑 `station:update` 即可。
+
+## 修改入口与限制
+
+- 模型构件和尺寸：`experiments/station/ring-romantic/src/model/`；装配入口为 `station-ring.js`。
+- 首页镜头、灯光和运动：`src/app/components/station/scene.js`；截图尺寸在同目录 `config.js`。
+- 线稿镜头、轮廓处理和标注排布：`experiments/station/technical-study/main.js`；图框在 `index.html`，捕获产物尺寸在 `capture.mjs`。
+- 两个环的直径标注直接读取模型 `layout.confirmed` 参数；引出线端点随模型锚点更新。文字排布位置仍是固定设计值。
+
+一般改构件后只需 `npm run station:update`。大幅改变外形、增删构件或调整尺寸时，仍需查看生成图，必要时调整镜头、取景范围和标注位置；脚本不会自动完成新的构图设计。首页背景中的地月转移轨迹有独立参数和生成流程，修改空间站模型不会触发轨迹重算。
+
+检查指纹和图片哈希属于一致性检查，不能代替构图截图或工程验证。普通构建只读检查，不自动下载浏览器或生成图片。首次环境准备仍需安装 Playwright Chromium；版本升级后缺少匹配浏览器时，重新运行 `npx playwright install chromium`。
 
 主站的 3D 模块单独异步加载；文字和链接先显示，背景图提供加载及 WebGL 不可用时的静态画面。暂停、系统减少动态效果、页面隐藏及首屏离开可见区域时停止帧循环。像素比上限为手机 1.4、桌面 1.75。
 

@@ -2,7 +2,7 @@
 
 这两个版本保留独立的 Three.js 外景查看器。当前 R/06 的模型源码已接入主页，A/19 继续归档；本轮未部署。
 
-修改 R/06 后，在仓库根目录运行 `npm run station:update`，即可重新生成主页静态背景并构建网站。流程见 [主页鸟船更新说明](../../docs/development/station-homepage.md)。
+修改 R/06 后，在仓库根目录运行 `npm run station:update`，即可重新生成主页静态背景、结构图版与纯线稿，并构建网站。流程见 [主页鸟船更新说明](../../docs/development/station-homepage.md)。
 
 | 版本 | 入口 | 本地端口 |
 | --- | --- | --- |
