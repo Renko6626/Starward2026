@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { ArrowUpRight, Compass, Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ScrollProgress } from "../components/ScrollProgress";
 
 export function Brand() {
   return (
     <Link to="/" className="brand" aria-label="逐星巡礼首页">
-      <Compass size={27} strokeWidth={1.2} />
+      <img className="brand-emblem" src="/brand/moon-phase.png" alt="" width={44} height={38} />
       <span>
-        逐星巡礼<small>Starward2026</small>
+        逐星巡礼<small>Starward Pilgrimage</small>
       </span>
     </Link>
   );
@@ -99,8 +99,8 @@ export function SiteLayout({ children }: PropsWithChildren) {
         </div>
       </main>
       <footer className="public-footer">
-        <span>逐星巡礼</span>
-        <span>Starward2026</span>
+        <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
+        <span>Starward Pilgrimage</span>
       </footer>
     </div>
   );

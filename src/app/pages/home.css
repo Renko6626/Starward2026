@@ -3,9 +3,9 @@
 .public-site--home .public-main { width: 100%; max-width: none; padding: 0; }
 .public-site--home .public-header { position: absolute; z-index: 12; inset: 0 0 auto; width: 100%; max-width: none; padding: 32px 4.3vw; border: 0; background: linear-gradient(#000000c4, transparent); }
 .public-site--home .brand { color: #dcdcdc; }
-.public-site--home .brand > span { font-family: var(--font-body); font-size: 17px; font-weight: 500; letter-spacing: .2em; }
+.public-site--home .brand > span { font-family: var(--font-brand-cn); font-size: 17px; font-weight: 500; letter-spacing: .04em; }
 .public-site--home .brand small { color: #979797; font-size: 10px; letter-spacing: .1em; }
-.public-site--home .brand > svg { width: 24px; color: #a6a6a6; }
+.public-site--home .brand-emblem { width: 42px; }
 .public-site--home .public-nav { gap: 34px; font-size: 13px; }
 .public-site--home .public-nav a { color: #bfbfbf; }
 .public-site--home .public-nav a[data-status="active"] { color: #eeeeee; }
@@ -22,9 +22,10 @@
 .station-backdrop.is-ready .station-canvas { opacity: 1; }
 .orbital-shade { z-index: -1; pointer-events: none; background: linear-gradient(90deg, #00000085 0%, #00000018 43%, transparent 65%), linear-gradient(0deg, #000000 0%, #00000055 12%, transparent 38%); }
 .orbital-copy { position: absolute; left: 6.3vw; bottom: 19%; max-width: 560px; }
-.orbital-edition { margin: 0 0 25px; font: 12px/1.5 var(--font-body); letter-spacing: .08em; color: #bcbcbc; }
-.orbital-copy h1 { margin: 0 0 12px; font: 400 clamp(45px, 5.25vw, 84px)/1.2 var(--font-headline); letter-spacing: .08em; color: #efefef; }
-.orbital-subtitle { margin: 0; font: 400 22px/1.6 var(--font-headline); letter-spacing: .25em; color: #d7d7d7; }
+.orbital-title { margin-bottom: 16px; }
+.orbital-edition { margin: 12px 0 0; font: 700 clamp(16px, 1.9vw, 28px)/1.2 var(--font-brand-en); letter-spacing: .02em; color: #aaa; text-transform: uppercase; white-space: nowrap; }
+.orbital-copy h1 { margin: 0; font: 500 clamp(45px, 5.25vw, 84px)/1.2 var(--font-brand-cn); letter-spacing: .035em; color: #fff; transform: skewX(-8deg); transform-origin: left bottom; }
+.orbital-subtitle { margin: 0; border-top: 1px solid #ffffff66; padding-top: 10px; font: 500 clamp(12px, 1.2vw, 18px)/1.6 var(--font-brand-cn); letter-spacing: .01em; color: #bdbdbd; }
 .orbital-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 28px; margin-top: 32px; }
 .orbital-actions a { display: inline-flex; align-items: center; gap: 20px; min-height: 44px; font-size: 12px; letter-spacing: .05em; }
 .orbital-primary { border: 1px solid #c3c3c355; padding: 0 18px; color: #e5e5e5; background: #10101088; }
@@ -104,7 +105,7 @@
 @media (max-width: 1000px) and (min-width: 700px) {
   .orbital-copy { left: 4.3vw; bottom: 16%; }
   .orbital-copy h1 { font-size: 51px; }
-  .orbital-subtitle { font-size: 19px; }
+  .orbital-subtitle { font-size: 13px; }
   .orbital-shade { background: linear-gradient(90deg, #000000b0, #00000022 65%, transparent), linear-gradient(0deg, #000000, transparent 45%); }
   .public-site--home .public-nav { gap: 18px; }
 }
@@ -115,8 +116,8 @@
   .orbital-hero { height: 100svh; min-height: 840px; max-height: 1100px; }
   .orbital-copy { left: 26px; right: 26px; bottom: 15%; max-width: none; }
   .orbital-copy h1 { font-size: clamp(37px, 11.5vw, 66px); letter-spacing: .02em; }
-  .orbital-edition { font-size: 11px; margin-bottom: 15px; letter-spacing: .1em; }
-  .orbital-subtitle { font-size: 17px; letter-spacing: .22em; }
+  .orbital-edition { font-size: clamp(14px, 4vw, 22px); letter-spacing: .02em; }
+  .orbital-subtitle { font-size: clamp(10px, 2.7vw, 16px); letter-spacing: 0; }
   .orbital-actions { margin-top: 22px; gap: 22px; }
   .orbital-actions a { font-size: 11px; gap: 14px; }
   .orbital-shade { background: linear-gradient(0deg, #000000 0%, #000000ba 20%, #00000033 42%, transparent 60%); }
@@ -166,6 +167,8 @@
 .orbital-artwork .orbit-metadata { opacity: .38; stroke-width: .55; }
 .orbital-artwork .orbit-metadata text { font-size: 8px; }
 .orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 9px; }
+.orbital-artwork .orbit-mission-star path { fill: #eee; stroke: none; }
+.orbital-artwork .orbit-lit-track { stroke: #eee; stroke-width: 1.2; }
 .orbital-artwork .station-annotation { opacity: .45; stroke-width: .6; }
 .orbital-artwork .station-annotation circle { fill: currentColor; stroke: none; }
 @media (max-width: 699px) {

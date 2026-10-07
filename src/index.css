@@ -1,6 +1,22 @@
 @import "tailwindcss";
 
 @font-face {
+  font-family: "Copperplate CC";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/copperplate-cc-bold-brand.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Han Sans SC Brand";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/source-han-sans-sc-brand-500.woff2") format("woff2");
+}
+
+@font-face {
   font-family: "Starward Editorial";
   font-style: normal;
   font-weight: 500;
@@ -68,6 +84,8 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --font-brand-cn: "Source Han Sans SC Brand", "Microsoft YaHei", sans-serif;
+    --font-brand-en: "Copperplate CC", "Copperplate Gothic Bold", "Copperplate", serif;
     --font-editorial: "Starward Editorial", var(--font-headline);
     --motion-fast: 160ms;
     --motion-panel: 240ms;
@@ -173,16 +191,31 @@
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    color: var(--color-primary);
+    color: #fff;
     flex-shrink: 0;
   }
+  .brand-emblem {
+    filter: brightness(0) invert(1);
+    width: 44px;
+    height: auto;
+    flex-shrink: 0;
+  }
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .footer-brand img {
+    filter: brightness(0) invert(1);
+    height: auto;
+  }
   .brand > span {
-    font: 20px/1.2 var(--font-headline);
+    font: 500 20px/1.2 var(--font-brand-cn);
     letter-spacing: 0.14em;
   }
   .brand small {
     display: block;
-    font: 12px/1.6 var(--font-body);
+    font: 700 10px/1.6 var(--font-brand-en);
     letter-spacing: 0.08em;
     color: var(--color-on-surface-variant);
     margin-top: 5px;

@@ -36,3 +36,33 @@ export const parkingRadius = trajectory.parkingRadius * 390;
 export const earthRadius = trajectory.radii.earth * 390;
 export const moonRadius = trajectory.radii.moon * 390;
 export const missionMetadata = trajectory.metadata;
+
+const timedPoints = projectedArcs.flatMap((arc, arcIndex) => arc.map((position, index) => ({
+  ...position, seconds: trajectory.arcTimesSeconds[arcIndex]![index]!,
+})));
+const departureAngle = Math.atan2(460 - departure.y, departure.x - 270);
+
+export function missionPositionAt(now: number, arrivalTime: number) {
+  const launchTime = arrivalTime - missionMetadata.flightDays * 86400000;
+  const elapsed = (now - launchTime) / 1000;
+  if (elapsed < 0) {
+    const angle = departureAngle + (elapsed % missionMetadata.parkingPeriodSeconds)
+      / missionMetadata.parkingPeriodSeconds * Math.PI * 2;
+    return { x: 270 + parkingRadius * Math.cos(angle),
+      y: 460 - parkingRadius * Math.sin(angle), phase: 'parking' as const };
+  }
+  if (now >= arrivalTime) return { ...insertion, phase: 'arrived' as const };
+
+  // Samples include adaptive integration steps, so index and arc length are
+  // not proxies for time. Find the bracketing timestamps, then interpolate.
+  let left = 0, right = timedPoints.length - 1;
+  while (right - left > 1) {
+    const middle = Math.floor((left + right) / 2);
+    if (timedPoints[middle]!.seconds <= elapsed) left = middle;
+    else right = middle;
+  }
+  const a = timedPoints[left]!, b = timedPoints[right]!;
+  const fraction = (elapsed - a.seconds) / (b.seconds - a.seconds);
+  return { x: a.x + (b.x - a.x) * fraction,
+    y: a.y + (b.y - a.y) * fraction, phase: 'transfer' as const };
+}

@@ -138,12 +138,13 @@ def generate(fingerprint):
               'bodies': {'earth': model.earth.tolist(), 'moon': model.moon.tolist(), 'l4': model.l4.tolist()},
               'parkingRadius': model.parking_radius,
               'radii': {'earth': model.earth_radius_km/model.distance_km, 'moon': model.moon_radius_km/model.distance_km},
-              'referenceOrbit': reference, 'arcs': [], 'burns': []}
+              'referenceOrbit': reference, 'arcs': [], 'arcTimesSeconds': [], 'burns': []}
     offset = 0.
     for coast in coasts:
         times, states = sample_coast(coast)
         raw['arcs'].append({'time_nd': (times+offset).tolist(), 'states': states.tolist()})
         visual['arcs'].append(states[:, :2].tolist())
+        visual['arcTimesSeconds'].append(((times+offset)*model.time_s).tolist())
         offset += float(coast.t[-1])
     for burn in burns:
         dv = burn['after'][2:]-burn['before'][2:]
@@ -163,6 +164,9 @@ def generate(fingerprint):
         'flightDays': report['total_days'],
         'totalDeltaVKmS': report['total_delta_v_km_s'],
         'parkingAltitudeKm': model.parking_altitude_km,
+        # Prograde circular LEO angular rate relative to the rotating chart.
+        'parkingPeriodSeconds': 2*math.pi*model.time_s / (
+            math.sqrt((1-model.mu)/model.parking_radius**3)-1),
         'lunarAltitudeKm': min(c['minimum_moon']['altitude_km'] for c in report['coasts']),
         'lunarDeltaVKmS': raw['burns'][1]['delta_v_km_s'],
     }

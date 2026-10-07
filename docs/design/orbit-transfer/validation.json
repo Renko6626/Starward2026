@@ -51,7 +51,7 @@
   },
   "accepted": true,
   "failures": [],
-  "inputFingerprint": "b8cfd28842f7d56e42e7664d9c7871e973152afcf347080f4474b6919e808058",
+  "inputFingerprint": "f85987d45705fa3e3d23070f9d7406d5818c5b7381fd2d1afc5a0bab545478d9",
   "config": {
     "model": {
       "distance_km": 384748.91,
@@ -100,8 +100,8 @@
   ],
   "sha256": {
     "trajectory.json": "7a340f874e17d0aff95998de277e958ffeec38284a20a130a1ecea806d5d0e96",
-    "preview.svg": "0559cf86feb703b782e919822efa6c6cf386bc10877c1f1247656fe53396d2d2",
+    "preview.svg": "e352325bff9783fb119e10a71bcaac296c31ceb530d3efe235ef2871f571c3f6",
     "preview.png": "5b97cb8bcb7281d80c93ea530132cd87485dabff2af36873d2ec840c270659ce"
   },
-  "frontendSha256": "dde450a1460f5e12278d7ecebe27f94171a80667f03052982259164d69bbcdeb"
+  "frontendSha256": "0a8038369895a1cf43a8d53e2bcf27ad2f0091240c56da74d20ec7566f208c1f"
 }

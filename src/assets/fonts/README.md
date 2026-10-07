@@ -19,3 +19,18 @@
 ## 轨道标注字体
 
 `quicksand-latin-500.woff2` 为 Quicksand 500 的 Latin 子集，供首页轨道 metadata 和飞船标注使用。字体通过 Google Fonts 获取并本地托管，以圆润无衬线、小字号和全大写排版。许可为 SIL OFL 1.1，见 `quicksand-OFL.txt`。来源：https://github.com/google/fonts/tree/main/ofl/quicksand
+
+## 品牌标题字体
+
+`source-han-sans-sc-brand-500.woff2` 来自 Adobe Source Han Sans SC Medium（思源黑体，500 字重），
+用于品牌名及首页活动标题。按当前文字生成 WOFF2 子集，使用 SIL OFL 1.1
+（见 `source-han-sans-LICENSE.txt`）。修改标题文字时需更新子集。
+来源：https://github.com/adobe-fonts/source-han-sans/tree/release/OTF/SimplifiedChinese
+
+子集：`逐星巡礼2026年秘封俱乐部之日创作接力`
+
+`copperplate-cc-bold-brand.woff2` 为 Copperplate CC Bold 的品牌文字子集，
+用于英文品牌标题 `Starward Pilgrimage`（含对应大写字符）。
+这是经用户选择的 Copperplate Gothic 开源复刻替代，使用 SIL OFL 1.1
+（见 `copperplate-cc-OFL.txt`）。
+来源：https://github.com/CowboyCollective/CopperplateCC
