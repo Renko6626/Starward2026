@@ -128,30 +128,91 @@
   .work-cover img, .work-card-caption > svg { transition: none; transform: none !important; }
 }
 
-.relay-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; color: var(--color-on-surface-variant); font-size: 13px; }
-.relay-summary strong { color: #edce94; font-size: 15px; font-weight: 500; }
-.relay-timetable { list-style: none; padding: 0; margin: 24px 0 0; }
-.relay-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 32px; padding: 32px 0; border-bottom: 1px solid var(--color-outline-variant); }
-.relay-row--current { background: linear-gradient(90deg, #edce940a, transparent); }
-.relay-time { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.relay-number { font-size: 12px; color: #bda9d0; }
-.relay-time time { display: flex; flex-direction: column; gap: 8px; }
-.relay-time strong { font: 500 30px/1.2 var(--font-label); font-variant-numeric: tabular-nums; color: #edce94; }
-.relay-time time span { font-size: 13px; color: var(--color-on-surface-variant); }
-.relay-current { font-size: 12px; color: #edce94; }
-.relay-preview { display: flex; align-items: flex-start; gap: 24px; min-width: 0; }
-.relay-cover { width: 180px; max-height: 150px; aspect-ratio: 4 / 3; object-fit: cover; flex-shrink: 0; border-radius: 4px; }
-.relay-copy { min-width: 0; }
-.relay-author { font-size: 14px; color: #d8c6a6; overflow-wrap: anywhere; }
-.relay-copy h2 { margin: 8px 0 12px; font: 500 24px/1.5 var(--font-headline); overflow-wrap: anywhere; }
-.relay-description { margin: 12px 0 16px; color: var(--color-on-surface-variant); font-size: 14px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-.relay-pending { font-size: 12px; color: var(--color-on-surface-variant); }
-@media (max-width: 800px) { .relay-row { grid-template-columns: 120px minmax(0, 1fr); gap: 20px; } .relay-cover { width: 140px; } }
-@media (max-width: 600px) {
-  .relay-row { grid-template-columns: 90px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
-  .relay-time strong { font-size: 24px; }
-  .relay-time time span { font-size: 11px; }
-  .relay-preview { flex-direction: column; gap: 16px; }
-  .relay-cover { width: 100%; max-height: 180px; }
-  .relay-copy h2 { font-size: 20px; }
+/* Public relay timetable: chronological pairs on desktop, one entry on mobile. */
+.works-page--schedule { padding: 40px 0; }
+.schedule-page-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px; padding-bottom: 27px; }
+.schedule-page-heading h1 { margin: 0; font: 500 27px/1.5 var(--font-brand-cn); letter-spacing: .04em; }
+.schedule-page-heading p, .schedule-page-heading > span { margin: 0; font-size: 11px; color: var(--color-on-surface-variant); }
+.relay-progress { padding: 16px 0 17px; border-block: 1px solid var(--color-outline-variant); }
+.relay-progress-caption { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 11px; color: var(--color-on-surface-variant); }
+.relay-progress-caption strong { margin-left: 8px; font: 17px var(--font-label); color: var(--color-on-surface); }
+.relay-progress-caption a { display: inline-flex; align-items: center; min-height: 28px; color: var(--color-on-surface); font-size: 10px; }
+.relay-progress-ticks { display: grid; gap: 7px; margin-top: 13px; }
+.relay-progress-ticks i { height: 6px; border-top: 1px solid #555; border-right: 1px solid #555; }
+.relay-progress-ticks .is-past { border-color: #aaa; }
+.relay-progress-ticks .is-current { background: var(--color-on-surface); border-color: var(--color-on-surface); }
+.works-page--schedule .works-toolbar { min-height: 69px; border-top: 0; padding-block: 8px; }
+.relay-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; color: var(--color-on-surface-variant); font-size: 10px; }
+.relay-summary strong { display: inline-flex; align-items: center; gap: 8px; color: var(--color-on-surface); font-size: 10px; font-weight: 500; }
+.relay-summary strong::before { content: ''; width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+.works-page--schedule .works-search { font-size: 11px; }
+.works-page--schedule .works-search input::placeholder { font-size: 11px; }
+.relay-date-nav { position: sticky; top: 0; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 0 26px; min-height: 56px; border-bottom: 1px solid var(--color-outline-variant); background: var(--color-background); padding-block: 6px; }
+.relay-date-nav > span, .relay-date-nav p { color: var(--color-on-surface-variant); font-size: 10px; }
+.relay-date-nav a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 11px; }
+.relay-date-nav small { color: var(--color-on-surface-variant); font-size: 9px; }
+.relay-date-nav p { margin: 0 0 0 auto; font-size: 9px; }
+.relay-days { padding-top: 20px; }
+.relay-day, .relay-row { scroll-margin-top: 100px; }
+.relay-day + .relay-day { margin-top: 25px; }
+.relay-day-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0 18px; border-bottom: 1px solid var(--color-outline-variant); }
+.relay-day-heading h2 { display: flex; align-items: baseline; gap: 12px; margin: 0; font: 500 16px var(--font-body); }
+.relay-day-heading h2 span { font-size: 11px; color: var(--color-on-surface-variant); }
+.relay-day-heading h2 strong { font: 35px/1.2 var(--font-label); letter-spacing: -.06em; }
+.relay-day-heading > span { color: var(--color-on-surface-variant); font-size: 10px; }
+.relay-timetable { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; list-style: none; padding: 0; margin: 0; }
+.relay-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; min-height: 102px; border-bottom: 1px solid var(--color-outline-variant); padding: 19px 0; align-items: start; }
+.relay-row:nth-child(odd) { padding-right: 24px; border-right: 1px solid #ffffff12; }
+.relay-row--current { border-bottom-color: var(--color-on-surface); }
+.relay-time { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.relay-time strong { font: 22px/1.1 var(--font-label); font-variant-numeric: tabular-nums; color: #bdbdbd; }
+.relay-time .relay-time-pending { font: 12px/1.8 var(--font-body); }
+.relay-number { color: var(--color-on-surface-variant); font-size: 9px; overflow-wrap: anywhere; }
+.relay-slot-state, .relay-current { font-size: 8px; color: var(--color-on-surface-variant); }
+.relay-current { padding-bottom: 3px; border-bottom: 1px solid currentColor; color: var(--color-on-surface); }
+.relay-row--current .relay-time strong { color: var(--color-on-surface); }
+.relay-preview { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.relay-copy { flex: 1; min-width: 0; }
+.relay-copy h3 { margin: 0; font: 500 16px/1.6 var(--font-brand-cn); overflow-wrap: anywhere; }
+.relay-copy h3 a > svg { display: inline; margin-left: 5px; vertical-align: baseline; }
+.relay-copy h3 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.relay-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.relay-author { margin: 0; font-size: 10px; color: var(--color-on-surface-variant); overflow-wrap: anywhere; }
+.relay-byline .work-type { font-size: 9px; color: var(--color-on-surface-variant); }
+.relay-byline .work-type svg { width: 11px; height: 11px; }
+.relay-cover { width: 48px; height: 48px; object-fit: cover; flex-shrink: 0; margin-top: 2px; }
+.relay-pending { display: block; margin-top: 6px; font-size: 9px; color: var(--color-on-surface-variant); }
+.relay-list-end { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 32px 0 0; font-size: 10px; color: var(--color-on-surface-variant); }
+.relay-list-end::before, .relay-list-end::after { content: ''; width: 26px; height: 1px; background: var(--color-outline-variant); }
+.works-page--schedule a:focus-visible, .works-page--schedule button:focus-visible { outline-color: var(--color-on-surface); }
+@media (max-width: 950px) {
+  .relay-timetable { column-gap: 24px; }
+  .relay-row { grid-template-columns: 69px minmax(0, 1fr); gap: 11px; }
+  .relay-row:nth-child(odd) { padding-right: 17px; }
+  .relay-copy h3 { font-size: 15px; }
+  .relay-cover { width: 40px; height: 44px; }
+}
+@media (max-width: 700px) {
+  .works-page--schedule { padding-top: 27px; }
+  .schedule-page-heading { gap: 8px 12px; padding-bottom: 22px; }
+  .schedule-page-heading h1 { flex-basis: 100%; font-size: 24px; }
+  .schedule-page-heading p, .schedule-page-heading > span { font-size: 10px; }
+  .relay-progress-ticks { gap: 4px; }
+  .relay-progress-caption { font-size: 10px; }
+  .relay-progress-caption a { font-size: 9px; }
+  .works-page--schedule .works-toolbar { flex-wrap: wrap; gap: 6px; padding-top: 17px; }
+  .relay-summary { gap: 10px 17px; font-size: 9px; }
+  .relay-summary strong { font-size: 9px; }
+  .works-page--schedule .works-search { width: 100%; max-width: none; border-top: 1px solid #ffffff15; margin-top: 9px; }
+  .relay-date-nav { gap: 0 17px; min-height: 51px; }
+  .relay-date-nav > span, .relay-date-nav p { display: none; }
+  .relay-date-nav a { font-size: 10px; gap: 7px; }
+  .relay-date-nav small { font-size: 8px; }
+  .relay-day-heading { padding: 0 0 15px; }
+  .relay-day-heading h2 strong { font-size: 32px; }
+  .relay-timetable { grid-template-columns: minmax(0, 1fr); }
+  .relay-row { grid-template-columns: 69px minmax(0, 1fr); gap: 16px; min-height: 95px; padding: 18px 0; }
+  .relay-row:nth-child(odd) { padding-right: 0; border-right: 0; }
+  .relay-copy h3 { font-size: 16px; }
+  .relay-cover { width: 48px; height: 48px; }
 }
