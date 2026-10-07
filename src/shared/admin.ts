@@ -85,6 +85,7 @@ export const adminSegmentStatusLabels: Record<PortalSegmentStatus, string> = {
 };
 
 export type AdminSegmentItem = {
+  scheduledAt: string | null;
   id: string;
   code: string;
   name: string;
@@ -103,6 +104,7 @@ export type AdminSegmentListResponse = {
 };
 
 export const updateSegmentInputSchema = z.object({
+  scheduledAt: z.string().trim().datetime({ offset: true }).nullable().optional(),
   description: z.string().trim().max(240).nullable().optional(),
   status: portalSegmentStatusSchema,
   currentParticipantId: z.string().trim().min(1).max(64).nullable().optional(),

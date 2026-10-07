@@ -102,6 +102,7 @@ export const portalSegmentStatusSchema = z.enum([
 export type PortalSegmentStatus = z.infer<typeof portalSegmentStatusSchema>;
 
 export type PortalSegmentSummary = {
+  scheduledAt: string | null;
   id: string;
   code: string;
   name: string;

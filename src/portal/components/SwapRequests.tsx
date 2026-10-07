@@ -25,7 +25,7 @@ export function SwapRequests({ collaboration, onSaved }: { collaboration: Collab
         <div><h3>{outgoing ? `向 ${request.recipientName} 发起的换期` : `${request.requesterName} 希望与你换期`}</h3><StatusBadge tone={pending ? "warning" : "muted"}>{labels[request.status]}</StatusBadge></div>
         <p>{request.requesterSegmentName} 与 {request.recipientSegmentName} 交换</p>
         {request.message ? <p>{request.message}</p> : null}
-        {pending ? <><p className="field-hint">同意后双方时段立即交换；等待回应期间保留原时段。</p><div className="workspace-actions">{outgoing ? <Button variant="secondary" disabled={busy !== null} onClick={() => void respond(request.id, "cancel")}>取消请求</Button> : <><Button disabled={busy !== null || !collaboration.canSwap} onClick={() => void respond(request.id, "accept")}>同意交换</Button><Button variant="secondary" disabled={busy !== null} onClick={() => void respond(request.id, "reject")}>拒绝请求</Button></>}</div></> : null}
+        {pending ? <><p className="field-hint">同意后双方发布时点立即交换；等待回应期间保留原发布时点。</p><div className="workspace-actions">{outgoing ? <Button variant="secondary" disabled={busy !== null} onClick={() => void respond(request.id, "cancel")}>取消请求</Button> : <><Button disabled={busy !== null || !collaboration.canSwap} onClick={() => void respond(request.id, "accept")}>同意交换</Button><Button variant="secondary" disabled={busy !== null} onClick={() => void respond(request.id, "reject")}>拒绝请求</Button></>}</div></> : null}
       </article>;
     })}
     {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}

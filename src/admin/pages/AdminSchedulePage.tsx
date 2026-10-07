@@ -38,6 +38,7 @@ type BootstrapState =
   | { status: "error"; message: string };
 
 type SegmentDraft = {
+  scheduledAt: string;
   description: string;
   status: AdminSegmentItem["status"];
   currentParticipantId: string;
@@ -86,7 +87,7 @@ export function AdminSchedulePage() {
       setState({
         status: "error",
         message:
-          error instanceof Error ? error.message : "无法读取时间段状态。",
+          error instanceof Error ? error.message : "无法读取发布时点状态。",
       });
     }
   }
@@ -96,6 +97,7 @@ export function AdminSchedulePage() {
       ...current,
       [segmentId]: {
         ...(current[segmentId] ?? {
+          scheduledAt: "",
           description: "",
           status: "open",
           currentParticipantId: "",
@@ -153,7 +155,7 @@ export function AdminSchedulePage() {
     } catch (error) {
       setBootstrap({
         status: "error",
-        message: error instanceof Error ? error.message : "初始化时间段失败。",
+        message: error instanceof Error ? error.message : "初始化发布时点失败。",
       });
     }
   }
@@ -183,6 +185,7 @@ export function AdminSchedulePage() {
             "content-type": "application/json",
           },
           body: JSON.stringify({
+            scheduledAt: draft.scheduledAt ? new Date(`${draft.scheduledAt}:00+08:00`).toISOString() : null,
             description: draft.description,
             status: draft.status,
             currentParticipantId:
@@ -222,7 +225,7 @@ export function AdminSchedulePage() {
         ...current,
         [segmentId]: {
           status: "error",
-          message: error instanceof Error ? error.message : "时间段更新失败。",
+          message: error instanceof Error ? error.message : "发布时点更新失败。",
         },
       }));
     }
@@ -247,19 +250,19 @@ export function AdminSchedulePage() {
       <PageHeading
         title={<>全局日程</>}
         description={
-          <>查看时间段初始化状态、当前占用情况，并手动修正单个时间段。</>
+          <>查看发布时点初始化状态、当前占用情况，并手动修正单个发布时点。</>
         }
       >
         {segmentMetrics ? (
           <div className="text-sm font-mono text-on-surface-variant">
-            当前共 {segmentMetrics.total} 个时间段
+            当前共 {segmentMetrics.total} 个发布时点
           </div>
         ) : null}
       </PageHeading>
 
       {segmentMetrics ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <MetricCard label="总时间段" value={String(segmentMetrics.total)} />
+          <MetricCard label="总发布时点" value={String(segmentMetrics.total)} />
           <MetricCard label="可认领" value={String(segmentMetrics.open)} />
           <MetricCard label="已认领" value={String(segmentMetrics.held)} />
           <MetricCard label="已完成" value={String(segmentMetrics.completed)} />
@@ -267,7 +270,7 @@ export function AdminSchedulePage() {
       ) : null}
 
       {state.status === "loading" ? (
-        <StateNotice message="正在读取时间段状态。" />
+        <StateNotice message="正在读取发布时点状态。" />
       ) : null}
       {state.status === "error" ? (
         <ReadError message={state.message} />
@@ -280,15 +283,15 @@ export function AdminSchedulePage() {
         <section className="panel space-y-6">
           <div className="border-b border-outline-variant pb-4">
             <h2 className="text-base font-mono text-on-surface-variant uppercase">
-              初始化时间段
+              初始化发布时点
             </h2>
             <p className="mt-2 text-base text-on-surface-variant">
-              当前还没有时间段记录。先写入一期初始数量，后续再在同页进行人工修正。
+              当前还没有发布时点记录。先写入一期初始数量，后续再在同页进行人工修正。
             </p>
           </div>
 
           <form className="max-w-sm space-y-4" onSubmit={handleBootstrap}>
-            <FormField label="初始时间段数量">
+            <FormField label="初始发布时点数量">
               <input
                 className="field-input"
                 inputMode="numeric"
@@ -306,7 +309,7 @@ export function AdminSchedulePage() {
             >
               {bootstrap.status === "submitting"
                 ? "正在初始化..."
-                : "初始化时间段"}
+                : "初始化发布时点"}
             </button>
             {bootstrap.status === "error" ? (
               <StateNotice message={bootstrap.message} tone="error" />
@@ -318,7 +321,7 @@ export function AdminSchedulePage() {
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
           <div className="panel text-base text-on-surface-variant">
-            为创作者分配新的时间段后，原时间段会自动释放，作品资料会同步关联新的时间段。
+            为创作者分配新的发布时点后，原发布时点会自动释放，作品资料会同步关联新的发布时点。
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -339,7 +342,7 @@ export function AdminSchedulePage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-lg font-medium text-on-surface">
-                        {segment.code} · {segment.name}
+                        第 {segment.code} 棒（{segment.name}）
                       </h2>
                       <p className="mt-1 text-base text-on-surface-variant">
                         当前认领人: {segment.currentParticipantName ?? "暂无"}
@@ -370,7 +373,10 @@ export function AdminSchedulePage() {
                   </div>
 
                   <div className="space-y-4">
-                    <FormField label="时间段说明">
+                    <FormField label="发布时间（北京时间）">
+                      <input className="field-input" type="datetime-local" value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
+                    </FormField>
+                    <FormField label="发布时点说明">
                       <textarea
                         className="field-input"
                         maxLength={240}
@@ -474,6 +480,7 @@ function buildDraftMap(items: AdminSegmentItem[]) {
 
 function buildDraft(item: AdminSegmentItem): SegmentDraft {
   return {
+    scheduledAt: item.scheduledAt ? new Date(new Date(item.scheduledAt).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16) : "",
     description: item.description ?? "",
     status: item.status,
     currentParticipantId: item.currentParticipantId ?? "",

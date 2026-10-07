@@ -12,6 +12,7 @@ import { getWindowOrFallback } from "../lib/windows";
 import type { ParticipantAuthRow } from "./participants";
 
 type SegmentRow = {
+  scheduled_at: string | null;
   id: string;
   schedule_version_id: string;
   code: string;
@@ -86,6 +87,7 @@ export async function getCurrentSegmentForParticipant(
         schedule_segments.code,
         schedule_segments.name,
         schedule_segments.description,
+        schedule_segments.scheduled_at,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         schedule_segments.claimed_at,
@@ -116,6 +118,7 @@ export async function listAvailableSegments(
         schedule_segments.code,
         schedule_segments.name,
         schedule_segments.description,
+        schedule_segments.scheduled_at,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         schedule_segments.claimed_at,
@@ -169,7 +172,7 @@ export async function claimParticipantSegment(
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
   if (!window.isOpen) {
-    return segmentMutationError(403, "segment_claim_closed", "当前还没有开放时间段认领。");
+    return segmentMutationError(403, "segment_claim_closed", "当前还没有开放发布时点认领。");
   }
 
   if (!scheduleVersionId) {
@@ -177,7 +180,7 @@ export async function claimParticipantSegment(
   }
 
   if (!canParticipantManageSegments(input.participant.status)) {
-    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行时间段认领。");
+    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点认领。");
   }
 
   const currentSegment = await getCurrentSegmentForParticipant(db, input.participant.id);
@@ -186,7 +189,7 @@ export async function claimParticipantSegment(
     return segmentMutationError(
       409,
       "segment_already_held",
-      `你已经持有 ${currentSegment.code} · ${currentSegment.name}，如需调整请走时间段变更或释放。`,
+      `你已经持有 ${currentSegment.code} · ${currentSegment.name}，如需调整请走发布时点变更或释放。`,
     );
   }
 
@@ -196,14 +199,14 @@ export async function claimParticipantSegment(
   });
 
   if (!targetSegment) {
-    return segmentMutationError(404, "segment_not_found", "未找到对应时间段。");
+    return segmentMutationError(404, "segment_not_found", "未找到对应发布时点。");
   }
 
   if (!isSegmentAvailable(targetSegment)) {
     return segmentMutationError(
       409,
       "segment_unavailable",
-      "这个时间段刚刚被认领或暂不可用，请刷新后重试。",
+      "这个发布时点刚刚被认领或暂不可用，请刷新后重试。",
     );
   }
 
@@ -286,13 +289,13 @@ export async function claimParticipantSegment(
   ]);
 
   if (toChanges(mutation[0]) !== 1) {
-    return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
+    return segmentMutationError(409, "segment_state_changed", "发布时点状态刚刚发生变化，请刷新后重试。");
   }
 
   const claimedSegment = await getCurrentSegmentForParticipant(db, input.participant.id);
 
   if (!claimedSegment) {
-    return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
+    return segmentMutationError(409, "segment_state_changed", "发布时点状态刚刚发生变化，请刷新后重试。");
   }
 
   return {
@@ -317,7 +320,7 @@ export async function changeParticipantSegment(
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
   if (!window.isOpen) {
-    return segmentMutationError(403, "segment_change_closed", "当前还没有开放时间段变更或释放。");
+    return segmentMutationError(403, "segment_change_closed", "当前还没有开放发布时点变更或释放。");
   }
 
   if (!scheduleVersionId) {
@@ -325,17 +328,17 @@ export async function changeParticipantSegment(
   }
 
   if (!canParticipantManageSegments(input.participant.status)) {
-    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行时间段变更。");
+    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点变更。");
   }
 
   const currentSegment = await getCurrentSegmentForParticipant(db, input.participant.id);
 
   if (!currentSegment) {
-    return segmentMutationError(409, "segment_missing_current", "你当前还没有持有时间段，请先认领。");
+    return segmentMutationError(409, "segment_missing_current", "你当前还没有持有发布时点，请先认领。");
   }
 
   if (currentSegment.id === input.segmentId) {
-    return segmentMutationError(409, "segment_same_target", "你已经持有这个时间段，不需要重复变更。");
+    return segmentMutationError(409, "segment_same_target", "你已经持有这个发布时点，不需要重复变更。");
   }
 
   const targetSegment = await getSegmentById(db, {
@@ -344,14 +347,14 @@ export async function changeParticipantSegment(
   });
 
   if (!targetSegment) {
-    return segmentMutationError(404, "segment_not_found", "未找到对应时间段。");
+    return segmentMutationError(404, "segment_not_found", "未找到对应发布时点。");
   }
 
   if (!isSegmentAvailable(targetSegment)) {
     return segmentMutationError(
       409,
       "segment_unavailable",
-      "目标时间段刚刚被认领或暂不可用，请刷新后重试。",
+      "目标发布时点刚刚被认领或暂不可用，请刷新后重试。",
     );
   }
 
@@ -461,20 +464,20 @@ export async function changeParticipantSegment(
   ]);
 
   if (toChanges(mutation[0]) !== 1 || toChanges(mutation[1]) !== 1) {
-    return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
+    return segmentMutationError(409, "segment_state_changed", "发布时点状态刚刚发生变化，请刷新后重试。");
   }
 
   const nextSegment = await getCurrentSegmentForParticipant(db, input.participant.id);
 
   if (!nextSegment) {
-    return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
+    return segmentMutationError(409, "segment_state_changed", "发布时点状态刚刚发生变化，请刷新后重试。");
   }
 
   return {
     ok: true,
     response: {
       ok: true,
-      message: `已将当前时间段调整为 ${nextSegment.code} · ${nextSegment.name}。`,
+      message: `已将当前发布时点调整为 ${nextSegment.code} · ${nextSegment.name}。`,
       segment: nextSegment,
     },
   };
@@ -490,17 +493,17 @@ export async function releaseParticipantSegment(
   const window = getWindowOrFallback(input.windows, "segment_change_open");
 
   if (!window.isOpen) {
-    return segmentMutationError(403, "segment_release_closed", "当前还没有开放时间段变更或释放。");
+    return segmentMutationError(403, "segment_release_closed", "当前还没有开放发布时点变更或释放。");
   }
 
   if (!canParticipantManageSegments(input.participant.status)) {
-    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行时间段释放。");
+    return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点释放。");
   }
 
   const currentSegment = await getCurrentSegmentForParticipant(db, input.participant.id);
 
   if (!currentSegment) {
-    return segmentMutationError(409, "segment_missing_current", "你当前没有可释放的时间段。");
+    return segmentMutationError(409, "segment_missing_current", "你当前没有可释放的发布时点。");
   }
 
   const now = nowIso();
@@ -570,14 +573,14 @@ export async function releaseParticipantSegment(
   ]);
 
   if (toChanges(mutation[0]) !== 1) {
-    return segmentMutationError(409, "segment_state_changed", "时间段状态刚刚发生变化，请刷新后重试。");
+    return segmentMutationError(409, "segment_state_changed", "发布时点状态刚刚发生变化，请刷新后重试。");
   }
 
   return {
     ok: true,
     response: {
       ok: true,
-      message: `已释放 ${currentSegment.code} · ${currentSegment.name} 这个时间段。`,
+      message: `已释放 ${currentSegment.code} · ${currentSegment.name} 这个发布时点。`,
       segment: null,
     },
   };
@@ -600,6 +603,7 @@ function mapPortalSegmentRow(row: SegmentRow): PortalSegmentSummary {
     code: row.code,
     name: row.name,
     description: row.description,
+    scheduledAt: row.scheduled_at,
     status: row.status,
     claimedAt: row.claimed_at,
     releasedAt: row.released_at,
@@ -636,6 +640,7 @@ async function getSegmentById(
         code,
         name,
         description,
+        scheduled_at,
         status,
         current_participant_id,
         claimed_at,

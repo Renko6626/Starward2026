@@ -41,7 +41,16 @@ export type PublicWork = WorkPresentation & {
   segmentCode: string | null;
   segmentName: string | null;
 };
-export type PublicWorksResponse = { items: PublicWork[] };
+export type PublicScheduleEntry = {
+  id: string;
+  code: string;
+  name: string;
+  scheduledAt: string | null;
+  publicAuthorName: string | null;
+  preview: Pick<WorkPresentation, "previewTitle" | "previewSummary" | "workType" | "coverUrl" | "coverAlt"> | null;
+  workId: string | null;
+};
+export type PublicWorksResponse = { items: PublicWork[]; schedule: PublicScheduleEntry[] };
 export type PublicWorkDetailResponse = {
   work: PublicWork;
   previous: PublicWork | null;

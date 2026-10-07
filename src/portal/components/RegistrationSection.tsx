@@ -1,3 +1,4 @@
+import { formatScheduledTime } from "../../app/lib/format";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -79,7 +80,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     if (required && (!siteKey || !token)) { setError("请先完成人机验证后再提交。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, contactEmail: form.profile.contactEmail, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
     const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile), application: normalized, turnstileToken: token ?? undefined });
-    if (!parsed.success) { setError("请补全署名、B站 UID、联系方式和创作计划，并选择一个时段。请检查邮箱和链接格式。"); return; }
+    if (!parsed.success) { setError("请补全署名、B站 UID、联系方式和创作计划，并选择一个发布时点。请检查邮箱和链接格式。"); return; }
     setSaving(true);
     try {
       const response = await requestJson<WorkspaceApplicationResponse>("/api/portal/application-with-segment", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
@@ -137,7 +138,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     <section className={compact ? "creator-card creator-work-card" : undefined} id={compact ? "plan" : undefined}>
       {compact ? <header className="creator-card-header"><h2 className="creator-card-title">当前创作计划</h2><a className="text-link" href="#schedule">完整排期</a></header> : null}
       <div className={compact ? "creator-card-body" : undefined}>
-    {!editable ? <Notice>{`${getApplicationWindowLabel(application.window)}，暂时不能提交或修改报名。`}</Notice> : <p>填写联系方式、创作计划并选择时段。提交后会先预留时段，审核通过后确认。</p>}
+    {!editable ? <Notice>{`${getApplicationWindowLabel(application.window)}，暂时不能提交或修改报名。`}</Notice> : <p>填写联系方式、创作计划并选择发布时点。提交后会先预留发布时点，审核通过后确认。</p>}
     {compact && application.application ? <div className="creator-work-summary"><h3>{applicationInterestFormatLabels[application.application.interestFormat]}</h3><p>{application.application.introText || "简介待填写"}</p>{application.application.portfolioUrl ? <a className="text-link" href={application.application.portfolioUrl} target="_blank" rel="noreferrer">作品或主页</a> : null}</div> : null}
     <details className="compact-editor" open={!compact || !application.application ? true : undefined}><summary>编辑创作计划</summary>
     <fieldset className="form-section" disabled={disabled}>
@@ -150,9 +151,9 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <Field label="给主催的话（选填）"><textarea form="creator-registration-form" className="field-input" rows={3} value={form.application.messageToHosts ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, messageToHosts: event.target.value } }))} /></Field>
     </fieldset>
     </details>
-    <details className="compact-editor" open={compact ? undefined : true}><summary>{form.segmentId ? `已选时段：${collaboration.segments.find(segment => segment.id === form.segmentId)?.name ?? "待更新"}（调整）` : "选择报名时段"}</summary>
+    <details className="compact-editor" open={compact ? undefined : true}><summary>{form.segmentId ? `已选发布时点：${formatScheduledTime(collaboration.segments.find(segment => segment.id === form.segmentId)?.scheduledAt)}（调整）` : "选择报名发布时点"}</summary>
     <fieldset className="form-section">
-      <legend>选择报名时段</legend>
+      <legend>选择报名发布时点</legend>
       <ScheduleGrid
         segments={collaboration.segments}
         participantId={collaboration.participantId}
@@ -164,7 +165,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     </details>
     {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}{refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
-    <div className="workspace-actions"><Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application ? "更新报名与预留时段" : "提交报名并预留时段"}</Button></div>
+    <div className="workspace-actions"><Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application ? "更新报名与预留发布时点" : "提交报名并预留发布时点"}</Button></div>
       </div>
     </section>
   </div>;

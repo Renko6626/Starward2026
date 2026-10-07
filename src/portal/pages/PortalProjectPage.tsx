@@ -345,7 +345,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
         {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">查看作品</a> : <p className="field-hint">作品链接待填写</p>}
       </div> : <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
-          label="当前时间段"
+          label="当前发布时点"
           value={
             state.project.participant.currentSegmentCode
               ? `${state.project.participant.currentSegmentCode} ${state.project.participant.currentSegmentName ?? "未命名"}`

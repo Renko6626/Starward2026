@@ -23,18 +23,18 @@ export function WorkDetailPage() {
   useEffect(() => {
     if (state.status !== "ready") return;
     const previousTitle = document.title;
-    document.title = `${state.data.work.previewTitle} · 秘封观测集 · STARWARD`;
+    document.title = `${state.data.work.previewTitle} | STARWARD 2026`;
     return () => { document.title = previousTitle; };
   }, [state]);
   return <div className="work-detail">
-    <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} className="text-link"><ArrowLeft size={16} />返回观测集</Link>
+    <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} className="text-link"><ArrowLeft size={16} />返回时间表</Link>
     {state.status === "loading" ? <p className="works-empty" role="status">正在读取这份观测…</p> : state.status === "error" ?
-      state.missing ? <section className="works-empty"><h1>这份观测尚未公开或已撤下。</h1><p>回到观测集，看看其他创作。</p></section> : <ReadError message={state.message} /> : <>
+      state.missing ? <section className="works-empty"><h1>这份观测尚未公开或已撤下。</h1><p>回到时间表，查看参与者和作品预告。</p></section> : <ReadError message={state.message} /> : <>
         <div className="work-detail-index"><span>OBS. {String(state.data.work.observationNumber).padStart(2, "0")}</span><span>{state.data.work.segmentName || "自由观测"}</span></div>
         <WorkPresentation work={state.data.work} />
         <nav className="work-neighbors" aria-label="继续接力观测">
           {state.data.previous ? <Link to="/works/$workId" params={{ workId: state.data.previous.id }}><span><ArrowLeft size={15} />上一份观测</span><strong>{state.data.previous.previewTitle}</strong></Link> : <div />}
-          {state.data.next ? <Link to="/works/$workId" params={{ workId: state.data.next.id }}><span>下一份观测<ArrowRight size={15} /></span><strong>{state.data.next.previewTitle}</strong></Link> : <Link to="/works" search={{ view: "gallery", type: "all", q: "" }}><span>本次观测至此</span><strong>返回观测集</strong></Link>}
+          {state.data.next ? <Link to="/works/$workId" params={{ workId: state.data.next.id }}><span>下一份观测<ArrowRight size={15} /></span><strong>{state.data.next.previewTitle}</strong></Link> : <Link to="/works" search={{ view: "gallery", type: "all", q: "" }}><span>本次观测至此</span><strong>返回时间表</strong></Link>}
         </nav>
       </>}
   </div>;

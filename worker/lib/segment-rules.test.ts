@@ -36,6 +36,7 @@ function buildWindows(
 
 function buildSegment(overrides: Partial<PortalSegmentSummary> = {}): PortalSegmentSummary {
   return {
+    scheduledAt: null,
     id: "segment_03",
     code: "03",
     name: "第三时段",
@@ -74,7 +75,7 @@ describe("buildPortalSegmentActions", () => {
     });
 
     expect(actions.canClaim).toBe(false);
-    expect(actions.claimHint).toContain("未开放时间段认领");
+    expect(actions.claimHint).toContain("未开放发布时点认领");
   });
 
   it("allows change and release when participant already holds a segment and change window is open", () => {

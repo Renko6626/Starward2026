@@ -127,3 +127,31 @@
 @media (prefers-reduced-motion: reduce) {
   .work-cover img, .work-card-caption > svg { transition: none; transform: none !important; }
 }
+
+.relay-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; color: var(--color-on-surface-variant); font-size: 13px; }
+.relay-summary strong { color: #edce94; font-size: 15px; font-weight: 500; }
+.relay-timetable { list-style: none; padding: 0; margin: 24px 0 0; }
+.relay-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 32px; padding: 32px 0; border-bottom: 1px solid var(--color-outline-variant); }
+.relay-row--current { background: linear-gradient(90deg, #edce940a, transparent); }
+.relay-time { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.relay-number { font-size: 12px; color: #bda9d0; }
+.relay-time time { display: flex; flex-direction: column; gap: 8px; }
+.relay-time strong { font: 500 30px/1.2 var(--font-label); font-variant-numeric: tabular-nums; color: #edce94; }
+.relay-time time span { font-size: 13px; color: var(--color-on-surface-variant); }
+.relay-current { font-size: 12px; color: #edce94; }
+.relay-preview { display: flex; align-items: flex-start; gap: 24px; min-width: 0; }
+.relay-cover { width: 180px; max-height: 150px; aspect-ratio: 4 / 3; object-fit: cover; flex-shrink: 0; border-radius: 4px; }
+.relay-copy { min-width: 0; }
+.relay-author { font-size: 14px; color: #d8c6a6; overflow-wrap: anywhere; }
+.relay-copy h2 { margin: 8px 0 12px; font: 500 24px/1.5 var(--font-headline); overflow-wrap: anywhere; }
+.relay-description { margin: 12px 0 16px; color: var(--color-on-surface-variant); font-size: 14px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.relay-pending { font-size: 12px; color: var(--color-on-surface-variant); }
+@media (max-width: 800px) { .relay-row { grid-template-columns: 120px minmax(0, 1fr); gap: 20px; } .relay-cover { width: 140px; } }
+@media (max-width: 600px) {
+  .relay-row { grid-template-columns: 90px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
+  .relay-time strong { font-size: 24px; }
+  .relay-time time span { font-size: 11px; }
+  .relay-preview { flex-direction: column; gap: 16px; }
+  .relay-cover { width: 100%; max-height: 180px; }
+  .relay-copy h2 { font-size: 20px; }
+}

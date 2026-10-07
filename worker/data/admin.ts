@@ -35,6 +35,7 @@ type ParticipantRow = {
 };
 
 type SegmentRow = {
+  scheduled_at: string | null;
   id: string;
   schedule_version_id?: string;
   code: string;
@@ -329,6 +330,7 @@ export async function listSegments(
         schedule_segments.code,
         schedule_segments.name,
         schedule_segments.description,
+        schedule_segments.scheduled_at,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -378,7 +380,7 @@ export async function bootstrapActiveScheduleSegments(
       ok: false,
       status: 409,
       code: "schedule_segments_already_initialized",
-      message: "当前生效排期已经有时间段，不能重复初始化。",
+      message: "当前生效排期已经有发布时点，不能重复初始化。",
     };
   }
 
@@ -421,7 +423,7 @@ export async function bootstrapActiveScheduleSegments(
   return {
     ok: true,
     items: await listSegments(db),
-    message: `已初始化 ${seeds.length} 个时间段。`,
+    message: `已初始化 ${seeds.length} 个发布时点。`,
   };
 }
 
@@ -449,10 +451,11 @@ export async function updateActiveScheduleSegment(
       ok: false,
       status: 404,
       code: "segment_not_found",
-      message: "未找到对应时间段。",
+      message: "未找到对应发布时点。",
     };
   }
 
+  const nextScheduledAt = input.scheduledAt === undefined ? existingSegment.scheduled_at : input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null;
   const nextDescription = normalizeOptionalText(input.description);
   const nextRequestedParticipantId = normalizeOptionalText(
     input.currentParticipantId,
@@ -476,7 +479,7 @@ export async function updateActiveScheduleSegment(
       status: 422,
       code: "invalid_request",
       message:
-        error instanceof Error ? error.message : "时间段更新参数不正确。",
+        error instanceof Error ? error.message : "发布时点更新参数不正确。",
     };
   }
 
@@ -500,12 +503,13 @@ export async function updateActiveScheduleSegment(
         ok: false,
         status: 409,
         code: "segment_participant_locked",
-        message: "当前参与者状态不可持有时间段。",
+        message: "当前参与者状态不可持有发布时点。",
       };
     }
   }
 
   const hasChanges =
+    existingSegment.scheduled_at !== nextScheduledAt ||
     existingSegment.description !== nextDescription ||
     existingSegment.status !== nextResolvedState.nextStatus ||
     existingSegment.current_participant_id !==
@@ -521,14 +525,14 @@ export async function updateActiveScheduleSegment(
         ok: false,
         status: 404,
         code: "segment_not_found",
-        message: "未找到对应时间段。",
+        message: "未找到对应发布时点。",
       };
     }
 
     return {
       ok: true,
       item,
-      message: `时间段 ${item.code} · ${item.name} 没有变更。`,
+      message: `发布时点 ${item.code} · ${item.name} 没有变更。`,
     };
   }
 
@@ -674,7 +678,8 @@ export async function updateActiveScheduleSegment(
   const updateTarget = db
     .prepare(
       `UPDATE schedule_segments
-        SET description = ?,
+        SET scheduled_at = ?,
+            description = ?,
             status = ?,
             current_participant_id = ?,
             claimed_at = ?,
@@ -685,6 +690,7 @@ export async function updateActiveScheduleSegment(
           AND updated_at = ?`,
     )
     .bind(
+      nextScheduledAt,
       nextDescription,
       nextResolvedState.nextStatus,
       nextParticipantId,
@@ -713,7 +719,7 @@ export async function updateActiveScheduleSegment(
         ok: false,
         status: 409,
         code: "segment_state_changed",
-        message: "时间段状态刚刚发生变化，请刷新后重试。",
+        message: "发布时点状态刚刚发生变化，请刷新后重试。",
       };
     }
   } catch (error) {
@@ -722,7 +728,7 @@ export async function updateActiveScheduleSegment(
         ok: false,
         status: 409,
         code: "segment_state_changed",
-        message: "时间段状态刚刚发生变化，请刷新后重试。",
+        message: "发布时点状态刚刚发生变化，请刷新后重试。",
       };
     }
 
@@ -736,7 +742,7 @@ export async function updateActiveScheduleSegment(
       ok: false,
       status: 404,
       code: "segment_not_found",
-      message: "未找到对应时间段。",
+      message: "未找到对应发布时点。",
     };
   }
 
@@ -809,6 +815,7 @@ async function getActiveSegmentDetail(db: D1Database, segmentId: string) {
         schedule_segments.code,
         schedule_segments.name,
         schedule_segments.description,
+        schedule_segments.scheduled_at,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -879,6 +886,7 @@ function mapAdminParticipantDetail(
 
 function mapAdminSegmentItem(row: SegmentRow): AdminSegmentItem {
   return {
+    scheduledAt: row.scheduled_at,
     id: row.id,
     code: row.code,
     name: row.name,

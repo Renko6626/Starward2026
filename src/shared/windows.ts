@@ -70,8 +70,8 @@ export type UpdateEventWindowInput = z.infer<typeof updateEventWindowInputSchema
 
 export const eventWindowLabels: Record<EventWindowKey, string> = {
   application_open: "报名开放",
-  segment_claim_open: "时间段认领开放",
-  segment_change_open: "时间段变更 / 释放开放",
+  segment_claim_open: "发布时点认领开放",
+  segment_change_open: "发布时点变更 / 释放开放",
   preview_submit_open: "预告资料提交开放",
   review_submit_open: "审查说明提交开放",
   public_release_open: "公开发布开放",

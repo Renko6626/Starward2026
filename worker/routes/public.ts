@@ -1,4 +1,4 @@
-import { getPublicWork, listPublicWorks } from "../data/works";
+import { getPublicWork, listPublicWorks, listPublicSchedule } from "../data/works";
 import { getRequiredDb, jsonError } from "../lib/http";
 import { Hono } from "hono";
 import {
@@ -54,7 +54,9 @@ publicApi.post("/applications", async (c) => {
 
 publicApi.get("/works", async (c) => {
   c.header("Cache-Control", "no-store");
-  return c.json({ items: await listPublicWorks(getRequiredDb(c)) });
+  const db = getRequiredDb(c);
+  const items = await listPublicWorks(db);
+  return c.json({ items, schedule: await listPublicSchedule(db, items) });
 });
 
 publicApi.get("/works/:workId", async (c) => {

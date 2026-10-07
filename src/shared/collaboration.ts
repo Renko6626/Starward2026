@@ -12,6 +12,7 @@ export type WorkspaceApplicationInput = z.infer<typeof workspaceApplicationInput
 export type WorkspaceApplicationResponse = PortalApplicationMutationResponse;
 
 export type CollaborationSegment = {
+  scheduledAt: string | null;
   id: string;
   code: string;
   name: string;

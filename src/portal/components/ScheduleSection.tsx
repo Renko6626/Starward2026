@@ -1,3 +1,4 @@
+import { formatScheduledTime } from "../../app/lib/format";
 import { useEffect, useState } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -73,17 +74,17 @@ export function ScheduleSection({ collaboration, onSaved, revision }: {
     return <div className="schedule-detail-actions">
       {segment.status === "available" ? <>
         <p>{schedule.currentSegment
-          ? `将你的时段从 ${schedule.currentSegment.name} 调整到 ${segment.name}，原时段会同时释放。`
-          : `确认后认领 ${segment.name}。`}</p>
+          ? `将你的发布时点从 ${formatScheduledTime(schedule.currentSegment.scheduledAt)} 调整到 ${formatScheduledTime(segment.scheduledAt)}，原发布时点会同时释放。`
+          : `确认后认领 ${formatScheduledTime(segment.scheduledAt)}。`}</p>
         <Button disabled={busy || !permissionsReady || (schedule.currentSegment ? !schedule.actions.canChange : !schedule.actions.canClaim)}
-          onClick={() => void mutate(segment.id, close)}>{schedule.currentSegment ? "确认调整到这个时段" : "确认认领这个时段"}</Button>
+          onClick={() => void mutate(segment.id, close)}>{schedule.currentSegment ? "确认调整到这个发布时点" : "确认认领这个发布时点"}</Button>
       </> : own ? <>
-        <p>这是你当前持有的时段。释放后会重新开放给其他创作者。</p>
+        <p>这是你当前持有的发布时点。释放后会重新开放给其他创作者。</p>
         <Button variant="danger" disabled={busy || !permissionsReady || !schedule.actions.canRelease}
-          onClick={() => void mutate(null, close)}>确认释放当前时段</Button>
+          onClick={() => void mutate(null, close)}>确认释放当前发布时点</Button>
         <p className="field-hint">{schedule.actions.releaseHint}</p>
       </> : segment.status === "confirmed" ? <>
-        <p>{schedule.currentSegment ? `用你的 ${schedule.currentSegment.name} 与这个时段交换，对方同意后生效。` : "先认领一个空闲时段，再向其他创作者请求交换。"}</p>
+        <p>{schedule.currentSegment ? `用你的 ${formatScheduledTime(schedule.currentSegment.scheduledAt)} 与这个发布时点交换，对方同意后生效。` : "先认领一个空闲发布时点，再向其他创作者请求交换。"}</p>
         {alreadyRequested ? <Notice>请求已发出，可以在待办与反馈中查看或取消。</Notice> : <>
           <Field label="换期说明（选填）"><textarea className="field-input" rows={3} maxLength={500}
             value={swapMessage} disabled={busy || !permissionsReady || !collaboration.canSwap}
@@ -97,9 +98,9 @@ export function ScheduleSection({ collaboration, onSaved, revision }: {
   }
 
   return <div className="space-y-6">
-    <p>{schedule ? schedule.currentSegment ? schedule.actions.changeHint : schedule.actions.claimHint : "正在读取排期权限，可以先查看时段。"}</p>
+    <p>{schedule ? schedule.currentSegment ? schedule.actions.changeHint : schedule.actions.claimHint : "正在读取排期权限，可以先查看发布时点。"}</p>
     <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId} renderActions={actions} />
-    {!collaboration.canSwap ? <p className="field-hint">交换需双方持有已确认时段，并处于变更开放期间。</p> : null}
+    {!collaboration.canSwap ? <p className="field-hint">交换需双方持有已确认发布时点，并处于变更开放期间。</p> : null}
     {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
     {notice ? <Notice tone={notice.error ? "error" : "success"}>{notice.text}</Notice> : null}
   </div>;

@@ -56,7 +56,7 @@ export function WorkspaceLayout({
         <div className="creator-header-actions"><Link to="/apply">参与指南</Link><PortalAccount /></div>
       </header>
       <nav className="creator-section-nav" aria-label="工作台区块导航">
-        <a href="#plan">计划与时段</a><a href="#tasks">待办与反馈</a><a href="#project">作品资料</a><a href="#profile">署名与联系</a><a href="#history">参与记录</a>
+        <a href="#plan">计划与发布时点</a><a href="#tasks">待办与反馈</a><a href="#project">作品资料</a><a href="#profile">署名与联系</a><a href="#history">参与记录</a>
       </nav>
       <main id="main-content" className="creator-content">{children}</main>
       <footer className="creator-footer"><span>逐星巡礼 2026</span><Link to="/">返回活动首页 <ArrowUpRight size={14} /></Link></footer>

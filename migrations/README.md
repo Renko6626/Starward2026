@@ -67,3 +67,12 @@ legacy profiles remain readable until their next save. The authenticated neighbo
 API shares this UID only with the adjacent confirmed creator, alongside public
 credit and slot details. Other contact fields remain private. Apply this migration
 with the compact creator workspace version.
+
+## Relay publication time
+
+`0016_schedule_publication_time.sql` adds nullable `scheduled_at` to each existing
+schedule entry. Admins set one publication instant per relay entry (Beijing time
+in the editor, UTC ISO timestamps in storage). No start/end interval is needed.
+Apply this migration with the public timetable version; existing times stay unset.
+Approved previews appear before the relay. Formal works remain gated until the
+last configured publication instant, then follow the existing admin publication rules.

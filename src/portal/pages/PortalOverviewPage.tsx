@@ -1,3 +1,4 @@
+import { formatScheduledTime } from "../../app/lib/format";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Notice, PageHeading, ReadError, StatusBadge, WorkspaceSection } from "../../app/components/ui";
@@ -55,7 +56,7 @@ export function PortalOverviewPage() {
       const response = await requestJson<{ ok: true; message: string }>("/api/portal/application/withdraw", { method: "POST" });
       setMessage(response.message); setConfirmWithdraw(false);
       try { await refresh(); }
-      catch { setError("报名已撤回并释放时段，但摘要暂未更新。请点击更新进度。"); }
+      catch { setError("报名已撤回并释放发布时点，但摘要暂未更新。请点击更新进度。"); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
@@ -74,20 +75,20 @@ export function PortalOverviewPage() {
     {approved ? <div className="creator-board">
       <PortalProfilePage embedded compact onSaved={refresh} />
       <section className="creator-card creator-work-card" id="project">
-        <header className="creator-card-header"><h2 className="creator-card-title">当前作品</h2><a className="text-link" href="#schedule">调整时段</a></header>
+        <header className="creator-card-header"><h2 className="creator-card-title">当前作品</h2><a className="text-link" href="#schedule">调整发布时点</a></header>
         <div className="creator-card-body">
-          <div className="workspace-actions"><p>当前时段：{current ? `${current.code} ${current.name}` : "尚未选择"}</p><a className="text-link" href="#schedule">调整</a></div>
+          <div className="workspace-actions"><p>当前发布时点：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p><a className="text-link" href="#schedule">调整</a></div>
           <PortalProjectPage embedded compact onSaved={refresh} revision={revision} />
           <NeighborSlots revision={revision} />
         </div>
       </section>
     </div> : <><span id="project" /><RegistrationSection compact application={application} collaboration={collaboration} onSaved={refresh} /></>}
-    <WorkspaceSection id={approved ? "plan" : "registration-status"} title="报名记录" summary={approved ? "已通过，报名计划锁定" : application.application?.status === "pending" ? "审核中，时段已预留" : "报名与时段一起提交"}>
-      {approved ? <RegistrationSection application={application} collaboration={collaboration} onSaved={refresh} /> : <p>{application.application?.introText || "填写右侧创作计划并选择时段后，即可提交报名。"}</p>}
-      {application.application?.status === "pending" ? <div className="space-y-4">{confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留时段，并保留参与记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放时段"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : <Button variant="secondary" onClick={() => setConfirmWithdraw(true)}>撤回报名</Button>}</div> : null}
+    <WorkspaceSection id={approved ? "plan" : "registration-status"} title="报名记录" summary={approved ? "已通过，报名计划锁定" : application.application?.status === "pending" ? "审核中，发布时点已预留" : "报名与发布时点一起提交"}>
+      {approved ? <RegistrationSection application={application} collaboration={collaboration} onSaved={refresh} /> : <p>{application.application?.introText || "填写右侧创作计划并选择发布时点后，即可提交报名。"}</p>}
+      {application.application?.status === "pending" ? <div className="space-y-4">{confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留发布时点，并保留参与记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放发布时点"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : <Button variant="secondary" onClick={() => setConfirmWithdraw(true)}>撤回报名</Button>}</div> : null}
     </WorkspaceSection>
-    <WorkspaceSection id="schedule" title="完整排期" summary={current ? `${current.code} ${current.name}` : "尚未选择时段"}>
-      {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId} renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往创作计划选择时段</a>} />}
+    <WorkspaceSection id="schedule" title="完整排期" summary={current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择发布时点"}>
+      {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId} renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往创作计划选择发布时点</a>} />}
     </WorkspaceSection>
     <WorkspaceSection id="history" title="参与记录" summary="报名、排期和作品提交的进展">
       {dashboard.participant ? <PortalHistoryPage embedded revision={revision} /> : <p className="workspace-empty">提交报名后，参与记录会显示在这里。</p>}

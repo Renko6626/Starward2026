@@ -293,6 +293,7 @@ export async function getPortalNeighbors(
 }
 
 type SegmentRow = {
+  scheduledAt: string | null;
   id: string;
   code: string;
   name: string;
@@ -313,7 +314,7 @@ export async function getCollaboration(
     .first<{ id: string; status: string }>();
   const segments = await db
     .prepare(
-      `SELECT s.id,s.code,s.name,s.description,s.status,
+      `SELECT s.id,s.code,s.name,s.description,s.status,s.scheduled_at AS scheduledAt,
         s.current_participant_id AS participantId,
         p.status AS participantStatus,CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName
         FROM schedule_segments s
@@ -363,6 +364,7 @@ export async function getCollaboration(
       code: s.code,
       name: s.name,
       description: s.description,
+      scheduledAt: s.scheduledAt,
       participantId: s.participantId,
       publicName: s.publicName,
       status:

@@ -5,6 +5,7 @@ import { buildLocalSeedSql } from "../../scripts/lib/local-dev-bootstrap.mjs";
 import { getPublicWork, listPublicWorks, setWorkPublication } from "./works";
 import { updateAdminProjectDraftReview, updatePortalProjectPreview } from "./project-drafts";
 import { getParticipantByUserId } from "./participants";
+import { updateActiveScheduleSegment } from "./admin";
 import { publicApi } from "../routes/public";
 import { adminApi } from "../routes/admin";
 import { Hono } from "hono";
@@ -144,4 +145,56 @@ it("accepts empty draft URLs but rejects executable, invalid and credential-bear
     expect(workPublicationFieldsSchema.safeParse({ coverUrl: value }).success).toBe(false);
   }
   expect(workPublicationFieldsSchema.safeParse({ workUrl: "", coverUrl: "", workType: null }).success).toBe(true);
+});
+
+
+describe("public relay timetable", () => {
+  it("keeps slots and approved anonymous previews without leaking draft links", async () => {
+    database.sqlite.exec(`UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active';
+      UPDATE project_drafts SET preview_status = 'approved', work_url = 'https://example.com/private' WHERE id = 'draft_seed_active';
+      UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
+    const app = new Hono<AppRouteConfig>().route("/api", publicApi);
+    const response = await app.request("http://localhost/api/works", {}, { DB: db });
+    const body = await response.json() as any;
+    const slot = body.schedule.find((entry: any) => entry.preview);
+    expect(body.items).toEqual([]);
+    expect(slot).toMatchObject({ publicAuthorName: "匿名", scheduledAt: "2099-01-01T00:00:00.000Z", workId: null });
+    expect(slot.preview.previewTitle).toBeTruthy();
+    expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("https://example.com/private");
+    expect(Object.keys(slot).sort()).toEqual(["id", "code", "name", "scheduledAt", "publicAuthorName", "preview", "workId"].sort());
+    database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
+    const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
+    expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
+  });
+
+  it("gates published details until the last instant and retains chronological slots afterwards", async () => {
+    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
+    database.sqlite.exec(`UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00.000Z';
+      UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
+    const app = new Hono<AppRouteConfig>().route("/api", publicApi);
+    expect(await listPublicWorks(db)).toEqual([]);
+    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(404);
+    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE current_participant_id = 'part_seed_active'");
+    expect(await getPublicWork(db, draftId)).toBeNull();
+    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '1999-12-31T23:00:00.000Z' WHERE current_participant_id = 'part_seed_active'");
+    const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
+    expect(body.schedule[0]).toMatchObject({ scheduledAt: "1999-12-31T23:00:00.000Z", workId: draftId });
+    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(200);
+    await setWorkPublication(db, draftId, false, actor);
+    const withdrawn = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
+    expect(withdrawn.schedule[0].workId).toBeNull();
+    expect(withdrawn.schedule[0].preview).not.toBeNull();
+  });
+
+  it("saves, preserves and clears the admin publication instant", async () => {
+    const slot = database.sqlite.prepare("SELECT id FROM schedule_segments WHERE current_participant_id = 'part_seed_active'").get() as { id: string };
+    const input = { status: "held" as const, currentParticipantId: "part_seed_active" };
+    expect(await updateActiveScheduleSegment(db, slot.id, { ...input, scheduledAt: "2026-12-01T10:00:00+08:00" }, actor))
+      .toMatchObject({ ok: true, item: { scheduledAt: "2026-12-01T02:00:00.000Z" } });
+    expect(await updateActiveScheduleSegment(db, slot.id, { ...input, description: "说明" }, actor))
+      .toMatchObject({ ok: true, item: { scheduledAt: "2026-12-01T02:00:00.000Z" } });
+    expect(await updateActiveScheduleSegment(db, slot.id, { ...input, scheduledAt: null }, actor))
+      .toMatchObject({ ok: true, item: { scheduledAt: null } });
+  });
 });

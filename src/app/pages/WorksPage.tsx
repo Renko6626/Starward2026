@@ -3,73 +3,70 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, Search } from "lucide-react";
 import { requestJson } from "../lib/api";
 import { ReadError } from "../components/ui";
-import { ScrollReveal } from "../components/ScrollReveal";
-import { ObservationMark, WorkCover, WorkTypeMark } from "../components/WorkPresentation";
-import { workTypeLabels, type PublicWorksResponse } from "../../shared/works";
+import { ObservationMark, WorkTypeMark } from "../components/WorkPresentation";
+import type { PublicWorksResponse } from "../../shared/works";
 
 const route = getRouteApi("/works/");
+const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" });
+const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 export function WorksPage() {
-  const { view, type, q } = route.useSearch();
+  const { q } = route.useSearch();
   const navigate = route.useNavigate();
   const [data, setData] = useState<PublicWorksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const controller = new AbortController();
-    requestJson<PublicWorksResponse>("/api/works", { signal: controller.signal })
-      .then(response => { if (!controller.signal.aborted) setData(response); })
-      .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "暂时无法读取观测集。"); });
-    return () => controller.abort();
+    const refresh = () => requestJson<PublicWorksResponse>("/api/works", { signal: controller.signal })
+      .then(response => { if (!controller.signal.aborted) { setData(response); setError(null); setNow(Date.now()); } })
+      .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "暂时无法读取接力时间表。"); });
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 60000);
+    return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
-  const items = data?.items ?? [];
+  const schedule = data?.schedule ?? [];
   const query = q.trim().toLocaleLowerCase();
-  const visible = items.filter(work => (type === "all" || work.workType === type) &&
-    `${work.previewTitle ?? ""} ${work.publicAuthorName ?? ""}`.toLocaleLowerCase().includes(query));
-  const update = (next: Partial<{ view: "gallery" | "orbit"; type: string; q: string }>) =>
-    void navigate({ search: current => ({ ...current, ...next }), replace: true });
+  const visible = schedule.filter(entry => `${entry.preview?.previewTitle ?? ""} ${entry.publicAuthorName ?? ""}`.toLocaleLowerCase().includes(query));
+  const timed = schedule.filter(entry => entry.scheduledAt);
+  const started = timed.some(entry => Date.parse(entry.scheduledAt!) <= now);
+  const ended = timed.length === schedule.length && timed.length > 0 && timed.every(entry => Date.parse(entry.scheduledAt!) <= now);
+  const currentId = started && !ended ? [...timed].reverse().find(entry => Date.parse(entry.scheduledAt!) <= now)?.id : null;
 
   return <div className="works-page">
     <header className="works-intro">
       <div>
-        <p className="eyebrow">HIFUU / OBSERVATION ARCHIVE</p>
-        <h1>秘封观测集<span>沿着星轨，拾起每一份想象。</span></h1>
-        <p>文字、画面与声音，在此相遇。循着接力的顺序，继续我们的共同观测。</p>
+        <p className="eyebrow">STARWARD 2026</p>
+        <h1>接力时间表<span>每一棒，在约定的时刻相遇。</span></h1>
+        <p>按发布时间查看参与者与作品预告。接力结束后，已公开的作品可以进入详情查看。</p>
       </div>
       <div className="works-seal" aria-hidden="true"><ObservationMark /><span>STARWARD<br />VOL. 2026</span></div>
     </header>
     <div className="works-toolbar">
-      <div className="works-view-switch" role="group" aria-label="浏览方式">
-        <button type="button" aria-pressed={view === "gallery"} onClick={() => update({ view: "gallery" })}>作品墙</button>
-        <button type="button" aria-pressed={view === "orbit"} onClick={() => update({ view: "orbit" })}>星轨接力</button>
-      </div>
-      <label className="works-search"><Search size={17} aria-hidden="true" /><span className="sr-only">搜索作品标题或作者</span><input type="search" value={q} placeholder="寻找标题或创作者" onChange={event => update({ q: event.target.value })} /></label>
+      <div className="relay-summary" role="status"><strong>{ended ? "接力已结束" : started ? "接力进行中" : "接力预告"}</strong><span>{schedule.length} 棒</span><span>北京时间 UTC+8</span></div>
+      <label className="works-search"><Search size={17} aria-hidden="true" /><span className="sr-only">搜索作品标题或参与者</span><input type="search" value={q} placeholder="寻找标题或参与者" onChange={event => void navigate({ search: current => ({ ...current, q: event.target.value }), replace: true })} /></label>
     </div>
-    {data && items.length > 0 && <div className="works-filters">
-      <div className="works-types" role="group" aria-label="作品类型">
-        <button type="button" aria-pressed={type === "all"} onClick={() => update({ type: "all" })}>全部 <small>{items.length}</small></button>
-        {Object.entries(workTypeLabels).filter(([key]) => key === type || items.some(work => work.workType === key)).map(([key, label]) =>
-          <button key={key} type="button" aria-pressed={type === key} onClick={() => update({ type: key })}>{label} <small>{items.filter(work => work.workType === key).length}</small></button>)}
-      </div>
-      <p role="status">{visible.length} 份观测 · 按接力顺序</p>
-    </div>}
-    {error ? <ReadError message={error} /> : !data ? <p className="works-empty" role="status">正在展开观测集…</p> : items.length === 0 ?
-      <section className="works-empty"><ObservationMark /><h2>下一份观测，正在酝酿。</h2><p>作品公开后，会在这里依次相遇。</p><Link to="/apply" className="text-link">了解创作接力 <ArrowUpRight size={16} /></Link></section> : visible.length === 0 ?
-      <section className="works-empty"><h2>还没有找到这份观测。</h2><p>试试其他标题、作者或作品类型。</p><button className="button button--secondary" type="button" onClick={() => update({ q: "", type: "all" })}>查看全部作品</button></section> : <>
-        {view === "orbit" && <nav className="works-orbit" aria-label="接力顺序导航">{visible.map(work =>
-          <a key={work.id} href={`#observation-${work.id}`}><span className="orbit-point" /><small>OBS. {String(work.observationNumber).padStart(2, "0")}</small><strong>{work.previewTitle}</strong><span>{work.segmentName || "自由观测"}</span></a>)}</nav>}
-        <div className={`works-grid${view === "orbit" ? " works-grid--sequence" : ""}`}>
-          {visible.map(work => <ScrollReveal key={work.id}>
-            <article id={`observation-${work.id}`} className="work-card">
-              <Link to="/works/$workId" params={{ workId: work.id }} className="work-card-link">
-                <div className="work-card-index"><span>OBS. {String(work.observationNumber).padStart(2, "0")}</span><span>{work.segmentName || "自由观测"}</span></div>
-                <WorkCover work={work} />
-                <div className="work-card-caption"><div><WorkTypeMark type={work.workType} /><h2>{work.previewTitle}</h2><p>{work.publicAuthorName}</p></div><ArrowUpRight size={22} aria-hidden="true" /></div>
-                <span className="sr-only">查看作品详情</span>
-              </Link>
-            </article>
-          </ScrollReveal>)}
-        </div>
-        <footer className="works-end"><span />共同观测，仍在继续。<span /></footer>
-      </>}
+    {error ? <ReadError message={error} /> : !data ? <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
+      <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>发布时点确认后，会在这里展示参与者和作品预告。</p></section> : visible.length === 0 ?
+      <section className="works-empty"><h2>没有找到对应作品或参与者</h2><button className="button button--secondary" type="button" onClick={() => void navigate({ search: current => ({ ...current, q: "" }), replace: true })}>查看完整时间表</button></section> :
+      <ol className="relay-timetable" aria-label="作品发布顺序">
+        {visible.map(entry => <li key={entry.id} className={`relay-row${entry.id === currentId ? " relay-row--current" : ""}`}>
+          <div className="relay-time">
+            <span className="relay-number">第 {entry.code} 棒</span>
+            {entry.scheduledAt ? <time dateTime={entry.scheduledAt}><strong>{timeFormat.format(new Date(entry.scheduledAt))}</strong><span>{dateFormat.format(new Date(entry.scheduledAt))}</span></time> : <strong>时间待定</strong>}
+            {entry.id === currentId && <span className="relay-current">当前接力</span>}
+          </div>
+          <div className="relay-preview">
+            {entry.preview?.coverUrl && <img className="relay-cover" src={entry.preview.coverUrl} alt={entry.preview.coverAlt || `${entry.preview.previewTitle ?? "作品"}预览`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+            <div className="relay-copy">
+              <p className="relay-author">{entry.publicAuthorName || "参与者待公布"}</p>
+              <h2>{entry.preview?.previewTitle || "作品预告待公布"}</h2>
+              {entry.preview && <WorkTypeMark type={entry.preview.workType} />}
+              <p className="relay-description">{entry.preview?.previewSummary || "此处保留作品坑位，预告审核通过后展示。"}</p>
+              {entry.workId ? <Link className="text-link" to="/works/$workId" params={{ workId: entry.workId }}>查看作品 <ArrowUpRight size={16} /></Link> : <span className="relay-pending">{ended ? "作品待公开" : "接力结束后开放作品详情"}</span>}
+            </div>
+          </div>
+        </li>)}
+      </ol>}
   </div>;
 }

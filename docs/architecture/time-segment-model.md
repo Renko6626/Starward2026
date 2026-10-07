@@ -2,6 +2,8 @@
 
 Last reviewed against official documentation: 2026-04-11
 
+2026-10-07 更新：接力以单个作品发布时间点建模，使用 `schedule_segments.scheduled_at`；对外称“发布时点”。保留排期版本、认领与交换机制。下文中的时长、起止时间属于早期方案，不作为当前实现要求。
+
 ## 1. Purpose
 
 本文定义 `时间段 / schedule segment` 的命名与领域模型决策。

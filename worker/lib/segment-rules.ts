@@ -14,20 +14,20 @@ export function buildPortalSegmentActions(input: {
       canClaim: claimWindow.isOpen,
       canChange: false,
       canRelease: false,
-      claimHint: claimWindow.isOpen ? "当前可以认领一个空闲时间段。" : "当前未开放时间段认领。",
-      changeHint: "你还没有持有时间段。",
-      releaseHint: "你还没有持有时间段。",
+      claimHint: claimWindow.isOpen ? "当前可以认领一个空闲发布时点。" : "当前未开放发布时点认领。",
+      changeHint: "你还没有持有发布时点。",
+      releaseHint: "你还没有持有发布时点。",
     };
   }
 
   const segmentLabel = `${input.currentSegment.code} · ${input.currentSegment.name}`;
-  const changeHint = changeWindow.isOpen ? "当前可以变更或释放时间段。" : "当前未开放时间段变更或释放。";
+  const changeHint = changeWindow.isOpen ? "当前可以变更或释放发布时点。" : "当前未开放发布时点变更或释放。";
 
   return {
     canClaim: false,
     canChange: changeWindow.isOpen,
     canRelease: changeWindow.isOpen,
-    claimHint: `你已经持有 ${segmentLabel}。如需调整，请使用时间段变更或释放。`,
+    claimHint: `你已经持有 ${segmentLabel}。如需调整，请使用发布时点变更或释放。`,
     changeHint,
     releaseHint: changeHint,
   };
