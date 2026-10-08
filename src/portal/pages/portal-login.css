@@ -32,7 +32,7 @@
 .station-entry-caption a:hover { color: #fff; }
 .station-entry .auth-panel { width: 100%; max-width: 460px; justify-self: end; padding: 12px 0 12px 48px; border: 0; border-left: 1px solid #ffffff21; border-radius: 0; background: none; }
 .station-entry .auth-panel .station-entry-form-label { margin: 0 0 15px; font: 9px/1.8 var(--font-label); letter-spacing: .12em; color: #888; }
-.station-entry .auth-panel h1 { margin: 0 0 12px; font: 400 27px/1.5 var(--font-headline); }
+.station-entry .auth-panel h1 { margin: 0 0 12px; font: 700 27px/1.5 var(--font-headline); }
 .station-entry .auth-panel > p:not(.station-entry-form-label) { margin: 0 0 30px; font-size: 12px; line-height: 1.9; color: #aaa; }
 .station-entry .auth-tabs { gap: 26px; margin-bottom: 27px; border-color: #ffffff1f; }
 .station-entry .auth-tabs button { font-size: 12px; border-bottom-width: 1px; }

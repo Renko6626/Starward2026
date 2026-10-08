@@ -1,29 +1,6 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Copperplate CC";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("./assets/fonts/copperplate-cc-bold-brand.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Source Han Sans SC Brand";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("./assets/fonts/source-han-sans-sc-brand-500.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Starward Editorial";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("./assets/fonts/noto-serif-sc-headings-500.woff2") format("woff2");
-  unicode-range: U+3002, U+4E00, U+4E0B, U+4E0D, U+4E8B, U+4ECD, U+4F20, U+4F5C, U+5149, U+5165, U+521B, U+53BB, U+53F7, U+540C, U+56DE, U+5728, U+5EFA, U+628A, U+6545, U+661F, U+6761, U+6765, U+6B22, U+6CBF, U+7684, U+7740, U+7A7A, U+7ACB, U+7EE7, U+7EED, U+8005, U+8D26, U+8F68, U+8FCE, U+8FDB, U+95F4, U+FF0C;
-}
+@import "./fonts.css";
 
 @theme {
   --color-background: #090909;
@@ -73,20 +50,18 @@
   --color-inverse-surface: #eeeae0;
   --color-inverse-on-surface: #162436;
   --color-inverse-primary: #67502b;
-  --font-headline:
-    "Iowan Old Style", "Palatino Linotype", "Noto Serif CJK SC", "Songti SC",
-    "SimSun", serif;
-  --font-body: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-label: "SFMono-Regular", Consolas, monospace;
+  --font-headline: "IBM Plex Sans", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", serif;
+  --font-body: "IBM Plex Sans", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-label: "IBM Plex Mono", "Source Han Sans SC", monospace;
   --font-geist: var(--font-body);
 }
 
 @layer base {
   :root {
     color-scheme: dark;
-    --font-brand-cn: "Source Han Sans SC Brand", "Microsoft YaHei", sans-serif;
-    --font-brand-en: "Copperplate CC", "Copperplate Gothic Bold", "Copperplate", serif;
-    --font-editorial: "Starward Editorial", var(--font-headline);
+    --font-brand-cn: var(--font-body);
+    --font-brand-en: "IBM Plex Sans", sans-serif;
+    --font-editorial: var(--font-headline);
     --motion-fast: 160ms;
     --motion-panel: 240ms;
     --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -368,7 +343,7 @@
   }
   .hero-copy h1 {
     margin: 24px 0;
-    font: 500 clamp(40px, 4.5vw, 64px)/1.3 var(--font-editorial);
+    font: 700 clamp(40px, 4.5vw, 64px)/1.3 var(--font-editorial);
     letter-spacing: 0;
   }
   .hero-copy h1 em {
@@ -533,7 +508,7 @@
     gap: 64px;
   }
   .editorial-section h2 {
-    font: 500 32px/1.5 var(--font-editorial);
+    font: 700 32px/1.5 var(--font-editorial);
     margin-top: 16px;
   }
   .editorial-intro {
@@ -581,7 +556,7 @@
     top: 40px;
   }
   .guide-aside h1 {
-    font: 44px/1.3 var(--font-headline);
+    font: 700 44px/1.3 var(--font-headline);
     margin: 24px 0;
   }
   .guide-aside > p:not(.eyebrow) {
@@ -603,7 +578,7 @@
     padding-top: 0;
   }
   .guide-section h2 {
-    font: 24px/1.4 var(--font-headline);
+    font: 700 24px/1.4 var(--font-headline);
     margin-bottom: 20px;
   }
   .guide-section li {
@@ -661,7 +636,7 @@
     position: relative;
   }
   .auth-intro h2 {
-    font: 500 44px/1.4 var(--font-editorial);
+    font: 700 44px/1.4 var(--font-editorial);
     margin: 24px 0;
   }
   .auth-intro > p:not(.eyebrow) {
@@ -681,7 +656,7 @@
     min-width: 0;
   }
   .auth-panel h1 {
-    font: 500 28px/1.5 var(--font-editorial);
+    font: 700 28px/1.5 var(--font-editorial);
     margin-bottom: 8px;
   }
   .auth-panel > p {
@@ -746,7 +721,7 @@
     color: var(--color-tertiary);
   }
   .success-page h1 {
-    font: 40px var(--font-headline);
+    font: 700 40px var(--font-headline);
     margin: 22px 0;
   }
   .success-page > p {
@@ -921,7 +896,7 @@
     border-bottom: 1px solid var(--color-outline-variant);
   }
   .page-heading h1 {
-    font: 32px/1.4 var(--font-headline);
+    font: 700 32px/1.4 var(--font-headline);
     letter-spacing: 0.02em;
   }
   .page-heading .eyebrow {
@@ -947,7 +922,7 @@
     padding: 26px;
   }
   .panel-title {
-    font: 19px var(--font-headline);
+    font: 700 19px var(--font-headline);
     margin-bottom: 20px;
   }
   .form-field {
@@ -995,7 +970,7 @@
     border-bottom: 1px solid var(--color-outline-variant);
   }
   .form-section legend {
-    font: 20px var(--font-headline);
+    font: 700 20px var(--font-headline);
     margin-bottom: 8px;
   }
   .form-section > p {
@@ -1095,7 +1070,7 @@
     color: var(--color-on-surface-variant);
   }
   .metric-card > div {
-    font: 34px/1.3 var(--font-headline);
+    font: 700 34px/1.3 var(--font-headline);
     margin-top: 15px;
     font-variant-numeric: tabular-nums;
   }
@@ -1205,7 +1180,7 @@
     border-radius: 7px;
   }
   .dashboard-welcome h2 {
-    font: 27px var(--font-headline);
+    font: 700 27px var(--font-headline);
     margin: 12px 0;
     overflow-wrap: anywhere;
   }
@@ -1844,3 +1819,6 @@
   .schedule-track-item:nth-child(4) { animation-delay: 210ms; }
   .schedule-track-item:nth-child(5) { animation-delay: 280ms; }
 }
+
+/* Workspaces use the same text families with sans-serif interface headings. */
+.workspace { --font-headline: var(--font-body); --font-editorial: var(--font-body); }

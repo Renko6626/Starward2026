@@ -12,8 +12,8 @@
 .participation-back { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: #999; font-size: 11px; }
 .participation-back:hover { color: #fff; }
 .participation-kicker { margin: 55px 0 20px; color: #818181; font: 9px/1.6 var(--font-label); letter-spacing: .13em; }
-.participation-aside h1 { margin: 0; font: 500 clamp(42px, 4.3vw, 64px)/1.3 var(--font-brand-cn); letter-spacing: .04em; }
-.participation-intro { margin: 26px 0 0; font: 400 22px/1.8 var(--font-headline); letter-spacing: .03em; color: #c6c6c6; }
+.participation-aside h1 { margin: 0; font: 700 clamp(42px, 4.3vw, 64px)/1.3 var(--font-headline); letter-spacing: .025em; }
+.participation-intro { margin: 26px 0 0; font: 400 22px/1.8 var(--font-body); letter-spacing: .03em; color: #c6c6c6; }
 .participation-aside-note { margin: 20px 0 0; color: #929292; font-size: 12px; line-height: 1.9; }
 .participation-artwork { position: absolute; inset: 425px -12% 32px -14%; margin: 0; pointer-events: none; }
 .participation-artwork img { width: 100%; height: 100%; object-fit: contain; opacity: .43; mix-blend-mode: screen; }
@@ -30,7 +30,7 @@
 .participation-section { border-top: 1px solid #ffffff1c; margin-top: 45px; padding-top: 28px; }
 .participation-section-heading { display: flex; align-items: baseline; gap: 18px; }
 .participation-section-heading > span { color: #777; font: 10px/1.6 var(--font-label); }
-.participation-section-heading h2 { margin: 0; font: 400 23px/1.55 var(--font-headline); }
+.participation-section-heading h2 { margin: 0; font: 700 23px/1.55 var(--font-headline); }
 .participation-section-lead { margin: 17px 0 0; color: #a5a5a5; font-size: 13px; line-height: 1.95; }
 .participation-steps { list-style: none; margin: 28px 0 0; padding: 0; }
 .participation-steps li { display: grid; grid-template-columns: 25px minmax(0, 1fr); gap: 18px; position: relative; padding-bottom: 28px; }

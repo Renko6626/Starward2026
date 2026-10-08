@@ -8,6 +8,7 @@ import {
 import type { AppRouteConfig } from "../lib/types";
 import { getWindowOrFallback } from "../lib/windows";
 import { listEventWindows } from "../data/event-windows";
+import { getParticipationStatistics } from "../data/participation";
 
 const publicApi = new Hono<AppRouteConfig>();
 
@@ -20,17 +21,25 @@ publicApi.get("/health", (c) => {
 });
 
 publicApi.get("/applications/intake", async (c) => {
+  c.header("Cache-Control", "no-store");
   let window = null;
+  let statistics = null;
 
   if (c.env.DB) {
     const windows = await listEventWindows(c.env.DB);
     window = getWindowOrFallback(windows, "application_open");
+    try {
+      statistics = await getParticipationStatistics(c.env.DB);
+    } catch (error) {
+      console.error("Participation statistics unavailable", error);
+    }
   }
 
   const response: ApplicationIntakeResponse = {
     isOpen: window?.isOpen ?? false,
     turnstileEnabled: Boolean(c.env.TURNSTILE_SECRET_KEY ?? c.env.TURNSTILE_SECRET),
     window,
+    statistics,
     interestFormats: Object.entries(applicationInterestFormatLabels).map(([value, label]) => ({
       value: value as keyof typeof applicationInterestFormatLabels,
       label,

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
 import { MissionCountdown } from '../components/MissionCountdown';
 import { DesignReferences } from '../components/DesignReferences';
@@ -10,13 +10,14 @@ import { getApplicationWindowLabel } from '../../shared/windows';
 import './home.css';
 
 const steps = [
-  { number: '01', title: '提交创作计划', body: '建立账号，一次填写联系资料、创作计划和发布时段。' },
-  { number: '02', title: '准备作品', body: '整理预告与作品说明，根据审核反馈完善内容。' },
-  { number: '03', title: '确认发布时段', body: '报名时预留时段，审核通过后确认，按日程发布作品。' },
+  { number: '01', title: '注册账号', body: '使用邮箱注册，已有账号直接登录。' },
+  { number: '02', title: '填写资料', body: '填写联系方式和创作计划。' },
+  { number: '03', title: '选择时段', body: '选择发布时段，提交报名。' },
 ];
 
 export function HomePage() {
-  const intake = useApplicationIntake();
+  const intake = useApplicationIntake(30_000);
+  const statistics = intake.status === 'ready' ? intake.payload.statistics : null;
   const isOpen = intake.status === 'ready' && intake.payload.isOpen;
   const status = intake.status === 'loading' ? '正在读取活动状态'
     : intake.status === 'error' ? '暂时无法读取状态'
@@ -33,7 +34,7 @@ export function HomePage() {
           </div>
           <p className="orbital-subtitle">2026年秘封俱乐部之日创作接力</p>
           <div className="orbital-actions">
-            <Link className="orbital-primary" to="/apply">参与指南 <ArrowUpRight size={17} /></Link>
+            <Link className="orbital-primary" to="/apply">参与活动 <ArrowUpRight size={18} /></Link>
             <Link className="orbital-secondary" to="/works" search={{ view: 'gallery', type: 'all', q: '' }}>浏览作品 <ArrowUpRight size={15} /></Link>
           </div>
         </div>
@@ -43,10 +44,36 @@ export function HomePage() {
             <span>报名状态</span><strong>{status}</strong>
             {intake.status === 'error' ? <span className="orbital-status-error">{intake.message}</span> : null}
           </div>
-          <a className="orbital-scroll" href="#about-relay">活动介绍 <ArrowDown size={13} /></a>
+          <a className="orbital-scroll" href="#participate-relay">参与方式 <ArrowDown size={13} /></a>
         </div>
       </section>
       <MissionCountdown />
+      <section id="participate-relay" className="relay-route" aria-labelledby="route-title">
+        <div className="relay-route-heading"><h2 id="route-title">参与活动</h2></div>
+        <p className="relay-route-lead">注册并提交创作计划，选择你的发布时段。</p>
+        <ol className="relay-steps">
+          {steps.map((step, index) => <li key={step.number}>
+            <ScrollReveal className="relay-step">
+              <span className="relay-step-number" aria-hidden="true">{step.number}</span>
+              <h3>{step.title}</h3><p>{step.body}</p>
+            </ScrollReveal>
+            {index < steps.length - 1 ? <ArrowRight className="relay-step-arrow" size={18} aria-hidden="true" /> : null}
+          </li>)}
+        </ol>
+        <div className="relay-actions">
+          <Link className="relay-start" to="/portal/login">开始报名 <ArrowUpRight size={18} /></Link>
+          <Link to="/apply">查看参与指南 <ArrowUpRight size={15} /></Link>
+        </div>
+        <p className="relay-enrollment-note">提交后预留时段，审核通过后确认。</p>
+        <div className="relay-statistics" aria-live="polite">
+          {statistics ? <dl>
+            <div><dt>已注册创作者</dt><dd><strong>{statistics.registeredCreators}</strong><span>人</span></dd></div>
+            <div><dt>接力时段已占用</dt><dd>{statistics.schedule && statistics.schedule.total > 0
+              ? <><strong>{statistics.schedule.occupied}</strong><span className="relay-statistics-divider">/</span><strong>{statistics.schedule.total}</strong></>
+              : <span className="relay-statistics-note">时间表准备中</span>}</dd></div>
+          </dl> : <p className="relay-statistics-note">{intake.status === 'loading' ? '正在读取参与情况' : '暂时无法读取参与情况'}</p>}
+        </div>
+      </section>
       <section id="about-relay" className="relay-intro" aria-labelledby="relay-title">
         <ScrollReveal className="relay-heading">
           <h2 id="relay-title">关于活动</h2>
@@ -54,13 +81,6 @@ export function HomePage() {
         <ScrollReveal className="relay-statement">
           <p>逐星巡礼是以秘封组为主题的同人创作接力。参与者按约定日程发布作品。</p>
         </ScrollReveal>
-      </section>
-      <section className="relay-route" aria-labelledby="route-title">
-        <div className="relay-route-heading"><h2 id="route-title">参与方式</h2><Link to="/apply">参与指南 <ArrowUpRight size={15} /></Link></div>
-        <div className="relay-steps">
-          {steps.map(step => <ScrollReveal key={step.number}><article><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></article></ScrollReveal>)}
-        </div>
-        <div className="relay-return"><span>审核结果与发布日程可在创作者工作台查看。</span><Link to="/portal/login">创作者工作台 <ArrowUpRight size={16} /></Link></div>
       </section>
       <DesignReferences />
     </div>

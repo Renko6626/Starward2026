@@ -105,10 +105,16 @@ export type ApplicationInterestFormat = z.infer<
   typeof applicationInterestFormatSchema
 >;
 
+export type ParticipationStatistics = {
+  registeredCreators: number;
+  schedule: { occupied: number; total: number } | null;
+};
+
 export type ApplicationIntakeResponse = {
   isOpen: boolean;
   turnstileEnabled: boolean;
   window: EventWindowSummary | null;
+  statistics: ParticipationStatistics | null;
   interestFormats: Array<{
     value: ApplicationInterestFormat;
     label: string;
