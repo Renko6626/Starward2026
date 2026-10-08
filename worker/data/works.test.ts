@@ -162,10 +162,26 @@ describe("public relay timetable", () => {
     expect(slot.preview.previewTitle).toBeTruthy();
     expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
     expect(JSON.stringify(body)).not.toContain("https://example.com/private");
-    expect(Object.keys(slot).sort()).toEqual(["id", "code", "name", "scheduledAt", "publicAuthorName", "preview", "workId"].sort());
+    expect(Object.keys(slot).sort()).toEqual(["id", "code", "name", "scheduledAt", "status", "publicAuthorName", "preview", "workId"].sort());
     database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
     const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
+  });
+
+  it("distinguishes open, reserved, confirmed and closed slots without publishing pending identities", async () => {
+    database.sqlite.exec(`UPDATE schedule_segments SET status = 'held', current_participant_id = 'part_seed_pending' WHERE id = 'seg_seed_101';
+      UPDATE schedule_segments SET status = 'completed' WHERE id = 'seg_seed_102';
+      UPDATE portal_profiles SET credit_name = '待审核私有署名' WHERE user_id = 'usr_seed_pending'`);
+    const app = new Hono<AppRouteConfig>().route("/api", publicApi);
+    const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "reserved", publicAuthorName: null, preview: null });
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_102')).toMatchObject({ status: "confirmed", publicAuthorName: "结界观测者" });
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_103')).toMatchObject({ status: "unavailable" });
+    expect(JSON.stringify(body)).not.toContain('待审核私有署名');
+    expect(JSON.stringify(body)).not.toContain('part_seed_pending');
+    database.sqlite.exec("UPDATE schedule_segments SET status = 'released', current_participant_id = NULL WHERE id = 'seg_seed_101'");
+    const released = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
+    expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, preview: null });
   });
 
   it("gates published details until the last instant and retains chronological slots afterwards", async () => {

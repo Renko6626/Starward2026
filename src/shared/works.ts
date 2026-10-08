@@ -46,6 +46,7 @@ export type PublicScheduleEntry = {
   code: string;
   name: string;
   scheduledAt: string | null;
+  status: "available" | "reserved" | "confirmed" | "unavailable";
   publicAuthorName: string | null;
   preview: Pick<WorkPresentation, "previewTitle" | "previewSummary" | "workType" | "coverUrl" | "coverAlt"> | null;
   workId: string | null;

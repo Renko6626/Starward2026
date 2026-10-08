@@ -75,6 +75,12 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     workType: PublicWork["workType"]; coverUrl: string | null; coverAlt: string | null;
   };
   const { results } = await db.prepare(`SELECT s.id, s.code, s.name, s.scheduled_at AS scheduledAt,
+    CASE
+      WHEN s.status IN ('held', 'completed') AND participant.id IS NOT NULL THEN 'confirmed'
+      WHEN s.status = 'held' THEN 'reserved'
+      WHEN s.current_participant_id IS NULL AND s.status IN ('open', 'released') THEN 'available'
+      ELSE 'unavailable'
+    END AS status,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
     d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     d.work_type AS workType, d.cover_url AS coverUrl, d.cover_alt AS coverAlt
