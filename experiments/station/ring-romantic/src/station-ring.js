@@ -7,6 +7,7 @@ import { createCore } from './model/core.js';
 import { createPropulsion } from './model/propulsion.js';
 import { createEnergyThermal } from './model/energy-thermal.js';
 import { createOperations } from './model/operations.js';
+import { createEvaAirlock } from './model/eva-airlock.js';
 
 export function createRingStation() {
   const resources = createStationResources(), context = { layout, resources };
@@ -20,6 +21,8 @@ export function createRingStation() {
   const core = createCore(context), propulsion = createPropulsion(context);
   const energy = createEnergyThermal(context), operations = createOperations(context);
   fixed.add(core.object, propulsion.object, energy.object, operations.object);
+  const eva = createEvaAirlock(context);
+  fixed.add(eva.object);
   const main = createMainRing(context), counter = createCounterRing(context);
   object.add(main.object, main.transferCabin, counter.object, counter.transferCabin);
 
@@ -28,6 +31,7 @@ export function createRingStation() {
     [`物资储备环 / ${layout.confirmed.counterDiameter} m`, counter.anchors.counterRing, true],
     ['固定分析舱', core.anchors.lab, false], ['人员支持', core.anchors.personnel, false],
     ['载人对接', operations.anchors.crewDock, false], ['货运检查', operations.anchors.cargoDock, false],
+    ['出舱气闸', eva.anchors.exit, false],
     ['主通信碟', operations.anchors.comms, false],
     ['装配臂', operations.anchors.assemblyArm, false], ['检修臂', operations.anchors.inspectionArm, false],
     ['主环入口', main.anchors.crewLandings[0], false],

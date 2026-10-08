@@ -66,6 +66,15 @@ function subtractRectangle(rect, cut) {
 
 function protectedCutouts(moduleIndex, module, w) {
   const [x, , r] = module, cuts = [];
+  if (moduleIndex === 0) {
+    const eva = w.evaAirlock, halfAngle = 1.42 / r;
+    cuts.push([eva.x - x - 1.42, eva.x - x + 1.42,
+      Math.PI - halfAngle, Math.PI + halfAngle]);
+    for (const axial of [eva.routeFrontX, eva.x - 1.6, eva.x + 1.6, eva.routeRearX]) {
+      cuts.push([axial - x - .12, axial - x + .12,
+        Math.PI - .36 - .12 / r, Math.PI - .36 + .12 / r]);
+    }
+  }
   // Actual fixed vestibule roots; the covers end around, not across, these ports.
   if (moduleIndex === 1) cuts.push([-39 - x - 1.45, -39 - x + 1.45,
     Math.PI * .375 - .31, Math.PI * .375 + .31]);

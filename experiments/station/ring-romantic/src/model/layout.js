@@ -33,6 +33,12 @@ export const layout = {
     counterWorkPodIndices: [0, 2], counterTransferX: -5.2, counterTransferRadius: 8.2,
     counterCrewInnerRadius: 9.5,
     coreFront: -60, engineExit: 66, energyAxialOffset: 10,
+    evaAirlock: {
+      x: -46.9, shellRadius: 4.5, outerRadius: 1.45, innerRadius: 1.2,
+      effectiveLength: 2.5, projection: 3.8, neckRadius: 1.08,
+      hatchAxial: 1.5, hatchLateral: 1.2, preparationEnvelope: [3, 4],
+      routeFrontX: -49.7, routeRearX: -45,
+    },
     coreModules: [
       [-51, 14, 4.5, 'hull'], [-40.5, 7, 4.7, 'hullShade'],
       [-16, 18, 4.9, 'hull'], [15, 16, 4.5, 'hullShade'], [30, 10, 3.8, 'service'],

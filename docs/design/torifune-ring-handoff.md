@@ -242,3 +242,16 @@ R/06 完成新稿 build、13 JS node --check、diff 检查，桌面/手机、四
 这是按常见制造规格收敛外截面的外景工作值，不等于选定实心钢材、壁厚、材料牌号、受压稳定性或载荷已经验算。长弦杆按分段装配理解，杆件存在接头也不等于其受压有效长度自然缩短。
 
 参考：SSAB Domex Tube 460MH产品表（100×50、120×60等管材）、SSAB Domex Tube 500MH供货长度（标准6 m/12 m）、Atlas Tube Jumbo HSS（最大22英寸方管）、NASA FAST Mast Structural Response to Axial Loading（20120008187）。其中ISS太阳翼FAST的纵杆中段12.7/约15 mm，柔性横撑约7×9.5 mm，与米级主桁架的杆件不是同一类；本文光伏桅杆50 mm仍为较保守外景值，不能据此宣称复现FAST设计。
+
+
+### R/13 双人出舱气闸首轮（2026-10-08）
+
+按用户确认的A方案，常压准备区设于主轴内，双人出舱舱沿−Y外挂。研究净径2.4 m、有效长度2.5 m、舱门净开口沿X 1.5 m／沿Z 1.2 m；准备区约3×4 m，内部未制作。气闸主体外径2.9 m，端面距4.5 m半径主轴壳面3.8 m，附件最远Y约−8.608 m。初始X=−47.5 m靠近已有RCS服务盒，试放后向后调整0.6 m至−46.9 m，既有设备保持。
+
+新增贴壳弧形座、短颈、圆筒与关闭端门，出口两侧抓手、两根筒体扶手、独立系绳座、工具架、脚部固定接口和照明。根部四处扶手鞋接壳，覆板按接口及支座裁分。近场主轴路线范围X=−49.7…−45 m，未贯通两环轴承。新模块`model/eva-airlock.js`挂固定组，尺寸集中于`layout.working.evaAirlock`。独立查看器更新为R/13，默认镜头保持。
+
+预览：[气闸侧面](../../experiments/station/ring-romantic/previews/eva-airlock.png)、[出口正面](../../experiments/station/ring-romantic/previews/eva-exit.png)、[桌面](../../experiments/station/ring-romantic/previews/r13-desktop.png)、[手机](../../experiments/station/ring-romantic/previews/r13-mobile.png)。设计和实施调整见[气闸方案](../superpowers/specs/2026-10-08-torifune-eva-airlock-design.md)。
+
+64个气闸／设施实例对3235个既有盒形结构的静态包络交叠候选为0；这不是全船曲面碰撞或动态净空验收。只读审查的根部鞋悬离壳面问题已修正，复核附近RCS储罐、端帽和管线无其他重要发现。桌面、手机和两张近景只加载截图，页面／控制台错误为0，未自动交互。`npm run test:station`、根目录与独立查看器`npm run build`、`git diff --check`通过；根目录构建包含背景、结构图及轨迹资源校验。背景和结构图已同步，保留Vite大包提示，未部署。
+
+压力壳保持关闭，实际气密开孔、舱内通道和内舱门未制作；挂点强度、承压开孔加强、气体容量、门扇全行程、穿服救援空间与机械臂动态扫掠均未核定。
