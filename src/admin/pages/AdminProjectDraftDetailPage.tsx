@@ -341,9 +341,6 @@ export function AdminProjectDraftDetailPage() {
             </div>
 
             <div className="mt-6 pt-4 border-t border-outline-variant space-y-3">
-              <SidebarNotice>
-                保存后，创作者可以在作品资料页查看审核状态与反馈。
-              </SidebarNotice>
               {message ? (
                 <SidebarNotice>{message}</SidebarNotice>
               ) : null}

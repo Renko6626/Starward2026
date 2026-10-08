@@ -117,10 +117,6 @@ export function WorkspaceLayout({
           </Link>
           <p>
             STARWARD · 2026
-            <br />
-            {kind === "admin"
-              ? "每一份创作，都值得认真回应。"
-              : "把你的故事，交给下一束星光。"}
           </p>
         </div>
       </aside>

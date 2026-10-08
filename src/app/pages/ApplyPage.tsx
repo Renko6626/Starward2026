@@ -31,8 +31,6 @@ export function ApplyPage() {
           <Link to="/" className="participation-back"><ArrowLeft size={14} /> 返回首页</Link>
           <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
           <h1>参与指南</h1>
-          <p className="participation-intro">带上你的创作，<br />加入这次秘封接力。</p>
-          <p className="participation-aside-note">从提交计划到按日程发布，<br />这里说明你需要准备的事。</p>
         </div>
         <figure className="participation-artwork" aria-hidden="true">
           <img src="/station-drawings/side-elevation.png" alt="" width={1260} height={850} />
@@ -78,7 +76,6 @@ export function ApplyPage() {
           </div>
         </section>
         <div className="participation-closing">
-          <p>准备好了，就从你的创作计划开始。</p>
           <Link to={session ? "/portal" : "/portal/login"}>{session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={16} /></Link>
         </div>
       </div>

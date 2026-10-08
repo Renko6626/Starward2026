@@ -40,9 +40,6 @@ export function AdminProjectDraftsPage() {
     <div className="page-content">
       <PageHeading
         title={<>作品审核</>}
-        description={
-          <>集中查看参与者的预告资料与审查说明，并在详情页执行审核。</>
-        }
       >
         {state.status === "ready" ? (
           <div className="text-sm font-mono text-on-surface-variant">

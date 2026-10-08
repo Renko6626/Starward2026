@@ -54,7 +54,6 @@ export function AdminParticipantsPage() {
     <div className="page-content">
       <PageHeading
         title={<>创作者名册</>}
-        description={<>查看创作者的联系方式、参与状态和接力时间段。</>}
       >
         <div className="flex items-center gap-2">
           <div className="relative">

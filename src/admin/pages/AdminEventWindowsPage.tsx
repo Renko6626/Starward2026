@@ -137,7 +137,6 @@ export function AdminEventWindowsPage() {
     <div className="page-content">
       <PageHeading
         title={<>开放窗口</>}
-        description={<>设置报名、时间段认领与作品资料提交的开放时间。</>}
       ></PageHeading>
 
       {state.status === "loading" ? (

@@ -249,9 +249,6 @@ export function AdminSchedulePage() {
     <div className="page-content">
       <PageHeading
         title={<>全局日程</>}
-        description={
-          <>查看发布时点初始化状态、当前占用情况，并手动修正单个发布时点。</>
-        }
       >
         {segmentMetrics ? (
           <div className="text-sm font-mono text-on-surface-variant">

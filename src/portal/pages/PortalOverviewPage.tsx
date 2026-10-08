@@ -90,7 +90,7 @@ export function PortalOverviewPage() {
     <WorkspaceSection id="schedule" title="完整排期" summary={current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择发布时点"}>
       {dashboard.participant?.status === "approved" ? <ScheduleSection collaboration={collaboration} onSaved={refresh} revision={revision} /> : <ScheduleGrid segments={collaboration.segments} participantId={collaboration.participantId} renderActions={dashboard.participant?.status === "completed" ? undefined : (_segment, close) => <a className="text-link" href="#plan" onClick={close}>前往创作计划选择发布时点</a>} />}
     </WorkspaceSection>
-    <WorkspaceSection id="history" title="参与记录" summary="报名、排期和作品提交的进展">
+    <WorkspaceSection id="history" title="参与记录">
       {dashboard.participant ? <PortalHistoryPage embedded revision={revision} /> : <p className="workspace-empty">提交报名后，参与记录会显示在这里。</p>}
     </WorkspaceSection>
   </div>;

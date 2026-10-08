@@ -107,7 +107,6 @@ export function AdminOverviewPage() {
       <PageHeading
         eyebrow="CONTROL ROOM / 2026"
         title="活动总览"
-        description="从报名到交稿，跟进每一位创作者的参与进度。"
       />
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         <MetricCard label="待审核报名" value={pendingApplications} />
@@ -133,7 +132,6 @@ export function AdminOverviewPage() {
               ? `${pendingApplications} 份报名，等待你的回应`
               : "报名队列已处理完毕"}
           </h2>
-          <p>查看创作方向与联系资料，确认参与资格。</p>
         </div>
         <Link className="button button--primary" to="/admin/applications">
           进入报名审核 →
@@ -152,31 +150,26 @@ export function AdminOverviewPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           <QuickLink
-            description="审核正式报名并开放参与资格。"
             icon={<Scroll className="w-5 h-5" />}
             label="报名审核"
             to="/admin/applications"
           />
           <QuickLink
-            description="维护参与者状态与入口提醒。"
             icon={<UserRound className="w-5 h-5" />}
             label="创作者名册"
             to="/admin/participants"
           />
           <QuickLink
-            description="查看并修正时间段占用。"
             icon={<Clock3 className="w-5 h-5" />}
             label="接力排期"
             to="/admin/schedule"
           />
           <QuickLink
-            description="审阅预告资料与内容说明。"
             icon={<FileText className="w-5 h-5" />}
             label="作品审核"
             to="/admin/project-drafts"
           />
           <QuickLink
-            description="控制报名、时间段认领与资料提交的开放时间。"
             icon={<Sparkles className="w-5 h-5" />}
             label="开放窗口"
             to="/admin/settings/windows"
@@ -225,12 +218,10 @@ function AdminOverviewShell({ description }: { description: string }) {
 
 function QuickLink({
   label,
-  description,
   icon,
   to,
 }: {
   label: string;
-  description: string;
   icon: ReactNode;
   to: string;
 }) {
@@ -246,9 +237,6 @@ function QuickLink({
       <h3 className="mt-4 text-base font-medium text-on-surface group-hover:text-primary transition-colors">
         {label}
       </h3>
-      <p className="mt-2 text-base leading-relaxed text-on-surface-variant">
-        {description}
-      </p>
     </Link>
   );
 }

@@ -188,7 +188,6 @@ export function PortalLoginPage() {
         <div className="station-entry-heading">
           <p className="eyebrow">STARWARD PILGRIMAGE / 2026</p>
           <h2>创作者入口</h2>
-          <p>在这里，跟进你的报名、<br />作品与接力日程。</p>
         </div>
         <div className="station-entry-caption">
           <p>TORIFUNE / SIDE ELEVATION</p>
@@ -198,11 +197,6 @@ export function PortalLoginPage() {
       <section className="auth-panel" aria-label="创作者账号">
         <p className="station-entry-form-label">CREATOR ACCESS</p>
         <h1>{mode === "register" ? "建立创作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录创作者账号"}</h1>
-        <p>
-          {mode === "register"
-            ? "注册后，可完善个人资料并提交创作计划。"
-            : "使用报名时的邮箱，继续查看和维护你的资料。"}
-        </p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [

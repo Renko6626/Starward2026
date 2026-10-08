@@ -70,11 +70,6 @@ export function AdminApplicationsPage() {
     <div className="page-content">
       <PageHeading
         title={<>报名审核队列</>}
-        description={
-          <>
-            管理与审核创作者正式报名，并识别未绑入口、待补资料或尚未开放资格的账号。
-          </>
-        }
       >
         <div className="flex items-center gap-2">
           <div className="relative">

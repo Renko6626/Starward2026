@@ -50,7 +50,6 @@ export function HomePage() {
       <MissionCountdown />
       <section id="participate-relay" className="relay-route" aria-labelledby="route-title">
         <div className="relay-route-heading"><h2 id="route-title">参与活动</h2></div>
-        <p className="relay-route-lead">注册并提交创作计划，选择你的发布时段。</p>
         <ol className="relay-steps">
           {steps.map((step, index) => <li key={step.number}>
             <ScrollReveal className="relay-step">
