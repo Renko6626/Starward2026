@@ -43,7 +43,9 @@ export function createPropulsion({ layout, resources }) {
     }
   }
   for (const y of [-5.4, 5.4]) for (const z of [-5.4, 5.4]) {
-    a.beam('silver', [38, 0, 0], [38, y, z], .65);
+    // The planar frame retains its large local bending beams. A conical
+    // thrust truss would change this load path and is not part of this pass.
+    a.beam('silver', [38, 0, 0], [38, y, z], w.structuralSections.planarThrustBeam[0]);
     // The four stand-off feet attach to an open local frame, which crosses
     // the existing radial thrust beam at the engine's mounting centre.
     for (const offset of [-1.25, 1.25]) {

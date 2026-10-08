@@ -98,7 +98,7 @@ export function createMainRing({ layout, resources }) {
     // Exposed circumferential truss bays alternate with hull segments. The
     // sealed joint lies underneath these bays within the same radial band as the enlarged shell.
     for (const x of [-9.1, 9.1]) {
-      for (const r of [41.5, 47.7].map(r => r + ringOffset)) a.beam('silver', polar(x, r, t - .032), polar(x, r, t + .032), .14);
+      for (const r of [41.5, 47.7].map(r => r + ringOffset)) a.beam('silver', polar(x, r, t - .032), polar(x, r, t + .032), w.structuralSections.mainRingChord[0]);
       for (const dt of [-.032, .032]) a.beam('silver', ringAt(x, 41.5, t + dt), ringAt(x, 47.7, t + dt), .14);
       a.beam('frame', ringAt(x, 41.5, t - .032), ringAt(x, 47.7, t + .032), .08);
       a.beam('frame', ringAt(x, 47.7, t - .032), ringAt(x, 41.5, t + .032), .08);
@@ -106,7 +106,7 @@ export function createMainRing({ layout, resources }) {
     for (const side of [-1, 1]) {
       a.beam('silver', ringAt(side * 8.2, 40.3, t), ringAt(side * 8.2, 48.7, t), .55, .7);
       for (const r of [40.5, 48.4].map(r => r + ringOffset)) {
-        a.beam('silver', polar(-8.2, r, t), polar(8.2, r, t), .46);
+        a.beam('silver', polar(-8.2, r, t), polar(8.2, r, t), w.structuralSections.mainTransverseFrame[0]);
         a.box('silver', polar(side * 8.7, r, t), [.22, 1.5, 1.7], [t, 0, 0]);
         for (const offset of [-.01, .01]) a.cylinder('dark', polar(side * 8.92, r, t + offset), .13, .12, [0, 0, Math.PI / 2]);
       }
@@ -122,7 +122,10 @@ export function createMainRing({ layout, resources }) {
     }
     if (major) {
       const crewSpoke = w.mainCrewSpokeIndices.includes(i / 4);
-      radialTruss(a, t, 6.8, 40.5 + ringOffset, 0, 4.2, 1.6, 7);
+      radialTruss(a, t, 6.8, 40.5 + ringOffset, 0, 4.2, 1.6, 7, {
+        chord: w.structuralSections.mainSpokeChord[0],
+        axialDiagonal: w.structuralSections.spokeAxialDiagonal[0],
+      });
       // Attached utilities + sealed solid-sample carrier, separately readable.
       for (const side of [-1, 1]) a.beam('oxidizerPipe', polar(side * 3.2, 7, t), ringAt(side * 3.2, 39, t), .21);
       a.beam('service', polar(crewSpoke ? 1.7 : -1.2, 7, t), ringAt(crewSpoke ? 1.7 : -1.2, 40, t), .72, .95);

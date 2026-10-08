@@ -103,20 +103,24 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
 }
 
 // Open rectangular truss, with corner chords, alternating diagonals and end plates.
-export function radialTruss(a, angle, inner, outer, x = 0, halfDepth = 3, halfWidth = 1.3, bays = 6) {
+export function radialTruss(a, angle, inner, outer, x = 0, halfDepth = 3, halfWidth = 1.3, bays = 6,
+  { chord = .28, axialDiagonal = .16 } = {}) {
   const at = (r, dx, side) => {
     const p = polar(x + dx, r, angle);
     p[1] -= Math.sin(angle) * side; p[2] += Math.cos(angle) * side; return p;
   };
-  for (const dx of [-halfDepth, halfDepth]) for (const side of [-halfWidth, halfWidth])
-    a.beam('silver', at(inner, dx, side), at(outer, dx, side), .38);
   for (let i = 0; i <= bays; i++) {
     const r = inner + (outer - inner) * i / bays;
+    for (const dx of [-halfDepth, halfDepth]) for (const side of [-halfWidth, halfWidth])
+      a.beam('silver', at(r - .12, dx, side), at(r + .12, dx, side), chord + .06);
     for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, -halfWidth), at(r, dx, halfWidth), .06);
     for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(r, halfDepth, side), .1);
     if (i === bays) continue;
     const next = r + (outer - inner) / bays;
-    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(next, halfDepth, side), .12);
+    // Bay-length chord pieces meet at braced nodes, not decorative splices.
+    for (const dx of [-halfDepth, halfDepth]) for (const side of [-halfWidth, halfWidth])
+      a.beam('silver', at(r, dx, side), at(next, dx, side), chord);
+    for (const side of [-halfWidth, halfWidth]) a.beam('frame', at(r, -halfDepth, side), at(next, halfDepth, side), axialDiagonal);
     for (const dx of [-halfDepth, halfDepth]) a.beam('frame', at(r, dx, i % 2 ? halfWidth : -halfWidth), at(next, dx, i % 2 ? -halfWidth : halfWidth), .08);
   }
 }

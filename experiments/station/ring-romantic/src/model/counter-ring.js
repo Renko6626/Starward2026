@@ -122,7 +122,8 @@ export function createCounterRing({ layout, resources }) {
     const chordRadius = inner * Math.cos(pitch / 2) / Math.cos(t - bayAngle);
     const key = t.toFixed(7);
     if (!floorBeams.has(key)) {
-      a.beam('frame', polar(-depth, chordRadius, t), polar(depth, chordRadius, t), .08);
+      // These 6.8 m beams carry spinning tanks/pods, unlike unloaded rungs.
+      a.beam('frame', polar(-depth, chordRadius, t), polar(depth, chordRadius, t), w.structuralSections.counterLoadedCrossbeam[0]);
       floorBeams.add(key);
     }
     a.beam('silver', foot, polar(foot[0], chordRadius, t), .08);
@@ -131,7 +132,7 @@ export function createCounterRing({ layout, resources }) {
   for (let i = 0; i < count; i++) {
     const angle = i * pitch, start = angle - pitch / 2, end = angle + pitch / 2;
     for (const x of [-depth, depth]) for (const r of [inner, outer])
-      a.beam('silver', polar(x, r, start), polar(x, r, end), .28);
+      a.beam('silver', polar(x, r, start), polar(x, r, end), w.structuralSections.counterRingChord[0]);
     for (const r of [inner, outer]) {
       a.beam('frame', polar(-depth, r, start), polar(depth, r, start), .08);
       a.beam('frame', polar(-depth, r, start), polar(depth, r, end), .1);
@@ -161,7 +162,10 @@ export function createCounterRing({ layout, resources }) {
   const rails = [-.45, .45].map(dr => arcGeometry(railRadius + dr, .16, .16, Math.PI / 2 - .11, .04, 24));
   for (let i = 0; i < 4; i++) {
     const angle = (w.counterPodCentreBay + i * 8) * pitch;
-    radialTruss(a, angle, 5.6, inner, 0, 2.2, 1.3, 7);
+    radialTruss(a, angle, 5.6, inner, 0, 2.2, 1.3, 7, {
+      chord: w.structuralSections.counterSpokeChord[0],
+      axialDiagonal: w.structuralSections.spokeAxialDiagonal[0],
+    });
     const occupied = w.counterWorkPodIndices.includes(i);
     storagePod(a, w, angle, podShell, podFacePlate, podOuterPlate, occupied, mount); podPositions.push(polar(-w.counterPodAxialWidth / 2 - .3, w.counterStorageRadius, angle));
     if (occupied) {

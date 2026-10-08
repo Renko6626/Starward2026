@@ -39,5 +39,20 @@ export const layout = {
     solarPanelWidth: 10, solarWingLength: 45, solarRootZ: 58,
     radiatorWidth: 6, radiatorLength: 40, radiatorRootX: 17, radiatorRootZ: 32,
     radiatorStartY: 4.5, antennaDiameter: 9,
+    // Approved middle-load study: [outer width, candidate wall], metres.
+    // Rendering represents the outer envelope, not solid metal or tube mass.
+    structuralSections: {
+      coreChord: [.35, .012], mainSpokeChord: [.28, .01],
+      counterSpokeChord: [.3, .014], spokeAxialDiagonal: [.16, .008],
+      mainRingChord: [.25, .008], counterRingChord: [.28, .01],
+      mainTransverseFrame: [.45, .025], counterLoadedCrossbeam: [.25, .01],
+      energyChord: [.2, .006], energyVerticalDiagonal: [.1, .005],
+      solarChord: [.05, .003], solarDiagonal: [.025, .002],
+      radiatorChord: [.08, .004], radiatorDiagonal: [.06, .003],
+      planarThrustBeam: [.65, .035],
+    },
+    radiatorBackTrussDepth: .6,
+    // Shell-supported fixed chords: closed rings, no straight cross-shell braces.
+    coreSupportStations: [-58, -51, -44, -37, -30, -25, -16, -7, 0, 7, 15, 23, 30, 35, 40, 45.3],
   },
 };

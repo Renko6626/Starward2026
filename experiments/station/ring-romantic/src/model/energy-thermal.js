@@ -88,7 +88,7 @@ export function createEnergyThermal({ layout, resources }) {
       a.beam('silver', [20, y, sign * Math.sqrt(3.8 ** 2 - y ** 2)], [20, y, sign * 4.5], .55);
     }
     // Fixed two-level energy truss attaches aft of the main ring.
-    for (const x of [14, 20]) for (const y of [-3, 0]) a.beam('silver', [x, y, sign * 4.5], [x, y, sign * w.solarRootZ], .4);
+    for (const x of [14, 20]) for (const y of [-3, 0]) a.beam('silver', [x, y, sign * 4.5], [x, y, sign * w.solarRootZ], w.structuralSections.energyChord[0]);
     for (let i = 0; i <= 8; i++) {
       const bay = (w.solarRootZ - 5) / 8;
       const z = sign * (5 + i * bay), nz = z + sign * bay;
@@ -97,6 +97,9 @@ export function createEnergyThermal({ layout, resources }) {
         if (i < 8) a.beam('frame', [14, y, z], [20, y, nz], .12);
       }
       for (const x of [14, 20]) a.beam('frame', [x, -3, z], [x, 0, z], .06);
+      if (i < 8) for (const x of [14, 20]) {
+        a.beam('frame', [x, i % 2 ? 0 : -3, z], [x, i % 2 ? -3 : 0, nz], w.structuralSections.energyVerticalDiagonal[0]);
+      }
     }
     energyEquipment(a, sign);
     pipe(a, 'silver', [[15, -3.6, sign * 4.7], [15, -3.6, sign * 20], [15, -3.6, sign * w.solarRootZ]], .14);
@@ -116,14 +119,25 @@ export function createEnergyThermal({ layout, resources }) {
       const blanketWidth = (w.solarPanelWidth - centreGap) / 2;
       const start = sign * w.solarRootZ, end = sign * (w.solarRootZ + w.solarWingLength);
       for (const dx of [-.2, .2]) for (const dy of [-.4, .4])
-        a.beam('silver', [x + dx, -4.4 + dy, start], [x + dx, -4.4 + dy, end], .05);
+        a.beam('silver', [x + dx, -4.4 + dy, start], [x + dx, -4.4 + dy, end], w.structuralSections.solarChord[0]);
       const mastBays = 18;
       for (let i = 0; i < mastBays; i++) {
         const z0 = sign * (w.solarRootZ + i * w.solarWingLength / mastBays);
         const z1 = sign * (w.solarRootZ + (i + 1) * w.solarWingLength / mastBays);
         for (const dx of [-.2, .2]) {
-          a.beam('frame', [x + dx, -4.8, z0], [x + dx, -4, z1], .02);
+          a.beam('frame', [x + dx, -4.8, z0], [x + dx, -4, z1], w.structuralSections.solarDiagonal[0]);
           a.beam('silver', [x + dx, -4.8, z0], [x + dx, -4, z0], .025);
+        }
+        // Brace the narrow faces too; otherwise weak-axis bending/torsion
+        // cannot use the four-chord section assumed in the sizing study.
+        for (const y of [-4.8, -4]) {
+          a.beam('silver', [x - .2, y, z0], [x + .2, y, z0], .025);
+          a.beam('frame', [x + (i % 2 ? .2 : -.2), y, z0],
+            [x + (i % 2 ? -.2 : .2), y, z1], w.structuralSections.solarDiagonal[0]);
+        }
+        if (i === mastBays - 1) {
+          for (const dx of [-.2, .2]) a.beam('silver', [x + dx, -4.8, z1], [x + dx, -4, z1], .025);
+          for (const y of [-4.8, -4]) a.beam('silver', [x - .2, y, z1], [x + .2, y, z1], .025);
         }
       }
       for (let group = 0; group < groups; group++) for (let i = 0; i < piecesPerGroup; i++) {
@@ -159,6 +173,13 @@ export function createEnergyThermal({ layout, resources }) {
       a.box('frame', [x, direction * .4, z], [3.8, .8, 2.7]);
       a.cylinder('dark', [x, direction * 1.1, z], .95, 1.5, [0, 0, Math.PI / 2]);
       a.beam('silver', [x, direction * 1.1, z], [x, direction * startY, z], .16);
+      const backFaces = [x + .22, x + .22 + w.radiatorBackTrussDepth];
+      const edges = [-w.radiatorWidth / 2, w.radiatorWidth / 2];
+      // Four rear-truss feet spread force and moment across the drive frame.
+      for (let face = 0; face < backFaces.length; face++) for (const dz of edges) {
+        a.beam('silver', [x + (face ? .7 : -.7), direction * 1.1, z + Math.sign(dz) * .7],
+          [backFaces[face], direction * startY, z + dz], .16);
+      }
       // Side-mounted manifolds avoid the existing power-conditioning trays.
       a.beam('silver', [20, 0, z - sign * 4], [21.5, direction * .9, z - sign * 4], .06);
       a.box('service', [21.5, direction * .9, z - sign * 4], [2.1, 1.5, 2.4]);
@@ -166,14 +187,22 @@ export function createEnergyThermal({ layout, resources }) {
         const length = w.radiatorLength / 6, height = startY + (i + .5) * length;
         const y = direction * height;
         a.box('radiator', [x, y, z], [.2, length - .18, w.radiatorWidth]);
-        for (const dz of [-w.radiatorWidth / 2, w.radiatorWidth / 2])
-          a.beam('silver', [x + .22, direction * (height - length / 2), z + dz],
-            [x + .22, direction * (height + length / 2), z + dz], .05, .025);
-        for (const dy of [-length / 2, length / 2])
-          a.beam('silver', [x + .32, direction * (height + dy), z - w.radiatorWidth / 2],
-            [x + .32, direction * (height + dy), z + w.radiatorWidth / 2], .05, .025);
-        a.beam('frame', [x + .43, direction * (height - length / 2), z - (w.radiatorWidth / 2 - .1)],
-          [x + .43, direction * (height + length / 2), z + (w.radiatorWidth / 2 - .1)], .03);
+        const y0 = direction * (height - length / 2), y1 = direction * (height + length / 2);
+        for (const px of backFaces) for (const dz of edges)
+          a.beam('silver', [px, y0, z + dz], [px, y1, z + dz], w.structuralSections.radiatorChord[0]);
+        // A shallow box truss joins all six panels; the cladding is not used
+        // as an unverified 40 m cantilever in the exterior representation.
+        for (const dz of edges) a.beam('frame',
+          [backFaces[i % 2], y0, z + dz], [backFaces[1 - i % 2], y1, z + dz], w.structuralSections.radiatorDiagonal[0]);
+        for (let end = 0; end < (i === 5 ? 2 : 1); end++) {
+          const py = end ? y1 : y0;
+          for (const px of backFaces) a.beam('silver', [px, py, z + edges[0]], [px, py, z + edges[1]], .08);
+          for (const dz of edges) a.beam('silver', [backFaces[0], py, z + dz], [backFaces[1], py, z + dz], .06);
+        }
+        for (const px of backFaces) a.beam('frame',
+          [px, y0, z + edges[i % 2]], [px, y1, z + edges[1 - i % 2]], .06);
+        // Each plate has its own short mounts on the continuous near frame.
+        for (const dz of edges) a.beam('silver', [x + .1, y, z + dz], [backFaces[0], y, z + dz], .05);
         a.box('silver', [x, direction * (height + length / 2), z], [.65, .4, .8]);
       }
       for (const dz of [-w.radiatorWidth / 2 + .5, w.radiatorWidth / 2 - .5])

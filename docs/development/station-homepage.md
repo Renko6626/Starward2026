@@ -1,6 +1,6 @@
 # 主页鸟船的修改与更新
 
-主页直接使用 `experiments/station/ring-romantic/src/station-ring.js` 的 R/07 程序化模型。几何、材质和地月背景没有另一份副本。首页场景适配器位于 `src/app/components/station/scene.js`，负责构图、灯光、运动和资源释放；experiment 查看器仍独立运行。
+主页直接使用 `experiments/station/ring-romantic/src/station-ring.js` 的 R/08 程序化模型。几何、材质和地月背景没有另一份副本。首页场景适配器位于 `src/app/components/station/scene.js`，负责构图、灯光、运动和资源释放；experiment 查看器仍独立运行。
 
 ## 首次准备
 
@@ -147,3 +147,9 @@ ORBIT_PYTHON=.venv-orbit/bin/python npm run orbit:generate
 普通设备支架、两环次级杆和能源桁架斜撑收敛至约25–120 mm常见外截面，重设备支柱/翼根支臂160 mm，主轴/两环主弦/能源主弦/推进主承力保持。结构杆改用平直盒形几何，气密通路与设备罩保留圆角。主环人员通路小支撑60 mm、转接托架支撑80 mm；泵组座板高度配合横梁缩细调整。几何属于截面外包络，尚未指定实际钢材、铝材、壁厚或证明承载。
 
 先前直接读取生产结构杆几何的端部过渡已由4.28 m/3.18 m降为0，主轴550 mm、两环辐条380 mm及能源主弦400 mm保持。四副散热板镜像与1580.716 m²单面光伏面积保持。最终`STATION_BROWSER_PATH=… npm run station:update`、独立查看器构建通过；提交前重跑`npm run test:station`、`npm run station:check`、`npm run station:drawings:check`、`git diff --check`通过。已查看最终桌面远景，未执行自动交互或工程验算；Vite大包提示保留，未部署。
+
+## R/08 中档杆件与支撑（2026-10-08）
+
+主轴纵梁350 mm，采用用户选择的贴壳承力环与短支座，16处支撑的最大间距9 m；没有穿舱直线斜撑。主环/副环辐条主弦280/300 mm，能源主弦200 mm；补能源竖向斜撑、光伏弱轴支撑及四副散热器600 mm深连续背架，副环重载横梁加强至250 mm。外宽和候选壁厚在`layout.working.structuralSections`记录；实际网格是外包络，不据此计算金属质量。主环承压接口和主轴舱壳/支环刚度仍待核算。
+
+`npm run station:update`完整通过，生成两张预览、两张结构图并通过来源检查及主站构建；`npm --prefix experiments/station/ring-romantic run build`和`npm run test:station`通过。桌面/手机、结构图及四类局部截图已查看，实例几何已核对；未新增永久测试或执行自动交互。保留Vite大包提示；模型、素材和交接随本阶段保存，具体提交及推送状态见Git记录，未部署。详情见[交接](../design/torifune-ring-handoff.md)。

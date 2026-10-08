@@ -41,15 +41,31 @@ export function createCore({ layout, resources }) {
     }
     a.box('foil', [x, -radius - .55, 0], [length * .45, 1.1, 2.1]);
   }
-  // Continuous fixed chords give the modular pressure core one readable spine.
-  // They remain inside both rotor bores and never attach to a rotating spoke.
-  for (let i = 0; i < 4; i++) {
-    const t = Math.PI / 4 + i * Math.PI / 2, r = 5.15;
-    a.beam('hull', polar(spineFront, r, t), polar(spineRear, r, t), .55, .55);
-    for (const x of [-57, -44, -36, -23, -10, 10, 23, 35, 44]) {
-      a.beam('silver', polar(x, 2.8, t), polar(x, r, t), .32);
-      a.box('silver', polar(x, r, t), [1.2, .8, .8], [t, 0, 0]);
+  // Four fixed chords remain at the approved radius, inside the rotor bores.
+  // Straight face diagonals would cut through the pressure modules. Closed
+  // support rings transfer restraint through the fixed shell/bearing frames;
+  // their actual stiffness is still an engineering assumption, not verified.
+  const supports = w.coreSupportStations.filter(x => x >= spineFront && x <= spineRear);
+  const chordRadius = 5.15, chordWidth = w.structuralSections.coreChord[0];
+  for (const x of supports) {
+    const module = modules.find(([centre, length]) => Math.abs(x - centre) <= length / 2 + .001);
+    const bearing = [[w.mainX, 6.1, 6.2], [w.counterX, 5, 2.8]]
+      .find(([centre, , halfLength]) => Math.abs(x - centre) <= halfLength);
+    const shellRadius = bearing ? bearing[1] : module ? module[2] : 2.8;
+    a.part(arcGeometry(shellRadius + .1, .3, .2, Math.PI * 2, .04, 48), 'silver', [x, 0, 0]);
+    for (let i = 0; i < 4; i++) {
+      const t = Math.PI / 4 + i * Math.PI / 2;
+      a.beam('silver', polar(x, shellRadius + .2, t), polar(x, chordRadius, t), .25);
+      a.beam('silver', polar(x - .12, chordRadius, t), polar(x + .12, chordRadius, t), chordWidth + .06);
+      for (const dx of [-.2, .2]) {
+        a.box('frame', polar(x + dx, chordRadius, t), [.12, .5, .5], [t, 0, 0]);
+      }
     }
+  }
+  for (let i = 0; i < 4; i++) {
+    const t = Math.PI / 4 + i * Math.PI / 2;
+    for (let j = 0; j < supports.length - 1; j++)
+      a.beam('hull', polar(supports[j], chordRadius, t), polar(supports[j + 1], chordRadius, t), chordWidth);
   }
   for (const [x, radius, length] of [[w.mainX, 6.1, 12.4], [w.counterX, 5, 5.6]]) {
     a.cylinder('dark', [x, 0, 0], radius, length, axis);
