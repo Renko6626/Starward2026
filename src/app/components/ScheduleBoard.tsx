@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { PublicScheduleEntry } from "../../shared/works";
 import { WorkTypeMark } from "./WorkPresentation";
 import { scheduleDay, scheduleHour, type ScheduleDay } from "../lib/schedule-layout";
+import { missionTime } from "../lib/mission-time";
 import "./schedule-board.css";
 
 export const scheduleStatusLabels = {
@@ -10,7 +11,16 @@ export const scheduleStatusLabels = {
 } satisfies Record<PublicScheduleEntry["status"], string>;
 const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", weekday: "long" });
-const hourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+
+function MissionClock({ value, start }: { value: string | number; start: number | null }) {
+  if (start === null) return <span>{timeFormat.format(new Date(value))}</span>;
+  const label = missionTime(value, start);
+  return <span className="ops-mission-time"><span className="ops-mission-prefix">{label.slice(0, 2)}</span>{label.slice(2)}</span>;
+}
+
+function dayInstant(day: ScheduleDay, hour: number) {
+  return Date.parse(`${day.key}T00:00:00+08:00`) + hour * 3600000;
+}
 
 export function scheduleAuthor(entry: PublicScheduleEntry, ownName?: string | null) {
   return entry.publicAuthorName || ownName || (entry.status === "available" ? "待认领"
@@ -21,76 +31,101 @@ export function ScheduleStatus({ status }: { status: PublicScheduleEntry["status
   return <span className="ops-status"><i className={`ops-mark ops-mark--${status}`} aria-hidden="true" />{scheduleStatusLabels[status]}</span>;
 }
 
-function ScheduleRuler({ day, selected, currentId, mineId, now, active }: {
-  day: ScheduleDay; selected?: PublicScheduleEntry; currentId: string | null; mineId: string | null; now: number; active: boolean;
+function ScheduleRuler({ day, missionStart, selected, currentId, mineId, now, active }: {
+  day: ScheduleDay; missionStart: number; selected?: PublicScheduleEntry; currentId: string | null; mineId: string | null; now: number; active: boolean;
 }) {
   const showNow = active && scheduleDay(now) === day.key;
   return <div className="ops-overview">
-    <div className="ops-overview-heading"><span>全天排程</span><span>{day.entries.length} 个发布时刻</span></div>
-    <div className="ops-ruler" aria-label="北京时间 00:00 到 24:00 的全天标尺">
+    <div className="ops-ruler" aria-label={`${missionTime(dayInstant(day, 0), missionStart)} 到 ${missionTime(dayInstant(day, 24), missionStart)}，UTC+8 全天标尺`}>
       <div className="ops-scale" aria-hidden="true">
-        {Array.from({ length: 25 }, (_, hour) => <span key={hour} className={`ops-tick${hour % 6 === 0 ? " is-major" : hour % 2 === 0 ? " is-medium" : ""}`} style={{ left: `${hour / 24 * 100}%` }}>
-          {hour % 2 === 0 && <span className={hour % 6 === 0 ? "is-mobile-major" : ""}>{hourLabel(hour)}</span>}
-        </span>)}
+        {Array.from({ length: 97 }, (_, index) => {
+          const hour = index / 4;
+          return <span key={index} className={`ops-tick${index % 24 === 0 ? " is-major" : index % 4 === 0 ? " is-medium" : ""}`} style={{ left: `${hour / 24 * 100}%` }}>
+            {index % 8 === 0 && <span className={index % 24 === 0 ? "is-mobile-major" : ""}>{missionTime(dayInstant(day, hour), missionStart)}</span>}
+          </span>;
+        })}
       </div>
       <div className="ops-occupancy" aria-hidden="true">
         {day.entries.map(entry => <i key={entry.id} className={`ops-window ops-window--${entry.status}${entry.id === selected?.id ? " is-selected" : ""}${entry.id === mineId ? " is-mine" : ""}${entry.id === currentId ? " is-current" : ""}`}
           style={{ left: `${scheduleHour(entry.scheduledAt!) / 24 * 100}%`, width: `${Math.min(1, 24 - scheduleHour(entry.scheduledAt!)) / 24 * 100}%` }} />)}
       </div>
       {selected?.scheduledAt && <div className={`ops-cursor ops-cursor--selected${scheduleHour(selected.scheduledAt) > 21 ? " is-near-end" : ""}`} aria-hidden="true" style={{ left: `${scheduleHour(selected.scheduledAt) / 24 * 100}%` }}>
-        <span>{timeFormat.format(new Date(selected.scheduledAt))} 已选</span>
+        <span>{missionTime(selected.scheduledAt, missionStart)} 已选</span>
       </div>}
-      {showNow && <div className={`ops-cursor ops-cursor--now${scheduleHour(now) > 21 ? " is-near-end" : ""}`} aria-hidden="true" style={{ left: `${scheduleHour(now) / 24 * 100}%` }}><span>当前 {timeFormat.format(new Date(now))}</span></div>}
+      {showNow && <div className={`ops-cursor ops-cursor--now${scheduleHour(now) > 21 ? " is-near-end" : ""}`} aria-hidden="true" style={{ left: `${scheduleHour(now) / 24 * 100}%` }}><span>当前 {missionTime(now, missionStart)}</span></div>}
     </div>
   </div>;
 }
 
-export function ScheduleBoard({ day, selectedId, mineId, ownName, currentId, now, active, matches, onSelect }: {
-  day: ScheduleDay; selectedId: string | null; mineId: string | null; ownName: string | null; currentId: string | null;
+/** Subdivide each actual interval; unconfigured slots never receive invented clock ticks. */
+function ScheduleIntervalTicks({ day, missionStart, start, end }: { day: ScheduleDay; missionStart: number; start: number; end: number }) {
+  const first = Math.floor(start * 6) + 1;
+  const last = Math.ceil(end * 6);
+  return <span className="ops-interval" aria-hidden="true">
+    {Array.from({ length: Math.max(0, last - first) }, (_, index) => {
+      const step = first + index;
+      const hour = step / 6;
+      return <i key={step} className={`ops-interval-tick${step % 6 === 0 ? " is-hour" : step % 3 === 0 ? " is-half" : ""}`} style={{ top: `${(hour - start) / (end - start) * 100}%` }}>
+        {step % 6 === 0 && <span>{missionTime(dayInstant(day, hour), missionStart)}</span>}
+      </i>;
+    })}
+  </span>;
+}
+
+export function ScheduleBoard({ day, missionStart, toolbar, selectedId, mineId, ownName, currentId, now, active, matches, onSelect }: {
+  day: ScheduleDay; missionStart: number | null; toolbar?: ReactNode; selectedId: string | null; mineId: string | null; ownName: string | null; currentId: string | null;
   now: number; active: boolean; matches: Set<string> | null; onSelect: (id: string) => void;
 }) {
   const selected = day.entries.find(entry => entry.id === selectedId);
   return <section className="ops-day" id={`relay-day-${day.key}`} aria-labelledby={`ops-day-${day.key}`}>
-    <h2 className="ops-day-title" id={`ops-day-${day.key}`}>{day.date ? <time dateTime={day.date}>{dateFormat.format(new Date(day.date))}</time> : "发布时间待定"}</h2>
-    {day.date ? <ScheduleRuler day={day} selected={selected} currentId={currentId} mineId={mineId} now={now} active={active} />
+    <div className="ops-day-heading"><h2 className="ops-day-title" id={`ops-day-${day.key}`}>{day.date ? <time dateTime={day.date}>{dateFormat.format(new Date(day.date))}</time> : "发布时间待定"}</h2>{toolbar}</div>
+    {day.date ? <ScheduleRuler day={day} missionStart={missionStart!} selected={selected} currentId={currentId} mineId={mineId} now={now} active={active} />
       : <p className="ops-unconfigured">发布时刻尚未配置，以下按接力顺序排列。</p>}
     <div className={`ops-board${day.date ? "" : " ops-board--pending"}`}>
       {day.shifts.map((shift, index) => <section className="ops-shift" key={shift.start ?? index} aria-labelledby={`ops-shift-${day.key}-${index}`}>
         <header className="ops-shift-heading">
-          <h3 id={`ops-shift-${day.key}-${index}`}>{shift.start !== null ? <>{String(shift.start).padStart(2, "0")}<span>—</span>{String(shift.start + 6).padStart(2, "0")}<small>时</small></> : <><small>第</small>{shift.entries[0]?.code}<span>—</span>{shift.entries.at(-1)?.code}<small>棒</small></>}</h3>
+          <h3 id={`ops-shift-${day.key}-${index}`}>{shift.start !== null ? <><span className="ops-shift-mission"><MissionClock start={missionStart} value={dayInstant(day, shift.start)} /><span>—</span><MissionClock start={missionStart} value={dayInstant(day, shift.start + 6)} /></span></> : <><small>第</small>{shift.entries[0]?.code}<span>—</span>{shift.entries.at(-1)?.code}<small>棒</small></>}</h3>
           <span>{shift.entries.filter(entry => entry.status === "confirmed" || entry.status === "reserved").length} / {shift.entries.length} 已排入</span>
         </header>
         {shift.entries.length > 0 ? <>
-          <div className="ops-fields" aria-hidden="true"><span>{shift.start !== null ? "时刻" : "棒次"}</span><span>作者署名</span><span>状态</span></div>
-          <ol className="ops-rack">
-            {shift.entries.map(entry => {
+          <ol className={`ops-rack${shift.start === null ? " ops-rack--pending" : ""}`}>
+            {shift.start !== null && scheduleHour(shift.entries[0]!.scheduledAt!) > shift.start && <li className="ops-timeline-gap" aria-hidden="true" style={{ minHeight: `${(scheduleHour(shift.entries[0]!.scheduledAt!) - shift.start) * 84}px` }}>
+              <ScheduleIntervalTicks day={day} missionStart={missionStart!} start={shift.start} end={scheduleHour(shift.entries[0]!.scheduledAt!)} />
+            </li>}
+            {shift.entries.map((entry, entryIndex) => {
               const mine = entry.id === mineId;
               const inspected = entry.id === selectedId;
               const author = scheduleAuthor(entry, mine ? ownName : null);
-              return <li key={entry.id} id={`relay-${entry.id}`}>
+              const start = entry.scheduledAt ? scheduleHour(entry.scheduledAt) : null;
+              const next = shift.entries[entryIndex + 1];
+              const end = start !== null ? next?.scheduledAt ? scheduleHour(next.scheduledAt) : shift.start! + 6 : null;
+              return <li key={entry.id} id={`relay-${entry.id}`} style={start !== null && end !== null ? { minHeight: `${Math.max(84, (end - start) * 84)}px` } : undefined}>
+                {start !== null && end !== null && <ScheduleIntervalTicks day={day} missionStart={missionStart!} start={start} end={end} />}
                 <button type="button" className={`ops-task ops-task--${entry.status}${mine ? " is-mine" : ""}${inspected ? " is-selected" : ""}${entry.id === currentId ? " is-current" : ""}${matches && !matches.has(entry.id) && !inspected ? " is-dimmed" : ""}`}
                   aria-pressed={inspected} aria-controls={`ops-detail-${day.key}`} onClick={() => onSelect(entry.id)}
-                  aria-label={`${entry.scheduledAt ? timeFormat.format(new Date(entry.scheduledAt)) : `第 ${entry.code} 棒，时间待定`}，${author}，${scheduleStatusLabels[entry.status]}${mine ? "，我的时段" : ""}`}>
-                  <span className="ops-task-clock">{entry.scheduledAt ? <time dateTime={entry.scheduledAt}>{timeFormat.format(new Date(entry.scheduledAt))}</time> : <><strong>{entry.code}</strong><small>时间待定</small></>}</span>
-                  <span className="ops-task-author">{author}{mine && <span className="ops-mine-label">我的</span>}{entry.id === currentId && <span className="ops-current-label">当前接力</span>}</span>
-                  <ScheduleStatus status={entry.status} />
+                  aria-label={`${entry.scheduledAt ? `${missionTime(entry.scheduledAt, missionStart!)}，${timeFormat.format(new Date(entry.scheduledAt))} UTC+8` : `第 ${entry.code} 棒，时间待定`}，${author}，${scheduleStatusLabels[entry.status]}${mine ? "，我的时段" : ""}`}>
+                  <span className="ops-task-clock">{entry.scheduledAt ? <><time dateTime={entry.scheduledAt}><MissionClock start={missionStart} value={entry.scheduledAt} /></time></> : <><strong>{entry.code}</strong><small>时间待定</small></>}</span>
+                  <span className={`ops-task-anchor ops-task-anchor--${entry.status}`} aria-hidden="true" />
+                  <span className="ops-task-copy"><span className="ops-task-author">{author}{mine && <span className="ops-mine-label">我的</span>}{entry.id === currentId && <span className="ops-current-label">当前接力</span>}</span>
+                    {entry.preview?.previewTitle ? <span className="ops-task-work">{entry.preview.previewTitle}</span> : <span className="ops-task-work">{entry.status === "available" ? "选择此时点报名" : scheduleStatusLabels[entry.status]}</span>}
+                  </span>
                 </button>
               </li>;
             })}
           </ol>
-          <div className="ops-shift-foot"><span>{shift.start !== null ? `${hourLabel(shift.start)} 起` : `${shift.entries.length} 个发布时刻`}</span><span>{shift.entries.filter(entry => entry.status === "available").length} 个空位</span></div>
+          <div className="ops-shift-foot"><span>{shift.start !== null ? `${missionTime(dayInstant(day, shift.start + 6), missionStart!)} 止` : `${shift.entries.length} 个发布时刻`}</span><span>{shift.entries.filter(entry => entry.status === "available").length} 个空位</span></div>
         </> : <p className="ops-shift-empty">此时段尚未配置发布时刻</p>}
       </section>)}
     </div>
   </section>;
 }
 
-export function ScheduleTaskDetail({ entry, mine, ownName, signedIn, ended, detailId, onClose, actions }: {
-  entry: PublicScheduleEntry; mine: boolean; ownName: string | null; signedIn: boolean; ended: boolean; detailId: string; onClose?: () => void;
+export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedIn, ended, detailId, onClose, actions }: {
+  entry: PublicScheduleEntry; missionStart: number | null; mine: boolean; ownName: string | null; signedIn: boolean; ended: boolean; detailId: string; onClose?: () => void;
   actions?: ReactNode;
 }) {
   return <section className="ops-detail" id={detailId} aria-label="选中时段详情">
-    <div className="ops-detail-time"><span>选中时段</span><strong>{entry.scheduledAt ? timeFormat.format(new Date(entry.scheduledAt)) : entry.code}</strong><span>第 {entry.code} 棒{mine ? " / 我的时段" : ""}</span></div>
+    <div className="ops-detail-time"><span>选中时段</span><strong>{entry.scheduledAt ? <MissionClock start={missionStart} value={entry.scheduledAt} /> : entry.code}</strong><span>第 {entry.code} 棒{mine ? " / 我的时段" : ""}</span></div>
     <div className="ops-detail-copy">
       <div className="ops-detail-heading"><h2>{scheduleAuthor(entry, mine ? ownName : null)}</h2><ScheduleStatus status={entry.status} />{onClose && <button type="button" className="ops-close" onClick={onClose}>关闭</button>}</div>
       {entry.preview ? <>

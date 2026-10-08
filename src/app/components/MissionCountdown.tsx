@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export const RELAY_START = '2026-11-12T00:00:00+08:00';
+import { RELAY_START } from "../lib/mission-time";
+export { RELAY_START } from "../lib/mission-time";
 const startTime = Date.parse(RELAY_START);
 
 export function countdownAt(now: number) {
