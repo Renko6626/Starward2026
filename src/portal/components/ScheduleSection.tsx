@@ -6,10 +6,12 @@ import { createSwapInputSchema, type CollaborationMutationResponse, type Collabo
 import type { PortalCurrentSegmentResponse, PortalSegmentMutationResponse } from "../../shared/portal";
 import { ScheduleGrid } from "./ScheduleGrid";
 
-export function ScheduleSection({ collaboration, onSaved, revision }: {
+export function ScheduleSection({ collaboration, onSaved, revision, selectedSegmentId, onResult }: {
   collaboration: CollaborationResponse;
   onSaved: () => Promise<void>;
   revision: number;
+  selectedSegmentId?: string;
+  onResult?: (message: string) => void;
 }) {
   const [schedule, setSchedule] = useState<PortalCurrentSegmentResponse | null>(null);
   const [loadedRevision, setLoadedRevision] = useState(-1);
@@ -54,6 +56,7 @@ export function ScheduleSection({ collaboration, onSaved, revision }: {
         ...(segmentId ? { body: JSON.stringify(swap && parsed?.success ? parsed.data : { segmentId }) } : {}),
       });
       setNotice({ text: response.message, error: false });
+      onResult?.(response.message);
       setStale(true);
       if ("segment" in response) setSchedule(current => current ? { ...current, currentSegment: response.segment } : current);
       if (swap) setSwapMessage("");
@@ -84,7 +87,7 @@ export function ScheduleSection({ collaboration, onSaved, revision }: {
           onClick={() => void mutate(null, close)}>确认释放当前发布时点</Button>
         <p className="field-hint">{schedule.actions.releaseHint}</p>
       </> : segment.status === "confirmed" ? <>
-        <p>{schedule.currentSegment ? `用你的 ${formatScheduledTime(schedule.currentSegment.scheduledAt)} 与这个发布时点交换，对方同意后生效。` : "先认领一个空闲发布时点，再向其他创作者请求交换。"}</p>
+        <p>{schedule.currentSegment ? `你的时点：${formatScheduledTime(schedule.currentSegment.scheduledAt)}；对方的时点：${formatScheduledTime(segment.scheduledAt)}。对方同意后交换，等待回应期间双方保留原时点。` : "先认领一个空闲发布时点，再向其他创作者请求交换。"}</p>
         {alreadyRequested ? <Notice>请求已发出，可以在待办与反馈中查看或取消。</Notice> : <>
           <Field label="换期说明（选填）"><textarea className="field-input" rows={3} maxLength={500}
             value={swapMessage} disabled={busy || !permissionsReady || !collaboration.canSwap}
@@ -92,8 +95,18 @@ export function ScheduleSection({ collaboration, onSaved, revision }: {
           <Button disabled={busy || !permissionsReady || !collaboration.canSwap} onClick={() => void mutate(segment.id, close, true)}>发送换期请求</Button>
         </>}
       </> : null}
-      {notice?.error ? <Notice tone="error">{notice.text}</Notice> : null}
+      {!selectedSegmentId && notice?.error ? <Notice tone="error">{notice.text}</Notice> : null}
       {!permissionsReady ? <p className="field-hint">操作权限更新后可以确认调整。可点击工作台的更新进度重新读取。</p> : null}
+    </div>;
+  }
+
+  if (selectedSegmentId) {
+    const segment = collaboration.segments.find(item => item.id === selectedSegmentId);
+    return <div className="schedule-inline-actions">
+      {segment ? actions(segment, () => {}) : <Notice>时点信息已变化，请重新选择。</Notice>}
+      {!collaboration.canSwap && segment?.status === "confirmed" && segment.participantId !== collaboration.participantId ? <p className="field-hint">交换需双方持有已确认发布时点，并处于变更开放期间。</p> : null}
+      {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
+      {notice ? <Notice tone={notice.error ? "error" : "success"}>{notice.text}</Notice> : null}
     </div>;
   }
 

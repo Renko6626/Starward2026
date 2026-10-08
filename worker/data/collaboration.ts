@@ -141,7 +141,7 @@ export async function saveWorkspaceApplication(
         userId,
         p.creditName,
         p.bilibiliUid,
-        p.contactEmail.toLowerCase(),
+        authEmail.trim().toLowerCase(),
         p.primaryContactChannel,
         p.primaryContactHandle,
         normalizeOptionalText(p.backupContact),
@@ -169,7 +169,7 @@ export async function saveWorkspaceApplication(
       .bind(
         applicationId,
         userId,
-        a.contactEmail.toLowerCase(),
+        authEmail.trim().toLowerCase(),
         normalizeOptionalText(a.contactHandle),
         a.interestFormat,
         normalizeOptionalText(a.introText),

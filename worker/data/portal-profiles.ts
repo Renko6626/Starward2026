@@ -59,7 +59,7 @@ export async function upsertPortalProfile(
         is_anonymous,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, (SELECT lower(trim(email)) FROM "user" WHERE id = ?), ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         credit_name = excluded.credit_name,
         bilibili_uid = excluded.bilibili_uid,
@@ -74,7 +74,7 @@ export async function upsertPortalProfile(
       input.userId,
       input.data.creditName.trim(),
       input.data.bilibiliUid,
-      input.data.contactEmail.trim().toLowerCase(),
+      input.userId,
       input.data.primaryContactChannel.trim(),
       input.data.primaryContactHandle.trim(),
       normalizeOptionalText(input.data.backupContact),

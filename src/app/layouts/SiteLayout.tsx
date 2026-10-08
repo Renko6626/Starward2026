@@ -44,7 +44,8 @@ export function SiteLayout({ children }: PropsWithChildren) {
       document.body.style.overflow = previousOverflow;
     };
   }, [menuOpen]);
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const isWorkspace =
     (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
     pathname.startsWith("/admin");

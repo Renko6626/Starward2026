@@ -225,7 +225,7 @@ portalApi.post("/application-with-segment", async (c) => {
       parsed.error.flatten(),
     );
   const submissionGuard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: parsed.data.application.contactEmail,
+    contactEmail: access.session.user.email,
     turnstileToken: parsed.data.turnstileToken,
   });
   if (!submissionGuard.ok)
@@ -485,7 +485,7 @@ portalApi.post("/application", async (c) => {
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: parsed.data.contactEmail,
+    contactEmail: access.session.user.email,
     turnstileToken: readTurnstileToken(body),
   });
 
@@ -581,7 +581,7 @@ portalApi.patch("/application", async (c) => {
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: parsed.data.contactEmail,
+    contactEmail: access.session.user.email,
     turnstileToken: readTurnstileToken(body),
   });
 

@@ -1,16 +1,12 @@
 /* The homepage lives in the same space as the station. Other routes retain their shell. */
 .public-site--home { background: #000; --color-primary: #eee; }
 .public-site--home .public-main { width: 100%; max-width: none; padding: 0; }
-.public-site--home .public-header { position: absolute; z-index: 12; inset: 0 0 auto; width: 100%; max-width: none; padding: 32px 4.3vw; border: 0; background: linear-gradient(#000000c4, transparent); }
+.public-site--home .public-header { position: absolute; z-index: 12; inset: 0 0 auto; width: var(--site-content-width); padding: 0; border: 0; background: linear-gradient(#000000c4, transparent); }
 .public-site--home .brand { color: #dcdcdc; }
-.public-site--home .brand > span { font-family: var(--font-brand-cn); font-size: 17px; font-weight: 500; letter-spacing: .04em; }
-.public-site--home .brand small { color: #979797; font-size: 10px; letter-spacing: .1em; }
-.public-site--home .brand-emblem { width: 42px; }
-.public-site--home .public-nav { gap: 34px; font-size: 13px; }
 .public-site--home .public-nav a { color: #bfbfbf; }
 .public-site--home .public-nav a[data-status="active"] { color: #eeeeee; }
 .public-site--home .nav-entry { border-color: #bfbfbf38; background: #0d0d0d80; }
-.public-site--home .public-footer { margin-top: 0; width: 91.4%; max-width: none; border-color: #c5c5c51a; padding: 30px 0; font-size: 11px; color: #858585; }
+.public-site--home .public-footer { margin-top: 0; width: var(--site-content-width); border-color: #c5c5c51a; padding: 30px 0; color: #858585; }
 .station-home { position: relative; isolation: isolate; color: #e6e6e6; }
 .orbital-hero { position: relative; isolation: isolate; min-height: 820px; height: 100svh; max-height: 1200px; overflow: hidden; }
 .station-backdrop, .station-canvas, .station-poster, .orbital-shade { position: absolute; inset: 0; }
@@ -22,7 +18,7 @@
 .station-backdrop.is-ready .station-canvas { opacity: 1; }
 .orbital-shade { pointer-events: none; background: linear-gradient(90deg, #00000085 0%, #00000018 43%, transparent 65%), linear-gradient(0deg, #000000 0%, #00000055 12%, transparent 38%); }
 .station-reading-shade { position: absolute; inset: 0; background: #000; opacity: var(--station-dim, 0); }
-.orbital-copy { position: absolute; left: 6.3vw; bottom: 19%; max-width: 560px; }
+.orbital-copy { position: absolute; left: var(--site-content-offset); bottom: 19%; max-width: 560px; }
 .orbital-title { margin-bottom: 16px; }
 .orbital-edition { margin: 12px 0 0; font: 600 clamp(16px, 1.9vw, 28px)/1.2 var(--font-brand-en); letter-spacing: .02em; color: #aaa; text-transform: uppercase; white-space: nowrap; }
 .orbital-copy h1 { margin: 0; font: 500 clamp(45px, 5.25vw, 84px)/1.2 var(--font-brand-cn); letter-spacing: .035em; color: #fff; transform: skewX(-8deg); transform-origin: left bottom; }
@@ -42,22 +38,22 @@
 .orbital-status-light.is-open { background: #bfbfbf; border-color: #bfbfbf; box-shadow: 0 0 10px #bfbfbf33; }
 .orbital-status-error { flex-basis: 100%; }
 .orbital-scroll { display: inline-flex; align-items: center; gap: 20px; white-space: nowrap; font-size: 10px; color: #9c9c9c; min-height: 30px; }
-.relay-intro { width: 87.4%; max-width: 1320px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10%; padding: 130px 0 120px; scroll-margin-top: 40px; }
-.relay-heading h2 { margin: 0; font: 700 clamp(28px, 3vw, 43px)/1.65 var(--font-headline); letter-spacing: .025em; }
+.relay-intro { width: var(--site-content-width); margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10%; padding: 130px 0 120px; scroll-margin-top: 40px; }
+.relay-heading h2 { margin: 0; font: 500 var(--site-section-size)/1.6 var(--font-body); letter-spacing: .025em; }
 .relay-statement { padding-top: 8px; }
-.relay-statement p { font-size: 14px; line-height: 2.1; color: #9c9c9c; margin: 0; max-width: 32em; }
+.relay-statement p { font-size: var(--site-body-size); line-height: 2.1; color: #9c9c9c; margin: 0; max-width: 32em; }
 .relay-route a { display: inline-flex; align-items: center; gap: 22px; color: #c8c8c8; font-size: 12px; min-height: 44px; }
 .relay-route a:hover { color: #d8d8d8; }
-.relay-route { width: 87.4%; max-width: 1320px; margin: auto; padding-top: 70px; scroll-margin-top: 40px; }
-.relay-route-heading h2 { font: 700 clamp(28px, 3vw, 43px)/1.65 var(--font-headline); letter-spacing: .025em; margin: 0; }
-.relay-route-lead { margin: 12px 0 0; font-size: 15px; line-height: 1.8; color: #b5b5b5; }
+.relay-route { width: var(--site-content-width); margin: auto; padding-top: 70px; scroll-margin-top: 40px; }
+.relay-route-heading h2 { font: 500 var(--site-section-size)/1.6 var(--font-body); letter-spacing: .025em; margin: 0; }
+.relay-route-lead { margin: 12px 0 0; font-size: var(--site-body-size); line-height: 1.8; color: #b5b5b5; }
 .relay-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; max-width: 1040px; list-style: none; margin: 42px 0 38px; padding: 0; }
 .relay-steps > li { position: relative; min-width: 0; }
 .relay-steps > li:not(:last-child)::after { content: ''; position: absolute; top: 22px; left: 58px; right: -24px; height: 1px; background: #ffffff30; }
 .relay-step-number { position: relative; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ffffff66; border-radius: 50%; background: #0a0a0a; color: #ddd; font: 400 14px/1 var(--font-label); }
 .relay-step-arrow { position: absolute; top: 14px; right: -29px; color: #9c9c9c; }
-.relay-steps h3 { font-size: clamp(22px, 2vw, 28px); font-weight: 500; margin: 20px 0 10px; letter-spacing: .02em; }
-.relay-steps p { color: #aaa; font-size: 14px; line-height: 1.8; margin: 0; }
+.relay-steps h3 { font-size: 16px; font-weight: 500; margin: 20px 0 10px; letter-spacing: .02em; }
+.relay-steps p { color: #aaa; font-size: var(--site-body-size); line-height: 1.8; margin: 0; }
 .relay-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 30px; }
 .relay-route .relay-start { min-height: 56px; min-width: 208px; justify-content: space-between; padding: 0 26px; border: 1px solid #ededed; background: #ededed; color: #111; font-size: 15px; font-weight: 500; }
 .relay-route .relay-start:hover { background: #fff; border-color: #fff; color: #111; }
@@ -68,24 +64,24 @@
 .relay-statistics dt { font-size: 12px; line-height: 1.6; color: #9c9c9c; }
 .relay-statistics dd { display: flex; align-items: baseline; gap: 7px; margin: 0; }
 .relay-statistics strong { font: 400 24px/1.2 var(--font-label); color: #c6c6c6; font-variant-numeric: tabular-nums; }
-.relay-statistics dd > span { color: #858585; font-size: 11px; }
+.relay-statistics dd > span { color: #858585; font-size: var(--site-meta-size); }
 .relay-statistics dd > .relay-statistics-divider { font: 400 17px/1 var(--font-label); color: #777; }
 .relay-statistics .relay-statistics-note { margin: 0; font: 400 12px/1.8 var(--font-body); color: #858585; }
-.design-references { width: 87.4%; max-width: 1320px; margin: auto; padding: 0 0 44px; }
+.design-references { width: var(--site-content-width); margin: auto; padding: 0 0 44px; }
 .design-references > h2 { border-top: 1px solid #c3c3c326; padding-top: 26px; margin: 0 0 20px; font: 700 18px/1.6 var(--font-headline); }
-.design-reference-list { list-style: none; padding: 0; margin: 0; color: #858585; font-size: 11px; line-height: 1.75; }
+.design-reference-list { list-style: none; padding: 0; margin: 0; color: #858585; font-size: var(--site-meta-size); line-height: 1.75; }
 .design-reference-list li { display: grid; grid-template-columns: 25px 1fr; gap: 5px; margin: 0 0 7px; }
 .design-reference-number { color: #666; font-variant-numeric: tabular-nums; }
 .design-reference-list p { margin: 0; }
 .design-reference-list a { color: #b5b5b5; text-decoration: underline; text-decoration-color: #ffffff26; text-underline-offset: 3px; }
 .design-reference-list a:hover { color: #fff; text-decoration-color: #ffffff80; }
 @media (max-width: 699px) {
-  .design-references { width: calc(100% - 52px); padding-bottom: 32px; }
+  .design-references { width: var(--site-content-width); padding-bottom: 32px; }
   .design-references > h2 { font-size: 16px; padding-top: 22px; margin-bottom: 16px; }
   .design-reference-list { font-size: 10px; line-height: 1.8; }
   .design-reference-list li { grid-template-columns: 22px 1fr; margin-bottom: 9px; }
 }
-.mission-countdown { width: 87.4%; max-width: 1320px; margin: auto; padding: 70px 0 64px; border-bottom: 1px solid #c3c3c326; }
+.mission-countdown { width: var(--site-content-width); margin: auto; padding: 70px 0 64px; border-bottom: 1px solid #c3c3c326; }
 .mission-countdown-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 42px; }
 .mission-countdown-heading h2 { margin: 0; font: 400 18px/1.5 var(--font-body); color: #bdbdbd; }
 .mission-countdown-heading > span { font: 500 9px/1.5 var(--font-label); letter-spacing: .14em; color: #777; }
@@ -104,9 +100,9 @@
   .mission-start { gap: 8px; }
 }
 @media (max-width: 699px) {
-  .mission-countdown { width: calc(100% - 52px); padding: 46px 0; }
+  .mission-countdown { width: var(--site-content-width); padding: 46px 0; }
   .mission-countdown-heading { margin-bottom: 32px; gap: 12px; }
-  .mission-countdown-heading h2 { font-size: 15px; }
+  .mission-countdown-heading h2 { font-size: var(--site-section-size); }
   .mission-countdown-heading > span { font-size: 8px; }
   .mission-clock { width: 100%; gap: 14px; }
   .mission-clock-prefix { font-size: 19px; padding-top: 3px; }
@@ -115,53 +111,50 @@
   .mission-clock-label { font-size: 7px; letter-spacing: 0; }
   .mission-start time { font-size: 19px; }
 }
-@media (min-width: 1800px) { .orbital-copy { left: 8vw; } }
 @media (max-width: 1000px) and (min-width: 700px) {
   .orbital-copy { left: 4.3vw; bottom: 16%; }
   .orbital-copy h1 { font-size: 51px; }
   .orbital-subtitle { font-size: 13px; }
   .orbital-shade { background: linear-gradient(90deg, #000000b0, #00000022 65%, transparent), linear-gradient(0deg, #000000, transparent 45%); }
-  .public-site--home .public-nav { gap: 18px; }
 }
 @media (max-width: 699px) {
-  .public-site--home .public-header { padding: 24px 22px; }
-  .public-site--home .public-nav.is-open { background: #101010f5; top: 82px; }
-  .public-site--home .public-footer { margin-top: 0; width: calc(100% - 44px); padding: 24px 0; gap: 14px; }
+  .public-site--home .public-nav.is-open { background: #101010f5; top: var(--site-header-height); }
+  .public-site--home .public-footer { margin-top: 0; width: var(--site-content-width); padding: 24px 0; gap: 14px; }
   .orbital-hero { height: 100svh; min-height: 840px; max-height: 1100px; }
-  .orbital-copy { left: 26px; right: 26px; bottom: 15%; max-width: none; }
+  .orbital-copy { left: var(--site-content-offset); right: var(--site-content-offset); bottom: 15%; max-width: none; }
   .orbital-copy h1 { font-size: clamp(37px, 11.5vw, 66px); letter-spacing: .02em; }
   .orbital-edition { font-size: clamp(14px, 4vw, 22px); letter-spacing: .02em; }
   .orbital-subtitle { font-size: clamp(10px, 2.7vw, 16px); letter-spacing: 0; }
   .orbital-actions { margin-top: 22px; gap: 22px; }
-  .orbital-actions a { font-size: 11px; gap: 14px; }
+  .orbital-actions a { font-size: var(--site-meta-size); gap: 14px; }
   .orbital-actions .orbital-primary { min-height: 50px; min-width: 158px; padding: 0 22px; font-size: 14px; }
   .orbital-shade { background: linear-gradient(0deg, #000000 0%, #000000ba 20%, #00000033 42%, transparent 60%); }
-  .orbital-bottom { left: 26px; right: 26px; bottom: 27px; padding-top: 16px; }
+  .orbital-bottom { left: var(--site-content-offset); right: var(--site-content-offset); bottom: 27px; padding-top: 16px; }
   .orbital-status { font-size: 9px; gap: 8px; }
   .orbital-scroll { font-size: 0; gap: 0; }
   .station-motion { right: 20px; bottom: 12px; font-size: 9px; }
-  .relay-intro { width: calc(100% - 52px); grid-template-columns: 1fr; gap: 32px; padding: 76px 0 66px; }
-  .relay-heading h2 { font-size: 30px; line-height: 1.6; }
+  .relay-intro { width: var(--site-content-width); grid-template-columns: 1fr; gap: 32px; padding: 76px 0 66px; }
+  .relay-heading h2 { font-size: var(--site-section-size); line-height: 1.6; }
   .relay-statement { padding: 0; }
-  .relay-statement p { font-size: 12px; }
-  .relay-route { width: calc(100% - 52px); padding-top: 46px; }
-  .relay-route-heading h2 { font-size: 30px; line-height: 1.6; }
-  .relay-route-lead { font-size: 13px; margin-top: 10px; }
+  .relay-statement p { font-size: var(--site-body-size); }
+  .relay-route { width: var(--site-content-width); padding-top: 46px; }
+  .relay-route-heading h2 { font-size: var(--site-section-size); line-height: 1.6; }
+  .relay-route-lead { font-size: var(--site-body-size); margin-top: 10px; }
   .relay-steps { grid-template-columns: 1fr; gap: 28px; margin: 30px 0; }
   .relay-step { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 18px; }
   .relay-step-number { width: 36px; height: 36px; grid-row: 1 / 3; font-size: 12px; }
-  .relay-steps h3 { font-size: 20px; margin: 2px 0 7px; line-height: 1.5; }
-  .relay-steps p { font-size: 12px; grid-column: 2; }
+  .relay-steps h3 { font-size: 16px; margin: 2px 0 7px; line-height: 1.5; }
+  .relay-steps p { font-size: var(--site-body-size); grid-column: 2; }
   .relay-steps > li:not(:last-child)::after { top: 46px; left: 18px; right: auto; bottom: -18px; width: 1px; height: auto; }
   .relay-step-arrow { display: none; }
   .relay-actions { align-items: stretch; gap: 12px; }
   .relay-route .relay-start { width: 100%; min-height: 54px; padding-inline: 22px; }
   .relay-actions > a:not(.relay-start) { font-size: 12px; min-height: 40px; }
-  .relay-enrollment-note { margin-top: 8px; font-size: 11px; }
+  .relay-enrollment-note { margin-top: 8px; font-size: var(--site-meta-size); }
   .relay-statistics { margin-top: 26px; min-height: 82px; padding-top: 20px; }
   .relay-statistics dl { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .relay-statistics dl > div { display: block; }
-  .relay-statistics dt { font-size: 11px; }
+  .relay-statistics dt { font-size: var(--site-meta-size); }
   .relay-statistics dd { margin-top: 8px; }
   .relay-statistics strong { font-size: 22px; }
 

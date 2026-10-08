@@ -1,0 +1,81 @@
+/* Shared measurements for the public site and creator workspace. */
+:root {
+  --site-content-max: 1280px;
+  --site-gutter: 32px;
+  --site-content-width: min(var(--site-content-max), calc(100% - 2 * var(--site-gutter)));
+  --site-content-offset: max(var(--site-gutter), calc((100% - var(--site-content-max)) / 2));
+  --site-header-height: 96px;
+  --site-title-size: 32px;
+  --site-section-size: 18px;
+  --site-body-size: 14px;
+  --site-label-size: 13px;
+  --site-meta-size: 12px;
+}
+
+.public-site, .creator-shell {
+  --font-headline: var(--font-body);
+  --font-editorial: var(--font-body);
+  font-size: var(--site-body-size);
+}
+
+.public-header, .creator-header {
+  width: var(--site-content-width);
+  min-height: var(--site-header-height);
+  height: var(--site-header-height);
+  margin-inline: auto;
+}
+
+.public-main, .public-footer,
+.creator-section-nav, .creator-content, .creator-footer {
+  width: var(--site-content-width);
+  margin-inline: auto;
+}
+
+:is(.public-site, .creator-shell) .brand > span {
+  font: 500 18px/1.2 var(--font-brand-cn);
+  letter-spacing: .04em;
+}
+:is(.public-site, .creator-shell) .brand small {
+  font: 500 10px/1.6 var(--font-brand-en);
+  letter-spacing: .08em;
+}
+:is(.public-site, .creator-shell) .brand-emblem { width: 44px; }
+.public-nav, .creator-header-actions, .creator-section-nav { font-size: var(--site-label-size); }
+.public-nav { gap: 28px; }
+.public-footer, .creator-footer { font-size: var(--site-meta-size); }
+.creator-header .workspace-account { display: flex; align-items: center; min-width: 0; }
+:is(.public-site, .creator-shell) .brand > span { white-space: nowrap; }
+
+:is(.public-site, .creator-shell) .page-content { max-width: none; }
+:is(.public-site, .creator-shell) .page-heading h1 {
+  font: 500 var(--site-title-size)/1.4 var(--font-body);
+}
+:is(.public-site, .creator-shell) .page-description,
+:is(.public-site, .creator-shell) .field-input,
+:is(.public-site, .creator-shell) .button { font-size: var(--site-body-size); }
+:is(.public-site, .creator-shell) .field-label { font-size: var(--site-label-size); }
+:is(.public-site, .creator-shell) .field-hint { font-size: var(--site-meta-size); }
+
+@media (max-width: 800px) {
+  .public-nav { top: var(--site-header-height); gap: 0; padding-inline: var(--site-gutter); }
+  .creator-header { height: auto; }
+}
+@media (max-width: 640px) {
+  :root { --site-gutter: 16px; --site-title-size: 28px; }
+  .creator-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 44px 44px;
+    gap: 0 12px;
+    height: var(--site-header-height);
+    padding-block: 4px;
+  }
+  .creator-header > .brand { grid-column: 1; grid-row: 1 / -1; }
+  .creator-header-actions { display: contents; }
+  .creator-header-actions > a { grid-column: 2; grid-row: 1; justify-self: end; display: flex; align-items: center; min-height: 44px; padding-block: 0; }
+  .creator-header .workspace-account { grid-column: 2; grid-row: 2; justify-self: end; gap: 4px; }
+  .creator-header .workspace-account > span { max-width: clamp(44px, calc(100vw - 286px), 104px); font-size: var(--site-meta-size); }
+}
+
+.public-site .success-page h1 { font: 500 var(--site-title-size)/1.4 var(--font-body); }
+.public-site .success-page > p { font-size: var(--site-body-size); }

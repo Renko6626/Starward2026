@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
@@ -17,6 +17,7 @@ import { resolvePortalEntryDestination } from "../lib/onboarding";
 import "./portal-login.css";
 
 export function PortalLoginPage() {
+  const { segment } = getRouteApi("/portal_/login").useSearch();
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [email, setEmail] = useState("");
@@ -42,12 +43,12 @@ export function PortalLoginPage() {
     void requestJson<PortalMeResponse>("/api/portal/me")
       .then((response) => {
         if (!cancelled) {
-          void navigate({ to: resolvePortalEntryDestination(response) });
+          void navigate({ to: resolvePortalEntryDestination(response), search: { segment }, hash: segment ? "plan" : undefined });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          void navigate({ to: "/portal" });
+          void navigate({ to: "/portal", search: { segment }, hash: segment ? "plan" : undefined });
         }
       })
       .finally(() => {
@@ -59,7 +60,7 @@ export function PortalLoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, sessionQuery.data]);
+  }, [navigate, sessionQuery.data, segment]);
 
   useEffect(() => {
     if (resendCooldownSeconds <= 0) {

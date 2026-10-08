@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import type { PublicScheduleEntry } from "../../shared/works";
 import { WorkTypeMark } from "./WorkPresentation";
 import { scheduleDay, scheduleHour, type ScheduleDay } from "../lib/schedule-layout";
@@ -84,8 +85,9 @@ export function ScheduleBoard({ day, selectedId, mineId, ownName, currentId, now
   </section>;
 }
 
-export function ScheduleTaskDetail({ entry, mine, ownName, signedIn, ended, detailId, onClose }: {
+export function ScheduleTaskDetail({ entry, mine, ownName, signedIn, ended, detailId, onClose, actions }: {
   entry: PublicScheduleEntry; mine: boolean; ownName: string | null; signedIn: boolean; ended: boolean; detailId: string; onClose?: () => void;
+  actions?: ReactNode;
 }) {
   return <section className="ops-detail" id={detailId} aria-label="选中时段详情">
     <div className="ops-detail-time"><span>选中时段</span><strong>{entry.scheduledAt ? timeFormat.format(new Date(entry.scheduledAt)) : entry.code}</strong><span>第 {entry.code} 棒{mine ? " / 我的时段" : ""}</span></div>
@@ -99,8 +101,8 @@ export function ScheduleTaskDetail({ entry, mine, ownName, signedIn, ended, deta
       {entry.preview?.coverUrl && <img className="ops-detail-cover" src={entry.preview.coverUrl} alt={entry.preview.coverAlt || `${entry.preview.previewTitle ?? "作品"}预览`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
     </div>
     <div className="ops-detail-actions">
-      {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link>
-        : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "前往认领"}</Link> : null}
+      {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link> : null}
+      {actions !== undefined ? actions : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} search={{ segment: mine ? "" : entry.id }} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "选择这个时点并报名"}</Link> : null}
       {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作品详情在接力结束后开放。"}</p>}
     </div>
   </section>;

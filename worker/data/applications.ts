@@ -223,6 +223,7 @@ export async function upsertPortalApplication(
         db,
         {
           ...input.data,
+          contactEmail: input.authEmail.trim().toLowerCase(),
           turnstileToken: undefined,
         },
         {
@@ -277,7 +278,7 @@ export async function upsertPortalApplication(
        WHERE user_id = ?`,
     )
     .bind(
-      input.data.contactEmail.trim().toLowerCase(),
+      input.authEmail.trim().toLowerCase(),
       normalizeOptionalText(input.data.contactHandle),
       input.data.interestFormat,
       normalizeOptionalText(input.data.introText),

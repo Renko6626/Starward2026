@@ -8,15 +8,15 @@ import type {
   UpdatePortalProfileInput,
 } from "../../shared/portal";
 import { updatePortalProfileInputSchema } from "../../shared/portal";
-import { PasswordSettings } from "../components/PasswordSettings";
+import { LoginPasswordDialog } from "../components/LoginPasswordDialog";
 import { authClient } from "../lib/auth-client";
-import { normalizePortalProfileInput } from "../lib/profile-form";
+import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels } from "../lib/profile-form";
 
 const defaultFormState: UpdatePortalProfileInput = {
   creditName: "",
   bilibiliUid: "",
   contactEmail: "",
-  primaryContactChannel: "Email",
+  primaryContactChannel: "QQ",
   primaryContactHandle: "",
   backupContact: "",
   isAnonymous: true,
@@ -86,11 +86,11 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
     setRefreshWarning(null);
     setError(null);
 
-    const normalized = normalizePortalProfileInput(form);
+    const normalized = normalizePortalProfileInput(form, profileState?.user.email);
     const parsed = updatePortalProfileInputSchema.safeParse(normalized);
 
     if (!parsed.success) {
-      setError("请填写署名、B站 UID、联系邮箱和联系账号。");
+      setError("请填写署名、有效的 B站主页链接或 UID、联系账号。");
       return;
     }
 
@@ -145,16 +145,16 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
 
   const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
-  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} hint={key === "bilibiliUid" ? "数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input className="field-input" type={type} required={key !== "backupContact"} inputMode={key === "bilibiliUid" ? "numeric" : undefined} pattern={key === "bilibiliUid" ? "[0-9]+" : undefined} maxLength={key === "bilibiliUid" ? 20 : undefined} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} /></Field>;
+  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} hint={key === "bilibiliUid" ? "填写 space.bilibili.com 主页链接或数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={key === "bilibiliUid" ? "https://space.bilibili.com/12345678 或数字 UID" : undefined} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
   return <div className={compact ? "creator-card creator-profile-card" : embedded ? "space-y-6" : "page-content"} id={compact ? "profile" : undefined}>
-    {compact ? <header className="creator-card-header"><h2 className="creator-card-title">我的信息</h2></header> : !embedded ? <PageHeading title="个人档案" /> : null}
+    {compact ? <header className="creator-card-header"><h2 className="creator-card-title">我的信息</h2><LoginPasswordDialog email={profileState.user.email} /></header> : !embedded ? <PageHeading title="个人档案" /> : null}
     <div className={compact ? "creator-card-body" : undefined}>
       <form className={compact ? "space-y-4" : "panel space-y-6"} onSubmit={handleSubmit}>
         {profileField("creditName", "署名")}
         <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示</label>
-        {profileField("bilibiliUid", "B站 UID")}
-        {profileField("contactEmail", "联系邮箱", "email")}
-        {profileField("primaryContactChannel", "联系渠道")}
+        {profileField("bilibiliUid", "B站主页链接或 UID")}
+        <Field label="注册邮箱"><input className="field-input" type="email" readOnly value={profileState.user.email} /></Field>
+        <Field label="联系方式"><select className="field-input" value={form.primaryContactChannel} onChange={event => setForm(current => ({ ...current, primaryContactChannel: event.target.value }))}>{!portalContactChannels.includes(form.primaryContactChannel) ? <option value={form.primaryContactChannel}>{form.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>
         {profileField("primaryContactHandle", "联系账号")}
         {profileField("backupContact", "备用联系方式（选填）")}
         {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
@@ -165,7 +165,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
           <Button disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存信息"}</Button>
         </div>
       </form>
-      <details className="compact-editor"><summary>登录与密码</summary><div className="space-y-4"><Field label="登录邮箱"><input className="field-input" type="email" readOnly value={profileState.user.email} /></Field><PasswordSettings /></div></details>
+      {!compact ? <LoginPasswordDialog email={profileState.user.email} /> : null}
     </div>
   </div>;
 }
@@ -177,7 +177,7 @@ function buildInitialProfileForm(
     return {
       creditName: response.profile.creditName ?? "",
       bilibiliUid: response.profile.bilibiliUid ?? "",
-      contactEmail: response.profile.contactEmail,
+      contactEmail: response.user.email,
       primaryContactChannel: response.profile.primaryContactChannel,
       primaryContactHandle: response.profile.primaryContactHandle,
       backupContact: response.profile.backupContact ?? "",
@@ -189,8 +189,8 @@ function buildInitialProfileForm(
     creditName: "",
     bilibiliUid: "",
     contactEmail: response.user.email,
-    primaryContactChannel: "Email",
-    primaryContactHandle: response.user.email,
+    primaryContactChannel: "QQ",
+    primaryContactHandle: "",
     backupContact: "",
     isAnonymous: true,
   };

@@ -12,7 +12,7 @@ import {
   saveWorkspaceApplication,
   withdrawApplication,
 } from "./collaboration";
-import { reviewApplication } from "./applications";
+import { reviewApplication, upsertPortalApplication } from "./applications";
 
 const fixtures: SqliteD1Fixture[] = [];
 afterEach(() => {
@@ -68,6 +68,19 @@ async function approvedPair(f: SqliteD1Fixture) {
 }
 
 describe("workspace reservations", () => {
+  it("uses the registration email for profile and application saves while keeping the contact account editable", async () => {
+    const f = fixture();
+    const data = input("s1");
+    data.profile.primaryContactChannel = "QQ";
+    data.profile.primaryContactHandle = "123456789";
+    await saveWorkspaceApplication(f.db, "u1", "one@example.com", data);
+    expect(await getPortalProfileByUserId(f.db, "u1")).toMatchObject({ contactEmail: "one@example.com", primaryContactChannel: "QQ", primaryContactHandle: "123456789" });
+    expect(f.sqlite.prepare("SELECT contact_email FROM applications WHERE user_id='u1'").get()).toMatchObject({ contact_email: "one@example.com" });
+    await upsertPortalProfile(f.db, { userId: "u1", data: { ...data.profile, contactEmail: "changed@example.com", primaryContactHandle: "987654321" } });
+    expect(await getPortalProfileByUserId(f.db, "u1")).toMatchObject({ contactEmail: "one@example.com", primaryContactHandle: "987654321" });
+    await upsertPortalApplication(f.db, { userId: "u1", authEmail: "one@example.com", data: { ...data.application, contactEmail: "changed@example.com" } });
+    expect(f.sqlite.prepare("SELECT contact_email FROM applications WHERE user_id='u1'").get()).toMatchObject({ contact_email: "one@example.com" });
+  });
   it("saves profile, plan and pending reservation, confirms on approval and releases on rejection", async () => {
     const f = fixture();
     const a = await saveWorkspaceApplication(
