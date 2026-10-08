@@ -23,10 +23,9 @@ export function HomePage() {
     : getApplicationWindowLabel(intake.payload.window);
   return (
     <div className="station-home">
+      <StationBackdrop />
       <section className="orbital-hero" aria-labelledby="home-title">
-        <StationBackdrop />
         <OrbitalArtwork />
-        <div className="orbital-shade" aria-hidden="true" />
         <div className="orbital-copy">
           <div className="orbital-title">
             <h1 id="home-title">逐星巡礼</h1>

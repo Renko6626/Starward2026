@@ -131,19 +131,9 @@ export function OrbitalArtwork() {
             <TransferDiagram arrowId={arrowId} rotation={35} position={position} />
           </g>
         </g>
-        <g className="station-annotation">
-          <circle cx="1100" cy="728" r="1.5" />
-          <path d="M1100 728 L1160 818 H1320" />
-          <text x="1160" y="838">Satellite Torifune</text>
-        </g>
       </svg>
       <svg className="orbital-artwork-mobile" viewBox="0 0 390 844" preserveAspectRatio="xMidYMin slice" focusable="false">
         <g transform="translate(70 310) rotate(15) scale(.73) translate(-270 -460)"><TransferDiagram arrowId={arrowId} rotation={15} position={position} /></g>
-        <g className="station-annotation">
-          <circle cx="277" cy="350" r="1" />
-          <path d="M277 350 L315 456 H190" />
-          <text x="190" y="476" textAnchor="end">Satellite Torifune</text>
-        </g>
       </svg>
     </div>
   );

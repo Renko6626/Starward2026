@@ -27,7 +27,20 @@ export function mountStationScene(container, options = {}) {
   let last = 0;
   const media = matchMedia('(prefers-reduced-motion: reduce)');
   const camera = new THREE.PerspectiveCamera(37, 1, 1, 3000);
+  const basePosition = new THREE.Vector3();
+  const orbitAxis = new THREE.Vector3();
+  let narrow = false;
+  let scrollProgress = 0;
+  let targetProgress = 0;
   let station, stars, earth, moon;
+
+  function updateCamera() {
+    const angle = media.matches ? 0 : THREE.MathUtils.degToRad(narrow ? 10 : 22) * scrollProgress;
+    camera.position.copy(basePosition).applyAxisAngle(orbitAxis, angle);
+    camera.up.copy(orbitAxis);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+  }
 
   function restoreEnvironment() {
     environment?.dispose();
@@ -46,6 +59,8 @@ export function mountStationScene(container, options = {}) {
     const delta = last ? Math.min((now - last) / 1000, .05) : 0;
     last = now;
     time += delta;
+    scrollProgress = THREE.MathUtils.damp(scrollProgress, targetProgress, 8, delta);
+    updateCamera();
     draw();
   }
   function syncLoop() {
@@ -53,22 +68,22 @@ export function mountStationScene(container, options = {}) {
       && !paused && !media.matches && !options.staticFrame;
     last = 0;
     renderer.setAnimationLoop(animate ? frame : null);
+    updateCamera();
     draw();
   }
   function resize() {
     const { width, height } = container.getBoundingClientRect();
     if (!width || !height || disposed || contextLost) return;
     // Capture mobile at 2x resolution while keeping the same CSS viewport.
-    const narrow = width < mobileBreakpoint;
+    narrow = width < mobileBreakpoint;
     const ratio = Math.min(devicePixelRatio, narrow ? 1.4 : 1.75);
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.fov = narrow ? 43 : 37;
-    const position = new THREE.Vector3(-120, 310, 170).multiplyScalar(narrow ? 1.58 : .93);
-    camera.position.copy(position);
-    camera.up.set(0, position.z, -position.y).normalize();
-    camera.lookAt(0, 0, 0);
+    basePosition.set(-120, 310, 170).multiplyScalar(narrow ? 1.58 : .93);
+    orbitAxis.set(0, basePosition.z, -basePosition.y).normalize();
+    updateCamera();
     camera.setViewOffset(width, height, narrow ? 0 : -width * .19, narrow ? height * .17 : -height * .01, width, height);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
@@ -152,5 +167,11 @@ export function mountStationScene(container, options = {}) {
     renderer.domElement.addEventListener('webglcontextrestored', restored);
     syncLoop();
   } catch (error) { dispose(); throw error; }
-  return { setPaused(value) { paused = value; syncLoop(); }, dispose };
+  return {
+    setPaused(value) { paused = value; syncLoop(); },
+    setScrollProgress(value) {
+      targetProgress = THREE.MathUtils.clamp(value, 0, 1);
+    },
+    dispose,
+  };
 }

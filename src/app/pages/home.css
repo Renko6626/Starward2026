@@ -11,16 +11,17 @@
 .public-site--home .public-nav a[data-status="active"] { color: #eeeeee; }
 .public-site--home .nav-entry { border-color: #bfbfbf38; background: #0d0d0d80; }
 .public-site--home .public-footer { margin-top: 0; width: 91.4%; max-width: none; border-color: #c5c5c51a; padding: 30px 0; font-size: 11px; color: #858585; }
-.station-home { color: #e6e6e6; }
-.orbital-hero { position: relative; isolation: isolate; min-height: 820px; height: 100svh; max-height: 1200px; overflow: hidden; background: #000000; }
+.station-home { position: relative; isolation: isolate; color: #e6e6e6; }
+.orbital-hero { position: relative; isolation: isolate; min-height: 820px; height: 100svh; max-height: 1200px; overflow: hidden; }
 .station-backdrop, .station-canvas, .station-poster, .orbital-shade { position: absolute; inset: 0; }
-.station-backdrop { z-index: -3; }
+.station-backdrop { position: fixed; z-index: -1; pointer-events: none; }
 .station-poster { display: block; }
 .station-poster img { width: 100%; height: 100%; object-fit: cover; }
 .station-canvas { opacity: 0; transition: opacity 700ms ease; }
 .station-canvas canvas { width: 100%; height: 100%; display: block; }
 .station-backdrop.is-ready .station-canvas { opacity: 1; }
-.orbital-shade { z-index: -1; pointer-events: none; background: linear-gradient(90deg, #00000085 0%, #00000018 43%, transparent 65%), linear-gradient(0deg, #000000 0%, #00000055 12%, transparent 38%); }
+.orbital-shade { pointer-events: none; background: linear-gradient(90deg, #00000085 0%, #00000018 43%, transparent 65%), linear-gradient(0deg, #000000 0%, #00000055 12%, transparent 38%); }
+.station-reading-shade { position: absolute; inset: 0; background: #000; opacity: var(--station-dim, 0); }
 .orbital-copy { position: absolute; left: 6.3vw; bottom: 19%; max-width: 560px; }
 .orbital-title { margin-bottom: 16px; }
 .orbital-edition { margin: 12px 0 0; font: 700 clamp(16px, 1.9vw, 28px)/1.2 var(--font-brand-en); letter-spacing: .02em; color: #aaa; text-transform: uppercase; white-space: nowrap; }
@@ -32,7 +33,7 @@
 .orbital-primary:hover { border-color: #e5e5e5; background: #1e1e1ecc; }
 .orbital-secondary { color: #adadad; }
 .orbital-secondary:hover { color: #efefef; }
-.station-motion { position: absolute; bottom: 13%; right: 4.4vw; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 44px; color: #a0a0a0; padding: 0 10px; font-size: 10px; letter-spacing: .04em; }
+.station-motion { position: fixed; bottom: 22px; right: 4.4vw; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 44px; color: #a0a0a0; padding: 0 10px; font-size: 10px; letter-spacing: .04em; background: #00000088; border: 1px solid #ffffff18; }
 .station-motion:hover { color: #eaeaea; }
 .orbital-bottom { position: absolute; bottom: 42px; left: 4.3vw; right: 4.3vw; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #c3c3c326; padding-top: 20px; gap: 16px; }
 .orbital-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: #8e8e8e; font-size: 10px; }
@@ -124,7 +125,7 @@
   .orbital-bottom { left: 26px; right: 26px; bottom: 27px; padding-top: 16px; }
   .orbital-status { font-size: 9px; gap: 8px; }
   .orbital-scroll { font-size: 0; gap: 0; }
-  .station-motion { right: 20px; bottom: auto; top: 49%; font-size: 9px; }
+  .station-motion { right: 20px; bottom: 12px; font-size: 9px; }
   .relay-intro { width: calc(100% - 52px); grid-template-columns: 1fr; gap: 32px; padding: 76px 0 66px; }
   .relay-heading h2 { font-size: 30px; line-height: 1.6; }
   .relay-statement { padding: 0; }
@@ -169,8 +170,6 @@
 .orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 9px; }
 .orbital-artwork .orbit-mission-star path { fill: #eee; stroke: none; }
 .orbital-artwork .orbit-lit-track { stroke: #eee; stroke-width: 1.2; }
-.orbital-artwork .station-annotation { opacity: .45; stroke-width: .6; }
-.orbital-artwork .station-annotation circle { fill: currentColor; stroke: none; }
 @media (max-width: 699px) {
   .orbital-artwork .orbital-artwork-desktop { display: none; }
   .orbital-artwork .orbital-artwork-mobile { display: block; }

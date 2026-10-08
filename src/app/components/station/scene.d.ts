@@ -1,5 +1,6 @@
 export interface StationScene {
   setPaused(paused: boolean): void;
+  setScrollProgress(progress: number): void;
   dispose(): void;
 }
 export function mountStationScene(
