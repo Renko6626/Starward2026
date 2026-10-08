@@ -25,7 +25,7 @@ export class Assembly {
     // Straight structural sections keep flat ends; stretching a rounded unit
     // box would stretch its end radius by metres on long chords. Wide passage
     // envelopes and utility covers retain their existing rounded profiles.
-    const structural = Math.max(width, depth) < 1 && ['silver', 'frame', 'hull'].includes(material);
+    const structural = Math.max(width, depth) < 1 && ['silver', 'frame', 'hull', 'ringSupport'].includes(material);
     const geometry = structural ? this.resources.geometries.box : this.resources.geometries.rounded;
     return this.part(geometry, material, a.add(b).multiplyScalar(.5).toArray(),
       [width, length, depth], new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()));
@@ -100,6 +100,69 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geometry.setIndex(indices); geometry.computeVertexNormals();
   return geometry;
+}
+
+// A thin formed shield swept around X. Profile points carry [x, radial offset,
+// outward x normal, outward radial normal]. UV0 measures metres / 2 for finish
+// grain; UV1 maps each complete face for panel edges and captive fasteners.
+// Separate rim vertices keep folded sheet edges sharp without faceting corners.
+export function arcPanelGeometry(radius, profile, angle, offset = .065, thickness = .025, steps = 12) {
+  const positions = [], normals = [], uv = [], uv1 = [], indices = [];
+  const distances = [0];
+  for (let k = 1; k < profile.length; k++) distances.push(distances[k - 1]
+    + Math.hypot(profile[k][0] - profile[k - 1][0], profile[k][1] - profile[k - 1][1]));
+  const length = distances.at(-1), count = profile.length, layer = (steps + 1) * count;
+  const vertex = (p, n, tex, panelTex) => {
+    const index = positions.length / 3;
+    positions.push(...p); normals.push(...n); uv.push(...tex); uv1.push(...panelTex); return index;
+  };
+  const quad = (a, b, c, d, outward) => {
+    const point = i => new THREE.Vector3().fromArray(positions, i * 3);
+    const normal = point(b).sub(point(a)).cross(point(c).sub(point(a)));
+    if (normal.dot(new THREE.Vector3(...outward)) >= 0) indices.push(a, b, c, a, c, d);
+    else indices.push(a, c, b, a, d, c);
+  };
+  for (let face = 0; face < 2; face++) for (let i = 0; i <= steps; i++) {
+    const t = angle * (i / steps - .5), sign = face === 0 ? 1 : -1;
+    for (let k = 0; k < count; k++) {
+      const [x, dr, nx, nr] = profile[k], lift = offset + (face === 0 ? thickness : 0);
+      const r = radius + dr + nr * lift;
+      vertex([x + nx * lift, r * Math.cos(t), r * Math.sin(t)],
+        [sign * nx, sign * nr * Math.cos(t), sign * nr * Math.sin(t)],
+        [i / steps * angle * radius / 2, distances[k] / 2], [i / steps, distances[k] / length]);
+    }
+  }
+  for (let face = 0; face < 2; face++) for (let i = 0; i < steps; i++) for (let k = 0; k < count - 1; k++) {
+    const a = face * layer + i * count + k;
+    quad(a, a + 1, a + count + 1, a + count, normals.slice(a * 3, a * 3 + 3));
+  }
+  const rim = (a, b, outward) => {
+    const source = [a, b, b + layer, a + layer];
+    const copied = source.map(i => vertex(positions.slice(i * 3, i * 3 + 3), outward,
+      uv.slice(i * 2, i * 2 + 2), uv1.slice(i * 2, i * 2 + 2)));
+    quad(...copied, outward);
+  };
+  for (const end of [0, steps]) {
+    const t = angle * (end / steps - .5), sign = end === 0 ? -1 : 1;
+    for (let k = 0; k < count - 1; k++) rim(end * count + k, end * count + k + 1,
+      [0, -sign * Math.sin(t), sign * Math.cos(t)]);
+  }
+  for (const k of [0, count - 1]) {
+    const neighbour = k === 0 ? 1 : k - 1;
+    const dx = profile[k][0] - profile[neighbour][0], dr = profile[k][1] - profile[neighbour][1];
+    const magnitude = Math.hypot(dx, dr);
+    for (let i = 0; i < steps; i++) {
+      const t = angle * ((i + .5) / steps - .5);
+      rim(i * count + k, (i + 1) * count + k,
+        [dx / magnitude, dr / magnitude * Math.cos(t), dr / magnitude * Math.sin(t)]);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(uv1, 2));
+  geometry.setIndex(indices); return geometry;
 }
 
 // Open rectangular truss, with corner chords, alternating diagonals and end plates.

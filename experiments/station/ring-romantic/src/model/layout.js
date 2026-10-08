@@ -14,6 +14,12 @@ export const layout = {
     mainCrewSpokeIndices: [0, 2], mainAccessShaftX: -1.6,
     mainAccessInnerRadius: 10.6, mainAccessOuterRadius: 44.8,
     mainTransferX: -8.5, mainTransferRadius: 9.3,
+    // Subdued exterior support study; these are envelope/display dimensions,
+    // not newly verified load-bearing sections or pressure-vessel properties.
+    mainInnerSupport: {
+      axialOffset: 7.15, inwardOffset: .28, baysPerSegment: 5, jointDepth: .42,
+      tieWidth: .12, braceWidth: .07, seatWidth: .08, nodeBraceWidth: .14,
+    },
     counterStorageBays: 32, counterStorageRadius: 39.2, counterInnerRadius: 36.6,
     counterTankRadius: .8, counterTankBarrelLength: 2, counterTankCapDepth: .4,
     counterPodArcLength: 24, counterPodAxialWidth: 6, counterPodRadialHeight: 4,

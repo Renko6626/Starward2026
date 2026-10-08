@@ -1,4 +1,172 @@
-import { Assembly, anchor, arcGeometry, polar, radialTruss, crewLift } from './assembly.js';
+import { Assembly, anchor, arcGeometry, arcPanelGeometry, polar, radialTruss, crewLift } from './assembly.js';
+
+// Cladding follows the existing rounded envelope, including its corners. The
+// structural interface remains open on the axial faces, underneath local
+// shields; it is not replaced by another circumferential pressure passage.
+function ringShielding(a, radius, axialWidth, radialHeight, pitch) {
+  const hx = axialWidth / 2, hr = radialHeight / 2, corner = 2;
+  const flatX = hx - corner, flatR = hr - corner, gap = .045;
+  const cache = new Map();
+  const patch = (material, profile, start, end) => {
+    const span = end - start;
+    const key = JSON.stringify([profile, Number(span.toFixed(8))]);
+    if (!cache.has(key)) cache.set(key, arcPanelGeometry(radius, profile, span));
+    a.part(cache.get(key), material, [0, 0, 0], [1, 1, 1], [(start + end) / 2, 0, 0]);
+  };
+  const tiles = (start, end, stagger, callback) => {
+    const step = (end - start) / 6;
+    for (let t = start - (stagger ? step / 2 : 0); t < end - .00001; t += step) {
+      const lo = Math.max(start, t) + gap / radius / 2;
+      const hi = Math.min(end, t + step) - gap / radius / 2;
+      if (hi > lo) callback(lo, hi);
+    }
+  };
+  const curve = (side, radialSide) => Array.from({ length: 9 }, (_, k) => {
+    const t = .012 + (Math.PI / 2 - .024) * k / 8;
+    return [side * (flatX + corner * Math.cos(t)), radialSide * (flatR + corner * Math.sin(t)),
+      side * Math.cos(t), radialSide * Math.sin(t)];
+  });
+  return angle => {
+    const start = angle - (pitch - .06) / 2, end = angle + (pitch - .06) / 2;
+    // Staggered formed plates: common panel stock, with clipped end pieces.
+    // Darker plates identify the maintenance margins rather than random tiles.
+    for (const radialSide of [-1, 1]) for (let row = 0; row < 4; row++) {
+      const x0 = -flatX + row * flatX / 2 + gap / 2, x1 = x0 + flatX / 2 - gap;
+      const profile = [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]];
+      tiles(start, end, row % 2, (lo, hi) => patch(
+        radialSide < 0 && (row === 0 || row === 3) ? 'ringPanel' : 'ringHull', profile, lo, hi));
+    }
+    for (const side of [-1, 1]) {
+      for (let row = 0; row < 3; row++) {
+        const r0 = -flatR + row * flatR * 2 / 3 + gap / 2, r1 = r0 + flatR * 2 / 3 - gap;
+        tiles(start, end, row % 2, (lo, hi) => patch(
+          side > 0 && row === 0 ? 'ringPanel' : 'ringHull',
+          [[side * hx, r0, side, 0], [side * hx, r1, side, 0]], lo, hi));
+      }
+      for (const radialSide of [-1, 1]) tiles(start, end, false,
+        (lo, hi) => patch('ringHull', curve(side, radialSide), lo, hi));
+    }
+    // Split shields over the connection neck leave the joint and its external
+    // truss readable. A narrow centre seam replaces the full black waist band.
+    const jointAngle = angle + pitch / 2;
+    for (const [lo, hi] of [[-.029, -.001], [.001, .029]]) {
+      for (const radialSide of [-1, 1]) for (let row = 0; row < 4; row++) {
+        const x0 = -flatX + row * flatX / 2 + gap / 2, x1 = x0 + flatX / 2 - gap;
+        patch(row === 0 || row === 3 ? 'ringPanel' : 'ringHull',
+          [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]],
+          jointAngle + lo, jointAngle + hi);
+      }
+      for (const side of [-1, 1]) for (const radialSide of [-1, 1]) {
+        patch('ringHull', curve(side, radialSide), jointAngle + lo, jointAngle + hi);
+        patch('ringService', [[side * hx, radialSide * 2.95, side, 0], [side * hx, radialSide * (flatR - gap), side, 0]],
+          jointAngle + lo, jointAngle + hi);
+      }
+    }
+  };
+}
+
+function ringServiceFace(a, radius, angle, index) {
+  const observation = -1;
+  for (const side of [-1, 1]) {
+    const at = (x, dr, dt = 0) => polar(side * x, radius + dr, angle + dt / radius);
+    // Observation face: recessed glass, thin compression frame and shutter
+    // parked above. Maintenance face: mostly closed covers and service ports.
+    const visibleWindow = side === observation || index % 4 === 0;
+    a.box('dark', at(9.16, -.25), [.16, 1.8, 3.6], [angle, 0, 0]);
+    a.box(visibleWindow ? 'glass' : 'hullShade', at(9.26, -.25), [.06, 1.45, 3.2], [angle, 0, 0]);
+    for (const dr of [-1.04, .54]) a.box('ringRim', at(9.32, dr), [.06, .065, 3.46], [angle, 0, 0]);
+    for (const dt of [-1.72, 1.72]) a.box('ringRim', at(9.32, -.25, dt), [.06, 1.6, .065], [angle, 0, 0]);
+    if (visibleWindow) {
+      a.box('hullShade', at(9.19, 1.47), [.13, 1.1, 3.45], [angle, 0, 0]);
+      for (const dt of [-1.5, 1.5]) a.box('ringRim', at(9.32, 1.47, dt), [.08, .75, .055], [angle, 0, 0]);
+    }
+    // Isolated sample coupling has a backing plate, recessed seal and cap.
+    a.box('hullShade', at(9.21, -2.58, 3.9), [.18, .86, .95], [angle, 0, 0]);
+    a.cylinder('ringRim', at(9.39, -2.58, 3.9), .27, .12, [0, 0, Math.PI / 2]);
+    a.cylinder('dark', at(9.46, -2.58, 3.9), .21, .035, [0, 0, Math.PI / 2]);
+    a.cylinder('hullShade', at(9.49, -2.58, 3.9), .185, .035, [0, 0, Math.PI / 2]);
+    if (side !== observation) {
+      for (const dt of [-4.3, -2.9]) {
+        a.box('ringRim', at(9.16, -2.55, dt), [.09, .88, 1.06], [angle, 0, 0]);
+        a.box('hullShade', at(9.23, -2.55, dt), [.055, .7, .88], [angle, 0, 0]);
+      }
+    }
+    // Short identification bars stay at service fixtures, clear of the corners.
+    a.box(index % 4 === 0 ? 'red' : 'service', at(9.19, 2.43, 4.7), [.035, .09, 1.1], [angle, 0, 0]);
+  }
+}
+
+// Two close-fitting inner-edge chords connect the existing segment interfaces.
+// Light ties stay below the service equipment; the major nodes have side bays
+// only, leaving their central crew/material routes open. This is an exterior
+// load-path study, not validation of shell stiffness or beam capacity.
+function innerRingSupports(resources, w, outer, pitch) {
+  const a = new Assembly(resources), s = w.mainInnerSupport;
+  const shellInner = outer - w.mainRadialEnvelope, r = shellInner - s.inwardOffset;
+  const chord = w.structuralSections.mainRingChord[0], step = pitch / s.baysPerSegment;
+  const at = (x, radius, angle, tangent = 0) => {
+    const p = polar(x, radius, angle);
+    p[1] -= Math.sin(angle) * tangent; p[2] += Math.cos(angle) * tangent; return p;
+  };
+  const section = (x0, x1, angle, top, bottom, bays) => {
+    // Short straight pieces with real braced nodes, rather than one stretched
+    // rounded block spanning the whole axial width of the habitat.
+    for (let bay = 0; bay < bays; bay++) {
+      const x = x0 + (x1 - x0) * bay / bays, next = x0 + (x1 - x0) * (bay + 1) / bays;
+      for (const radius of [top, bottom]) a.beam('ringSupport', at(x, radius, angle), at(next, radius, angle), s.tieWidth);
+      a.beam('ringSupport', at(x, bay % 2 ? bottom : top, angle), at(next, bay % 2 ? top : bottom, angle), s.braceWidth);
+    }
+    for (let bay = 0; bay <= bays; bay++) {
+      const x = x0 + (x1 - x0) * bay / bays;
+      a.beam('ringSupport', at(x, bottom, angle), at(x, top, angle), s.braceWidth);
+    }
+  };
+  for (let i = 0; i < w.mainSegments; i++) {
+    const start = i * pitch - pitch / 2, joint = i * pitch + pitch / 2;
+    for (const side of [-1, 1]) for (let bay = 0; bay < s.baysPerSegment; bay++) {
+      const t = start + bay * step, x = side * s.axialOffset;
+      a.beam('ringSupport', at(x, r, t), at(x, r, t + step), chord);
+      a.part(resources.geometries.box, 'ringSupport', at(x, r, t), [.31, .29, .28], [t, 0, 0]);
+      // The interface itself connects to the existing end frame below. Other
+      // bay nodes use short structural seats through the removable cladding.
+      if (bay === 0) continue;
+      a.beam('ringSupport', at(x, r, t), at(x, shellInner + .12, t), s.seatWidth);
+      a.part(resources.geometries.box, 'ringSupport', at(x, shellInner - .035, t), [.32, .10, .34], [t, 0, 0]);
+    }
+    const major = i % 4 === 0, top = r - .23, bottom = r - s.jointDepth;
+    if (major) {
+      // Keep the open middle wider than the existing 8.4 m spoke frame. The
+      // crew vestibule and axial branches retain their existing envelopes.
+      section(-s.axialOffset, -4.55, joint, top, bottom, 1);
+      section(4.55, s.axialOffset, joint, top, bottom, 1);
+    } else section(-s.axialOffset, s.axialOffset, joint, top, bottom, 4);
+    for (const side of [-1, 1]) {
+      const x = side * s.axialOffset;
+      a.beam('ringSupport', at(x, bottom, joint), at(x, r, joint), s.tieWidth);
+      if (!major) {
+        // Ordinary feet meet the actual transverse end-frame chord rather than
+        // the shield sheet. Major-node feet must clear the axial crew branches.
+        a.beam('ringSupport', at(x, r, joint), at(side * 8.2, outer - 9.5, joint), s.nodeBraceWidth);
+        a.part(resources.geometries.box, 'ringSupport', at(side * 8.2, outer - 9.5, joint), [.28, .28, .32], [joint, 0, 0]);
+        continue;
+      }
+      const outerSpoke = 40.5 + outer - 50;
+      for (const tangent of [-1.6, 1.6]) {
+        // Fan from the four real spoke end-chord points into two neighbouring
+        // seats on each ring chord. Most of each brace is inside the major node.
+        const targetAngle = joint + Math.sign(tangent) * step;
+        a.beam('ringSupport', at(side * 4.2, outerSpoke, joint, tangent), at(x, r, targetAngle), s.nodeBraceWidth);
+        a.part(resources.geometries.box, 'ringSupport', at(side * 4.2, outerSpoke, joint, tangent), [.30, .30, .28], [joint, 0, 0]);
+        // Route around each landing to a real corner of the axial-face truss.
+        // Both ends lie on existing chords; no member crosses the crew volume.
+        const frameAngle = joint + Math.sign(tangent) * .032;
+        a.beam('ringSupport', at(x, r, targetAngle), at(side * 9.1, outer - 8.5, frameAngle), s.nodeBraceWidth);
+        a.part(resources.geometries.box, 'ringSupport', at(side * 9.1, outer - 8.5, frameAngle), [.28, .28, .32], [frameAngle, 0, 0]);
+      }
+    }
+  }
+  return a.build('Main ring inner structure / shell seats and local node reinforcement');
+}
 
 // Exterior study of a pressure-tight car in a vented guide shaft. This is a
 // departure/travel pose, not an animated or permanently sealed rotary passage.
@@ -50,51 +218,33 @@ export function createMainRing({ layout, resources }) {
   const a = new Assembly(resources), pitch = Math.PI * 2 / w.mainSegments;
   const shell = arcGeometry(radius, w.mainAxialEnvelope, w.mainRadialEnvelope, pitch - .06, 2);
   const joint = arcGeometry(radius, 16.8, 10.5, .066, 1.8, 5);
-  const plate = arcGeometry(radius, .13, 7, (pitch - .06) / 3, .05, 8);
-  const stripe = arcGeometry(radius + 3.8, .15, .48, pitch - .09, .04, 12);
-  const outerPlate = arcGeometry(outer + .01, 4.5, .08, (pitch - .08) / 3 - .014, .025, 8);
+  const collar = arcGeometry(radius, w.mainAxialEnvelope + .26, w.mainRadialEnvelope + .26, .0032, 2.13, 2);
+  const shield = ringShielding(a, radius, w.mainAxialEnvelope, w.mainRadialEnvelope, pitch);
   const rails = [-.65, .65].map(offset => arcGeometry(radius + offset, .22, .22, pitch - .06, .08, 12));
   const anchors = { serviceNodes: [], crewLandings: [] };
   const serviceAngles = [], crewAngles = [];
   for (let i = 0; i < w.mainSegments; i++) {
     const angle = i * pitch;
     a.part(shell, 'pressureHull', [0, 0, 0], [1, 1, 1], [angle, 0, 0]);
-    a.part(joint, 'dark', [0, 0, 0], [1, 1, 1], [angle + pitch / 2, 0, 0]);
-    for (const side of [-1, 1]) {
-      // Local shield panels and service strips on both axial faces.
-      for (let panel = -1; panel <= 1; panel++) a.part(plate,
-        (i + panel + 1) % 7 === 0 ? 'hullWarm' : (i + panel + 1) % 3 === 0 ? 'hullPanel' : 'hull',
-        [side * 9.04, 0, 0], [1, 1, 1], [angle + panel * (pitch - .06) / 3, 0, 0]);
-      for (const dt of [-1, 1]) {
-        const t = angle + dt * (pitch - .06) / 6;
-        a.beam('frame', polar(side * 9.12, radius - 3.4, t), polar(side * 9.12, radius + 3.4, t), .025);
-      }
-      for (const dr of [-3.3, 3.3]) for (const dt of [-1.5, -.5, .5, 1.5]) {
-        const t = angle + dt * (pitch - .06) / 3;
-        a.cylinder('silver', polar(side * 9.13, radius + dr, t), .08, .11, [0, 0, Math.PI / 2]);
-      }
-      a.part(stripe, i % 4 === 0 ? 'red' : 'service', [side * 9.14, 0, 0], [1, 1, 1], [angle, 0, 0]);
-      // Window, protective shutter and sealed sample port, all small exterior fittings.
-      const frameAt = polar(side * 9.2, radius - .3, angle);
-      a.box('dark', frameAt, [.3, 2.1, 4.4], [angle, 0, 0]);
-      a.box('glass', polar(side * 9.39, radius - .3, angle), [.12, 1.5, 3.6], [angle, 0, 0]);
-      for (const dz of [-.65, .65]) a.box('silver', polar(side * 9.5, radius - .3, angle + dz / radius), [.15, 1.65, .09], [angle, 0, 0]);
-      a.box('hullShade', polar(side * 9.46, radius + 1.8, angle), [.22, 1.35, 4.3], [angle, 0, 0]);
-      a.box('service', polar(side * 9.32, radius - 2.5, angle + .08), [.6, 1.2, 1.5], [angle, 0, 0]);
-      a.cylinder('silver', polar(side * 9.75, radius - 2.5, angle + .08), .36, .4, [0, 0, Math.PI / 2]);
-    }
-    // Replace a broad moulded-looking outer surface with separate shield
-    // panels attached to the pressure shell, exposing metal between them.
-    for (const x of [-4.8, 0, 4.8]) for (const dt of [-1, 0, 1])
-      a.part(outerPlate, (i + dt + 1) % 5 === 0 ? 'hullPanel' : 'hull',
-        [x, 0, 0], [1, 1, 1], [angle + dt * (pitch - .08) / 3, 0, 0]);
-    for (const sign of [-1, 1]) {
-      const t = angle + sign * (pitch / 2 - .055);
-      a.beam('silver', polar(-7, outer + .02, t), polar(7, outer + .02, t), .025);
-    }
+    a.part(joint, 'ringJoint', [0, 0, 0], [1, 1, 1], [angle + pitch / 2, 0, 0]);
+    shield(angle);
+    ringServiceFace(a, radius, angle, i);
+    for (const sign of [-1, 1]) a.part(collar, 'ringRim', [0, 0, 0], [1, 1, 1],
+      [angle + pitch / 2 + sign * .0313, 0, 0]);
     // End frames, fastening plates and segmented circumferential members lie
     // inside the same radial band as the pressure shell, not on a second ring.
     const t = angle + pitch / 2;
+    // Hinge feet and locking tabs sit on the interface shields. Their small
+    // mounting plates give the covers an attachment scale in close views.
+    for (const x of [-5.25, 5.25]) for (const dt of [-.022, .022]) {
+      a.part(resources.geometries.box, 'ringRim', polar(x, outer + .12, t + dt), [.34, .035, .24], [t + dt, 0, 0]);
+      a.beam('silver', polar(x - .14, outer + .19, t + dt), polar(x + .14, outer + .19, t + dt), .045);
+      for (const dx of [-.12, .12]) a.cylinder('dark', polar(x + dx, outer + .145, t + dt), .013, .012, [t + dt, 0, 0]);
+    }
+    for (const x of [-1.75, 1.75]) {
+      a.part(resources.geometries.box, 'ringRim', polar(x, outer + .135, t), [.18, .04, .32], [t, 0, 0]);
+      a.part(resources.geometries.box, 'dark', polar(x, outer + .16, t), [.07, .025, .08], [t, 0, 0]);
+    }
     // Exposed circumferential truss bays alternate with hull segments. The
     // sealed joint lies underneath these bays within the same radial band as the enlarged shell.
     for (const x of [-9.1, 9.1]) {
@@ -113,7 +263,19 @@ export function createMainRing({ layout, resources }) {
     }
     // Each fourth junction is a larger structural / circulation node.
     const major = i % 4 === 0;
-    a.box('service', ringAt(0, 40.1, t), [major ? 13 : 8, major ? 3 : 1.8, major ? 5.4 : 3], [t, 0, 0]);
+    const nodeWidth = major ? 13 : 8, nodeHeight = major ? 3 : 1.8, nodeDepth = major ? 5.4 : 3;
+    a.box('service', ringAt(0, 40.1, t), [nodeWidth, nodeHeight, nodeDepth], [t, 0, 0]);
+    // Removable inward-facing equipment covers share the existing node body;
+    // no new pressure volume or circulation subsystem is introduced.
+    const columns = major ? 4 : 3, rows = major ? 2 : 1;
+    for (let col = 0; col < columns; col++) for (let row = 0; row < rows; row++) {
+      const x = -nodeWidth / 2 + (col + .5) * nodeWidth / columns;
+      const dt = (-nodeDepth / 2 + (row + .5) * nodeDepth / rows) / (40.1 + ringOffset);
+      a.part(resources.geometries.box, 'hullShade', ringAt(x, 40.1 - nodeHeight / 2 - .045, t + dt),
+        [nodeWidth / columns - .08, .055, nodeDepth / rows - .08], [t, 0, 0]);
+    }
+    for (const side of [-1, 1]) for (const dr of [-2.7, 2.7]) for (const dt of [-.028, .028])
+      a.cylinder('ringRim', polar(side * 9.24, radius + dr, t + dt), .027, .04, [0, 0, Math.PI / 2]);
     a.box('foil', ringAt(5, 39.8, t), [3.5, 2.2, 2.6], [t, 0, 0]);
     a.cylinder('tank', ringAt(-4, 39.7, t), major ? 1.25 : .72, 3.8, [0, 0, Math.PI / 2]);
     for (const x of [-6, 6]) {
@@ -145,6 +307,7 @@ export function createMainRing({ layout, resources }) {
   a.cylinder('frame', [0, 0, 0], 7.2, 10.2, [0, 0, Math.PI / 2]);
   for (const x of [-5.2, 5.2]) a.cylinder('silver', [x, 0, 0], 7.5, .65, [0, 0, Math.PI / 2]);
   const object = a.build('Main ecology ring / rotating'); object.position.x = w.mainX;
+  object.add(innerRingSupports(resources, w, outer, pitch));
   const transfer = new Assembly(resources);
   // Co-rotating annular cradle: mechanical guides only, not a rotating seal.
   for (const r of [w.mainTransferRadius - 1.45, w.mainTransferRadius + 1.45]) {

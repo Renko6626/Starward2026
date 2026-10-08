@@ -22,7 +22,16 @@ export function createStationResources() {
     color, metalness: .18, roughness: .64, map: maps.panel,
     roughnessMap: maps.paintRoughness, bumpMap: maps.paintHeight, bumpScale: .008,
   });
+  const ringPaint = color => new THREE.MeshStandardMaterial({
+    color, metalness: .12, roughness: .78, map: maps.ringPanel,
+    roughnessMap: maps.ringFinish, bumpMap: maps.ringHeight, bumpScale: .002,
+  });
   const materials = {
+    ringHull: ringPaint(0xc5cecc), ringPanel: ringPaint(0xb4c0c1),
+    ringService: ringPaint(0x7e939b),
+    ringJoint: new THREE.MeshStandardMaterial({ color: 0x718189, metalness: .4, roughness: .68 }),
+    ringRim: new THREE.MeshStandardMaterial({ color: 0x98a6ab, metalness: .78, roughness: .52 }),
+    ringSupport: new THREE.MeshStandardMaterial({ color: 0x63737a, metalness: .5, roughness: .67 }),
     hull: paint(0xc7cfcc), hullPanel: paint(0xaebbbd), hullWarm: paint(0xc1bfb1),
     hullShade: paint(0x97a8af), service: paint(0x627b86),
     pressureHull: metal(0x88989e, .43, { bumpMap: maps.paintHeight, bumpScale: .006 }),

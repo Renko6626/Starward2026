@@ -170,5 +170,20 @@ export function createStationSurfaceMaps() {
   });
   const metalRoughness = dataMap((ctx, w, h) => grain(ctx, w, h, 192, 18, true));
   const paintHeight = dataMap((ctx, w, h) => grain(ctx, w, h, 128, 8));
-  return { panel, blanket, foilHeight, paintRoughness, metalRoughness, paintHeight };
+  const ringPanel = canvasTexture(512, 512, (ctx, w, h) => {
+    grain(ctx, w, h, 246, 3);
+    ctx.strokeStyle = '#c4cbc8'; ctx.lineWidth = 1;
+    ctx.strokeRect(3, 3, w - 6, h - 6);
+    ctx.strokeStyle = '#f9faf8'; ctx.strokeRect(5, 5, w - 10, h - 10);
+    for (const x of [9, w - 9]) for (const y of [12, h / 2, h - 12]) {
+      ctx.fillStyle = '#79868a'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dce2df'; ctx.fillRect(x - .6, y - .4, 1.2, .8);
+    }
+  });
+  ringPanel.channel = 1;
+  const ringFinish = dataMap((ctx, w, h) => grain(ctx, w, h, 224, 6));
+  ringFinish.wrapS = ringFinish.wrapT = THREE.RepeatWrapping;
+  const ringHeight = dataMap((ctx, w, h) => grain(ctx, w, h, 128, 5));
+  ringHeight.wrapS = ringHeight.wrapT = THREE.RepeatWrapping;
+  return { panel, blanket, foilHeight, paintRoughness, metalRoughness, paintHeight, ringPanel, ringFinish, ringHeight };
 }
