@@ -16,6 +16,12 @@ export const layout = {
     mainTransferX: -8.5, mainTransferRadius: 9.3,
     // Subdued exterior support study; these are envelope/display dimensions,
     // not newly verified load-bearing sections or pressure-vessel properties.
+    mainSurface: {
+      circumferentialPanels: 3, axialRows: 2, sideRows: 2,
+      panelOffset: .065, panelThickness: .025, seam: .045,
+      outerJointOffset: .16, outerJointThickness: .025,
+      ordinaryNodeColumns: 2, majorCentreKeepoutHalfWidth: 4.55,
+    },
     mainInnerSupport: {
       axialOffset: 7.15, inwardOffset: .28, baysPerSegment: 5, jointDepth: .42,
       tieWidth: .12, braceWidth: .07, seatWidth: .08, nodeBraceWidth: .14,
@@ -31,6 +37,44 @@ export const layout = {
       [-51, 14, 4.5, 'hull'], [-40.5, 7, 4.7, 'hullShade'],
       [-16, 18, 4.9, 'hull'], [15, 16, 4.5, 'hullShade'], [30, 10, 3.8, 'service'],
     ],
+    // Exterior working dimensions; original module centres and envelopes stay.
+    coreDetail: {
+      panelOffset: .06, panelThickness: .025, seam: .035,
+      axialPanelLength: 4, shieldOffset: .20, shieldThickness: .025,
+      shieldAxialPadding: .55, shieldArcPadding: .50,
+      serviceAxialPadding: .90, serviceArcPadding: .70,
+      angularSegments: 16, beamBandAngle: 8 * Math.PI / 180,
+      modules: [
+        { role: 'personnel', shoulderLength: 1, shoulderInset: .45, features: [
+          { kind: 'window', localX: -2.65, angle: 0, axialWidth: 1.2, arcWidth: 1.1, lift: .24 },
+          { kind: 'window', localX: 1.4, angle: 0, axialWidth: 1.2, arcWidth: 1.1, lift: .24 },
+          { kind: 'hatch', localX: 2.8, angle: Math.PI / 2, axialWidth: 1.5, arcWidth: 1.6, lift: .25 },
+        ] },
+        { role: 'transfer', shoulderLength: .7, shoulderInset: .35, features: [
+          { kind: 'equipmentPack', localX: 0, angle: 0, axialWidth: 4.1, arcWidth: 2.6, lift: .95 },
+          { kind: 'sealedPort', localX: -1.5, angle: Math.PI / 2, axialWidth: 1.1, arcWidth: 1.2, lift: .26 },
+          { kind: 'sealedPort', localX: 1.2, angle: Math.PI, axialWidth: 1.1, arcWidth: 1.2, lift: .26 },
+          { kind: 'hatch', localX: -1, angle: Math.PI * 1.5, axialWidth: 1.4, arcWidth: 1.5, lift: .25 },
+        ] },
+        { role: 'analysis', shoulderLength: 1.1, shoulderInset: .5, features: [
+          { kind: 'equipmentPack', localX: -1.2, angle: 0, axialWidth: 3, arcWidth: 2.5, lift: 1.2 },
+          { kind: 'hatch', localX: -5, angle: Math.PI / 2, axialWidth: 1.8, arcWidth: 1.8, lift: .26 },
+          { kind: 'hatch', localX: 1, angle: Math.PI / 2, axialWidth: 1.6, arcWidth: 1.8, lift: .26 },
+          { kind: 'sealedPort', localX: -4, angle: Math.PI, axialWidth: 1, arcWidth: 1.1, lift: .25 },
+          { kind: 'sealedPort', localX: 2, angle: Math.PI, axialWidth: 1, arcWidth: 1.1, lift: .25 },
+        ] },
+        { role: 'equipment', shoulderLength: 1, shoulderInset: .45, features: [
+          { kind: 'equipmentPack', localX: -4, angle: 0, axialWidth: 2.1, arcWidth: 1.8, lift: .75 },
+          { kind: 'equipmentPack', localX: 0, angle: 0, axialWidth: 2.1, arcWidth: 1.8, lift: .75 },
+          { kind: 'hatch', localX: 3, angle: Math.PI / 2, axialWidth: 2, arcWidth: 1.8, lift: .27 },
+        ] },
+        { role: 'energy', shoulderLength: .7, shoulderInset: .35, features: [
+          { kind: 'hatch', localX: -2, angle: 0, axialWidth: 1.7, arcWidth: 1.8, lift: .24 },
+          { kind: 'hatch', localX: 2, angle: 0, axialWidth: 1.7, arcWidth: 1.8, lift: .24 },
+          { kind: 'junction', localX: -2, angle: Math.PI, axialWidth: 1.4, arcWidth: 1.4, lift: .34 },
+        ] },
+      ],
+    },
     mainDisplaySpeed: .025,
     tankRadius: 3.5, tankBarrelLength: 9, tankCircleRadius: 10,
     mainNozzleDiameter: 2.4, mainNozzleLength: 2,

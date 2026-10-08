@@ -1,23 +1,33 @@
+import * as THREE from 'three';
 import { Assembly, anchor, arcGeometry, arcPanelGeometry, polar, radialTruss, crewLift } from './assembly.js';
 
 // Cladding follows the existing rounded envelope, including its corners. The
 // structural interface remains open on the axial faces, underneath local
 // shields; it is not replaced by another circumferential pressure passage.
-function ringShielding(a, radius, axialWidth, radialHeight, pitch) {
+function ringShielding(a, radius, axialWidth, radialHeight, pitch, surface, jointGeometry) {
   const hx = axialWidth / 2, hr = radialHeight / 2, corner = 2;
-  const flatX = hx - corner, flatR = hr - corner, gap = .045;
-  const cache = new Map();
-  const patch = (material, profile, start, end) => {
-    const span = end - start;
-    const key = JSON.stringify([profile, Number(span.toFixed(8))]);
-    if (!cache.has(key)) cache.set(key, arcPanelGeometry(radius, profile, span));
+  const flatX = hx - corner, flatR = hr - corner, gap = surface.seam;
+  const cache = new Map(), host = new THREE.Mesh(jointGeometry, a.resources.materials.ringJoint);
+  const ray = new THREE.Raycaster();
+  const patch = (material, profile, start, end, raised = false) => {
+    const span = end - start, offset = raised ? surface.outerJointOffset : surface.panelOffset;
+    const thickness = raised ? surface.outerJointThickness : surface.panelThickness;
+    const key = JSON.stringify([radius, profile, +span.toFixed(8), offset, thickness, 12]);
+    if (!cache.has(key)) {
+      const geometry = arcPanelGeometry(radius, profile, span, offset, thickness);
+      geometry.userData.surfaceLayer = raised ? 'ring-joint-outer' : 'ring-primary';
+      cache.set(key, geometry);
+    }
     a.part(cache.get(key), material, [0, 0, 0], [1, 1, 1], [(start + end) / 2, 0, 0]);
   };
   const tiles = (start, end, stagger, callback) => {
-    const step = (end - start) / 6;
-    for (let t = start - (stagger ? step / 2 : 0); t < end - .00001; t += step) {
-      const lo = Math.max(start, t) + gap / radius / 2;
-      const hi = Math.min(end, t + step) - gap / radius / 2;
+    const step = (end - start) / surface.circumferentialPanels;
+    const boundaries = [start];
+    for (let edge = start + (stagger ? .75 : 1) * step; edge < end - .00001; edge += step) boundaries.push(edge);
+    boundaries.push(end);
+    if (boundaries.at(-1) - boundaries.at(-2) < step * .4) boundaries.splice(-2, 1);
+    for (let i = 1; i < boundaries.length; i++) {
+      const lo = boundaries[i - 1] + gap / radius / 2, hi = boundaries[i] - gap / radius / 2;
       if (hi > lo) callback(lo, hi);
     }
   };
@@ -26,41 +36,58 @@ function ringShielding(a, radius, axialWidth, radialHeight, pitch) {
     return [side * (flatX + corner * Math.cos(t)), radialSide * (flatR + corner * Math.sin(t)),
       side * Math.cos(t), radialSide * Math.sin(t)];
   });
+  // Mounts are fitted once during assembly against the real polygonal neck,
+  // including its smaller corner radius. No raycasting runs in frame updates.
+  const mount = (x, dr, nx, nr, angle) => {
+    const normal = new THREE.Vector3(nx, nr * Math.cos(angle), nr * Math.sin(angle));
+    const back = new THREE.Vector3(x, (radius + dr) * Math.cos(angle), (radius + dr) * Math.sin(angle))
+      .addScaledVector(normal, surface.outerJointOffset);
+    ray.set(back.clone().addScaledVector(normal, .3), normal.clone().negate());
+    const hit = ray.intersectObject(host, false)[0];
+    if (!hit) throw new Error('Main joint shield mount does not reach its neck');
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    a.box('ringSupport', hit.point.clone().addScaledVector(normal, .012).toArray(), [.20, .034, .18], q);
+    a.beam('ringSupport', hit.point.clone().addScaledVector(normal, .018).toArray(), back.toArray(), .06);
+    a.box('ringRim', back.clone().addScaledVector(normal, .008).toArray(), [.18, .032, .16], q);
+  };
   return angle => {
     const start = angle - (pitch - .06) / 2, end = angle + (pitch - .06) / 2;
-    // Staggered formed plates: common panel stock, with clipped end pieces.
-    // Darker plates identify the maintenance margins rather than random tiles.
-    for (const radialSide of [-1, 1]) for (let row = 0; row < 4; row++) {
-      const x0 = -flatX + row * flatX / 2 + gap / 2, x1 = x0 + flatX / 2 - gap;
-      const profile = [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]];
-      tiles(start, end, row % 2, (lo, hi) => patch(
-        radialSide < 0 && (row === 0 || row === 3) ? 'ringPanel' : 'ringHull', profile, lo, hi));
+    for (const radialSide of [-1, 1]) for (let row = 0; row < surface.axialRows; row++) {
+      const width = flatX * 2 / surface.axialRows;
+      const x0 = -flatX + row * width + gap / 2, x1 = x0 + width - gap;
+      tiles(start, end, row % 2, (lo, hi) => patch(radialSide < 0 ? 'ringPanel' : 'ringHull',
+        [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]], lo, hi));
     }
     for (const side of [-1, 1]) {
-      for (let row = 0; row < 3; row++) {
-        const r0 = -flatR + row * flatR * 2 / 3 + gap / 2, r1 = r0 + flatR * 2 / 3 - gap;
-        tiles(start, end, row % 2, (lo, hi) => patch(
-          side > 0 && row === 0 ? 'ringPanel' : 'ringHull',
+      for (let row = 0; row < surface.sideRows; row++) {
+        const height = flatR * 2 / surface.sideRows;
+        const r0 = -flatR + row * height + gap / 2, r1 = r0 + height - gap;
+        tiles(start, end, row % 2, (lo, hi) => patch(side > 0 && row === 0 ? 'ringPanel' : 'ringHull',
           [[side * hx, r0, side, 0], [side * hx, r1, side, 0]], lo, hi));
       }
       for (const radialSide of [-1, 1]) tiles(start, end, false,
         (lo, hi) => patch('ringHull', curve(side, radialSide), lo, hi));
     }
-    // Split shields over the connection neck leave the joint and its external
-    // truss readable. A narrow centre seam replaces the full black waist band.
     const jointAngle = angle + pitch / 2;
-    for (const [lo, hi] of [[-.029, -.001], [.001, .029]]) {
-      for (const radialSide of [-1, 1]) for (let row = 0; row < 4; row++) {
-        const x0 = -flatX + row * flatX / 2 + gap / 2, x1 = x0 + flatX / 2 - gap;
-        patch(row === 0 || row === 3 ? 'ringPanel' : 'ringHull',
-          [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]],
-          jointAngle + lo, jointAngle + hi);
+    host.rotation.x = jointAngle; host.updateMatrixWorld(true);
+    // Set-back rims reveal the darker neck, while inward and axial-face plates
+    // keep their old shallow level beside the inner structure and crew routes.
+    for (const [lo, hi] of [[-.026, -.002], [.002, .026]]) {
+      for (const radialSide of [-1, 1]) for (let row = 0; row < surface.axialRows; row++) {
+        const width = flatX * 2 / surface.axialRows;
+        const x0 = -flatX + row * width + gap / 2, x1 = x0 + width - gap;
+        patch('ringPanel', [[x0, radialSide * hr, 0, radialSide], [x1, radialSide * hr, 0, radialSide]],
+          jointAngle + lo, jointAngle + hi, radialSide > 0);
       }
       for (const side of [-1, 1]) for (const radialSide of [-1, 1]) {
-        patch('ringHull', curve(side, radialSide), jointAngle + lo, jointAngle + hi);
-        patch('ringService', [[side * hx, radialSide * 2.95, side, 0], [side * hx, radialSide * (flatR - gap), side, 0]],
-          jointAngle + lo, jointAngle + hi);
+        patch('ringHull', curve(side, radialSide), jointAngle + lo, jointAngle + hi, radialSide > 0);
+        patch('ringService', [[side * hx, radialSide * 2.95, side, 0],
+          [side * hx, radialSide * (flatR - gap), side, 0]], jointAngle + lo, jointAngle + hi);
       }
+      const t = jointAngle + (lo + hi) / 2;
+      for (const x of [-5.25, 5.25]) mount(x, hr, 0, 1, t);
+      for (const side of [-1, 1]) mount(side * (flatX + corner / Math.SQRT2),
+        flatR + corner / Math.SQRT2, side / Math.SQRT2, 1 / Math.SQRT2, t);
     }
   };
 }
@@ -219,7 +246,7 @@ export function createMainRing({ layout, resources }) {
   const shell = arcGeometry(radius, w.mainAxialEnvelope, w.mainRadialEnvelope, pitch - .06, 2);
   const joint = arcGeometry(radius, 16.8, 10.5, .066, 1.8, 5);
   const collar = arcGeometry(radius, w.mainAxialEnvelope + .26, w.mainRadialEnvelope + .26, .0032, 2.13, 2);
-  const shield = ringShielding(a, radius, w.mainAxialEnvelope, w.mainRadialEnvelope, pitch);
+  const shield = ringShielding(a, radius, w.mainAxialEnvelope, w.mainRadialEnvelope, pitch, w.mainSurface, joint);
   const rails = [-.65, .65].map(offset => arcGeometry(radius + offset, .22, .22, pitch - .06, .08, 12));
   const anchors = { serviceNodes: [], crewLandings: [] };
   const serviceAngles = [], crewAngles = [];
@@ -236,14 +263,15 @@ export function createMainRing({ layout, resources }) {
     const t = angle + pitch / 2;
     // Hinge feet and locking tabs sit on the interface shields. Their small
     // mounting plates give the covers an attachment scale in close views.
-    for (const x of [-5.25, 5.25]) for (const dt of [-.022, .022]) {
-      a.part(resources.geometries.box, 'ringRim', polar(x, outer + .12, t + dt), [.34, .035, .24], [t + dt, 0, 0]);
-      a.beam('silver', polar(x - .14, outer + .19, t + dt), polar(x + .14, outer + .19, t + dt), .045);
-      for (const dx of [-.12, .12]) a.cylinder('dark', polar(x + dx, outer + .145, t + dt), .013, .012, [t + dt, 0, 0]);
+    const shieldTop = outer + w.mainSurface.outerJointOffset + w.mainSurface.outerJointThickness;
+    for (const x of [-5.25, 5.25]) for (const dt of [-.014, .014]) {
+      a.part(resources.geometries.box, 'ringRim', polar(x, shieldTop + .012, t + dt), [.34, .035, .24], [t + dt, 0, 0]);
+      a.beam('silver', polar(x - .14, shieldTop + .035, t + dt), polar(x + .14, shieldTop + .035, t + dt), .045);
+      for (const dx of [-.12, .12]) a.cylinder('dark', polar(x + dx, shieldTop + .018, t + dt), .013, .012, [t + dt, 0, 0]);
     }
     for (const x of [-1.75, 1.75]) {
-      a.part(resources.geometries.box, 'ringRim', polar(x, outer + .135, t), [.18, .04, .32], [t, 0, 0]);
-      a.part(resources.geometries.box, 'dark', polar(x, outer + .16, t), [.07, .025, .08], [t, 0, 0]);
+      a.part(resources.geometries.box, 'ringRim', polar(x, shieldTop + .008, t + .004), [.18, .04, .32], [t, 0, 0]);
+      a.part(resources.geometries.box, 'dark', polar(x, shieldTop + .034, t + .004), [.07, .025, .08], [t, 0, 0]);
     }
     // Exposed circumferential truss bays alternate with hull segments. The
     // sealed joint lies underneath these bays within the same radial band as the enlarged shell.
@@ -267,12 +295,21 @@ export function createMainRing({ layout, resources }) {
     a.box('service', ringAt(0, 40.1, t), [nodeWidth, nodeHeight, nodeDepth], [t, 0, 0]);
     // Removable inward-facing equipment covers share the existing node body;
     // no new pressure volume or circulation subsystem is introduced.
-    const columns = major ? 4 : 3, rows = major ? 2 : 1;
-    for (let col = 0; col < columns; col++) for (let row = 0; row < rows; row++) {
-      const x = -nodeWidth / 2 + (col + .5) * nodeWidth / columns;
-      const dt = (-nodeDepth / 2 + (row + .5) * nodeDepth / rows) / (40.1 + ringOffset);
-      a.part(resources.geometries.box, 'hullShade', ringAt(x, 40.1 - nodeHeight / 2 - .045, t + dt),
-        [nodeWidth / columns - .08, .055, nodeDepth / rows - .08], [t, 0, 0]);
+    const nodeBands = major ? [[-nodeWidth / 2, -w.mainSurface.majorCentreKeepoutHalfWidth],
+      [w.mainSurface.majorCentreKeepoutHalfWidth, nodeWidth / 2]]
+      : Array.from({ length: w.mainSurface.ordinaryNodeColumns }, (_, j) => [
+        -nodeWidth / 2 + j * nodeWidth / w.mainSurface.ordinaryNodeColumns,
+        -nodeWidth / 2 + (j + 1) * nodeWidth / w.mainSurface.ordinaryNodeColumns]);
+    const tangentBands = major ? [[-nodeDepth / 2 + .04, -.20], [.20, nodeDepth / 2 - .04]]
+      : [[-nodeDepth / 2 + .04, nodeDepth / 2 - .04]];
+    for (const [lo, hi] of nodeBands) for (const [near, far] of tangentBands) {
+      const x = (lo + hi) / 2, face = 40.1 + ringOffset - nodeHeight / 2;
+      const tangent = (near + far) / 2, p = polar(x, face - .022, t);
+      p[1] -= Math.sin(t) * tangent; p[2] += Math.cos(t) * tangent;
+      // Flat lids sit on the existing box face. Major lids leave a narrow
+      // transverse-chord slot as well as the central crew/material keepout.
+      a.part(resources.geometries.box, 'hullShade', p,
+        [hi - lo - .08, .055, far - near], [t, 0, 0]);
     }
     for (const side of [-1, 1]) for (const dr of [-2.7, 2.7]) for (const dt of [-.028, .028])
       a.cylinder('ringRim', polar(side * 9.24, radius + dr, t + dt), .027, .04, [0, 0, Math.PI / 2]);

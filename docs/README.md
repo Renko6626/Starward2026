@@ -49,6 +49,7 @@ docs/
 - [design/ui-redesign-handoff.md](./design/ui-redesign-handoff.md)
 - [design/works-page-wireframe.md](./design/works-page-wireframe.md)
 - [design/work-detail-page-spec.md](./design/work-detail-page-spec.md)
+- [superpowers/specs/2026-10-06-romantic-ring-station-design.md](./superpowers/specs/2026-10-06-romantic-ring-station-design.md)：当前环形鸟船设定，含固定主轴分区与外部构造
 - [design/torifune-session-handoff.md](./design/torifune-session-handoff.md)
 - [design/torifune-design-progress.md](./design/torifune-design-progress.md)
 - [design/torifune-structure-draft.md](./design/torifune-structure-draft.md)

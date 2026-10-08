@@ -169,3 +169,39 @@ ORBIT_PYTHON=.venv-orbit/bin/python npm run orbit:generate
 临时脚本读取生产实例矩阵：周向梁端点闭合、新子组挂在主环上，实际网格顶点最小半径约44.217 m；通过有向包围盒核对新增构件与两组人员通路10个入口/轴向支路/侧面登乘舱包络，无相交。首轮直达安装脚与人员支路相交，已改为两侧绕行并复查。此项不是全站碰撞或工程载荷验收。
 
 独立查看器build、修改4个JS的`node --check`、`npm run test:station`、`STATION_BROWSER_PATH=… npm run station:update`完整通过，首页素材、结构图与来源清单同步，`git diff --check`通过。整环/内缘/节点及26106桌面/手机只加载截图，页面/控制台错误为0；未新增永久测试或执行自动交互、低端真机性能、压力/刚度/承载工程验算。新增构件尺寸是外景工作值，当前查看器为R/10；保留Vite大包提示。用户已授权R/09与R/10一起提交、推送main并触发已有自动部署，实际状态以Git和远端构建记录为准。详情和预览见[交接](../design/torifune-ring-handoff.md)。
+
+
+## R/11 主轴细化（2026-10-08）
+
+按已确认B路线完成五段短收肩、9处端部接合、697片弧形覆板和功能组件；固定核心的标记、分组、纵梁与既有子系统布局保持。分区与构造写入[鸟船设定第11节](../superpowers/specs/2026-10-06-romantic-ring-station-design.md#11-固定主轴分区与外部构造r112026-10-08)，成果预览与约束见[交接](../design/torifune-ring-handoff.md)。
+
+实际验证命令：
+
+- `node --check experiments/station/ring-romantic/src/model/core.js`、`node --check experiments/station/ring-romantic/src/model/layout.js`、`node --check experiments/station/ring-romantic/src/model/resources.js`：退出码0。
+- `npm run test:station`：已有检查通过，未新增永久测试。
+- `npm --prefix experiments/station/ring-romantic run build`：退出码0。
+- `STATION_BROWSER_PATH=/data/sunyunbo/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome npm run station:update`：退出码0，首页背景、两张结构图、来源清单和主站构建完成。浏览器路径只用于本机离线捕获，没有写入产品代码。
+- `git diff --check`：通过；文档本地引用及新文件格式检查通过。
+
+一次性脚本加载真实生产站体，核对5段范围／半径、有限坐标、单位法线、固定组和核心anchors；697片覆板及功能件共1119个几何实例，对1915个既有固定盒形构件做三角面与40 mm扩展包络检查，交叉及间隙命中为0。这是本轮新增表面的限定静态检查，不是全站碰撞或旋转包络验收。独立只读代码审查发现设备包安装脚悬空，补小曲面垫座后真实脚底80样点及垫座底16样点均接入壳面／支环。
+
+主轴前部、后部和检修槽三张近景仅加载截图，页面与控制台错误为0；已查看新生成的桌面／手机背景与结构图。同步回主工作目录后，26106独立查看器桌面／手机仅加载截图，均显示R/11，页面与控制台错误为0。未自动点击、填表、拖动或执行交互流程，也未做低端真机性能、压力／载荷／刚度、气密窗口／传递机构或整船动态净空验算。保留Vite大包提示，未提交、推送或部署。
+
+
+## R/12 外覆层与外挂护罩（2026-10-08）
+
+主环细碎覆板整理成3×2的大板面，局部外缘罩抬高；主轴7处检修区露出灰色基底并加独立弧形罩，设备包保留更高体量。原结构、分区、运行分组、入口、镜头和灯光保持。设定详见[第12节](../superpowers/specs/2026-10-06-romantic-ring-station-design.md#12-舱体外包覆与外挂护罩r122026-10-08)，实际尺寸和预览见[交接](../design/torifune-ring-handoff.md)。
+
+实际验证命令：
+
+- `node --check experiments/station/ring-romantic/src/model/main-ring.js`、同目录 `core.js`、`layout.js`、`resources.js` 的语法检查均退出码0。
+- `npm run test:station`：相关已有检查通过，无新增永久测试。
+- `npm --prefix experiments/station/ring-romantic run build`：退出码0。
+- `STATION_BROWSER_PATH=/data/sunyunbo/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome npm run station:update`：退出码0，背景、两张图版、来源一致性及主站TypeScript／Vite构建完成。路径仅用于本机离线捕获。
+- `npm run station:check`、`npm run station:drawings:check`：通过；`git diff --check`和本地文档引用／格式检查通过。
+
+一次性脚本调用真实模型：主环名义壳体顶点45…56 m、X=±9 m保持，内缘板顶点最小半径44.909998 m；主环板件2336→960，主轴普通板697→604。新增主轴表面739实例对1987固定盒形障碍、主环外缘罩及节点盖168实例对1832非安装接触盒形障碍，三角面交叉和40 mm扩展包络命中均为0。指定铰座等安装关系允许接触。这是限定静态包络检查，不是全船碰撞验收。
+
+54根主轴脚底270样点、128根主环脚底640样点、128主环底座中心和40节点盖安装中心接触验证通过。主环节点盖碰已有横梁的问题由盖板留400 mm槽解决；独立只读审查指出的基底UV拉伸已修复，生产分析壳UV跨15.393805周向单位、筒段跨7.900000轴向单位，与2 m纹理基准一致。
+
+主环整体／接口、主轴前／后部及检修区只加载截图，页面／控制台错误为0；同镜头R/11比较、生成的桌面／手机背景及结构图已查看。同步回主工作目录后，26106查看器桌面／手机仅加载截图，均显示R/12，页面／控制台错误为0。未自动点击、填表、拖动或执行UI流程，未验证低端真机、热控、防碎片、材料工艺、载荷／承压或动态扫掠。保留Vite大包提示，未提交、推送或部署。

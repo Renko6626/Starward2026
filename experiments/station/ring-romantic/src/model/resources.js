@@ -26,7 +26,17 @@ export function createStationResources() {
     color, metalness: .12, roughness: .78, map: maps.ringPanel,
     roughnessMap: maps.ringFinish, bumpMap: maps.ringHeight, bumpScale: .002,
   });
+  const corePaint = (color, panelEdges = false) => new THREE.MeshStandardMaterial({
+    color, metalness: .12, roughness: .76,
+    ...(panelEdges ? { map: maps.ringPanel } : {}),
+    roughnessMap: maps.ringFinish, bumpMap: maps.ringHeight, bumpScale: .002,
+  });
   const materials = {
+    coreBacking: new THREE.MeshStandardMaterial({ color: 0x748087, metalness: .25, roughness: .74,
+      roughnessMap: maps.ringFinish, bumpMap: maps.ringHeight, bumpScale: .002 }),
+    coreHull: corePaint(0xc5cecc, true), corePanel: corePaint(0xb4c0c1, true),
+    coreService: corePaint(0x7e939b), coreRim: metal(0x98a6ab, .52, { metalness: .7 }),
+    coreSeal: new THREE.MeshStandardMaterial({ color: 0x1c252b, metalness: 0, roughness: .88 }),
     ringHull: ringPaint(0xc5cecc), ringPanel: ringPaint(0xb4c0c1),
     ringService: ringPaint(0x7e939b),
     ringJoint: new THREE.MeshStandardMaterial({ color: 0x718189, metalness: .4, roughness: .68 }),
