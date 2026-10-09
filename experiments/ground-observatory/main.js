@@ -1,14 +1,26 @@
 import slots from '../schedule-ab/sample.json';
-import { mountArray } from './scene.js';
+import { mountArray, antennaViews } from './scene.js';
 import { renderOrbit, diagramVariants } from './orbit.js';
-document.querySelector('.brand img').src = new URL('../../public/brand/moon-phase.png', import.meta.url).href;
+const brandImageURL = new URL('../../public/brand/moon-phase.png', import.meta.url).href;
+document.querySelector('.brand img').src = brandImageURL;
+const favicon = document.createElement('link');
+favicon.rel = 'icon'; favicon.href = brandImageURL; document.head.appendChild(favicon);
 const requestedVariant = new URLSearchParams(location.search).get('diagram');
 const variant = Object.hasOwn(diagramVariants, requestedVariant) ? requestedVariant : 'maneuvers';
 document.body.dataset.diagram = variant;
 renderOrbit(document.querySelector('#orbit'), variant);
 document.title = diagramVariants[variant].name + '｜地面观测站样稿';
 document.querySelector('.site-foot > span').textContent = diagramVariants[variant].name + '构图样稿';
-try { const dispose = mountArray(document.querySelector('#antenna')); window.addEventListener('pagehide', dispose, { once:true }); } catch(error) { document.querySelector('.array-background').classList.add('unavailable'); console.warn('Antenna preview unavailable', error); }
+const antennaView = new URLSearchParams(location.search).get('antenna');
+if (antennaViews.includes(antennaView)) {
+ document.body.classList.add('antenna-inspection');
+ document.title = '40 米偏置观测天线｜模型查看';
+ const labels = { overview: '整体', front: '正面', back: '背面', side: '侧面', arm: '馈源臂', drive: '驱动', base: '底座' };
+ const heading = document.querySelector('.array-heading');
+ heading.innerHTML = `<span>40 米偏置观测天线</span><nav aria-label="模型视角">${antennaViews.map(view => `<a href="?antenna=${view}"${view === antennaView ? ' aria-current="page"' : ''}>${labels[view]}</a>`).join('')}</nav>`;
+ document.querySelector('.array-caption').innerHTML = '<span>1 单位 = 1 米</span><span class="antenna-controls-hint">拖动旋转，滚轮缩放，右键拖动平移</span>';
+}
+try { const dispose = mountArray(document.querySelector('#antenna'), { view: antennaView }); window.addEventListener('pagehide', dispose, { once:true }); } catch(error) { document.querySelector('.array-background').classList.add('unavailable'); console.warn('Antenna preview unavailable', error); }
 const devOrigin = `${location.protocol}//${location.hostname}:20262`;
 document.querySelector('.brand').href = devOrigin + '/';
 document.querySelectorAll('nav a').forEach(a=>{a.href=a.href.replace('http://localhost:20262',devOrigin);});

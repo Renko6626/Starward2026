@@ -200,3 +200,21 @@
   .ops-page-foot { align-items: flex-start; gap: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .ops-task { transition: none; } }
+
+
+/* Shared observatory artwork; isolated below the existing schedule controls. */
+.works-page--schedule { position: relative; isolation: isolate; }
+.schedule-observatory { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.schedule-antenna { position: fixed; top: 220px; left: 0; width: 100vw; height: 780px; opacity: .40; mask-image: linear-gradient(180deg, #000 70%, transparent); }
+.schedule-antenna canvas { display: block; width: 100%; height: 100%; }
+.schedule-orbit { position: fixed; top: 115px; left: 50%; transform: translateX(-50%); width: min(1300px, 100vw); height: 920px; opacity: .9; mask-image: linear-gradient(180deg, #000 72%, transparent); }
+.schedule-orbit svg { width: 100%; height: 100%; fill: none; stroke-width: 1; }
+.schedule-orbit .maneuver-secondary { stroke: #536f70; stroke-width: .8; fill: none; }
+.schedule-orbit .maneuver-primary { stroke: #a6b4a8; stroke-width: 1.15; fill: none; }
+.schedule-orbit .maneuver-primary circle { fill: var(--color-background); }
+.works-page--schedule .ops-task-copy, .works-page--schedule .ops-task-clock, .works-page--schedule .ops-shift-heading, .works-page--schedule .ops-toolbar { text-shadow: 0 0 4px var(--color-background), 0 0 9px var(--color-background); }
+@media (max-width: 1100px) { .schedule-antenna { height: 760px; } }
+@media (max-width: 640px) {
+  .schedule-antenna { position: absolute; top: 220px; left: calc(50% - 50vw); height: 650px; opacity: .30; }
+  .schedule-orbit { position: absolute; top: 170px; height: 720px; opacity: .7; }
+}

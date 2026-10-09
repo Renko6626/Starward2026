@@ -12,6 +12,7 @@ import type { PortalDashboardResponse } from "../../shared/portal";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { scheduleMissionStart } from "../lib/mission-time";
 import { ScheduleSection } from "../../portal/components/ScheduleSection";
+import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
 
 const route = getRouteApi("/works/");
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
@@ -134,6 +135,7 @@ export function WorksPage() {
       </div>;
 
   return <div className="works-page works-page--schedule">
+    <ObservatoryBackdrop />
     <header className="ops-page-heading">
       <div><h1>接力时间表</h1></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
