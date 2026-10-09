@@ -212,9 +212,37 @@
 .schedule-orbit .maneuver-secondary { stroke: #536f70; stroke-width: .8; fill: none; }
 .schedule-orbit .maneuver-primary { stroke: #a6b4a8; stroke-width: 1.15; fill: none; }
 .schedule-orbit .maneuver-primary circle { fill: var(--color-background); }
+.schedule-orbit .mission-reference { stroke: url(#mission-depth); stroke-width: .7; opacity: .25; }
+.schedule-orbit .mission-reference > path { stroke-dasharray: 2 9; }
+.schedule-orbit .mission-prediction { stroke: url(#mission-depth); stroke-width: .95; opacity: .52; stroke-dasharray: 6 10; }
+.schedule-orbit .mission-prediction--1 { opacity: .42; stroke-dasharray: 2 7; }
+.schedule-orbit .mission-prediction--2 { opacity: .46; stroke-dasharray: 9 13; }
+.schedule-orbit .mission-prediction > path, .schedule-orbit .mission-planned > path, .schedule-orbit .mission-completed > path { vector-effect: non-scaling-stroke; }
+.schedule-orbit .mission-planned { stroke: url(#mission-depth); stroke-width: .95; stroke-dasharray: 3 6; opacity: .55; }
+.schedule-orbit .mission-completed { stroke: url(#mission-depth); stroke-width: 1.2; }
+.schedule-orbit .mission-earth { stroke: #9cafa5; stroke-width: 1; }
+.schedule-orbit .mission-earth > circle, .schedule-orbit .mission-moon > circle { fill: var(--color-background); }
+.schedule-orbit .mission-earth-grid { stroke: #6d8581; stroke-width: .7; opacity: .8; }
+.schedule-orbit .mission-moon { stroke: #adb7aa; stroke-width: 1; }
+.schedule-orbit .mission-moon-surface { stroke: #7e8e85; stroke-width: .6; opacity: .7; }
+.schedule-orbit .mission-body-limb { vector-effect: non-scaling-stroke; }
+.schedule-orbit .mission-nodes { stroke: #a6b4a8; fill: var(--color-background); }
+.schedule-orbit .mission-burns { stroke: #ccd2b5; stroke-width: 1.1; }
+.schedule-orbit #mission-burn-arrow path { stroke: #ccd2b5; }
+.schedule-orbit .mission-target { stroke: #b5c4b6; stroke-width: .9; }
+.schedule-orbit .mission-station-axis, .schedule-orbit .mission-vehicle-hull { fill: var(--color-background); }
+.schedule-orbit .mission-station-structure { opacity: .55; stroke-width: .65; }
+.schedule-orbit .mission-docking-port { stroke: #d7decd; stroke-width: 1.3; }
+.schedule-orbit .mission-target.is-docked .mission-docking-port { stroke: #e0ddad; }
+.schedule-orbit .mission-craft, .schedule-orbit .mission-docked-vehicle { fill: none; stroke: #d7decd; stroke-width: .8; }
+.schedule-orbit #mission-vehicle-symbol > *, .schedule-orbit .mission-station-symbol > * { vector-effect: non-scaling-stroke; }
 .works-page--schedule .ops-task-copy, .works-page--schedule .ops-task-clock, .works-page--schedule .ops-shift-heading, .works-page--schedule .ops-toolbar { text-shadow: 0 0 4px var(--color-background), 0 0 9px var(--color-background); }
 @media (max-width: 1100px) { .schedule-antenna { height: 760px; } }
 @media (max-width: 640px) {
   .schedule-antenna { position: absolute; top: 220px; left: calc(50% - 50vw); height: 650px; opacity: .30; }
   .schedule-orbit { position: absolute; top: 170px; height: 720px; opacity: .7; }
+  .schedule-orbit .mission-orbit { width: 100%; height: 430px; overflow: visible; }
+  .schedule-orbit .mission-reference { display: none; }
+  .schedule-orbit .mission-prediction--1, .schedule-orbit .mission-prediction--2 { display: none; }
+  .schedule-orbit .mission-craft > use { transform: scale(1.3); }
 }

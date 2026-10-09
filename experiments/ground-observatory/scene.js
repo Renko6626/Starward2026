@@ -53,7 +53,7 @@ function createNightSky() {
   return { background, radiance };
 }
 
-export function mountArray(container, { view = null } = {}) {
+export function mountArray(container, { view = null, animate = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
   renderer.setClearColor(0x000000, 0);
@@ -171,11 +171,60 @@ export function mountArray(container, { view = null } = {}) {
     controls.addEventListener('change', render); controls.update();
     renderer.domElement.classList.add('is-orbit-preview');
   }
-  const lost = event => { event.preventDefault(); container.classList.remove('ready'); };
+  // Small tracking corrections around the authored pose; the footing stays fixed.
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  const azimuth = antenna.userData.azimuth, reflector = antenna.userData.elevation;
+  const restAzimuth = azimuth.rotation.y, restElevation = reflector.rotation.x;
+  let frame = 0, elapsed = 0, previousTime = null, lastShadow = -Infinity;
+  let visible = true, contextLost = false;
+  const moving = () => animate && !inspection && !motion.matches && !document.hidden && visible && !contextLost;
+  const stop = () => {
+    cancelAnimationFrame(frame); frame = 0; previousTime = null;
+  };
+  const tick = time => {
+    frame = 0;
+    if (!moving()) { previousTime = null; return; }
+    if (previousTime === null) previousTime = time;
+    const delta = time - previousTime;
+    // Background motion needs only 24 fps; do not catch up after a suspended tab.
+    if (delta >= 1000 / 24) {
+      elapsed += Math.min(delta, 100) / 1000; previousTime = time;
+      azimuth.rotation.y = restAzimuth + THREE.MathUtils.degToRad(1.2) * Math.sin(elapsed * Math.PI * 2 / 100);
+      reflector.rotation.x = restElevation + THREE.MathUtils.degToRad(0.3) * Math.sin(elapsed * Math.PI * 2 / 80);
+      // At this speed, shadow maps can refresh less often than the metal reflections.
+      if (elapsed - lastShadow >= 0.25) {
+        renderer.shadowMap.needsUpdate = true; lastShadow = elapsed;
+      }
+      render();
+    }
+    frame = requestAnimationFrame(tick);
+  };
+  const syncMotion = () => {
+    if (motion.matches) {
+      azimuth.rotation.y = restAzimuth; reflector.rotation.x = restElevation;
+      elapsed = 0; lastShadow = -Infinity;
+      if (!contextLost && !document.hidden) { renderer.shadowMap.needsUpdate = true; render(); }
+    }
+    if (moving()) { if (!frame) frame = requestAnimationFrame(tick); }
+    else stop();
+  };
+  const visibility = animate && !inspection ? new IntersectionObserver(entries => {
+    visible = entries[0].isIntersecting; syncMotion();
+  }) : null;
+  visibility?.observe(container);
+  if (animate && !inspection) {
+    motion.addEventListener('change', syncMotion);
+    document.addEventListener('visibilitychange', syncMotion);
+    syncMotion();
+  }
+  const lost = event => { event.preventDefault(); contextLost = true; stop(); container.classList.remove('ready'); };
   renderer.domElement.addEventListener('webglcontextlost', lost);
-  const restored = () => {rebuildEnvironment(); renderer.shadowMap.needsUpdate = true; resize();};
+  const restored = () => {contextLost = false; rebuildEnvironment(); renderer.shadowMap.needsUpdate = true; resize(); syncMotion();};
   renderer.domElement.addEventListener('webglcontextrestored', restored);
   return () => {
+    stop(); visibility?.disconnect();
+    motion.removeEventListener('change', syncMotion);
+    document.removeEventListener('visibilitychange', syncMotion);
     observer.disconnect();
     controls?.removeEventListener('change', render); controls?.dispose();
     renderer.domElement.removeEventListener('webglcontextlost', lost);
