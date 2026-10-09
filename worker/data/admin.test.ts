@@ -66,6 +66,7 @@ class SqliteD1Database {
 
       CREATE TABLE schedule_segments (
         scheduled_at TEXT,
+        kind TEXT NOT NULL DEFAULT 'standard',
         id TEXT PRIMARY KEY,
         schedule_version_id TEXT NOT NULL,
         code TEXT NOT NULL,

@@ -3,6 +3,7 @@ import type {
   AdminParticipantItem,
   AdminProjectDraftItem,
   AdminSegmentItem,
+  AppendSegmentsInput,
   BootstrapSegmentsInput,
   UpdateSegmentInput,
   UpdateParticipantInput,
@@ -35,6 +36,7 @@ type ParticipantRow = {
 };
 
 type SegmentRow = {
+  kind: AdminSegmentItem['kind'];
   scheduled_at: string | null;
   id: string;
   schedule_version_id?: string;
@@ -331,6 +333,7 @@ export async function listSegments(
         schedule_segments.name,
         schedule_segments.description,
         schedule_segments.scheduled_at,
+        schedule_segments.kind,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -427,6 +430,30 @@ export async function bootstrapActiveScheduleSegments(
   };
 }
 
+export async function appendActiveScheduleSegments(
+  db: D1Database,
+  input: AppendSegmentsInput,
+): Promise<BootstrapActiveScheduleSegmentsResult> {
+  const versionId = await getActiveScheduleVersionId(db);
+  if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有可追加坑位的生效排期。" };
+  const now = nowIso();
+  // D1 executes this batch atomically. Each insert derives the next code and
+  // sort position inside the transaction, so concurrent appends cannot reuse them.
+  const results = await db.batch(Array.from({ length: input.count }, () => db.prepare(`
+    WITH next AS (
+      SELECT COALESCE(MAX(CASE WHEN kind = 'extra' THEN CAST(substr(code, 7) AS INTEGER) END), 0) + 1 AS ordinal,
+             COALESCE(MAX(sort_order), 0) + 1 AS position
+      FROM schedule_segments WHERE schedule_version_id = ?
+    )
+    INSERT INTO schedule_segments
+      (id, schedule_version_id, kind, code, name, description, scheduled_at, status, sort_order, created_at, updated_at)
+    SELECT ?, ?, 'extra', printf('EXTRA-%02d', ordinal), '追加坑位 ' || ordinal, NULL, NULL, 'open', position, ?, ?
+    FROM next WHERE EXISTS (SELECT 1 FROM schedule_versions WHERE id = ? AND status = 'active')
+  `).bind(versionId, createPrefixedId('seg'), versionId, now, now, versionId)));
+  if (!results[0]?.meta.changes) return { ok: false, status: 409, code: 'schedule_changed', message: '生效排期已变化，请刷新后追加。' };
+  return { ok: true, items: await listSegments(db), message: `已追加 ${input.count} 个坑位。` };
+}
+
 export async function updateActiveScheduleSegment(
   db: D1Database,
   segmentId: string,
@@ -456,6 +483,9 @@ export async function updateActiveScheduleSegment(
   }
 
   const nextScheduledAt = input.scheduledAt === undefined ? existingSegment.scheduled_at : input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null;
+  if (existingSegment.kind === 'extra' && nextScheduledAt) {
+    return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
+  }
   const nextDescription = normalizeOptionalText(input.description);
   const nextRequestedParticipantId = normalizeOptionalText(
     input.currentParticipantId,
@@ -816,6 +846,7 @@ async function getActiveSegmentDetail(db: D1Database, segmentId: string) {
         schedule_segments.name,
         schedule_segments.description,
         schedule_segments.scheduled_at,
+        schedule_segments.kind,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -886,6 +917,7 @@ function mapAdminParticipantDetail(
 
 function mapAdminSegmentItem(row: SegmentRow): AdminSegmentItem {
   return {
+    kind: row.kind,
     scheduledAt: row.scheduled_at,
     id: row.id,
     code: row.code,

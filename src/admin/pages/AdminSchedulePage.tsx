@@ -60,6 +60,8 @@ export function AdminSchedulePage() {
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
   });
+  const [appendCount, setAppendCount] = useState('6');
+  const [append, setAppend] = useState<BootstrapState>({ status: 'idle' });
 
   useEffect(() => {
     void loadSchedulePage();
@@ -157,6 +159,27 @@ export function AdminSchedulePage() {
         status: "error",
         message: error instanceof Error ? error.message : "初始化发布时点失败。",
       });
+    }
+  }
+
+  async function handleAppend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const count = Number(appendCount);
+    if (!Number.isInteger(count) || count < 1 || count > 120) {
+      setAppend({ status: 'error', message: '追加数量必须是 1 到 120 之间的整数。' });
+      return;
+    }
+    setAppend({ status: 'submitting' });
+    try {
+      const payload = await requestJson<AdminSegmentBootstrapResponse>('/api/admin/segments/append', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ count }),
+      });
+      setDrafts(current => ({ ...buildDraftMap(payload.items), ...current }));
+      setState(current => current.status === 'ready'
+        ? { status: 'ready', payload: { ...current.payload, segments: payload.items } } : current);
+      setAppend({ status: 'success', message: payload.message });
+    } catch (error) {
+      setAppend({ status: 'error', message: error instanceof Error ? error.message : '追加坑位失败。' });
     }
   }
 
@@ -317,6 +340,18 @@ export function AdminSchedulePage() {
 
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
+          <section className="panel space-y-4">
+            <div><h2 className="text-base font-medium">追加坑位</h2>
+              <p className="mt-2 text-sm text-on-surface-variant">追加坑位显示在公开时间表底部，不占标准排程，沿用现有认领和审核流程。</p>
+            </div>
+            <form className="flex flex-wrap items-end gap-4" onSubmit={handleAppend}>
+              <FormField label="追加数量"><input className="field-input w-28" type="number" min={1} max={120} value={appendCount} onChange={event => setAppendCount(event.target.value)} /></FormField>
+              <button type="submit" disabled={append.status === 'submitting'} className="min-h-10 px-4 py-2 bg-primary text-on-primary rounded-md disabled:opacity-60">
+                {append.status === 'submitting' ? '正在追加…' : '追加坑位'}
+              </button>
+            </form>
+            {append.status === 'success' || append.status === 'error' ? <StateNotice message={append.message} tone={append.status === 'success' ? 'success' : 'error'} /> : null}
+          </section>
           <div className="panel text-base text-on-surface-variant">
             为创作者分配新的发布时点后，原发布时点会自动释放，作品资料会同步关联新的发布时点。
           </div>
@@ -339,7 +374,7 @@ export function AdminSchedulePage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-lg font-medium text-on-surface">
-                        第 {segment.code} 棒（{segment.name}）
+                        {segment.kind === 'extra' ? `${segment.name}（${segment.code}）` : `第 ${segment.code} 棒（${segment.name}）`}
                       </h2>
                       <p className="mt-1 text-base text-on-surface-variant">
                         当前认领人: {segment.currentParticipantName ?? "暂无"}
@@ -370,9 +405,9 @@ export function AdminSchedulePage() {
                   </div>
 
                   <div className="space-y-4">
-                    <FormField label="发布时间（北京时间）">
+                    {segment.kind === 'extra' ? <p className="text-sm text-on-surface-variant">追加坑位不设置计划发布时间。</p> : <FormField label="发布时间（北京时间）">
                       <input className="field-input" type="datetime-local" value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
-                    </FormField>
+                    </FormField>}
                     <FormField label="发布时点说明">
                       <textarea
                         className="field-input"

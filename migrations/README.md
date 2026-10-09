@@ -76,3 +76,14 @@ in the editor, UTC ISO timestamps in storage). No start/end interval is needed.
 Apply this migration with the public timetable version; existing times stay unset.
 Approved previews appear before the relay. Formal works remain gated until the
 last configured publication instant, then follow the existing admin publication rules.
+
+## Extra schedule slots
+
+`0017_extra_schedule_slots.sql` adds `kind` (`standard` / `extra`) to the existing
+schedule records. Existing entries remain `standard`; an extra slot must have no
+planned publication time. The admin append endpoint creates independently numbered
+`EXTRA-01` slots without changing existing entries or ownership.
+Apply the migration before running this application version, using the normal D1
+migration flow. Extra and unconfigured entries no longer prevent completion or
+archive visibility; only future configured standard publication times gate the archive.
+Review approvals and the existing admin publication window still control publishing.

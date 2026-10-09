@@ -21,6 +21,7 @@ import type {
 import { updateApplicationReviewInputSchema } from "../../src/shared/applications";
 import {
   bootstrapSegmentsInputSchema,
+  appendSegmentsInputSchema,
   updateProjectDraftInputSchema,
   updateSegmentInputSchema,
   updateParticipantInputSchema,
@@ -28,6 +29,7 @@ import {
 import { eventWindowKeySchema, updateEventWindowInputSchema } from "../../src/shared/windows";
 import {
   bootstrapActiveScheduleSegments,
+  appendActiveScheduleSegments,
   getParticipantDetail,
   listProjectDrafts,
   listParticipants,
@@ -280,6 +282,14 @@ const bootstrapSegmentsHandler = async (c: any) => {
 };
 
 adminApi.post("/segments/bootstrap", bootstrapSegmentsHandler);
+
+adminApi.post('/segments/append', async c => {
+  const parsed = appendSegmentsInputSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return jsonError(c, 422, 'invalid_request', '追加数量必须是 1 到 120 之间的整数。', parsed.error.flatten());
+  const result = await appendActiveScheduleSegments(getRequiredDb(c), parsed.data);
+  if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+  return c.json({ ok: true, message: result.message, items: result.items } satisfies AdminSegmentBootstrapResponse, 201);
+});
 
 const updateSegmentHandler = async (c: any) => {
   const body = await c.req.json().catch(() => null);

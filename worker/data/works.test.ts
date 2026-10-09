@@ -5,7 +5,9 @@ import { buildLocalSeedSql } from "../../scripts/lib/local-dev-bootstrap.mjs";
 import { getPublicWork, listPublicWorks, setWorkPublication } from "./works";
 import { updateAdminProjectDraftReview, updatePortalProjectPreview } from "./project-drafts";
 import { getParticipantByUserId } from "./participants";
-import { updateActiveScheduleSegment } from "./admin";
+import { appendActiveScheduleSegments, updateActiveScheduleSegment } from "./admin";
+import { claimParticipantSegment, getCurrentSegmentForParticipant, listAvailableSegments } from './segments';
+import { listEventWindows } from './event-windows';
 import { publicApi } from "../routes/public";
 import { adminApi } from "../routes/admin";
 import { Hono } from "hono";
@@ -162,7 +164,7 @@ describe("public relay timetable", () => {
     expect(slot.preview.previewTitle).toBeTruthy();
     expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
     expect(JSON.stringify(body)).not.toContain("https://example.com/private");
-    expect(Object.keys(slot).sort()).toEqual(["id", "code", "name", "scheduledAt", "status", "publicAuthorName", "preview", "workId"].sort());
+    expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "preview", "workId"].sort());
     database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
     const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
@@ -192,7 +194,7 @@ describe("public relay timetable", () => {
     expect(await listPublicWorks(db)).toEqual([]);
     expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(404);
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE current_participant_id = 'part_seed_active'");
-    expect(await getPublicWork(db, draftId)).toBeNull();
+    expect(await getPublicWork(db, draftId)).not.toBeNull();
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '1999-12-31T23:00:00.000Z' WHERE current_participant_id = 'part_seed_active'");
     const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(body.schedule[0]).toMatchObject({ scheduledAt: "1999-12-31T23:00:00.000Z", workId: draftId });
@@ -212,5 +214,60 @@ describe("public relay timetable", () => {
       .toMatchObject({ ok: true, item: { scheduledAt: "2026-12-01T02:00:00.000Z" } });
     expect(await updateActiveScheduleSegment(db, slot.id, { ...input, scheduledAt: null }, actor))
       .toMatchObject({ ok: true, item: { scheduledAt: null } });
+  });
+});
+
+describe('additional schedule slots', () => {
+  it('appends through the protected API with stable codes and leaves all original slots unchanged', async () => {
+    const original = database.sqlite.prepare('SELECT * FROM schedule_segments ORDER BY id').all();
+    const app = new Hono<AppRouteConfig>().route('/api/admin', adminApi);
+    const env = { DB: db, ALLOW_LOCAL_ADMIN_BYPASS: 'true' };
+    const request = (count: number, authenticated = true) => app.request('http://localhost/api/admin/segments/append', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...(authenticated ? { 'x-admin-email': actor } : {}) },
+      body: JSON.stringify({ count }),
+    }, authenticated ? env : { DB: db, CLOUDFLARE_ACCESS_TEAM_DOMAIN: 'https://example.cloudflareaccess.com', CLOUDFLARE_ACCESS_POLICY_AUD: 'test' });
+    expect((await request(2, false)).status).toBe(403);
+    expect((await request(0)).status).toBe(422);
+    expect((await request(121)).status).toBe(422);
+    expect((await request(2)).status).toBe(201);
+    const response = await request(1);
+    expect(response.status).toBe(201);
+    const body = await response.json() as any;
+    expect(body.items.filter((item: any) => item.kind === 'extra').map((item: any) => ({ code: item.code, status: item.status, scheduledAt: item.scheduledAt, sortOrder: item.sortOrder })))
+      .toEqual([
+        { code: 'EXTRA-01', status: 'open', scheduledAt: null, sortOrder: 104 },
+        { code: 'EXTRA-02', status: 'open', scheduledAt: null, sortOrder: 105 },
+        { code: 'EXTRA-03', status: 'open', scheduledAt: null, sortOrder: 106 },
+      ]);
+    expect(database.sqlite.prepare("SELECT * FROM schedule_segments WHERE kind = 'standard' ORDER BY id").all()).toEqual(original);
+  });
+
+  it('allows eligible participants to claim extra slots and keeps their planned time empty', async () => {
+    const result = await appendActiveScheduleSegments(db, { count: 1 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    const extra = result.items.find(item => item.kind === 'extra')!;
+    expect((await listAvailableSegments(db)).some(item => item.id === extra.id)).toBe(true);
+    database.sqlite.exec("UPDATE event_windows SET is_enabled = 1, opens_at = NULL, closes_at = NULL WHERE key = 'segment_claim_open'");
+    database.sqlite.exec("UPDATE participants SET status = 'approved' WHERE id = 'part_seed_pending'");
+    const participant = (await getParticipantByUserId(db, 'usr_seed_pending'))!;
+    const reservation = await claimParticipantSegment(db, { participant, windows: await listEventWindows(db), segmentId: extra.id });
+    expect(reservation).toMatchObject({ ok: true, response: { segment: { code: 'EXTRA-01', scheduledAt: null, status: 'held' } } });
+    expect(await getCurrentSegmentForParticipant(db, participant.id)).toMatchObject({ id: extra.id, scheduledAt: null });
+    expect(await updateActiveScheduleSegment(db, extra.id, { status: 'open', scheduledAt: '2026-12-01T00:00:00Z' }, actor))
+      .toMatchObject({ ok: false, status: 422 });
+    expect(await getCurrentSegmentForParticipant(db, participant.id)).toMatchObject({ id: extra.id });
+  });
+
+  it('keeps approved published works accessible with unconfigured and extra slots present', async () => {
+    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
+    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00Z' WHERE code = 'SEED-101'");
+    await appendActiveScheduleSegments(db, { count: 2 });
+    expect(await getPublicWork(db, draftId)).not.toBeNull();
+    const app = new Hono<AppRouteConfig>().route('/api', publicApi);
+    const body = await (await app.request('http://localhost/api/works', {}, { DB: db })).json() as any;
+    expect(body.schedule.filter((item: any) => item.kind === 'extra')).toHaveLength(2);
+    expect(body.schedule.at(-1)).toMatchObject({ kind: 'extra', code: 'EXTRA-02', scheduledAt: null });
+    expect(body.items.map((item: any) => item.id)).toContain(draftId);
   });
 });

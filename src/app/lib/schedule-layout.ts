@@ -27,12 +27,14 @@ export type ScheduleDay = {
 export function groupSchedule(entries: PublicScheduleEntry[]): ScheduleDay[] {
   const days = new Map<string, ScheduleDay>();
   const ordered = [...entries].sort((a, b) => {
+    const rank = (entry: PublicScheduleEntry) => entry.kind === 'extra' ? 2 : entry.scheduledAt ? 0 : 1;
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
     if (!a.scheduledAt) return b.scheduledAt ? 1 : 0;
     if (!b.scheduledAt) return -1;
     return Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt);
   });
   for (const entry of ordered) {
-    const key = entry.scheduledAt ? scheduleDay(entry.scheduledAt) : "pending";
+    const key = entry.kind === 'extra' ? 'extra' : entry.scheduledAt ? scheduleDay(entry.scheduledAt) : "pending";
     let day = days.get(key);
     if (!day) {
       day = { key, date: entry.scheduledAt, entries: [], shifts: entry.scheduledAt
@@ -40,7 +42,7 @@ export function groupSchedule(entries: PublicScheduleEntry[]): ScheduleDay[] {
       days.set(key, day);
     }
     day.entries.push(entry);
-    if (entry.scheduledAt) {
+    if (entry.scheduledAt && entry.kind !== 'extra') {
       day.shifts[Math.floor(scheduleHour(entry.scheduledAt) / 6)]!.entries.push(entry);
     } else {
       if (day.entries.length % 6 === 1) day.shifts.push({ start: null, entries: [] });
@@ -52,9 +54,9 @@ export function groupSchedule(entries: PublicScheduleEntry[]): ScheduleDay[] {
 
 /** Matches the existing public-release rule: details open at the final configured instant. */
 export function schedulePhase(entries: PublicScheduleEntry[], now: number) {
-  const timed = entries.filter(entry => entry.scheduledAt).sort((a, b) => Date.parse(a.scheduledAt!) - Date.parse(b.scheduledAt!));
+  const timed = entries.filter(entry => entry.kind !== 'extra' && entry.scheduledAt).sort((a, b) => Date.parse(a.scheduledAt!) - Date.parse(b.scheduledAt!));
   const started = timed.some(entry => Date.parse(entry.scheduledAt!) <= now);
-  const ended = timed.length > 0 && timed.length === entries.length && timed.every(entry => Date.parse(entry.scheduledAt!) <= now);
+  const ended = timed.length > 0 && timed.every(entry => Date.parse(entry.scheduledAt!) <= now);
   return {
     phase: ended ? "ended" as const : started ? "active" as const : "before" as const,
     currentId: started && !ended ? timed.findLast(entry => Date.parse(entry.scheduledAt!) <= now)?.id ?? null : null,

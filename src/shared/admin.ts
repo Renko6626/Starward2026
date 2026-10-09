@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { WorkPublicationFields } from "./works";
+import type { ScheduleSegmentKind, WorkPublicationFields } from "./works";
 import {
   portalSegmentStatusSchema,
   projectDraftStatusSchema,
@@ -85,6 +85,7 @@ export const adminSegmentStatusLabels: Record<PortalSegmentStatus, string> = {
 };
 
 export type AdminSegmentItem = {
+  kind: ScheduleSegmentKind;
   scheduledAt: string | null;
   id: string;
   code: string;
@@ -119,6 +120,9 @@ export const bootstrapSegmentsInputSchema = z.object({
 export type BootstrapSegmentsInput = z.infer<
   typeof bootstrapSegmentsInputSchema
 >;
+
+export const appendSegmentsInputSchema = z.object({ count: z.number().int().min(1).max(120) });
+export type AppendSegmentsInput = z.infer<typeof appendSegmentsInputSchema>;
 
 export type AdminSegmentBootstrapResponse = {
   ok: true;

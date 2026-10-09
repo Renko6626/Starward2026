@@ -1,8 +1,8 @@
 export const RELAY_START = "2026-11-12T00:00:00+08:00";
-export function scheduleMissionStart(entries: readonly { scheduledAt: string | null }[]) {
+export function scheduleMissionStart(entries: readonly { scheduledAt: string | null; kind?: 'standard' | 'extra' }[]) {
   let start: number | null = null;
   for (const entry of entries) {
-    if (!entry.scheduledAt) continue;
+    if (!entry.scheduledAt || entry.kind === 'extra') continue;
     const time = Date.parse(entry.scheduledAt);
     if (Number.isFinite(time) && (start === null || time < start)) start = time;
   }

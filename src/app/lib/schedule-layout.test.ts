@@ -3,7 +3,7 @@ import type { PublicScheduleEntry } from "../../shared/works";
 import { groupSchedule, scheduleHour, schedulePhase } from "./schedule-layout";
 
 const slot = (id: string, scheduledAt: string | null): PublicScheduleEntry => ({
-  id, code: id, name: id, scheduledAt, status: "available", publicAuthorName: null, preview: null, workId: null,
+  id, kind: 'standard', code: id, name: id, scheduledAt, status: "available", publicAuthorName: null, preview: null, workId: null,
 });
 
 describe("schedule layout", () => {
@@ -26,7 +26,7 @@ describe("schedule layout", () => {
     expect(days.map(day => day.key)).toEqual(["2026-10-17", "pending"]);
     expect(days[1]).toMatchObject({ date: null, shifts: [{ start: null, entries: [entries[0]] }] });
     expect(entries[0]!.scheduledAt).toBeNull();
-    expect(schedulePhase(entries, Date.parse("2026-10-18T00:00:00Z"))).toEqual({ phase: "active", currentId: "known" });
+    expect(schedulePhase(entries, Date.parse("2026-10-18T00:00:00Z"))).toEqual({ phase: "ended", currentId: null });
   });
 
   it("does not activate the current task before launch and ends at the final release instant", () => {
@@ -34,5 +34,14 @@ describe("schedule layout", () => {
     expect(schedulePhase(entries, Date.parse("2026-10-16T23:59:59Z"))).toEqual({ phase: "before", currentId: null });
     expect(schedulePhase(entries, Date.parse("2026-10-17T00:30:00Z"))).toEqual({ phase: "active", currentId: "first" });
     expect(schedulePhase(entries, Date.parse("2026-10-17T01:00:00Z"))).toEqual({ phase: "ended", currentId: null });
+  });
+
+  it('keeps extra slots in an independent trailing group without clock ticks', () => {
+    const extra = { ...slot('EXTRA-01', null), kind: 'extra' as const };
+    const days = groupSchedule([extra, slot('unknown', null), slot('known', '2026-10-17T00:00:00Z')]);
+    expect(days.map(day => day.key)).toEqual(['2026-10-17', 'pending', 'extra']);
+    expect(days[2]).toMatchObject({ date: null, entries: [extra], shifts: [{ start: null, entries: [extra] }] });
+    expect(schedulePhase([extra, slot('known', '2026-10-17T00:00:00Z')], Date.parse('2026-10-18T00:00:00Z')))
+      .toEqual({ phase: 'ended', currentId: null });
   });
 });

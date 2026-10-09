@@ -186,10 +186,11 @@ export function mountArray(container, { view = null, animate = false } = {}) {
     if (!moving()) { previousTime = null; return; }
     if (previousTime === null) previousTime = time;
     const delta = time - previousTime;
-    // Background motion needs only 24 fps; do not catch up after a suspended tab.
+    // Background motion needs only 24 fps. Pauses reset the timestamp above;
+    // visible frame drops must not slow the azimuth drive's tracking sweep.
     if (delta >= 1000 / 24) {
-      elapsed += Math.min(delta, 100) / 1000; previousTime = time;
-      azimuth.rotation.y = restAzimuth + THREE.MathUtils.degToRad(1.2) * Math.sin(elapsed * Math.PI * 2 / 100);
+      elapsed += delta / 1000; previousTime = time;
+      azimuth.rotation.y = restAzimuth + THREE.MathUtils.degToRad(6) * Math.sin(elapsed * Math.PI * 2 / 90);
       reflector.rotation.x = restElevation + THREE.MathUtils.degToRad(0.3) * Math.sin(elapsed * Math.PI * 2 / 80);
       // At this speed, shadow maps can refresh less often than the metal reflections.
       if (elapsed - lastShadow >= 0.25) {

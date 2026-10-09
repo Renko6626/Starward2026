@@ -10,9 +10,10 @@ type PublicWorkRow = Omit<PublicWork, "publicTags" | "observationNumber"> & { ta
 
 // Public reads deliberately select only display fields, never review or contact details.
 export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
-  const timing = await db.prepare(`SELECT MAX(julianday(s.scheduled_at)) AS lastTime, COUNT(*) AS total, COUNT(s.scheduled_at) AS timed
-    FROM schedule_segments s JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'`).first<{ lastTime: number | null; total: number; timed: number }>();
-  if (timing?.timed && (timing.timed < timing.total || timing.lastTime! > Date.now() / 86400000 + 2440587.5)) return [];
+  const timing = await db.prepare(`SELECT MAX(julianday(s.scheduled_at)) AS lastTime
+    FROM schedule_segments s JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
+    WHERE s.kind = 'standard'`).first<{ lastTime: number | null }>();
+  if (timing?.lastTime && timing.lastTime > Date.now() / 86400000 + 2440587.5) return [];
   const { results } = await db.prepare(`SELECT
     d.id, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
@@ -74,7 +75,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     draftId: string | null; previewTitle: string | null; previewSummary: string | null;
     workType: PublicWork["workType"]; coverUrl: string | null; coverAlt: string | null;
   };
-  const { results } = await db.prepare(`SELECT s.id, s.code, s.name, s.scheduled_at AS scheduledAt,
+  const { results } = await db.prepare(`SELECT s.id, s.kind, s.code, s.name, s.scheduled_at AS scheduledAt,
     CASE
       WHEN s.status IN ('held', 'completed') AND participant.id IS NOT NULL THEN 'confirmed'
       WHEN s.status = 'held' THEN 'reserved'
@@ -89,7 +90,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     LEFT JOIN participants participant ON participant.id = s.current_participant_id AND participant.status IN ('approved', 'completed')
     LEFT JOIN portal_profiles p ON p.user_id = participant.user_id
     LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
-    ORDER BY s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
+    ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({
     ...entry,
     preview: draftId ? { previewTitle, previewSummary, workType, coverUrl, coverAlt } : null,
