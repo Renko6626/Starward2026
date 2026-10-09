@@ -6,6 +6,7 @@ import { applicationInterestFormatLabels } from "../../shared/applications";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
+import { RelayPublicationNotice } from "../components/RelayPublicationNotice";
 import { NeighborSlots } from "../components/NeighborSlots";
 import { RegistrationProgress } from "../components/RegistrationProgress";
 import { RegistrationSection } from "../components/RegistrationSection";
@@ -89,6 +90,7 @@ export function PortalOverviewPage() {
   const selected = collaboration.segments.find(item => item.id === (selection?.userId === userId ? selection?.segmentId : segment));
   return <div className="page-content creator-workspace">
     <PageHeading title="我的工作台"><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
+    {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留发布时点，并保留操作记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放发布时点"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}

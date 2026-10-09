@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { RelayPublicationState } from "./relay-publication";
 import { workPublicationFieldsSchema, type WorkPublicationFields } from "./works";
 import type {
   ApplicationInterestFormat,
@@ -123,6 +124,7 @@ export type PortalProjectDraftSummary = {
 };
 
 export type PortalProjectDraftDetail = PortalProjectDraftSummary & WorkPublicationFields & {
+  releaseConfirmedAt: string | null;
   previewSummary: string | null;
   formatLabel: string | null;
   publicTags: string[];
@@ -184,6 +186,7 @@ export type PortalCurrentSegmentResponse = PortalExistingParticipantSummary & {
 
 export type PortalProjectResponse = PortalExistingParticipantSummary & {
   draft: PortalProjectDraftDetail;
+  release: RelayPublicationState;
   windows: EventWindowSummary[];
 };
 

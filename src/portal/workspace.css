@@ -184,3 +184,23 @@
 @media (prefers-reduced-motion: reduce) {
   .creator-shell *, .creator-shell *::before, .creator-shell *::after { scroll-behavior: auto; transition: none; }
 }
+
+
+.relay-publication-notice {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  background: var(--color-surface-container);
+}
+.relay-publication-notice.is-due {
+  border-color: var(--color-primary);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+}
+.relay-publication-heading h2 { font-size: 1.25rem; font-weight: 600; }
+.relay-publication-heading p { margin-top: 0.35rem; }
+.relay-publication-form { display: grid; gap: 0.75rem; }
+.relay-publication-form .button { justify-self: start; }

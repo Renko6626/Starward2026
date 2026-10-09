@@ -4,8 +4,8 @@ import { normalizeOptionalText } from "./strings";
 export function resolvePortalProjectDraftSaveStatus(
   currentStatus: ProjectDraftStatus,
 ): ProjectDraftStatus {
-  if (currentStatus === "changes_requested") {
-    return "changes_requested";
+  if (currentStatus === "changes_requested" || currentStatus === "approved") {
+    return currentStatus;
   }
 
   return "draft";

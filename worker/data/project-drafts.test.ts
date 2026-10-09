@@ -79,7 +79,7 @@ class SqliteD1Database {
         id TEXT PRIMARY KEY,
         participant_id TEXT NOT NULL UNIQUE,
         segment_id TEXT,
-        work_type TEXT, cover_url TEXT, cover_alt TEXT, work_url TEXT, published_at TEXT,
+        work_type TEXT, cover_url TEXT, cover_alt TEXT, work_url TEXT, published_at TEXT, release_confirmed_at TEXT,
         preview_title TEXT,
         preview_summary TEXT,
         format_label TEXT,
@@ -160,7 +160,7 @@ function seedApprovedDraft(
     );
 }
 describe("updatePortalProjectPreview save guard", () => {
-  it("refuses to un-approve an admin-approved preview when the participant saves edits", async () => {
+  it("updates an approved preview while preserving approval", async () => {
     const db = new SqliteD1Database();
     const { updatePortalProjectPreview } = await import("./project-drafts");
     seedApprovedDraft(db, {
@@ -178,7 +178,7 @@ describe("updatePortalProjectPreview save guard", () => {
         },
       },
     );
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
     const row = db.sqlite
       .prepare(
         `SELECT preview_status, preview_title FROM project_drafts WHERE id = ?`,
@@ -188,11 +188,11 @@ describe("updatePortalProjectPreview save guard", () => {
       preview_title: string;
     };
     expect(row.preview_status).toBe("approved");
-    expect(row.preview_title).toBe("原标题");
+    expect(row.preview_title).toBe("改过的标题");
   });
 });
 describe("updatePortalProjectReview save guard", () => {
-  it("refuses to un-approve an admin-approved review when the participant saves edits", async () => {
+  it("updates approved review notes while preserving approval", async () => {
     const db = new SqliteD1Database();
     const { updatePortalProjectReview } = await import("./project-drafts");
     seedApprovedDraft(db, {
@@ -206,7 +206,7 @@ describe("updatePortalProjectReview save guard", () => {
         data: { contentNote: "改过的概述", contentWarnings: "改过的警示" },
       },
     );
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
     const row = db.sqlite
       .prepare(
         `SELECT review_status, content_note FROM project_drafts WHERE id = ?`,
@@ -216,6 +216,6 @@ describe("updatePortalProjectReview save guard", () => {
       content_note: string;
     };
     expect(row.review_status).toBe("approved");
-    expect(row.content_note).toBe("原概述");
+    expect(row.content_note).toBe("改过的概述");
   });
 });

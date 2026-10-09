@@ -10,10 +10,6 @@ type PublicWorkRow = Omit<PublicWork, "publicTags" | "observationNumber"> & { ta
 
 // Public reads deliberately select only display fields, never review or contact details.
 export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
-  const timing = await db.prepare(`SELECT MAX(julianday(s.scheduled_at)) AS lastTime
-    FROM schedule_segments s JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
-    WHERE s.kind = 'standard'`).first<{ lastTime: number | null }>();
-  if (timing?.lastTime && timing.lastTime > Date.now() / 86400000 + 2440587.5) return [];
   const { results } = await db.prepare(`SELECT
     d.id, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,

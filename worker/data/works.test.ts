@@ -77,14 +77,18 @@ describe("public work publication", () => {
     expect(events.map(event => event.event_type)).toEqual(["work_published", "work_unpublished"]);
   });
 
-  it("requires withdrawal before review changes and allows editing after changes are requested", async () => {
+  it("allows approved public edits and requires withdrawal before changing review status", async () => {
     openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
     const change = { previewStatus: "changes_requested" as const, reviewStatus: "approved" as const };
     expect(await updateAdminProjectDraftReview(db, draftId, change, actor)).toMatchObject({ ok: false, code: "work_published" });
     const participant = (await getParticipantByUserId(db, "usr_seed_active"))!;
-    expect(await updatePortalProjectPreview(db, { participant, data: { previewTitle: "changed" } })).toMatchObject({ ok: false, code: "preview_already_approved" });
+    expect(await updatePortalProjectPreview(db, { participant, data: {
+      previewTitle: "changed", previewSummary: "updated summary", formatLabel: "小说", workType: "text",
+    } })).toMatchObject({ ok: true, draft: { previewStatus: "approved" } });
+    expect(await getPublicWork(db, draftId)).toMatchObject({ work: { previewTitle: "changed", workUrl: "https://example.com/story" } });
     await setWorkPublication(db, draftId, false, actor);
     expect(await updateAdminProjectDraftReview(db, draftId, change, actor)).toMatchObject({ ok: true });
+    database.sqlite.prepare("UPDATE schedule_segments SET scheduled_at = ? WHERE current_participant_id = 'part_seed_active'").run(new Date().toISOString());
     const saved = await updatePortalProjectPreview(db, { participant, data: {
       previewTitle: "新的观测", previewSummary: "简介", workType: "illustration", workUrl: "https://example.com/new",
       coverUrl: "https://example.com/cover.webp", coverAlt: "夜空", formatLabel: "插画", publicTags: ["秘封"],
@@ -186,13 +190,13 @@ describe("public relay timetable", () => {
     expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, preview: null });
   });
 
-  it("gates published details until the last instant and retains chronological slots afterwards", async () => {
+  it("exposes published details during the relay and retains chronological slots afterwards", async () => {
     openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec(`UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00.000Z';
       UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
-    expect(await listPublicWorks(db)).toEqual([]);
-    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(404);
+    expect((await listPublicWorks(db)).map(work => work.id)).toEqual([draftId]);
+    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(200);
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE current_participant_id = 'part_seed_active'");
     expect(await getPublicWork(db, draftId)).not.toBeNull();
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '1999-12-31T23:00:00.000Z' WHERE current_participant_id = 'part_seed_active'");

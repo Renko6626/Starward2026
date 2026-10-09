@@ -65,7 +65,7 @@ export function ApplyPage() {
           <dl className="participation-followup">
             <div><dt>认领发布时段</dt><dd>报名时选择空闲时段，提交成功后预留；审核未通过或撤回报名后释放。通过后可在调整窗口内换期。</dd></div>
             <div><dt>补充作品资料</dt><dd>按开放安排提交预告资料与审查说明，根据反馈完善内容。</dd></div>
-            <div><dt>按日程发布作品</dt><dd>在约定的时段发布。作品资料、审核进度与发布日程，都可以回到工作台查看。</dd></div>
+            <div><dt>按日程发布作品</dt><dd>在约定的时段发布，并在当天回到工作台填写作品链接、确认已发布。审核通过的作品会直接公开，链接之后仍可修改。</dd></div>
           </dl>
         </section>
         <section className="participation-section" aria-labelledby="participation-before-title">

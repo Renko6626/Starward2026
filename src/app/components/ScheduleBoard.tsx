@@ -138,7 +138,7 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
     <div className="ops-detail-actions">
       {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link> : null}
       {actions !== undefined ? actions : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} search={{ segment: mine ? "" : entry.id }} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "选择这个时点并报名"}</Link> : null}
-      {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作品详情在接力结束后开放。"}</p>}
+      {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作者确认发布且资料审核通过后，作品详情会在这里开放。"}</p>}
     </div>
   </section>;
 }

@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { publicHttpsUrlSchema } from "../../src/shared/works";
+import { confirmPortalProjectRelease, getPortalReleaseState } from "../data/relay-publication";
 import { Resend } from "resend";
 import {
   workspaceApplicationInputSchema,
@@ -767,10 +769,22 @@ portalApi.get("/project", async (c) => {
       access.session.user.id,
     ),
     draft,
+    release: await getPortalReleaseState(access.db, access.participant.id),
     windows,
   };
 
   return c.json(response);
+});
+
+portalApi.post("/project/release", async (c) => {
+  const access = await getProjectWorkspaceAccess(c);
+  if ("response" in access) return access.response;
+  const body = await c.req.json().catch(() => null);
+  const parsed = publicHttpsUrlSchema.safeParse(body?.workUrl);
+  if (!parsed.success) return jsonError(c, 422, "invalid_work_url", "请填写有效的 HTTPS 作品链接。");
+  const result = await confirmPortalProjectRelease(access.db, { participant: access.participant, workUrl: parsed.data });
+  if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+  return c.json(result);
 });
 
 portalApi.patch("/project/preview", async (c) => {

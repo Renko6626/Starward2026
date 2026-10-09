@@ -45,7 +45,7 @@ version. Users complete their profile again; local fixtures use the new schema.
 fields to existing drafts without replacing existing data. Existing works remain
 unpublished. Apply this migration with the works gallery version. The public release
 window controls new publication only; closing it does not remove the archive.
-Unpublish a work before returning approved material for edits.
+Approved material remains editable by its author; changes preserve approval. Unpublish before an admin changes review status.
 
 ## Collaboration and reservations
 
@@ -74,8 +74,7 @@ with the compact creator workspace version.
 schedule entry. Admins set one publication instant per relay entry (Beijing time
 in the editor, UTC ISO timestamps in storage). No start/end interval is needed.
 Apply this migration with the public timetable version; existing times stay unset.
-Approved previews appear before the relay. Formal works remain gated until the
-last configured publication instant, then follow the existing admin publication rules.
+Approved previews appear before the relay. With migration 0018, confirmed and approved works become visible immediately; other authors' future slots do not gate released details.
 
 ## Extra schedule slots
 
@@ -84,6 +83,19 @@ schedule records. Existing entries remain `standard`; an extra slot must have no
 planned publication time. The admin append endpoint creates independently numbered
 `EXTRA-01` slots without changing existing entries or ownership.
 Apply the migration before running this application version, using the normal D1
-migration flow. Extra and unconfigured entries no longer prevent completion or
-archive visibility; only future configured standard publication times gate the archive.
-Review approvals and the existing admin publication window still control publishing.
+migration flow. Extra and unconfigured entries do not prevent completion or archive visibility.
+Review approvals still control publishing; the existing admin publication window only controls manual admin publication.
+
+## Author release confirmation
+
+`0018_relay_release_confirmation.sql` adds nullable `release_confirmed_at` without
+changing existing rows. Apply it before deploying this version. First link submission
+on the scheduled Beijing calendar day records author confirmation atomically with
+the link. Approved, complete works become public immediately, independently of the
+manual admin release window and the final relay time. Pending works are published
+when their review completes. Later valid link edits preserve the first confirmation
+time. Ordinary edits preserve approval and do not notify reviewers. Admin withdrawal
+retains author confirmation, and link edits do not reverse that withdrawal.
+
+Extra slots have no planned time and continue to use manual admin publication.
+No remote migration or deployment is performed by local validation commands.

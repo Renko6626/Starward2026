@@ -58,6 +58,16 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
       return "已保存审查说明草稿。";
     case "review_submitted":
       return "已提交审查说明，等待主催查看。";
+    case "work_auto_published":
+      return "作品资料已通过，已自动公开。";
+    case "work_release_confirmed":
+      return "你已填写作品链接并确认发布。";
+    case "work_link_updated":
+      return "你更新了作品链接，首次发布确认时间保留。";
+    case "project_preview_saved":
+      return "已保存作品预告信息。";
+    case "project_review_saved":
+      return "已保存审查说明。";
     case "work_published":
       return "主催将你的作品发布到观测集。";
     case "work_unpublished":

@@ -9,6 +9,7 @@ import type {
   UpdatePortalProjectPreviewInput,
   UpdatePortalProjectReviewInput,
 } from "../../src/shared/portal";
+import { confirmPortalProjectRelease, publishConfirmedProjectIfReady } from "./relay-publication";
 import type { EventWindowSummary } from "../../src/shared/windows";
 import { resolveAdminProjectDraftReviewUpdate } from "../lib/project-draft-admin";
 import {
@@ -28,6 +29,7 @@ type ProjectDraftRow = {
   cover_alt: string | null;
   work_url: string | null;
   published_at: string | null;
+  release_confirmed_at: string | null;
   id: string;
   participant_id: string;
   participant_name: string;
@@ -127,14 +129,15 @@ export async function updateAdminProjectDraftReview(
   });
 
   if (!resolved.hasChanges) {
+    await publishConfirmedProjectIfReady(db, draftId);
     return {
       ok: true,
-      draft: existing,
+      draft: (await getAdminProjectDraftDetail(db, draftId))!,
       message: `资料 ${existing.participantName} 没有变更。`,
     };
   }
 
-  await db.batch([
+  const results = await db.batch([
     db
       .prepare(
         `UPDATE project_drafts
@@ -144,7 +147,9 @@ export async function updateAdminProjectDraftReview(
              reviewed_at = ?,
              reviewed_by = ?,
              updated_at = ?
-         WHERE id = ?`,
+         WHERE id = ? AND updated_at = ? AND preview_status = ? AND review_status = ?
+           AND release_confirmed_at IS ? AND work_url IS ? AND work_type IS ?
+           AND preview_title IS ? AND preview_summary IS ? AND published_at IS ?`,
       )
       .bind(
         resolved.nextPreviewStatus,
@@ -153,7 +158,9 @@ export async function updateAdminProjectDraftReview(
         resolved.reviewedAt,
         resolved.reviewedBy,
         now,
-        draftId,
+        draftId, existing.updatedAt, existing.previewStatus, existing.reviewStatus,
+        existing.releaseConfirmedAt, existing.workUrl, existing.workType,
+        existing.previewTitle, existing.previewSummary, existing.publishedAt,
       ),
     db
       .prepare(
@@ -167,7 +174,7 @@ export async function updateAdminProjectDraftReview(
           target_id,
           payload_json,
           created_at
-        ) VALUES (?, ?, 'admin', ?, 'project_draft_admin_reviewed', 'project_draft', ?, ?, ?)`,
+        ) SELECT ?, ?, 'admin', ?, 'project_draft_admin_reviewed', 'project_draft', ?, ?, ? WHERE changes() = 1`,
       )
       .bind(
         createPrefixedId("pevt"),
@@ -183,6 +190,8 @@ export async function updateAdminProjectDraftReview(
       ),
   ]);
 
+  if (results[0].meta.changes !== 1) return { ok: false, status: 409, code: "project_changed", message: "作品资料已变化，请刷新后重新审核。" };
+  await publishConfirmedProjectIfReady(db, draftId);
   const draft = await getAdminProjectDraftDetail(db, draftId);
 
   if (!draft) {
@@ -226,22 +235,19 @@ export async function updatePortalProjectPreview(
     );
   }
 
-  // An approved preview is terminal for the participant: only an admin requesting
-  // changes (status -> changes_requested) reopens it. Without this guard a save
-  // silently recomputes the status back to 'draft', un-approving admin-approved
-  // work with no window gating.
-  if (existing.preview_status === "approved") {
-    return projectDraftMutationError(
-      409,
-      "preview_already_approved",
-      "预告资料当前已通过，暂不可修改，如需调整请联系主催。",
-    );
+  if (input.data.workUrl !== undefined && input.data.workUrl.trim()) {
+    return confirmPortalProjectRelease(db, {
+      participant: input.participant, workUrl: input.data.workUrl, preview: input.data,
+    });
+  }
+  if (input.data.workUrl !== undefined && existing.release_confirmed_at) {
+    return projectDraftMutationError(422, "invalid_work_url", "已确认发布的作品链接不能清空，请填写新的 HTTPS 链接。");
   }
 
   const nextWorkType = input.data.workType ?? null;
   const nextCoverUrl = normalizeOptionalText(input.data.coverUrl);
   const nextCoverAlt = normalizeOptionalText(input.data.coverAlt);
-  const nextWorkUrl = normalizeOptionalText(input.data.workUrl);
+  const nextWorkUrl = input.data.workUrl === undefined ? existing.work_url : normalizeOptionalText(input.data.workUrl);
   const nextPreviewTitle = normalizeOptionalText(input.data.previewTitle);
   const nextPreviewSummary = normalizeOptionalText(input.data.previewSummary);
   const nextFormatLabel = normalizeOptionalText(input.data.formatLabel);
@@ -265,37 +271,40 @@ export async function updatePortalProjectPreview(
     existing.preview_status !== nextPreviewStatus;
 
   if (!hasChanges) {
+    await publishConfirmedProjectIfReady(db, existing.id);
     return {
       ok: true,
-      draft: mapPortalProjectDraftDetail(existing),
+      draft: (await getPortalProjectDraftDetail(db, input.participant.id))!,
       message: "预告信息没有变更。",
     };
   }
 
   const now = nowIso();
 
-  await db.batch([
+  const results = await db.batch([
     db
       .prepare(
         `UPDATE project_drafts
-         SET work_type = ?, cover_url = ?, cover_alt = ?, work_url = ?,
+         SET work_type = ?, cover_url = ?, cover_alt = ?, work_url = CASE WHEN ? THEN ? ELSE work_url END,
              preview_title = ?,
              preview_summary = ?,
              format_label = ?,
              public_tags_json = ?,
              preview_status = ?,
              updated_at = ?
-         WHERE participant_id = ?`,
+         WHERE participant_id = ? AND updated_at = ? AND preview_status = ? AND review_status = ?
+           AND release_confirmed_at IS ? AND work_url IS ?`,
       )
       .bind(
-        nextWorkType, nextCoverUrl, nextCoverAlt, nextWorkUrl,
+        nextWorkType, nextCoverUrl, nextCoverAlt, input.data.workUrl !== undefined ? 1 : 0, nextWorkUrl,
         nextPreviewTitle,
         nextPreviewSummary,
         nextFormatLabel,
         nextPublicTags.length > 0 ? JSON.stringify(nextPublicTags) : null,
         nextPreviewStatus,
         now,
-        input.participant.id,
+        input.participant.id, existing.updated_at, existing.preview_status, existing.review_status,
+        existing.release_confirmed_at, existing.work_url,
       ),
     buildParticipantEventInsert(db, {
       participantId: input.participant.id,
@@ -309,6 +318,8 @@ export async function updatePortalProjectPreview(
     }),
   ]);
 
+  if (results[0].meta.changes !== 1) return projectDraftMutationError(409, "project_changed", "作品资料已变化，请刷新后重试。你的填写内容仍保留在页面上。");
+  await publishConfirmedProjectIfReady(db, existing.id);
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
@@ -322,7 +333,7 @@ export async function updatePortalProjectPreview(
   return {
     ok: true,
     draft,
-    message: "已保存预告信息草稿。",
+    message: "已保存预告信息。",
   };
 }
 
@@ -445,16 +456,6 @@ export async function updatePortalProjectReview(
     );
   }
 
-  // See updatePortalProjectPreview: an approved review must not be silently
-  // reverted to 'draft' through the unguarded save path.
-  if (existing.review_status === "approved") {
-    return projectDraftMutationError(
-      409,
-      "review_already_approved",
-      "审查说明当前已通过，暂不可修改，如需调整请联系主催。",
-    );
-  }
-
   const nextContentNote = normalizeOptionalText(input.data.contentNote);
   const nextContentWarnings = normalizeOptionalText(input.data.contentWarnings);
   const nextReviewNote = normalizeOptionalText(input.data.reviewNote);
@@ -469,16 +470,17 @@ export async function updatePortalProjectReview(
     existing.review_status !== nextReviewStatus;
 
   if (!hasChanges) {
+    await publishConfirmedProjectIfReady(db, existing.id);
     return {
       ok: true,
-      draft: mapPortalProjectDraftDetail(existing),
+      draft: (await getPortalProjectDraftDetail(db, input.participant.id))!,
       message: "审查说明没有变更。",
     };
   }
 
   const now = nowIso();
 
-  await db.batch([
+  const results = await db.batch([
     db
       .prepare(
         `UPDATE project_drafts
@@ -487,7 +489,8 @@ export async function updatePortalProjectReview(
              review_note = ?,
              review_status = ?,
              updated_at = ?
-         WHERE participant_id = ?`,
+         WHERE participant_id = ? AND updated_at = ? AND preview_status = ? AND review_status = ?
+           AND release_confirmed_at IS ? AND work_url IS ?`,
       )
       .bind(
         nextContentNote,
@@ -495,7 +498,8 @@ export async function updatePortalProjectReview(
         nextReviewNote,
         nextReviewStatus,
         now,
-        input.participant.id,
+        input.participant.id, existing.updated_at, existing.preview_status, existing.review_status,
+        existing.release_confirmed_at, existing.work_url,
       ),
     buildParticipantEventInsert(db, {
       participantId: input.participant.id,
@@ -509,6 +513,8 @@ export async function updatePortalProjectReview(
     }),
   ]);
 
+  if (results[0].meta.changes !== 1) return projectDraftMutationError(409, "project_changed", "作品资料已变化，请刷新后重试。你的填写内容仍保留在页面上。");
+  await publishConfirmedProjectIfReady(db, existing.id);
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
@@ -522,7 +528,7 @@ export async function updatePortalProjectReview(
   return {
     ok: true,
     draft,
-    message: "已保存审查说明草稿。",
+    message: "已保存审查说明。",
   };
 }
 
@@ -705,6 +711,7 @@ function mapAdminProjectDraftDetail(
     coverAlt: row.cover_alt,
     workUrl: row.work_url,
     publishedAt: row.published_at,
+    releaseConfirmedAt: row.release_confirmed_at,
     previewTitle: row.preview_title,
     previewSummary: row.preview_summary,
     publicAuthorName: row.public_author_name,
@@ -734,6 +741,7 @@ function mapPortalProjectDraftDetail(
     coverAlt: row.cover_alt,
     workUrl: row.work_url,
     publishedAt: row.published_at,
+    releaseConfirmedAt: row.release_confirmed_at,
     previewTitle: row.preview_title,
     previewSummary: row.preview_summary,
     publicAuthorName: row.public_author_name,
@@ -773,7 +781,7 @@ function buildParticipantEventInsert(
         target_id,
         payload_json,
         created_at
-      ) VALUES (?, ?, 'participant', ?, ?, 'project_draft', ?, ?, ?)`,
+      ) SELECT ?, ?, 'participant', ?, ?, 'project_draft', ?, ?, ? WHERE changes() = 1`,
     )
     .bind(
       createPrefixedId("pevt"),
@@ -853,6 +861,7 @@ const projectDraftSelectSql = `SELECT
   project_drafts.cover_alt,
   project_drafts.work_url,
   project_drafts.published_at,
+  project_drafts.release_confirmed_at,
   project_drafts.preview_title,
   project_drafts.preview_summary,
   CASE WHEN portal_profiles.is_anonymous = 1 THEN '匿名' ELSE portal_profiles.credit_name END AS public_author_name,

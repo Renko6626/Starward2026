@@ -336,3 +336,12 @@ Last updated: 2026-04-12
 - [participant-account-system.md](../accounts/participant-account-system.md)
 - [data-api.md](./data-api.md)
 - [scope.md](../../delivery/phase-1/scope.md)
+
+## 2026-10-10：作品修改与发布确认
+
+当前报名与作品资料集中在 `/portal`，时间表与换期入口为 `/works`。
+所有作品字段在审核通过后仍可直接修改，保留审核结果，不通知审查人员。
+距自己的发布时刻七天以内，工作台顶部醒目提醒；发布当天（北京时间）填写
+HTTPS 作品链接并确认。第一次提交即记录确认，之后修改链接保留首次确认时间。
+预告与审查通过、公开资料完整后自动公开，无需下一棒确认或主催重复收录。
+没有配置发布时间或超过当天尚未确认时，联系主催协调。

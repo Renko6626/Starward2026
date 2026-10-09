@@ -12,7 +12,7 @@ describe("resolvePortalProjectDraftSaveStatus", () => {
 
     expect(module.resolvePortalProjectDraftSaveStatus("not_started")).toBe("draft");
     expect(module.resolvePortalProjectDraftSaveStatus("submitted")).toBe("draft");
-    expect(module.resolvePortalProjectDraftSaveStatus("approved")).toBe("draft");
+    expect(module.resolvePortalProjectDraftSaveStatus("approved")).toBe("approved");
   });
 
   it("keeps changes_requested until the participant explicitly resubmits", async () => {

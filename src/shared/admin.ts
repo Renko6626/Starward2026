@@ -162,6 +162,7 @@ export type AdminProjectDraftListResponse = {
 };
 
 export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFields & {
+  releaseConfirmedAt: string | null;
   participantInviteEmail: string;
   participantContactHandle: string | null;
   participantStatus: ParticipantPortalStatus;

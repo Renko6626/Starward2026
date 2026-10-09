@@ -32,7 +32,6 @@ type PreviewFormState = {
   workType: WorkType | "";
   coverUrl: string;
   coverAlt: string;
-  workUrl: string;
   previewTitle: string;
   previewSummary: string;
   formatLabel: string;
@@ -155,7 +154,6 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
           workType: previewForm.workType || null,
           coverUrl: previewForm.coverUrl,
           coverAlt: previewForm.coverAlt,
-          workUrl: previewForm.workUrl,
           previewTitle: previewForm.previewTitle,
           previewSummary: previewForm.previewSummary,
           formatLabel: previewForm.formatLabel,
@@ -376,7 +374,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
         </Notice>
       ) : null}
 
-      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "作品尚未公开。资料审核通过并由主催发布后，将出现在观测集中。"}</Notice>
+      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "作品尚未公开。发布当天提交链接确认，资料审核通过后会自动公开。"}</Notice>
       <details className="compact-editor" open={compact ? undefined : true}><summary>编辑作品资料</summary>
       <div className={compact ? "space-y-6" : "grid grid-cols-1 xl:grid-cols-2 gap-6"}>
         <section className={compact ? "space-y-6" : "panel space-y-6"}>
@@ -398,7 +396,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="预告标题">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -419,29 +417,26 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             </div>
 
             <Field label="作品类型">
-              <select className={inputClassName} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+              <select className={inputClassName} disabled={pendingAction !== null}
                 value={previewForm.workType} onChange={event => setPreviewForm(current => ({ ...current, workType: event.target.value as WorkType | "" }))}>
                 <option value="">请选择作品类型</option>
                 {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </Field>
-            <Field label="正式作品链接" hint="填写读者可直接访问的 HTTPS 作品地址，可先留空，发布前补齐。">
-              <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
-                value={previewForm.workUrl} placeholder="https://…" onChange={event => setPreviewForm(current => ({ ...current, workUrl: event.target.value }))} />
-            </Field>
+            <p className="field-hint">作品链接在工作台顶部的发布确认区填写。首次提交后仍可修改。</p>
             <Field label="封面地址（选填）" hint="填写可公开访问的 HTTPS 图片地址。不填时以标题和简介展示。">
-              <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+              <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null}
                 value={previewForm.coverUrl} placeholder="https://…" onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
             </Field>
             <Field label="封面描述（选填）">
-              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null}
                 value={previewForm.coverAlt} onChange={event => setPreviewForm(current => ({ ...current, coverAlt: event.target.value }))} />
             </Field>
 
             <Field label="作品形式">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -457,7 +452,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="公开标签" hint="用逗号、顿号或换行分隔。">
               <input
                 className={inputClassName}
-                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -472,7 +467,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="预告简介">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setPreviewForm((current) => ({
                     ...current,
@@ -487,15 +482,15 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
           <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
             <Button variant="secondary"
-              disabled={pendingAction !== null || state.project.draft.previewStatus === "approved"}
+              disabled={pendingAction !== null}
               aria-busy={pendingAction === "preview-save"}
               onClick={() => void handlePreviewSave()}
               type="button"
             >
-              {pendingAction === "preview-save" ? "保存中..." : "保存预告草稿"}
+              {pendingAction === "preview-save" ? "保存中…" : "保存预告信息"}
             </Button>
-            <Button
-              disabled={pendingAction !== null || !flags.previewSubmitOpen || state.project.draft.previewStatus === "approved"}
+            {state.project.draft.previewStatus !== "approved" ? <Button
+              disabled={pendingAction !== null || !flags.previewSubmitOpen}
               aria-busy={pendingAction === "preview-submit"}
               onClick={() => void handlePreviewSubmit()}
               type="button"
@@ -503,12 +498,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               {pendingAction === "preview-submit"
                 ? "提交中..."
                 : "提交预告资料"}
-            </Button>
+            </Button> : null}
           </div>
 
           <p className="text-sm text-on-surface-variant">
             {state.project.draft.previewStatus === "approved"
-              ? "预告已通过审核。如需修改，请联系主催退回；已发布作品需先撤下。"
+              ? "预告已通过审核，修改后直接保存即可。公开资料会同步更新。"
               : flags.previewSubmitOpen
               ? "当前可以提交预告资料。"
               : "当前只可先保存草稿。"}
@@ -532,7 +527,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="内容概述">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -547,7 +542,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="内容警示">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -562,7 +557,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             <Field label="给主催的补充说明">
               <textarea
                 className={textareaClassName}
-                disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
+                disabled={pendingAction !== null}
                 onChange={(event) =>
                   setReviewForm((current) => ({
                     ...current,
@@ -577,26 +572,26 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
           <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
             <Button variant="secondary"
-              disabled={pendingAction !== null || state.project.draft.reviewStatus === "approved"}
+              disabled={pendingAction !== null}
               aria-busy={pendingAction === "review-save"}
               onClick={() => void handleReviewSave()}
               type="button"
             >
-              {pendingAction === "review-save" ? "保存中..." : "保存审查草稿"}
+              {pendingAction === "review-save" ? "保存中…" : "保存审查说明"}
             </Button>
-            <Button
-              disabled={pendingAction !== null || !flags.reviewSubmitOpen || state.project.draft.reviewStatus === "approved"}
+            {state.project.draft.reviewStatus !== "approved" ? <Button
+              disabled={pendingAction !== null || !flags.reviewSubmitOpen}
               aria-busy={pendingAction === "review-submit"}
               onClick={() => void handleReviewSubmit()}
               type="button"
             >
               {pendingAction === "review-submit" ? "提交中..." : "提交审查说明"}
-            </Button>
+            </Button> : null}
           </div>
 
           <p className="text-sm text-on-surface-variant">
             {state.project.draft.reviewStatus === "approved"
-              ? "审查说明已通过，如需修改请联系主催退回。"
+              ? "审查说明已通过，修改后直接保存即可。"
               : flags.reviewSubmitOpen
               ? "当前可以提交审查说明。"
               : "当前只可先保存草稿。"}
@@ -615,7 +610,6 @@ const emptyPreviewForm: PreviewFormState = {
   workType: "",
   coverUrl: "",
   coverAlt: "",
-  workUrl: "",
   previewTitle: "",
   previewSummary: "",
   formatLabel: "",
@@ -633,7 +627,6 @@ function buildPreviewForm(draft: PortalProjectDraftDetail): PreviewFormState {
     workType: draft.workType ?? "",
     coverUrl: draft.coverUrl ?? "",
     coverAlt: draft.coverAlt ?? "",
-    workUrl: draft.workUrl ?? "",
     previewTitle: draft.previewTitle ?? "",
     previewSummary: draft.previewSummary ?? "",
     formatLabel: draft.formatLabel ?? "",
