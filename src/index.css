@@ -1822,3 +1822,28 @@
 
 /* Workspaces use the same text families with sans-serif interface headings. */
 .workspace { --font-headline: var(--font-body); --font-editorial: var(--font-body); }
+
+/* Compact organizer pages keep operational information visible on small screens. */
+.admin-work-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  color: var(--color-on-surface-variant);
+  font-size: 14px;
+}
+.admin-work-summary strong { color: var(--color-on-surface); }
+.admin-detail-grid { display: grid; gap: 24px; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+.admin-detail-grid > div { min-width: 0; }
+.admin-disclosure > summary { cursor: pointer; font-weight: 500; }
+.admin-disclosure > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 5px; }
+.admin-segment-row > summary { display: grid; grid-template-columns: minmax(120px, 1.3fr) minmax(140px, 1fr) minmax(100px, 1fr) auto; align-items: center; gap: 12px; }
+.admin-segment-row > summary::after { content: "展开编辑"; color: var(--color-on-surface-variant); font-size: 13px; grid-column: 1 / -1; }
+.admin-segment-row[open] > summary::after { content: "收起编辑"; }
+@media (min-width: 801px) { .admin-creators-table .mobile-field-label { display: none; } }
+@media (max-width: 1000px) { .admin-detail-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) {
+  .admin-creators-table td:first-child, .admin-creators-table td:nth-child(4) { grid-column: 1 / -1; }
+  .admin-segment-row > summary { grid-template-columns: minmax(0, 1fr) auto; }
+  .admin-segment-row > summary > span { overflow-wrap: anywhere; }
+  .admin-segment-row > summary > span:first-child { grid-column: 1 / -1; }
+}

@@ -1,191 +1,62 @@
-import { Link } from "@tanstack/react-router";
+import { Link, getRouteApi } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  CheckCircle2,
-  Clock,
-  Search,
-  XCircle,
-} from "../../app/components/icons";
-import { ReadError, MetricCard, PageHeading, StateNotice } from "../../app/components/ui";
+import { ReadError, PageHeading, StateNotice, StatusBadge } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
-import {
-  adminParticipantStatusLabels,
-  type AdminParticipantListResponse,
-} from "../../shared/admin";
+import { formatScheduledTime } from "../../app/lib/format";
+import { cn } from "../../app/lib/cn";
+import { adminParticipantStatusLabels, type AdminParticipantListResponse, type AdminProjectDraftListResponse, type AdminSegmentListResponse } from "../../shared/admin";
+import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationListResponse } from "../../shared/applications";
+import { buildCreatorRows, filterCreatorRows } from "../lib/creator-list";
+
+type Payload = { participants: AdminParticipantListResponse["items"]; applications: AdminApplicationListResponse["items"]; segments: AdminSegmentListResponse["items"]; drafts: AdminProjectDraftListResponse["items"] };
 
 export function AdminParticipantsPage() {
+  const { view } = getRouteApi("/admin/participants/").useSearch();
   const [query, setQuery] = useState("");
-  const [state, setState] = useState<
-    | { status: "loading" }
-    | { status: "ready"; payload: AdminParticipantListResponse }
-    | { status: "error"; message: string }
-  >({ status: "loading" });
-
+  const [state, setState] = useState<{ status: "loading" } | { status: "error"; message: string } | { status: "ready"; payload: Payload }>({ status: "loading" });
   useEffect(() => {
-    void requestJson<AdminParticipantListResponse>("/api/admin/participants")
-      .then((payload) => setState({ status: "ready", payload }))
-      .catch((error: Error) =>
-        setState({
-          status: "error",
-          message: error.message || "无法读取参与者列表。",
-        }),
-      );
+    let cancelled = false;
+    void Promise.all([
+      requestJson<AdminParticipantListResponse>("/api/admin/participants"),
+      requestJson<AdminApplicationListResponse>("/api/admin/applications"),
+      requestJson<AdminSegmentListResponse>("/api/admin/segments"),
+      requestJson<AdminProjectDraftListResponse>("/api/admin/project-drafts"),
+    ]).then(([participants, applications, segments, drafts]) => {
+      if (!cancelled) setState({ status: "ready", payload: { participants: participants.items, applications: applications.items, segments: segments.items, drafts: drafts.items } });
+    }).catch((error: Error) => { if (!cancelled) setState({ status: "error", message: error.message || "无法读取参与者列表。" }); });
+    return () => { cancelled = true; };
   }, []);
-
-  const items =
-    state.status === "ready"
-      ? state.payload.items.filter((item) =>
-          [item.displayName, item.inviteEmail, item.currentSegmentCode ?? ""]
-            .join("\n")
-            .toLowerCase()
-            .includes(query.trim().toLowerCase()),
-        )
-      : [];
-
-  const activeCount =
-    state.status === "ready"
-      ? state.payload.items.filter(
-          (item) => item.status === "approved" || item.status === "completed",
-        ).length
-      : 0;
-
-  return (
-    <div className="page-content">
-      <PageHeading
-        title={<>创作者名册</>}
-      >
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-            <input
-              className="field-input search-input"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索姓名、邮箱或时间段..."
-              aria-label="搜索列表"
-              type="search"
-              value={query}
-            />
-          </div>
-        </div>
-      </PageHeading>
-
-      {state.status === "ready" ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <MetricCard
-            label="总参与者数"
-            value={String(state.payload.items.length)}
-          />
-          <MetricCard label="已批准 / 已完成" value={String(activeCount)} />
-          <MetricCard label="当前搜索结果" value={String(items.length)} />
-        </div>
-      ) : null}
-
-      {state.status === "loading" ? (
-        <StateNotice message="正在读取参与者列表。" />
-      ) : null}
-      {state.status === "error" ? (
-        <ReadError message={state.message} />
-      ) : null}
-      {state.status === "ready" && state.payload.items.length === 0 ? (
-        <StateNotice message="还没有创作者记录。创作者建立账号后会显示在这里。" />
-      ) : null}
-      {state.status === "ready" &&
-      state.payload.items.length > 0 &&
-      items.length === 0 ? (
-        <StateNotice message="当前检索条件没有命中任何参与者。" />
-      ) : null}
-
-      {state.status === "ready" && items.length > 0 ? (
-        <div className="table-frame">
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-label="数据列表"
-          >
-            <table className="data-table admin-compact-table admin-participants-table">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 font-medium">参与者</th>
-                  <th className="px-4 py-3 font-medium">状态</th>
-                  <th className="px-4 py-3 font-medium">当前时间段</th>
-                  <th className="px-4 py-3 font-medium">最近更新</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/50">
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-surface-variant/30 transition-colors group"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-on-surface">
-                        {item.displayName}
-                      </div>
-                      <div className="text-sm text-on-surface-variant">
-                        {item.inviteEmail}
-                      </div>
-                      <div className="text-sm text-on-surface-variant">
-                        {item.contactHandle ?? "未填写联系备注"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <ParticipantStatusBadge status={item.status} />
-                    </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      {item.currentSegmentCode ?? "暂无"}
-                    </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      {formatDateTime(item.updatedAt)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        className="inline-flex min-h-10 items-center justify-center gap-2 px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-base hover:bg-surface-bright transition-colors"
-                        params={{ participantId: item.id }}
-                        to="/admin/participants/$participantId"
-                      >
-                        查看详情
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function ParticipantStatusBadge({
-  status,
-}: {
-  status: AdminParticipantListResponse["items"][number]["status"];
-}) {
-  if (status === "approved" || status === "completed") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-sm font-medium">
-        <CheckCircle2 className="w-3.5 h-3.5" />{" "}
-        {adminParticipantStatusLabels[status]}
-      </span>
-    );
-  }
-
-  if (status === "withdrawn") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-sm font-medium">
-        <XCircle className="w-3.5 h-3.5" />{" "}
-        {adminParticipantStatusLabels[status]}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-sm font-medium">
-      <Clock className="w-3.5 h-3.5" /> {adminParticipantStatusLabels[status]}
-    </span>
-  );
+  const rows = state.status === "ready" ? buildCreatorRows(state.payload.participants, state.payload.applications) : [];
+  const pending = rows.filter(row => row.application?.status === "pending").length;
+  const items = filterCreatorRows(rows, view, query);
+  const reviewCount = state.status === "ready" ? state.payload.drafts.filter(item => item.previewStatus === "submitted" || item.reviewStatus === "submitted").length : 0;
+  return <div className="page-content">
+    <PageHeading title="参与者管理">
+      <input className="field-input search-input" type="search" aria-label="搜索参与者" placeholder="搜索姓名、邮箱、联系方式或时点" value={query} onChange={event => setQuery(event.target.value)} />
+    </PageHeading>
+    {state.status === "ready" ? <div className="admin-work-summary">
+      <span>待审核报名 <strong>{pending}</strong></span>
+      <Link to="/admin/project-drafts">待审核作品 <strong>{reviewCount}</strong></Link>
+      <Link to="/admin/schedule">尚未分配时点的已通过创作者 <strong>{state.payload.participants.filter(item => ["approved", "completed"].includes(item.status) && !item.currentSegmentCode).length}</strong></Link>
+    </div> : null}
+    <nav className="flex flex-wrap gap-2" aria-label="参与者筛选">
+      {(["pending", "all"] as const).map(value => <Link key={value} to="/admin/participants" search={{ view: value }} aria-current={view === value ? "page" : undefined} className={cn("button button--secondary", view === value && "bg-primary/10 text-primary border-primary/30")}>{value === "pending" ? `待审核 (${pending})` : `全部创作者 (${rows.length})`}</Link>)}
+    </nav>
+    {state.status === "loading" ? <StateNotice message="正在读取参与者列表。" /> : null}
+    {state.status === "error" ? <ReadError message={state.message} /> : null}
+    {state.status === "ready" && !items.length ? <StateNotice message={query ? "没有匹配的参与者，请调整搜索词。" : view === "pending" ? "当前没有待审核报名。全部创作者中可查看未报名账号及已处理记录。" : "当前还没有创作者记录。"} /> : null}
+    {items.length ? <div className="table-frame"><div className="table-scroll" role="region" tabIndex={0} aria-label="参与者列表">
+      <table className="data-table admin-compact-table admin-creators-table"><thead><tr><th>创作者</th><th>参加形式</th><th>发布时点</th><th>状态</th><th>操作</th></tr></thead><tbody>
+        {items.map(({ key, participant, application }) => {
+          const segment = state.status === "ready" && participant ? state.payload.segments.find(item => item.currentParticipantId === participant.id) : undefined;
+          return <tr key={key}><td><div className="font-medium">{participant?.displayName ?? application?.displayName}</div><div className="text-sm text-on-surface-variant">{participant?.inviteEmail ?? application?.contactEmail}</div><div className="text-sm text-on-surface-variant">{participant?.contactHandle ?? application?.contactHandle ?? "未填写联系方式"}</div></td>
+            <td><span className="mobile-field-label">参加形式</span>{application ? applicationInterestFormatLabels[application.interestFormat] : "尚未报名"}</td>
+            <td><span className="mobile-field-label">发布时点</span>{segment ? <>{segment.code}<div className="text-sm text-on-surface-variant">{formatScheduledTime(segment.scheduledAt)}</div></> : participant?.currentSegmentCode ?? "未选择"}</td>
+            <td><StatusBadge>{application ? applicationStatusLabels[application.status] : "未提交报名"}</StatusBadge>{participant && (participant.status === "completed" || (application?.status === "approved" && participant.status !== "approved")) ? <div className="text-sm text-on-surface-variant">参与资格：{adminParticipantStatusLabels[participant.status]}</div> : null}</td>
+            <td>{participant ? <Link className="button button--secondary" to="/admin/participants/$participantId" params={{ participantId: participant.id }}>查看详情</Link> : application ? <Link className="button button--secondary" to="/admin/applications/$applicationId" params={{ applicationId: application.id }}>查看详情</Link> : null}</td>
+          </tr>;
+        })}
+      </tbody></table>
+    </div></div> : null}
+  </div>;
 }

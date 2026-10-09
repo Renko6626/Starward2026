@@ -1,16 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Clock, Clock3, UserRound } from "../../app/components/icons";
+import { Clock } from "../../app/components/icons";
 import {
   ReadError,
   Field as FormField,
-  SummaryCard as MetaCard,
   MetricCard,
   PageHeading,
   StateNotice,
 } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
-import { formatDateTime } from "../../app/lib/format";
+import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import {
   adminParticipantStatusLabels,
   adminSegmentStatusLabels,
@@ -20,6 +19,8 @@ import {
   type AdminSegmentListResponse,
   type AdminSegmentMutationResponse,
 } from "../../shared/admin";
+
+import { summarizeSchedule } from "../lib/creator-list";
 
 type SchedulePayload = {
   participants: AdminParticipantListResponse["items"];
@@ -254,24 +255,12 @@ export function AdminSchedulePage() {
     }
   }
 
-  const segmentMetrics =
-    state.status === "ready"
-      ? {
-          total: state.payload.segments.length,
-          open: state.payload.segments.filter((item) => item.status === "open")
-            .length,
-          held: state.payload.segments.filter((item) => item.status === "held")
-            .length,
-          completed: state.payload.segments.filter(
-            (item) => item.status === "completed",
-          ).length,
-        }
-      : null;
+  const segmentMetrics = state.status === "ready" ? summarizeSchedule(state.payload.segments) : null;
 
   return (
     <div className="page-content">
       <PageHeading
-        title={<>全局日程</>}
+        title="接力排期"
       >
         {segmentMetrics ? (
           <div className="text-sm font-mono text-on-surface-variant">
@@ -340,8 +329,9 @@ export function AdminSchedulePage() {
 
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
-          <section className="panel space-y-4">
-            <div><h2 className="text-base font-medium">追加坑位</h2>
+          <details className="panel admin-disclosure">
+            <summary>追加坑位</summary>
+            <div className="pt-4">
               <p className="mt-2 text-sm text-on-surface-variant">追加坑位显示在公开时间表底部，不占标准排程，沿用现有认领和审核流程。</p>
             </div>
             <form className="flex flex-wrap items-end gap-4" onSubmit={handleAppend}>
@@ -351,12 +341,12 @@ export function AdminSchedulePage() {
               </button>
             </form>
             {append.status === 'success' || append.status === 'error' ? <StateNotice message={append.message} tone={append.status === 'success' ? 'success' : 'error'} /> : null}
-          </section>
+          </details>
           <div className="panel text-base text-on-surface-variant">
             为创作者分配新的发布时点后，原发布时点会自动释放，作品资料会同步关联新的发布时点。
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-3">
             {state.payload.segments.map((segment) => {
               const draft = drafts[segment.id] ?? buildDraft(segment);
               const saveState = saveStates[segment.id] ?? {
@@ -364,46 +354,15 @@ export function AdminSchedulePage() {
               };
 
               return (
-                <form
-                  key={segment.id}
-                  className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-5 space-y-5"
-                  onSubmit={(event) =>
-                    void handleSegmentSave(event, segment.id)
-                  }
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-medium text-on-surface">
-                        {segment.kind === 'extra' ? `${segment.name}（${segment.code}）` : `第 ${segment.code} 棒（${segment.name}）`}
-                      </h2>
-                      <p className="mt-1 text-base text-on-surface-variant">
-                        当前认领人: {segment.currentParticipantName ?? "暂无"}
-                      </p>
-                    </div>
+                <details key={segment.id} className="panel admin-disclosure admin-segment-row">
+                  <summary>
+                    <span className="font-medium">{segment.code} {segment.name}</span>
+                    <span>{formatScheduledTime(segment.scheduledAt)}</span>
+                    <span>{segment.currentParticipantName ?? "未分配"}</span>
                     <SegmentStatusBadge status={segment.status} />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-base">
-                    <MetaCard
-                      icon={<UserRound className="w-4 h-4" />}
-                      label="当前参与者"
-                      value={segment.currentParticipantName ?? "未分配"}
-                    />
-                    <MetaCard
-                      icon={<Clock3 className="w-4 h-4" />}
-                      label="最近更新时间"
-                      value={formatDateTime(segment.updatedAt)}
-                    />
-                    <MetaCard
-                      label="认领时间"
-                      value={formatDateTime(segment.claimedAt)}
-                    />
-                    <MetaCard
-                      label="释放时间"
-                      value={formatDateTime(segment.releasedAt)}
-                    />
-                  </div>
-
+                  </summary>
+                  <form className="space-y-4 pt-5" onSubmit={event => void handleSegmentSave(event, segment.id)}>
+                  <p className="text-sm text-on-surface-variant">最近更新 {formatDateTime(segment.updatedAt)}；认领时间 {formatDateTime(segment.claimedAt)}；释放时间 {formatDateTime(segment.releasedAt)}</p>
                   <div className="space-y-4">
                     {segment.kind === 'extra' ? <p className="text-sm text-on-surface-variant">追加坑位不设置计划发布时间。</p> : <FormField label="发布时间（北京时间）">
                       <input className="field-input" type="datetime-local" value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
@@ -467,11 +426,11 @@ export function AdminSchedulePage() {
                           {state.payload.participants.map((participant) => (
                             <option key={participant.id} value={participant.id}>
                               {participant.displayName}
-                              {" · "}
+                              {"（"}
                               {adminParticipantStatusLabels[participant.status]}
                               {participant.currentSegmentCode
-                                ? ` · 当前 ${participant.currentSegmentCode}`
-                                : ""}
+                                ? `，当前 ${participant.currentSegmentCode}`
+                                : ""}）
                             </option>
                           ))}
                         </select>
@@ -496,7 +455,8 @@ export function AdminSchedulePage() {
                         : "保存修正"}
                     </button>
                   </div>
-                </form>
+                  </form>
+                </details>
               );
             })}
           </div>

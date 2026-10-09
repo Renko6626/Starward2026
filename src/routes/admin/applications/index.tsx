@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AdminApplicationsPage } from "../../../admin/pages/AdminApplicationsPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/applications/")({
-  component: AdminApplicationsPage,
+  beforeLoad: () => { throw redirect({ to: "/admin/participants", search: { view: "pending" }, replace: true }); },
 });

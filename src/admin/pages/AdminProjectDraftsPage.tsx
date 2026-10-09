@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  Search,
   CheckCircle2,
   Clock,
   FileText,
@@ -15,6 +16,8 @@ import {
 } from "../../shared/admin";
 
 export function AdminProjectDraftsPage() {
+  const [query, setQuery] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(true);
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ready"; payload: AdminProjectDraftListResponse }
@@ -36,6 +39,11 @@ export function AdminProjectDraftsPage() {
     state.status === "ready" ? state.payload.items : [],
   );
 
+  const items = state.status === "ready" ? state.payload.items.filter(item =>
+    (!pendingOnly || item.previewStatus === "submitted" || item.reviewStatus === "submitted") &&
+    [item.participantName, item.previewTitle, item.segmentCode].join("\n").toLowerCase().includes(query.trim().toLowerCase()),
+  ) : [];
+
   return (
     <div className="page-content">
       <PageHeading
@@ -43,10 +51,16 @@ export function AdminProjectDraftsPage() {
       >
         {state.status === "ready" ? (
           <div className="text-sm font-mono text-on-surface-variant">
-            草稿中 {progress.drafts} 份 · 已有正式提交 {progress.submitted}/{state.payload.items.length} 份
+            草稿中 {progress.drafts} 份；已有正式提交 {progress.submitted}/{state.payload.items.length} 份
           </div>
         ) : null}
       </PageHeading>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="checkbox-field"><input type="checkbox" checked={pendingOnly} onChange={event => setPendingOnly(event.target.checked)} />仅显示待审核</label>
+        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" /><input className="field-input search-input" aria-label="搜索作品" placeholder="搜索创作者、标题或时点" type="search" value={query} onChange={event => setQuery(event.target.value)} /></div>
+      </div>
+      {state.status === "ready" && state.payload.items.length > 0 && !items.length ? <StateNotice message="当前筛选下没有作品。可取消仅显示待审核，或调整搜索词。" /> : null}
 
       {state.status === "loading" ? (
         <StateNotice message="正在读取资料列表。" />
@@ -58,7 +72,7 @@ export function AdminProjectDraftsPage() {
         <StateNotice message="还没有作品资料记录。审核通过后，创作者可以在这里填写作品资料。" />
       ) : null}
 
-      {state.status === "ready" && state.payload.items.length > 0 ? (
+      {state.status === "ready" && items.length > 0 ? (
         <div className="table-frame">
           <div
             className="table-scroll"
@@ -77,7 +91,7 @@ export function AdminProjectDraftsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/50">
-                {state.payload.items.map((item) => (
+                {items.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-surface-variant/30 transition-colors group"

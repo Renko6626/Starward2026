@@ -3,9 +3,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   CalendarDays,
-  ClipboardList,
   FilePenLine,
-  LayoutDashboard,
   LogOut,
   Menu,
   Settings2,
@@ -18,12 +16,10 @@ import { ScrollProgress } from "../components/ScrollProgress";
 import { authClient } from "../../portal/lib/auth-client";
 
 const adminItems = [
-  { to: "/admin", label: "活动总览", icon: LayoutDashboard },
-  { to: "/admin/applications", label: "报名审核", icon: ClipboardList },
-  { to: "/admin/participants", label: "创作者名册", icon: Users },
+  { to: "/admin/participants", label: "参与者管理", icon: Users },
   { to: "/admin/project-drafts", label: "作品审核", icon: FilePenLine },
   { to: "/admin/schedule", label: "接力排期", icon: CalendarDays },
-  { to: "/admin/settings/windows", label: "开放窗口", icon: Settings2 },
+  { to: "/admin/settings/windows", label: "活动设置", icon: Settings2 },
 ] as const;
 
 export function WorkspaceLayout({
@@ -45,9 +41,10 @@ export function WorkspaceLayout({
   }, [open]);
   const { pathname } = useLocation();
   const items = adminItems;
+  const navPath = pathname.startsWith("/admin/applications") ? "/admin/participants" : pathname;
   const current = [...items]
     .reverse()
-    .find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`));
+    .find((item) => navPath === item.to || navPath.startsWith(`${item.to}/`));
   if (kind === "portal") {
     return <div className="creator-shell">
       <a className="skip-link" href="#main-content">跳至正文</a>
@@ -97,17 +94,16 @@ export function WorkspaceLayout({
           {kind === "admin" ? "ORGANIZER / 活动管理" : "CREATOR / 创作空间"}
         </div>
         <nav aria-label={kind === "admin" ? "管理后台导航" : "创作者导航"}>
-          {items.map(({ to, label, icon: Icon }, index) => (
+          {items.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/admin" }}
+              activeOptions={{ exact: false }}
               className="workspace-nav-item"
               onClick={() => setOpen(false)}
             >
               <Icon size={18} strokeWidth={1.5} />
               <span>{label}</span>
-              <small>0{index + 1}</small>
             </Link>
           ))}
         </nav>

@@ -103,12 +103,13 @@ Starward2026/
 
 ### 6.3 Admin
 
-- `/admin`
-- `/admin/applications`
-- `/admin/participants`
-- `/admin/schedule`
-- `/admin/project-drafts`
-- `/admin/settings/windows`
+- `/admin/participants`：参与者管理，`view=pending|all` 切换待审核报名与全部创作者
+- `/admin/participants/:participantId`：统一参与者与报名详情
+- `/admin/project-drafts`：作品审核
+- `/admin/schedule`：接力排期
+- `/admin/settings/windows`：活动设置
+
+兼容入口：`/admin` 与 `/admin/applications` 跳转到待审核视图；旧报名详情在明确关联参与者时跳转到统一详情，否则保留历史报名详情。合并只改变前端页面组织，报名与参与者 API 仍各自保留。
 
 ## 7. API Surfaces
 
