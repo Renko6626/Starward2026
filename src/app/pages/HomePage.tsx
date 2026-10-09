@@ -11,8 +11,8 @@ import './home.css';
 
 const steps = [
   { number: '01', title: '注册账号', body: '使用邮箱注册，已有账号直接登录。' },
-  { number: '02', title: '填写资料', body: '填写联系方式和创作计划。' },
-  { number: '03', title: '选择时段', body: '选择发布时段，提交报名。' },
+  { number: '02', title: '选择时段', body: '在时间表选择意向发布时间。' },
+  { number: '03', title: '填写资料', body: '在工作台填写联系方式和创作计划，确认时间后提交报名。' },
 ];
 
 export function HomePage() {

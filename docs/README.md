@@ -67,6 +67,7 @@ docs/
 
 交付：
 
+- [delivery/todo.md](./delivery/todo.md)：活动待办
 - [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
 - [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
 

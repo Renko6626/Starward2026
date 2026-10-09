@@ -11,6 +11,7 @@ import type { PortalDashboardResponse } from "../../shared/portal";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { scheduleMissionStart } from "../lib/mission-time";
 import { ScheduleSection } from "../../portal/components/ScheduleSection";
+import { readScheduleIntent, saveScheduleIntent } from "../../portal/lib/schedule-selection";
 import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
 
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
@@ -88,6 +89,13 @@ export function WorksPage() {
   const days = groupSchedule(schedule);
   const missionStart = scheduleMissionStart(schedule);
   const identity = own && own.userId === userId && own.revision === revision ? own : null;
+  useEffect(() => {
+    if (!userId || !identity || identity.status === "approved" || identity.status === "completed") return;
+    const intent = readScheduleIntent(userId);
+    if (intent && schedule.some(entry => entry.id === intent && entry.status === "available")) {
+      setSelectedId(current => current ?? intent);
+    }
+  }, [userId, identity, schedule]);
   const mine = schedule.find(entry => entry.id === identity?.segmentId);
   const mineId = mine?.id ?? null;
   const { phase, currentId } = schedulePhase(schedule, now);
@@ -101,6 +109,10 @@ export function WorksPage() {
   function select(id: string) {
     detailTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSelectedId(id);
+    if (userId && identity && identity.status !== "approved" && identity.status !== "completed"
+      && schedule.some(entry => entry.id === id && entry.status === "available")) {
+      saveScheduleIntent(userId, id);
+    }
     if (mobile) setDetailOpen(true);
   }
   function closeDetail() {
@@ -110,7 +122,8 @@ export function WorksPage() {
   const actions = selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
     : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
     : identity.status === "completed" ? <Link to="/portal">查看我的参与记录</Link>
-    : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash="plan">{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
+    : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash={selected.id === mineId ? "plan" : "profile"}
+      onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
   const detail = selected ? <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null}
     signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} actions={actions} /> : null;
 
@@ -120,6 +133,7 @@ export function WorksPage() {
       <div><h1>接力时间表</h1></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
+    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>先选择一个空闲时点，再进入工作台填写报名资料。意向时间保存在当前浏览器标签页，提交报名成功后才会预留。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
@@ -137,7 +151,7 @@ export function WorksPage() {
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。作品审核通过后由主催发布。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往创作者工作台</Link></div>
+      <div className="ops-page-foot"><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到工作台填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往创作者工作台</Link></div>
     </>}
   </div>;
 }

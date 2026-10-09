@@ -1,5 +1,5 @@
 import { formatScheduledTime } from "../../app/lib/format";
-import { Link, getRouteApi } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -12,6 +12,7 @@ import { getApplicationWindowLabel } from "../../shared/windows";
 import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels } from "../lib/profile-form";
 import { LoginPasswordDialog } from "./LoginPasswordDialog";
 import { parseRegistrationDraft, registrationDraftKey } from "../lib/registration-draft";
+import { isRegistrationSegmentSelectable, readScheduleIntent, saveScheduleIntent } from "../lib/schedule-selection";
 
 export function RegistrationSection({ application, collaboration, onSaved, compact = false, onSelectionChange }: {
   compact?: boolean;
@@ -21,6 +22,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   onSelectionChange?: (segmentId: string) => void;
 }) {
   const { segment } = getRouteApi("/portal/").useSearch();
+  const navigate = useNavigate();
   const [form, setForm] = useState<WorkspaceApplicationInput>(() => ({
     profile: {
       creditName: application.profile?.creditName ?? "",
@@ -42,19 +44,32 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     segmentId: collaboration.segments.find(item => item.participantId === collaboration.participantId)?.id ?? "",
   }));
   const [draftReady, setDraftReady] = useState(false);
+  const draftLoaded = useRef(false);
   useEffect(() => { onSelectionChange?.(form.segmentId); }, [form.segmentId, onSelectionChange]);
   useEffect(() => {
-    let draft: ReturnType<typeof parseRegistrationDraft> = null;
-    try { draft = parseRegistrationDraft(sessionStorage.getItem(registrationDraftKey(application.user.id))); } catch { /* Storage may be disabled. */ }
-    setForm(current => ({ ...current, ...(application.editable && draft ? draft : {}), ...(segment && application.editable ? { segmentId: segment } : {}) }));
-    setDraftReady(true);
-  }, [application.user.id, segment, application.editable]);
+    if (!draftLoaded.current) {
+      let draft: ReturnType<typeof parseRegistrationDraft> = null;
+      try { draft = parseRegistrationDraft(sessionStorage.getItem(registrationDraftKey(application.user.id))); } catch { /* Storage may be disabled. */ }
+      const intent = readScheduleIntent(application.user.id);
+      setForm(current => ({ ...current, ...(application.editable && draft ? draft : {}), ...(intent && application.editable ? { segmentId: intent } : {}) }));
+      draftLoaded.current = true;
+      setDraftReady(true);
+    }
+    if (segment && application.editable) {
+      setForm(current => ({ ...current, segmentId: segment }));
+      saveScheduleIntent(application.user.id, segment);
+      // Consume the incoming choice so a later dropdown change survives refresh.
+      void navigate({ to: "/portal", search: {}, hash: window.location.hash.slice(1) || undefined, replace: true });
+    }
+  }, [application.user.id, segment, application.editable, navigate]);
   useEffect(() => {
     if (!draftReady || !application.editable) return;
     try { sessionStorage.setItem(registrationDraftKey(application.user.id), JSON.stringify(form)); } catch { /* Keep the live form usable. */ }
+    saveScheduleIntent(application.user.id, form.segmentId);
   }, [form, draftReady, application.user.id, application.editable]);
   const selectedSegment = collaboration.segments.find(item => item.id === form.segmentId);
-  const selectionUnavailable = Boolean(form.segmentId && (!selectedSegment || (selectedSegment.status !== "available" && selectedSegment.participantId !== collaboration.participantId)));
+  const selectionUnavailable = Boolean(form.segmentId && (!selectedSegment || !isRegistrationSegmentSelectable(selectedSegment, collaboration.participantId)));
+  const selectableSegments = collaboration.segments.filter(item => isRegistrationSegmentSelectable(item, collaboration.participantId));
   const [refreshWarning, setRefreshWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -104,6 +119,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       const response = await requestJson<WorkspaceApplicationResponse>("/api/portal/application-with-segment", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
       setMessage(response.message);
       try { sessionStorage.removeItem(registrationDraftKey(application.user.id)); } catch { /* Storage may be disabled. */ }
+      saveScheduleIntent(application.user.id, "");
       await onSaved().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "报名保存失败，请保留资料后重试。"); }
     finally { setSaving(false); if (required) { setToken(null); window.turnstile?.reset(widgetRef.current); } }
@@ -169,9 +185,20 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     </fieldset>
     <section className="registration-time-summary" aria-label="报名发布时点">
       <h3>{selectedSegment ? `已选发布时间：${formatScheduledTime(selectedSegment.scheduledAt)}` : "尚未选择发布时点"}</h3>
-      <p className="field-hint">提交报名后预留，审核通过后确认。往返时间表时会保留本次填写的信息。</p>
+      <p className="field-hint">意向时间保存在当前浏览器标签页。提交报名成功后才会预留，审核通过后确认。</p>
+      {editable ? <Field label="发布时间（北京时间）">
+        <select form="creator-registration-form" className="field-input" required disabled={disabled}
+          value={form.segmentId} onChange={event => setForm(current => ({ ...current, segmentId: event.target.value }))}>
+          <option value="">请选择发布时间</option>
+          {selectionUnavailable ? <option value={form.segmentId} disabled>{selectedSegment ? `${formatScheduledTime(selectedSegment.scheduledAt)}（已不可选）` : "原意向时点已不可用"}</option> : null}
+          {selectableSegments.map(item => <option key={item.id} value={item.id}>
+            {item.scheduledAt ? formatScheduledTime(item.scheduledAt) : item.name}{item.status === "reserved" ? "（我的预留时点）" : ""}
+          </option>)}
+        </select>
+        {selectableSegments.length === 0 ? <p className="field-hint">当前没有可选时点，请稍后查看时间表。</p> : null}
+      </Field> : null}
       {selectionUnavailable ? <Notice tone="warning">所选时点已不可用，请重新选择。已填写的信息仍保留。</Notice> : null}
-      {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>{selectedSegment ? "更改时间" : "去时间表选择发布时间"}</Link> : null}
+      {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
     </section>
     {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}{refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}

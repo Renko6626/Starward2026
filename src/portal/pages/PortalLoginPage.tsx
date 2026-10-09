@@ -1,6 +1,6 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import {
@@ -22,7 +22,7 @@ export function PortalLoginPage() {
   const sessionQuery = authClient.useSession();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [mode, setMode] = useState<"login" | "register" | "otp">("login");
+  const [mode, setMode] = useState<"login" | "register" | "otp">("register");
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [message, setMessage] = useState<string | null>(null);
@@ -31,6 +31,7 @@ export function PortalLoginPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isResolvingDestination, setIsResolvingDestination] = useState(false);
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
+  const newRegistration = useRef(false);
 
   useEffect(() => {
     if (!sessionQuery.data) {
@@ -39,18 +40,19 @@ export function PortalLoginPage() {
 
     let cancelled = false;
     setIsResolvingDestination(true);
+    const enter = (state: PortalMeResponse | null) => {
+      if (cancelled) return;
+      const destination = resolvePortalEntryDestination(state, { newRegistration: newRegistration.current, segment });
+      if (destination === "/works") {
+        void navigate({ to: "/works", search: { view: "gallery", type: "all", q: "" } });
+      } else {
+        void navigate({ to: "/portal", search: { segment }, hash: segment ? "profile" : undefined });
+      }
+    };
 
     void requestJson<PortalMeResponse>("/api/portal/me")
-      .then((response) => {
-        if (!cancelled) {
-          void navigate({ to: resolvePortalEntryDestination(response), search: { segment }, hash: segment ? "plan" : undefined });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          void navigate({ to: "/portal", search: { segment }, hash: segment ? "plan" : undefined });
-        }
-      })
+      .then(enter)
+      .catch(() => enter(null))
       .finally(() => {
         if (!cancelled) {
           setIsResolvingDestination(false);
@@ -82,6 +84,7 @@ export function PortalLoginPage() {
     setError(null);
     setMessage(null);
     const normalizedEmail = email.trim().toLowerCase();
+    newRegistration.current = mode === "register";
 
     try {
       const response =
@@ -93,6 +96,7 @@ export function PortalLoginPage() {
             })
           : await authClient.signIn.email({ email: normalizedEmail, password });
       if (response.error) {
+        newRegistration.current = false;
         setError(
           response.error.message || "注册或登录失败，请检查邮箱和密码。",
         );
@@ -101,6 +105,7 @@ export function PortalLoginPage() {
       setPassword("");
       setIsResolvingDestination(true);
     } catch {
+      newRegistration.current = false;
       setError("暂时无法连接，请稍后重试。");
     } finally {
       setIsSigningIn(false);
@@ -201,8 +206,8 @@ export function PortalLoginPage() {
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [
-              ["login", "密码登录"],
               ["register", "注册账号"],
+              ["login", "密码登录"],
             ] as const
           ).map(([value, label]) => (
             <button

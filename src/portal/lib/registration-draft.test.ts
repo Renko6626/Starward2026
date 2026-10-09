@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseRegistrationDraft } from "./registration-draft";
-import { scheduleSelectionSearch } from "./schedule-selection";
+import { isRegistrationSegmentSelectable, scheduleSelectionSearch } from "./schedule-selection";
 
 describe("registration draft", () => {
   const incomplete = {
@@ -28,5 +28,18 @@ describe("schedule selection through login", () => {
   it("ignores malformed slot identifiers", () => {
     expect(scheduleSelectionSearch({ segment: ["slot-14"] }).segment).toBeUndefined();
     expect(scheduleSelectionSearch({ segment: "x".repeat(65) }).segment).toBeUndefined();
+  });
+});
+
+describe("registration time choices", () => {
+  it("allows free slots and the applicant's existing reservation", () => {
+    expect(isRegistrationSegmentSelectable({ status: "available", participantId: null }, "me")).toBe(true);
+    expect(isRegistrationSegmentSelectable({ status: "reserved", participantId: "me" }, "me")).toBe(true);
+  });
+
+  it("excludes other reservations, confirmed slots and unavailable slots", () => {
+    expect(isRegistrationSegmentSelectable({ status: "reserved", participantId: "other" }, "me")).toBe(false);
+    expect(isRegistrationSegmentSelectable({ status: "confirmed", participantId: "me" }, "me")).toBe(false);
+    expect(isRegistrationSegmentSelectable({ status: "unavailable", participantId: "me" }, "me")).toBe(false);
   });
 });
