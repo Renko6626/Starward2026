@@ -25,7 +25,8 @@
 .station-reading-shade { position: absolute; inset: 0; background: #000; opacity: var(--station-dim, 0); }
 .orbital-copy { position: absolute; left: calc(var(--site-content-offset) - var(--hero-copy-shift)); bottom: calc(19% + 40px); max-width: 560px; }
 .orbital-title { margin-bottom: 16px; }
-.orbital-edition { margin: 12px 0 0; font: 600 clamp(16px, 1.9vw, 28px)/1.2 var(--font-brand-en); letter-spacing: .02em; color: #aaa; text-transform: uppercase; white-space: nowrap; }
+.orbital-edition { margin: 8px 0 0; font-size: clamp(18px, 2.2vw, 32px); line-height: 1.2; }
+.orbital-edition img { display: block; height: 1.2em; width: auto; }
 .orbital-edition { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); }
 .orbital-copy h1 { margin: 0; font: 500 clamp(45px, 5.25vw, 84px)/1.2 var(--font-brand-cn); letter-spacing: .035em; color: #fff; transform: skewX(-8deg); transform-origin: left bottom; }
 .orbital-copy h1 { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); }
@@ -115,7 +116,7 @@
   .orbital-hero { height: 100svh; min-height: 840px; max-height: 1100px; }
   .orbital-copy { left: var(--site-content-offset); right: var(--site-content-offset); bottom: calc(15% + 40px); max-width: none; }
   .orbital-copy h1 { font-size: clamp(37px, 11.5vw, 66px); letter-spacing: .02em; }
-  .orbital-edition { font-size: clamp(14px, 4vw, 22px); letter-spacing: .02em; }
+  .orbital-edition { font-size: clamp(16px, 4.5vw, 24px); }
   .orbital-subtitle { font-size: var(--site-body-size); letter-spacing: 0; }
   .orbital-actions { margin-top: 22px; gap: 22px; }
   .orbital-actions a { font-size: var(--site-meta-size); gap: 14px; }
@@ -169,11 +170,10 @@
 .orbital-artwork .orbit-track { opacity: .32; }
 .orbital-artwork .orbit-reference { opacity: .23; stroke-width: .8; }
 .orbital-artwork .orbit-maneuvers { opacity: .32; }
-.orbital-artwork text { fill: currentColor; stroke: none; font: 500 8.5px/1.5 var(--font-label); letter-spacing: .08em; text-transform: uppercase; }
-.orbital-artwork .orbit-maneuvers text { font-size: 8px; }
+.orbital-artwork text { fill: currentColor; stroke: none; font: 400 10px/1.4 var(--font-body); letter-spacing: normal; word-spacing: normal; text-transform: none; font-variant-numeric: lining-nums tabular-nums; }
+.orbital-artwork .orbit-maneuvers text { font-size: 9.5px; }
 .orbital-artwork .orbit-metadata { opacity: .38; stroke-width: .55; }
-.orbital-artwork .orbit-metadata text { font-size: 8px; }
-.orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 9px; }
+.orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 11px; font-weight: 500; }
 .orbital-artwork .orbit-mission-star path { fill: #eee; stroke: none; }
 .orbital-artwork .orbit-lit-track { stroke: #eee; stroke-width: 1.2; }
 .orbital-artwork .has-entered .orbit-entry-track { mask: none; }

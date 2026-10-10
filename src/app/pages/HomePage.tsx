@@ -36,7 +36,7 @@ export function HomePage() {
         <div className="orbital-copy">
           <div className="orbital-title">
             <h1 id="home-title">逐星巡礼</h1>
-            <p className="orbital-edition">Starward Pilgrimage</p>
+            <p className="orbital-edition"><img src="/brand/starward-pilgrimage.svg" width={13181} height={1200} alt="Starward Pilgrimage" /></p>
           </div>
           <p className="orbital-subtitle">2026年秘封俱乐部之日创作接力</p>
           <div className="orbital-actions">
