@@ -3,6 +3,7 @@ import { Link, useLocation, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react";
+import { useAdminNavigation } from '../lib/use-admin-navigation';
 
 export function Brand() {
   return (
@@ -16,6 +17,7 @@ export function Brand() {
 }
 
 export function SiteHeader() {
+  const showAdmin = useAdminNavigation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(() => matchMedia('(max-width: 800px)').matches);
   const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -105,10 +107,14 @@ export function SiteHeader() {
           <Link
             className="nav-entry"
             to={pathname.startsWith("/portal") && pathname !== "/portal/login" ? "/portal" : "/portal/login"}
+            activeOptions={{ exact: pathname === '/portal/admin' || pathname.startsWith('/portal/admin/') }}
             onClick={() => setMenuOpen(false)}
           >
             {({ isActive }) => <>作者页面 <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link>
+          {showAdmin ? <Link to="/portal/admin" onClick={() => setMenuOpen(false)}>
+            {({ isActive }) => <>管理面板 <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+          </Link> : null}
         </NavigationPanel>}
         </AnimatePresence>
         </LayoutGroup>
@@ -161,8 +167,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
   const activePath = useRouterState({ select: state => state.matches.at(-1)?.pathname ?? state.location.pathname });
   const pathname = activePath.replace(/\/+$/, "") || "/";
   const isWorkspace =
-    (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
-    (pathname === '/admin' || pathname.startsWith('/admin/'));
+    pathname.startsWith("/portal") && !['/portal/login', '/portal/admin-access'].includes(pathname);
   if (isWorkspace) return <>{children}</>;
   return (
     <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" ? "public-site--guide" : pathname === "/portal/login" ? "public-site--entry" : ""}`}>

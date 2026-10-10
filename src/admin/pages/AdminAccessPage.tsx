@@ -5,7 +5,7 @@ import { authClient } from '../../portal/lib/auth-client';
 import { Button, Notice } from '../../app/components/ui';
 import '../admin.css';
 
-export function AdminAccessPage({ reason = 'forbidden', returnTo = '/admin' }: { reason?: string; returnTo?: string }) {
+export function AdminAccessPage({ reason = 'forbidden', returnTo = '/portal/admin' }: { reason?: string; returnTo?: string }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   async function switchAccount() {
     setBusy(true); setError('');

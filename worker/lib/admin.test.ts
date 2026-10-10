@@ -64,12 +64,17 @@ describe('website administrator boundary', () => {
     const f = fixture(), t = await adminTestSession(f.db);
     const fetchAsset = vi.fn(async () => new Response('<html>admin app</html>', { headers: { 'content-type': 'text/html' } }));
     const env = { ...t.env, ASSETS: { fetch: fetchAsset } as unknown as Fetcher };
-    for (const path of ['/admin', '/admin/', '/admin/participants?view=all', '/ADMIN/schedule', '/%61dmin/settings/admins']) {
+    for (const path of ['/portal/admin', '/portal/admin/', '/portal/admin/participants?view=all', '/PORTAL/ADMIN/schedule', '/portal/%61dmin/settings/admins']) {
       const denied = await app.request(path, {}, env);
       expect(denied.status).toBe(302); expect(denied.headers.get('location')).toMatch(/^\/portal\/login\?returnTo=/);
     }
     expect(fetchAsset).not.toHaveBeenCalled();
-    const allowed = await app.request('/admin/settings/admins', { headers: t.headers }, env);
+    for (const path of ['/admin', '/admin/participants?view=all', '/%61dmin/settings/admins', '/ADMIN', '/admin-access']) {
+      const moved = await app.request(path, {}, env);
+      expect(moved.status).toBe(404); expect(moved.headers.has('location')).toBe(false);
+    }
+    expect(fetchAsset).not.toHaveBeenCalled();
+    const allowed = await app.request('/portal/admin/settings/admins', { headers: t.headers }, env);
     expect(allowed.status).toBe(200); expect(allowed.headers.get('cache-control')).toContain('no-store');
     expect(fetchAsset).toHaveBeenCalledOnce();
   });

@@ -180,7 +180,7 @@ npm run deploy:staging
 本地管理页面与生产环境一样使用网站登录会话及 `admin_roles` 表。
 
 - 先应用迁移，再为已验证的测试账号添加 `admin` 或 `owner` 角色。
-- `/admin` 及所有子页面在身份验证通过后才提供页面内容；API 另行检查每次请求。
+- `/portal/admin` 及所有子页面在身份验证通过后才提供页面内容；API 另行检查每次请求。
 - `ALLOW_LOCAL_ADMIN_BYPASS`、`x-admin-email` 和 Cloudflare Access 身份头均不再授予管理权限。
 - 只有 `owner` 可以授予或撤销其他账号的 `admin` 权限；系统只允许一个 owner。
 - 自动化权限测试使用真实 SQLite 迁移和签名会话，不依赖开发绕过开关。

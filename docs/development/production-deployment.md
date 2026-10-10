@@ -82,7 +82,7 @@ Configure the runtime separately for `starward2026-production`:
   an existing account and does not rotate an existing owner's password.
   An explicitly authorized two-line credential file can instead be passed with
   `--credentials <path>` (account ID and API token; never committed).
-- The owner manages access at `/admin/settings/admins`: search registered users,
+- The owner manages access at `/portal/admin/settings/admins`: search registered users,
   then confirm granting or revoking administrator access. Only verified real
   email accounts qualify. Changes are recorded in `admin_role_events` and take
   effect on the next API request. The owner's role cannot be changed in the UI.

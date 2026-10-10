@@ -5,7 +5,7 @@ import { requestJson } from '../../app/lib/api';
 import type { AdminUser } from '../../shared/admin-access';
 
 export function AdminUsersPage() {
-  const { admin } = getRouteApi('/admin').useRouteContext();
+  const { admin } = getRouteApi('/portal_/admin').useRouteContext();
   const [query, setQuery] = useState(''), [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   const [selected, setSelected] = useState<AdminUser | null>(null);

@@ -4,7 +4,7 @@ export type AdminUser = { id: string; name: string; email: string; emailVerified
 export function isAdminPath(pathname: string) {
   try {
     const path = decodeURIComponent(pathname).toLowerCase();
-    return path === '/admin' || path.startsWith('/admin/');
+    return path === '/portal/admin' || path.startsWith('/portal/admin/');
   } catch { return false; }
 }
 
@@ -13,7 +13,9 @@ export function adminReturnTo(value: unknown): string | undefined {
   if (typeof value !== 'string' || /[\\\u0000-\u0020]/.test(value)) return undefined;
   try {
     const url = new URL(value, 'https://local.invalid');
-    if (!value.startsWith('/') || url.origin !== 'https://local.invalid' || !isAdminPath(url.pathname)) return undefined;
-    return url.pathname + url.search + url.hash;
+    if (!value.startsWith('/') || url.origin !== 'https://local.invalid') return undefined;
+    const path = url.pathname;
+    if (!isAdminPath(path)) return undefined;
+    return path + url.search + url.hash;
   } catch { return undefined; }
 }

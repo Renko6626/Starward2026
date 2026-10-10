@@ -14,13 +14,14 @@ import { isAdminPath, adminReturnTo } from '../src/shared/admin-access';
 const app = new Hono<AppRouteConfig>();
 
 app.use('*', async (c, next) => {
+  const url = new URL(c.req.url);
   if (!isAdminPath(new URL(c.req.url).pathname)) return next();
   try {
     await requireAdminAccess(c);
   } catch (error) {
     if (!(error instanceof HTTPException)) throw error;
-    const returnTo = adminReturnTo(new URL(c.req.url).pathname + new URL(c.req.url).search) ?? '/admin';
-    const destination = error.status === 401 ? '/portal/login' : '/admin-access';
+    const returnTo = adminReturnTo(url.pathname + url.search) ?? '/portal/admin';
+    const destination = error.status === 401 ? '/portal/login' : '/portal/admin-access';
     const search = new URLSearchParams({ returnTo });
     if (error.status !== 401) search.set('reason', error.status === 403 ? 'forbidden' : 'unavailable');
     return c.redirect(`${destination}?${search}`, 302);
@@ -57,6 +58,10 @@ app.onError((error, c) => {
 });
 
 app.notFound((c) => {
+  // The former admin URLs are removed, including encoded/case variants.
+  let path = new URL(c.req.url).pathname;
+  try { path = decodeURIComponent(path).toLowerCase(); } catch { /* Keep an invalid path unmatched. */ }
+  if (path === '/admin' || path.startsWith('/admin/') || path === '/admin-access') return jsonError(c, 404, 'not_found', '未找到对应页面。');
   if (!c.req.path.startsWith('/api/') && c.req.path !== '/api' && c.env.ASSETS) return c.env.ASSETS.fetch(c.req.raw);
   return jsonError(c, 404, "not_found", "未找到对应接口。");
 });
