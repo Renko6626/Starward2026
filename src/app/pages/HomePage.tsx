@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowDown, ArrowRight, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
@@ -16,6 +17,7 @@ const steps = [
 ];
 
 export function HomePage() {
+  const [motionPaused, setMotionPaused] = useState(false);
   const intake = useApplicationIntake(30_000);
   const statistics = intake.status === 'ready' ? intake.payload.statistics : null;
   const isOpen = intake.status === 'ready' && intake.payload.isOpen;
@@ -24,9 +26,9 @@ export function HomePage() {
     : getApplicationWindowLabel(intake.payload.window);
   return (
     <div className="station-home">
-      <StationBackdrop />
+      <StationBackdrop paused={motionPaused} onTogglePaused={() => setMotionPaused(value => !value)} />
       <section className="orbital-hero" aria-labelledby="home-title">
-        <OrbitalArtwork />
+        <OrbitalArtwork paused={motionPaused} />
         <div className="orbital-copy">
           <div className="orbital-title">
             <h1 id="home-title">逐星巡礼</h1>

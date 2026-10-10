@@ -178,6 +178,18 @@
 .orbital-artwork .orbit-metadata .orbit-mission-name { font-size: 9px; }
 .orbital-artwork .orbit-mission-star path { fill: #eee; stroke: none; }
 .orbital-artwork .orbit-lit-track { stroke: #eee; stroke-width: 1.2; }
+.orbital-artwork .has-entered .orbit-entry-track { mask: none; }
+.orbital-artwork .orbit-entry-sweep { opacity: 0; stroke: #eee; stroke-width: 1.2; transition: opacity 350ms ease; }
+@keyframes orbit-entry-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .orbital-artwork .is-entering .orbit-entry-guides { animation: orbit-entry-reveal 500ms ease 1400ms both; }
+  .orbital-artwork .is-entering .orbit-entry-details { animation: orbit-entry-reveal 400ms ease 2150ms both; }
+  .orbital-artwork .is-entering .orbit-entry-live { animation: orbit-entry-reveal 350ms ease 2300ms both; }
+  .orbital-artwork .has-entered.is-tracing .orbit-entry-sweep { opacity: .5; }
+  .orbital-artwork .is-paused .orbit-entry-guides,
+  .orbital-artwork .is-paused .orbit-entry-details,
+  .orbital-artwork .is-paused .orbit-entry-live { animation-play-state: paused; }
+}
 @media (max-width: 699px) {
   .orbital-artwork .orbital-artwork-desktop { display: none; }
   .orbital-artwork .orbital-artwork-mobile { display: block; }

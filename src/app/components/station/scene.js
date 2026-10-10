@@ -29,14 +29,25 @@ export function mountStationScene(container, options = {}) {
   const camera = new THREE.PerspectiveCamera(37, 1, 1, 3000);
   const basePosition = new THREE.Vector3();
   const orbitAxis = new THREE.Vector3();
+  const cameraRight = new THREE.Vector3();
+  const pointer = new THREE.Vector2(), pointerTarget = new THREE.Vector2();
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const antennaAim = new THREE.Quaternion();
+  const signals = [];
   let narrow = false;
   let scrollProgress = 0;
   let targetProgress = 0;
-  let station, stars, earth, moon;
+  let station, stars, earth, moon, antenna;
 
   function updateCamera() {
-    const angle = media.matches ? 0 : THREE.MathUtils.degToRad(narrow ? 10 : 22) * scrollProgress;
+    const motion = !media.matches && !options.staticFrame;
+    const cruise = motion ? Math.sin(time * Math.PI * 2 / 40) * (narrow ? 1.5 : 4) : 0;
+    const parallax = motion && !narrow && finePointer.matches ? pointer.x * 1.4 : 0;
+    const angle = media.matches ? 0 : THREE.MathUtils.degToRad((narrow ? 10 : 22) * scrollProgress + cruise + parallax);
     camera.position.copy(basePosition).applyAxisAngle(orbitAxis, angle);
+    if (motion && !narrow && finePointer.matches) {
+      camera.position.applyAxisAngle(cameraRight, THREE.MathUtils.degToRad(pointer.y * .8));
+    }
     camera.up.copy(orbitAxis);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
@@ -51,6 +62,23 @@ export function mountStationScene(container, options = {}) {
   function draw() {
     if (disposed || contextLost || document.hidden || !visible) return;
     station.update(time);
+    if (antenna) {
+      antenna.quaternion.copy(antennaAim);
+      // A short calibration sweep, followed by a long hold on the Earth target.
+      const phase = time % 20;
+      const correction = !media.matches && !options.staticFrame && phase < 5
+        ? Math.sin(phase * Math.PI / 5) * Math.sin(phase * Math.PI * 2 / 5) * THREE.MathUtils.degToRad(4) : 0;
+      antenna.rotateY(correction);
+      antenna.rotateX(correction * .35);
+    }
+    signals.forEach(({ lamp, halo, phase }, index) => {
+      const pulseTime = (time + phase) % 6;
+      const pulse = !media.matches && !options.staticFrame && pulseTime < .9
+        ? Math.sin(pulseTime * Math.PI / .9) ** 2 : 0;
+      lamp.material.opacity = .22 + pulse * .78;
+      halo.material.opacity = pulse * .16;
+      halo.scale.setScalar(1.8 + pulse * .8);
+    });
     stars.getObjectByName('Bright star optics').material.uniforms.time.value = time;
     renderer.render(scene, camera);
     if (!ready) { ready = true; options.onReady?.(); }
@@ -60,6 +88,8 @@ export function mountStationScene(container, options = {}) {
     last = now;
     time += delta;
     scrollProgress = THREE.MathUtils.damp(scrollProgress, targetProgress, 8, delta);
+    pointer.x = THREE.MathUtils.damp(pointer.x, pointerTarget.x, 5, delta);
+    pointer.y = THREE.MathUtils.damp(pointer.y, pointerTarget.y, 5, delta);
     updateCamera();
     draw();
   }
@@ -83,6 +113,8 @@ export function mountStationScene(container, options = {}) {
     camera.fov = narrow ? 43 : 37;
     basePosition.set(-120, 310, 170).multiplyScalar(narrow ? 1.58 : .93);
     orbitAxis.set(0, basePosition.z, -basePosition.y).normalize();
+    cameraRight.crossVectors(orbitAxis, basePosition).normalize();
+    if (narrow) { pointer.set(0, 0); pointerTarget.set(0, 0); }
     updateCamera();
     camera.setViewOffset(width, height, narrow ? 0 : -width * .19, narrow ? height * .17 : -height * .01, width, height);
     camera.updateProjectionMatrix();
@@ -96,6 +128,7 @@ export function mountStationScene(container, options = {}) {
     place(moon, narrow ? .69 : .80, narrow ? .78 : .68, 720);
     moon.scale.setScalar(narrow ? 6 : 8);
     station.aimAntennaAt(earth.getWorldPosition(new THREE.Vector3()));
+    if (antenna) antennaAim.copy(antenna.quaternion);
     const band = stars.getObjectByName('Galactic dust band');
     band.quaternion.copy(camera.quaternion);
     band.rotateX(.12); band.rotateZ(-.3);
@@ -103,6 +136,14 @@ export function mountStationScene(container, options = {}) {
     stars.getObjectByName('Bright star optics').material.uniforms.pixelRatio.value = ratio;
     draw();
   }
+  function movePointer(event) {
+    if (event.pointerType !== 'mouse' || narrow || paused || media.matches || !finePointer.matches || !visible) return;
+    const { left, top, width, height } = container.getBoundingClientRect();
+    if (!width || !height) return;
+    pointerTarget.set(THREE.MathUtils.clamp((event.clientX - left) / width * 2 - 1, -1, 1),
+      THREE.MathUtils.clamp((event.clientY - top) / height * 2 - 1, -1, 1));
+  }
+  function resetPointer() { pointerTarget.set(0, 0); }
   function lost(event) {
     event.preventDefault(); contextLost = true; ready = false;
     renderer.setAnimationLoop(null);
@@ -120,6 +161,8 @@ export function mountStationScene(container, options = {}) {
     renderer.setAnimationLoop(null);
     observer?.disconnect(); resizeObserver?.disconnect();
     document.removeEventListener('visibilitychange', syncLoop);
+    window.removeEventListener('pointermove', movePointer);
+    document.removeEventListener('mouseleave', resetPointer);
     media.removeEventListener('change', syncLoop);
     renderer.domElement.removeEventListener('webglcontextlost', lost);
     renderer.domElement.removeEventListener('webglcontextrestored', restored);
@@ -141,6 +184,23 @@ export function mountStationScene(container, options = {}) {
   try {
   station = createRingStation();
   scene.add(station.object);
+  antenna = station.object.getObjectByName('Pointable main dish / +Z boresight');
+  const signalGeometry = new THREE.SphereGeometry(.28, 10, 8);
+  for (const [name, offset, color, phase] of [
+    ['Crew docking', [-.3, 1.65, 1.4], 0xf4dfb0, 0],
+    ['Cargo and quarantine', [1.4, 1.65, .3], 0xb8dbd8, 2],
+    ['Main communications dish', [-.7, -1.6, .8], 0xf4dfb0, 4],
+  ]) {
+    const anchor = station.object.getObjectByName(name);
+    if (!anchor) continue;
+    const lamp = new THREE.Mesh(signalGeometry, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, toneMapped: false }));
+    lamp.name = `${name} / signal lamp`;
+    lamp.position.set(...offset);
+    const halo = new THREE.Mesh(signalGeometry, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    halo.position.copy(lamp.position);
+    anchor.add(lamp, halo);
+    signals.push({ lamp, halo, phase });
+  }
   stars = createStars(); earth = createPlanet(); moon = createMoon();
   scene.add(stars, earth, moon);
   const sun = new THREE.DirectionalLight(0xffead0, 4.2);
@@ -162,6 +222,8 @@ export function mountStationScene(container, options = {}) {
     observer = new IntersectionObserver(([entry]) => { visible = !!entry?.isIntersecting; syncLoop(); });
     observer.observe(container);
     document.addEventListener('visibilitychange', syncLoop);
+    window.addEventListener('pointermove', movePointer, { passive: true });
+    document.addEventListener('mouseleave', resetPointer);
     media.addEventListener('change', syncLoop);
     renderer.domElement.addEventListener('webglcontextlost', lost);
     renderer.domElement.addEventListener('webglcontextrestored', restored);
