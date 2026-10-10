@@ -64,3 +64,7 @@
   .station-entry-caption a { font-size: var(--site-meta-size); }
   .station-entry .auth-panel { max-width: none; padding: 28px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
 }
+.activity-rules-consent { margin: 20px 0; }
+.activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.9; }
+.activity-rules-consent input { flex: none; margin-top: 6px; }
+.activity-rules-consent a { text-decoration: underline; text-underline-offset: 3px; }

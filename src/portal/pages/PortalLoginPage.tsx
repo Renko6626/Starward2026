@@ -12,6 +12,8 @@ import {
   normalizePortalEmailOtpInput,
 } from "../../shared/email-otp";
 import type { PortalMeResponse } from "../../shared/portal";
+import { activityRulesConsentHeaders, NEW_ACCOUNT_RESPONSE_HEADER } from "../../shared/activity-rules";
+import { ActivityRulesConsent } from "../components/ActivityRulesConsent";
 import { authClient } from "../lib/auth-client";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
 import "./portal-login.css";
@@ -32,6 +34,7 @@ export function PortalLoginPage() {
   const [isResolvingDestination, setIsResolvingDestination] = useState(false);
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const newRegistration = useRef(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
 
   useEffect(() => {
     if (!sessionQuery.data) {
@@ -80,6 +83,10 @@ export function PortalLoginPage() {
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === "register" && !rulesAccepted) {
+      setError("请先阅读并同意活动规则。");
+      return;
+    }
     setIsSigningIn(true);
     setError(null);
     setMessage(null);
@@ -93,7 +100,7 @@ export function PortalLoginPage() {
               email: normalizedEmail,
               password,
               name: normalizedEmail.split("@")[0] || "参与者",
-            })
+            }, { headers: activityRulesConsentHeaders(rulesAccepted) })
           : await authClient.signIn.email({ email: normalizedEmail, password });
       if (response.error) {
         newRegistration.current = false;
@@ -127,7 +134,7 @@ export function PortalLoginPage() {
     const response = await authClient.emailOtp.sendVerificationOtp({
       email: normalizedEmail,
       type: "sign-in",
-    });
+    }, { headers: activityRulesConsentHeaders(rulesAccepted) });
 
     setIsSending(false);
 
@@ -169,14 +176,21 @@ export function PortalLoginPage() {
     setError(null);
     setMessage(null);
 
+    newRegistration.current = false;
     const response = await authClient.signIn.emailOtp({
       email: normalizedEmail,
       otp: normalizedOtp,
+    }, {
+      headers: activityRulesConsentHeaders(rulesAccepted),
+      onSuccess: ({ response }) => {
+        newRegistration.current = response.headers.get(NEW_ACCOUNT_RESPONSE_HEADER) === "true";
+      },
     });
 
     setIsSigningIn(false);
 
     if (response.error) {
+      newRegistration.current = false;
       setError(response.error.message || "登录失败，请确认验证码是否正确。");
       return;
     }
@@ -255,7 +269,8 @@ export function PortalLoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
               />
             </Field>
-            <Button type="submit" disabled={isSigningIn}>
+            {mode === "register" ? <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSigningIn} /> : null}
+            <Button type="submit" disabled={isSigningIn || (mode === "register" && !rulesAccepted)}>
               {isSigningIn
                 ? "提交中…"
                 : mode === "register"
@@ -278,6 +293,7 @@ export function PortalLoginPage() {
                 placeholder="you@example.com"
               />
             </Field>
+            <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
             <Button type="submit" disabled={isSending || isSigningIn}>
               {isSending ? "发送中…" : "发送登录验证码"}
               <ArrowRight size={16} />
@@ -303,6 +319,7 @@ export function PortalLoginPage() {
               />
             </Field>
             <p className="auth-note">{getPortalEmailOtpNoticeText()}</p>
+            <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
             <Button type="submit" disabled={isSigningIn}>
               {isSigningIn ? "验证中…" : "验证并进入"}
             </Button>

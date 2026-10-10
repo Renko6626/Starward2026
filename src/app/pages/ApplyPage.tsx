@@ -6,9 +6,9 @@ import { getApplicationWindowLabel } from "../../shared/windows";
 import "./apply.css";
 
 const steps = [
-  { title: "建立创作者账号", body: "使用邮箱注册，已有账号可以直接登录。新注册后会进入接力时间表，已有账号登录后进入工作台。" },
-  { title: "选择意向发布时间", body: "在时间表选择一个空闲时点，再进入工作台填写报名资料。意向时间保存在当前浏览器标签页，提交报名成功后才会预留。如果注册前已经选好了时点，会直接进入工作台。" },
-  { title: "填写资料并提交报名", body: "报名需要准备一个 B站账号，填写主页链接或数字 UID，供相邻作者联系，不会展示在公开作品页。填写署名、联系方式和创作计划；作品或主页链接为选填。时间会自动带入，也可以通过下拉框改选可用时点。确认后提交报名，在工作台查看审核结果。" },
+  { title: "注册或登录账号", body: "首次参与请先阅读并同意活动规则，再用邮箱注册。注册后会进入接力时间表；如果注册前已经选好了时点，会直接进入工作台。已有账号可切换到登录，继续查看报名和作品资料。" },
+  { title: "选择意向发布时间", body: "在时间表选择一个空闲时点，点击“选择这个时点并填写报名”，进入工作台。意向时间只保存在当前浏览器标签页，提交报名成功后才会预留，其他人此时仍可选择同一个时点。" },
+  { title: "填写资料并提交报名", body: "填写署名、B站主页链接或数字 UID、联系方式，并选择参加形式。B站账号供相邻作者联系，不会展示在公开作品页。创作简介、作品或主页链接、给主催的话目前均为选填。时间会自动带入，也可以用下拉框改选可用时点。检查资料后，点击“提交报名并预留发布时点”。" },
 ];
 
 export function ApplyPage() {
@@ -20,9 +20,10 @@ export function ApplyPage() {
     : getApplicationWindowLabel(intake.payload.window);
   const statusNote = intake.status === "loading" ? "报名状态读取后，会在这里显示当前安排。"
     : intake.status === "error" ? intake.message
-    : isOpen ? "现在可以建立账号、完善资料并提交创作计划。"
+    : isOpen ? "报名已开放。注册后先选意向发布时间，再到工作台填写资料并提交报名。"
     : intake.payload.window?.state === "ended" ? "本轮报名已结束。已报名的创作者可继续登录，查看审核进度与后续安排。"
-    : "你可以先建立账号，等待报名窗口开放后一起填写联系资料、创作计划和发布时段。";
+    : "你可以先注册账号、查看时间表，等报名开放后再提交资料和发布时间。";
+  const entryLabel = session ? "前往我的工作台" : isOpen ? "注册并开始报名" : "注册创作者账号";
 
   return (
     <div className="participation-guide">
@@ -45,9 +46,10 @@ export function ApplyPage() {
             <p>{statusNote}</p>
           </div>
           <Link to={session ? "/portal" : "/portal/login"} className="participation-action">
-            {session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={18} />
+            {entryLabel}<ArrowUpRight size={18} />
           </Link>
-          <p className="participation-action-note">{session ? "继续查看或维护当前账号的报名资料。" : "已有账号可直接登录，首次参与请先注册。"}</p>
+          <p className="participation-action-note">{session ? "查看报名进度、维护资料或处理发布安排。" : "首次参与请先注册；已有账号可在账号页切换登录。"}</p>
+          <Link className="participation-rules-link" to="/rules">阅读完整活动规则 <ArrowUpRight size={14} /></Link>
         </section>
         <section className="participation-section" aria-labelledby="participation-steps-title">
           <div className="participation-section-heading"><span aria-hidden="true">01</span><h2 id="participation-steps-title">选择时间，再填写报名资料</h2></div>
@@ -60,23 +62,23 @@ export function ApplyPage() {
           </ol>
         </section>
         <section className="participation-section" aria-labelledby="participation-next-title">
-          <div className="participation-section-heading"><span aria-hidden="true">02</span><h2 id="participation-next-title">审核通过后，安排你的发布</h2></div>
-          <p className="participation-section-lead">创作计划与发布时段一起提交。提交报名时一并选择发布时段，时段会先为你预留。主催审核通过后，正式确认占坑。</p>
+          <div className="participation-section-heading"><span aria-hidden="true">02</span><h2 id="participation-next-title">提交后，查看审核和发布安排</h2></div>
+          <p className="participation-section-lead">工作台显示“待审核”，才表示报名已提交、时点已预留。主催审核通过后，报名状态变为“已报名”，时点正式确认。</p>
           <dl className="participation-followup">
-            <div><dt>认领发布时段</dt><dd>报名时选择空闲时段，提交成功后预留；审核未通过或撤回报名后释放。通过后可在调整窗口内换期。</dd></div>
-            <div><dt>补充作品资料</dt><dd>按开放安排提交预告资料与审查说明，根据反馈完善内容。</dd></div>
-            <div><dt>按日程发布作品</dt><dd>由作者在约定的时段发布作品，并在当天回到工作台填写作品链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开，链接之后仍可修改。</dd></div>
+            <div><dt>等待报名审核</dt><dd>在工作台查看主催反馈。报名可修改期间，你可以更新资料或改选时点，再次提交后才会生效；审核未通过或撤回报名后，预留时点会释放。</dd></div>
+            <div><dt>补充作品资料</dt><dd>报名审核通过后，在工作台填写作品预告和审查说明，按开放安排分别提交，根据主催反馈完善。需要调整发布时间时，可在变更开放期间查看时间表、调整或申请换期。</dd></div>
+            <div><dt>发布并确认作品</dt><dd>由作者按约定时刻发布作品，并在当天（北京时间）回到工作台填写作品链接、点击“确认已发布”。作者确认发布且资料审核通过后，作品详情会在站内公开。首次确认只在约定当天开放，确认后仍可修改链接；错过当天请联系主催协调。</dd></div>
           </dl>
         </section>
         <section className="participation-section" aria-labelledby="participation-before-title">
           <div className="participation-section-heading"><span aria-hidden="true">03</span><h2 id="participation-before-title">提交前，再确认两件事</h2></div>
           <div className="participation-reminders">
             <div><h3>公开署名与联系方式分开</h3><p>不公开署名仍需提供有效联系方式，供主催联系与审核。请确认邮箱和主联系渠道能够找到你。</p></div>
-            <div><h3>沿用同一个创作者账号</h3><p>已有账号请直接登录。报名资料、审核反馈和后续日程都关联这个账号，方便你持续查看和更新。</p></div>
+            <div><h3>保存个人信息后还需要提交报名</h3><p>“仅保存个人信息”只保存署名和联系方式，不会提交报名或预留时点。请继续检查参加形式和发布时间，完成报名提交，并确认工作台显示“待审核”。</p></div>
           </div>
         </section>
         <div className="participation-closing">
-          <Link to={session ? "/portal" : "/portal/login"}>{session ? "前往我的报名" : "进入创作者工作台"}<ArrowUpRight size={16} /></Link>
+          <Link to={session ? "/portal" : "/portal/login"}>{entryLabel}<ArrowUpRight size={16} /></Link>
         </div>
       </div>
     </div>

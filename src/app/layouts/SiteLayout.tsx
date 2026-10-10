@@ -102,6 +102,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
       <footer className="public-footer">
         <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
         <span>Starward Pilgrimage</span>
+        <Link to="/rules">活动规则</Link>
       </footer>
     </div>
   );

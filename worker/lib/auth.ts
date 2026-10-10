@@ -20,6 +20,9 @@ import {
   getPortalEmailOtpValidityLabel,
 } from "../../src/shared/email-otp";
 import type { AppContext, AppBindings } from "./types";
+import { saveActivityRuleAcceptance } from "../data/activity-rule-acceptances";
+import { requireActivityRulesConsent } from "./activity-rule-consent";
+import { NEW_ACCOUNT_RESPONSE_HEADER } from "../../src/shared/activity-rules";
 import {
   ensureParticipantForAuthUser,
   getParticipantByInviteEmail,
@@ -79,6 +82,26 @@ function buildPortalEntryPlugin(env: AppBindings) {
       return {
         options: {
           databaseHooks: {
+            user: {
+              create: {
+                async before(_user: Record<string, unknown>, context: GenericEndpointContext | null) {
+                  requireActivityRulesConsent(context);
+                },
+                async after(user: { id: string } & Record<string, unknown>, context: GenericEndpointContext | null) {
+                  const version = requireActivityRulesConsent(context);
+                  try {
+                    await saveActivityRuleAcceptance(db, user.id, version);
+                  } catch {
+                    // Roll back only this newly created account if consent could not be recorded.
+                    await db.prepare('DELETE FROM "user" WHERE id = ?').bind(user.id).run();
+                    throw new APIError("SERVICE_UNAVAILABLE", {
+                      code: "ACTIVITY_RULES_SAVE_FAILED",
+                      message: "暂时无法保存规则确认，账号尚未建立，请稍后重试。",
+                    });
+                  }
+                },
+              },
+            },
             session: {
               create: {
                 async after(
@@ -120,6 +143,15 @@ function buildPortalEntryPlugin(env: AppBindings) {
       };
     },
     hooks: {
+      after: [{
+        matcher: (context: { path?: string }) => context.path === "/sign-in/email-otp",
+        handler: createAuthMiddleware(async ctx => {
+          const returned = ctx.context.returned as { user?: { id?: string } } | undefined;
+          if (ctx.body.__starwardNewAccount === true && returned?.user?.id) {
+            ctx.setHeader(NEW_ACCOUNT_RESPONSE_HEADER, "true");
+          }
+        }),
+      }],
       before: [
         {
           matcher(context: { path?: string }) {
@@ -140,6 +172,7 @@ function buildPortalEntryPlugin(env: AppBindings) {
               );
               ctx.body.email = email;
               if (ctx.path === "/sign-up/email") {
+                requireActivityRulesConsent(ctx);
                 const participant = await getParticipantByInviteEmail(
                   db,
                   email,
@@ -156,11 +189,9 @@ function buildPortalEntryPlugin(env: AppBindings) {
             }
 
             const type =
-              typeof ctx.body?.type === "string"
-                ? ctx.body.type
-                : ctx.path === "/sign-in/email-otp"
-                  ? "sign-in"
-                  : null;
+              ctx.path === "/sign-in/email-otp"
+                ? "sign-in"
+                : typeof ctx.body?.type === "string" ? ctx.body.type : null;
 
             if (type !== "sign-in") {
               return;
@@ -169,6 +200,10 @@ function buildPortalEntryPlugin(env: AppBindings) {
             const rawEmail =
               typeof ctx.body?.email === "string" ? ctx.body.email : "";
             const email = normalizeEmailAddress(rawEmail);
+            const existingUser = await db.prepare('SELECT id FROM "user" WHERE email = ? LIMIT 1').bind(email).first();
+            // Overwrite this request-local marker; never trust a client-supplied value.
+            if (ctx.path === "/sign-in/email-otp") ctx.body.__starwardNewAccount = !existingUser;
+            if (!existingUser) requireActivityRulesConsent(ctx);
             const participant = await getParticipantByInviteEmail(db, email);
 
             ctx.body.email = email;

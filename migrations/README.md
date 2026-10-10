@@ -99,3 +99,18 @@ retains author confirmation, and link edits do not reverse that withdrawal.
 
 Extra slots have no planned time and continue to use manual admin publication.
 No remote migration or deployment is performed by local validation commands.
+
+## Activity rules acceptance
+
+`0019_activity_rule_acceptances.sql` adds a separate acceptance table keyed by
+account and rules version. The backend requires an explicit current-version
+confirmation before password registration or OTP account creation, and records
+the server time after creating the account. Missing or outdated confirmation is
+rejected before consuming a signup OTP. Existing accounts can still log in
+without a historical acceptance record; no consent is backfilled for them.
+
+Apply this additive migration before deploying the new registration code. Local
+development uses `npx wrangler d1 migrations apply starward2026 --local` and keeps
+the existing accounts, sessions, applications and schedule. The public version
+and registration header are defined in `src/shared/activity-rules.ts`; update
+the version whenever the published terms change.

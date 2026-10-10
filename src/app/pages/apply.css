@@ -69,3 +69,4 @@
   .participation-section { margin-top: 36px; padding-top: 25px; }
   .participation-followup > div { grid-template-columns: 1fr; gap: 5px; }
 }
+.participation-rules-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 8px; color: #c6c6c6; font-size: var(--site-meta-size); text-decoration: underline; text-underline-offset: 3px; }

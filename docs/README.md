@@ -81,6 +81,7 @@ docs/
 - [product/portal/skeleton.md](./product/portal/skeleton.md)
 - [product/portal/data-api.md](./product/portal/data-api.md)
 - [product/site/skeleton.md](./product/site/skeleton.md)
+- [product/site/participation-rules-source.md](./product/site/participation-rules-source.md)：合作方提供的规则原稿、展示建议和待确认事项
 
 设计：
 

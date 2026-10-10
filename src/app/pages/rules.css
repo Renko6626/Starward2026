@@ -1,0 +1,27 @@
+.rules-page { max-width: 1080px; margin: 0 auto; padding: 52px 0 64px; }
+.rules-back { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: var(--color-on-surface-variant); }
+.rules-header h1 { margin: 24px 0 18px; font-size: var(--site-title-size); font-weight: 500; }
+.rules-version { display: flex; flex-wrap: wrap; gap: 12px 30px; margin: 0; color: var(--color-on-surface-variant); font-size: var(--site-meta-size); }
+.rules-version > div { display: flex; gap: 10px; }
+.rules-version dd { margin: 0; }
+.rules-header > p { margin: 24px 0 0; color: var(--color-on-surface-variant); line-height: 1.9; }
+.rules-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 58px; margin-top: 42px; border-top: 1px solid var(--color-outline-variant); padding-top: 28px; }
+.rules-contents { position: sticky; top: 28px; align-self: start; display: flex; flex-direction: column; gap: 4px; }
+.rules-contents h2 { margin: 0 0 12px; font-size: var(--site-meta-size); font-weight: 400; color: var(--color-on-surface-variant); }
+.rules-contents a { display: flex; align-items: center; min-height: 40px; color: var(--color-on-surface-variant); }
+.rules-contents a:hover, .rules-back:hover { color: var(--color-on-surface); }
+.rules-section { padding: 25px 0; border-bottom: 1px solid var(--color-outline-variant); scroll-margin-top: 28px; }
+.rules-section:first-child { padding-top: 0; }
+.rules-section h2 { margin: 0 0 16px; font-size: var(--site-section-size); font-weight: 500; }
+.rules-section p { margin: 0; line-height: 2; overflow-wrap: anywhere; color: var(--color-on-surface-variant); }
+.rules-section p + p { margin-top: 16px; }
+.rules-section--rights p { color: var(--color-on-surface); }
+.rules-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px; padding-top: 32px; }
+.rules-actions > a { min-height: 44px; display: inline-flex; align-items: center; gap: 10px; }
+@media (max-width: 759px) {
+  .rules-page { padding-top: 24px; }
+  .rules-layout { grid-template-columns: 1fr; gap: 28px; }
+  .rules-contents { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+  .rules-contents h2 { grid-column: 1 / -1; }
+  .rules-contents a { line-height: 1.6; }
+}

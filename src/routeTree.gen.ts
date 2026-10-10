@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RulesRouteImport } from './routes/rules'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ApplyRouteRouteImport } from './routes/apply/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -37,6 +38,11 @@ import { Route as AdminProjectDraftsDraftIdRouteImport } from './routes/admin/pr
 import { Route as AdminParticipantsParticipantIdRouteImport } from './routes/admin/participants/$participantId'
 import { Route as AdminApplicationsApplicationIdRouteImport } from './routes/admin/applications/$applicationId'
 
+const RulesRoute = RulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
   id: '/portal',
   path: '/portal',
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/rules': typeof RulesRoute
   '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
   '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
   '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
@@ -207,6 +214,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/rules': typeof RulesRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
   '/portal/application': typeof PortalApplicationRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/rules': typeof RulesRoute
   '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
   '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
   '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apply'
     | '/portal'
+    | '/rules'
     | '/admin/applications'
     | '/admin/participants'
     | '/admin/project-drafts'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/rules'
     | '/admin/schedule'
     | '/apply/success'
     | '/portal/application'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apply'
     | '/portal'
+    | '/rules'
     | '/admin/applications'
     | '/admin/participants'
     | '/admin/project-drafts'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ApplyRouteRoute: typeof ApplyRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
+  RulesRoute: typeof RulesRoute
   PortalLoginRoute: typeof PortalLoginRoute
   WorksWorkIdRoute: typeof WorksWorkIdRoute
   WorksIndexRoute: typeof WorksIndexRoute
@@ -354,6 +367,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/rules': {
+      id: '/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof RulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal': {
       id: '/portal'
       path: '/portal'
@@ -657,6 +677,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   ApplyRouteRoute: ApplyRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
+  RulesRoute: RulesRoute,
   PortalLoginRoute: PortalLoginRoute,
   WorksWorkIdRoute: WorksWorkIdRoute,
   WorksIndexRoute: WorksIndexRoute,
