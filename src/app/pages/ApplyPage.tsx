@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { authClient } from "../../portal/lib/auth-client";
 import { useApplicationIntake } from "../lib/use-application-intake";
 import { getApplicationWindowLabel } from "../../shared/windows";
+import { StationTechnicalDrawing } from "../components/StationTechnicalDrawing";
 import "./apply.css";
 
 const steps = [
@@ -33,10 +34,7 @@ export function ApplyPage() {
           <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
           <h1>参与指南</h1>
         </div>
-        <figure className="participation-artwork" aria-hidden="true">
-          <img src="/station-drawings/side-elevation.png" alt="" width={1260} height={850} />
-          <figcaption><span>TORIFUNE</span><span>EXTERIOR STUDY / 01</span></figcaption>
-        </figure>
+        <div className="participation-artwork"><StationTechnicalDrawing variant="guide" /></div>
       </aside>
       <div className="participation-content">
         <section className="participation-status" aria-labelledby="participation-status-title">

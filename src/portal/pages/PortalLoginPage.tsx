@@ -16,6 +16,7 @@ import { activityRulesConsentHeaders, NEW_ACCOUNT_RESPONSE_HEADER } from "../../
 import { ActivityRulesConsent } from "../components/ActivityRulesConsent";
 import { authClient } from "../lib/auth-client";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
+import { StationTechnicalDrawing } from "../../app/components/StationTechnicalDrawing";
 import "./portal-login.css";
 
 export function PortalLoginPage() {
@@ -207,16 +208,13 @@ export function PortalLoginPage() {
 
   return (
     <div className="auth-layout station-entry">
-      <div className="station-entry-artwork" aria-hidden="true">
-        <img src="/station-drawings/side-elevation.png" alt="" width={1260} height={850} />
-      </div>
       <div className="auth-intro">
         <div className="station-entry-heading">
           <p className="eyebrow">STARWARD PILGRIMAGE / 2026</p>
           <h2>作者页面</h2>
         </div>
+        <div className="station-entry-artwork"><StationTechnicalDrawing variant="entry" /></div>
         <div className="station-entry-caption">
-          <p>TORIFUNE / SIDE ELEVATION</p>
           <Link to="/apply">首次参与？阅读参与指南 <ArrowUpRight size={14} /></Link>
         </div>
       </div>

@@ -40,8 +40,11 @@ npm run test:station
 
 线稿产物还包括：
 
-- `public/station-drawings/overview.png`：1600×1100，英文标注结构图版。
-- `public/station-drawings/side-elevation.png`：1260×850，参与指南和创作者入口共用的纯线稿。
+- `public/station-drawings/overview.png`：1600×1100，总体图版预览。
+- `public/station-drawings/side-elevation.png`：1260×850，细线外形底图。
+- `public/station-drawings/assembly.svg`：1120×930，侧视总览；矢量边框分区、中心线、尺寸线、详图索引与比例尺。
+- `public/station-drawings/end-view.svg`：1120×930，双环端视图。
+- `public/station-drawings/docking.svg`、`propulsion.svg`：1120×650，对接端与推进尾段局部放大。
 - `public/station-drawings/manifest.json`：线稿输入指纹、依赖版本、尺寸和图片 SHA-256。
 
 将上述产物及两个 manifest 与模型/场景修改一起提交。临时构建与截图目录自动清理并已加入忽略规则；生成中任一视图失败时保留旧产物。捕获期间模型发生变化也会停止发布，以免清单与图片不一致。首页预览和线稿分别整组替换；若第二组失败，命令停止且不会继续构建，修复后重跑 `station:update` 即可。
@@ -51,7 +54,9 @@ npm run test:station
 - 模型构件和尺寸：`experiments/station/ring-romantic/src/model/`；装配入口为 `station-ring.js`。
 - 首页镜头、灯光和运动：`src/app/components/station/scene.js`；截图尺寸在同目录 `config.js`。
 - 线稿镜头、轮廓处理和标注排布：`experiments/station/technical-study/main.js`；图框在 `index.html`，捕获产物尺寸在 `capture.mjs`。
-- 两个环的直径标注直接读取模型 `layout.confirmed` 参数；引出线端点随模型锚点更新。文字排布位置仍是固定设计值。
+- 页面图版排版：`src/app/components/StationTechnicalDrawing.tsx` 及同目录 `station-technical-drawing.css`。桌面保留左右布局，登录展示一张总览，指南左栏依次展示环体端视、对接端、推进尾段三张子系统图；总览及辅助导出素材全部保留。图上仅保留尺寸、单位、图号与少量短词；手机将图版作为低透明度背景，不占正文空间。
+- 图内文字统一使用项目已有的 IBM Plex Mono 400，SVG 内嵌 WOFF2；图版预览先加载同一字体再截图。字体文件纳入图纸输入指纹。
+- 尺寸来自模型 `layout.confirmed` 与 `layout.working`；工作尺寸标记 `REF`。主图与局部图采用严格侧视正交相机，端视图仅展示环体与核心。比例尺按对应正交相机尺度生成；边框分区与 XYZ 空间坐标分别处理。文字排布位置仍是固定设计值。
 
 一般改构件后只需 `npm run station:update`。大幅改变外形、增删构件或调整尺寸时，仍需查看生成图，必要时调整镜头、取景范围和标注位置；脚本不会自动完成新的构图设计。首页背景中的地月转移轨迹有独立参数和生成流程，修改空间站模型不会触发轨迹重算。
 
