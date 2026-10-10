@@ -74,6 +74,7 @@ export function createStationResources() {
   const geometries = {
     box: new THREE.BoxGeometry(1, 1, 1),
     rounded: new RoundedBoxGeometry(1, 1, 1, 2, .08),
+    roundedSmall: new RoundedBoxGeometry(1, 1, 1, 1, .08),
     cylinder: new THREE.CylinderGeometry(1, 1, 1, 20),
     sphere: new THREE.SphereGeometry(1, 20, 12),
     nozzle: new THREE.LatheGeometry([

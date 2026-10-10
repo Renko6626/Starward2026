@@ -3,6 +3,7 @@ import { createRingStation } from '../../../../experiments/station/ring-romantic
 import { createEnvironment } from '../../../../experiments/station/ring-romantic/src/materials.js';
 import { createStars, createPlanet, createMoon } from '../../../../experiments/station/ring-romantic/src/space.js';
 import { mobileBreakpoint } from './config.js';
+import { batchStaticMeshes } from './static-batches.js';
 
 export function mountStationScene(container, options = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
@@ -190,6 +191,10 @@ export function mountStationScene(container, options = {}) {
   }
   try {
   station = createRingStation();
+  const retired = batchStaticMeshes(station.object.getObjectByName('Fixed group / no ring rotation'));
+  const retained = new Set();
+  station.object.traverse(object => { if (object.geometry) retained.add(object.geometry); });
+  retired.forEach(geometry => { if (!retained.has(geometry)) geometry.dispose(); });
   scene.add(station.object);
   antenna = station.object.getObjectByName('Pointable main dish / +Z boresight');
   const signalGeometry = new THREE.SphereGeometry(.28, 10, 8);

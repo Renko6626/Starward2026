@@ -1,22 +1,35 @@
 import * as THREE from 'three';
 
+// Keep the same corner radius and envelope. Small fittings and thin strips
+// need fewer corner segments than large cabinets or passage bodies.
+function roundedGeometry(geometries, size) {
+  const [shortest, middle, longest] = size.map(Math.abs).sort((a, b) => a - b);
+  const small = longest <= 2 || (shortest <= .2 && middle <= 2);
+  return small ? geometries.roundedSmall : geometries.rounded;
+}
+
 // Each Assembly owns one group's batches. Nothing batches across rotating groups.
 export class Assembly {
-  constructor(resources) { this.resources = resources; this.batches = new Map(); }
+  constructor(resources) {
+    this.resources = resources; this.batches = new Map();
+    this.position = new THREE.Vector3(); this.scale = new THREE.Vector3();
+    this.rotation = new THREE.Euler(); this.quaternion = new THREE.Quaternion();
+  }
   part(geometry, materialName, position, scale = [1, 1, 1], rotation = [0, 0, 0]) {
     const material = this.resources.materials[materialName];
     if (!material) throw new Error(`Unknown station material: ${materialName}`);
     if (!this.batches.has(geometry)) this.batches.set(geometry, new Map());
     const byMaterial = this.batches.get(geometry);
     if (!byMaterial.has(material)) byMaterial.set(material, []);
-    const quaternion = rotation.isQuaternion ? rotation : new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation));
+    const quaternion = rotation.isQuaternion ? rotation : this.quaternion.setFromEuler(
+      this.rotation.set(rotation[0], rotation[1], rotation[2], rotation[3] ?? 'XYZ'));
     byMaterial.get(material).push(new THREE.Matrix4().compose(
-      new THREE.Vector3(...position), quaternion, new THREE.Vector3(...scale),
+      this.position.fromArray(position), quaternion, this.scale.fromArray(scale),
     ));
     return this;
   }
   box(material, position, size, rotation) {
-    return this.part(this.resources.geometries.rounded, material, position, size, rotation);
+    return this.part(roundedGeometry(this.resources.geometries, size), material, position, size, rotation);
   }
   beam(material, start, end, width = .25, depth = width) {
     const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
@@ -26,7 +39,8 @@ export class Assembly {
     // box would stretch its end radius by metres on long chords. Wide passage
     // envelopes and utility covers retain their existing rounded profiles.
     const structural = Math.max(width, depth) < 1 && ['silver', 'frame', 'hull', 'ringSupport'].includes(material);
-    const geometry = structural ? this.resources.geometries.box : this.resources.geometries.rounded;
+    const geometry = structural ? this.resources.geometries.box
+      : roundedGeometry(this.resources.geometries, [width, length, depth]);
     return this.part(geometry, material, a.add(b).multiplyScalar(.5).toArray(),
       [width, length, depth], new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()));
   }
@@ -107,6 +121,9 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
 // grain; UV1 maps each complete face for panel edges and captive fasteners.
 // Separate rim vertices keep folded sheet edges sharp without faceting corners.
 export function arcPanelGeometry(radius, profile, angle, offset = .065, thickness = .025, steps = 12) {
+  // Use the requested subdivision count as a ceiling. Narrow tiles need fewer
+  // angular samples; retain at least two spans and every cross-section point.
+  steps = Math.min(steps, Math.max(2, Math.ceil(Math.abs(angle) / (Math.PI / 120))));
   const positions = [], normals = [], uv = [], uv1 = [], indices = [];
   const distances = [0];
   for (let k = 1; k < profile.length; k++) distances.push(distances[k - 1]
@@ -117,9 +134,11 @@ export function arcPanelGeometry(radius, profile, angle, offset = .065, thicknes
     positions.push(...p); normals.push(...n); uv.push(...tex); uv1.push(...panelTex); return index;
   };
   const quad = (a, b, c, d, outward) => {
-    const point = i => new THREE.Vector3().fromArray(positions, i * 3);
-    const normal = point(b).sub(point(a)).cross(point(c).sub(point(a)));
-    if (normal.dot(new THREE.Vector3(...outward)) >= 0) indices.push(a, b, c, a, c, d);
+    const aa = a * 3, bb = b * 3, cc = c * 3;
+    const bx = positions[bb] - positions[aa], by = positions[bb + 1] - positions[aa + 1], bz = positions[bb + 2] - positions[aa + 2];
+    const cx = positions[cc] - positions[aa], cy = positions[cc + 1] - positions[aa + 1], cz = positions[cc + 2] - positions[aa + 2];
+    const nx = by * cz - bz * cy, ny = bz * cx - bx * cz, nz = bx * cy - by * cx;
+    if (nx * outward[0] + ny * outward[1] + nz * outward[2] >= 0) indices.push(a, b, c, a, c, d);
     else indices.push(a, c, b, a, d, c);
   };
   for (let face = 0; face < 2; face++) for (let i = 0; i <= steps; i++) {
