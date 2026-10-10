@@ -15,6 +15,7 @@ import type { PortalMeResponse } from "../../shared/portal";
 import { activityRulesConsentHeaders, NEW_ACCOUNT_RESPONSE_HEADER } from "../../shared/activity-rules";
 import { ActivityRulesConsent } from "../components/ActivityRulesConsent";
 import { authClient } from "../lib/auth-client";
+import { getPasswordAuthErrorMessage } from "../lib/password-auth-error";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
 import { StationTechnicalDrawing } from "../../app/components/StationTechnicalDrawing";
 import "./portal-login.css";
@@ -111,9 +112,7 @@ export function PortalLoginPage() {
           : await authClient.signIn.email({ email: normalizedEmail, password });
       if (response.error) {
         newRegistration.current = false;
-        setError(
-          response.error.message || "注册或登录失败，请检查邮箱和密码。",
-        );
+        setError(getPasswordAuthErrorMessage(response.error));
         return;
       }
       setPassword("");
@@ -221,6 +220,7 @@ export function PortalLoginPage() {
       <section className="auth-panel" aria-label="作者账号">
         <p className="station-entry-form-label">CREATOR ACCESS</p>
         <h1>{mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
+        <p className="auth-note">目前使用邮箱注册和登录。报名时可另选联系方式，供组委会联系。</p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [
@@ -246,7 +246,7 @@ export function PortalLoginPage() {
         </div>
         {mode !== "otp" ? (
           <form onSubmit={handlePasswordSubmit}>
-            <Field label="邮箱">
+            <Field label="登录邮箱">
               <input
                 className="field-input"
                 type="email"
@@ -285,7 +285,7 @@ export function PortalLoginPage() {
           </form>
         ) : step === "email" ? (
           <form onSubmit={handleSendOtp}>
-            <Field label="邮箱">
+            <Field label="登录邮箱">
               <input
                 className="field-input"
                 type="email"

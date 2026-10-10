@@ -29,7 +29,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
   const time = current ?? selected;
   const timeStatus = current ? current.status === "confirmed" ? "已确认" : current.status === "reserved" ? "已预留" : "请查看排期状态"
     : selected ? selected.status === "available" ? "尚未预留" : "已不可选，请重新选择" : "尚未选择";
-  const next = approved ? completed ? "可查看作品和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "先选择发布时间，再继续创作。"
+  const next = approved ? completed ? "可查看作品和操作记录。" : current ? "报名已通过，安心创作。作品提交入口预计在接力开始前两周开放，届时提交作品并登记资料。" : "先选择发布时间，再继续创作。"
     : pending ? application.editable ? "等待主催审核，期间可修改或撤回报名。" : "等待主催审核，当前仍可撤回报名。"
     : application.editable ? withdrawn ? "重新选择发布时间，检查资料后再次提交报名。" : rejected ? "根据主催反馈修改资料后，重新提交报名。" : "填写署名与联系、创作意向，选择时间后提交报名。"
     : "当前不能提交或修改报名，请查看参与指南或联系主催。";

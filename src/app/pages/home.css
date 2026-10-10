@@ -55,6 +55,10 @@
 .relay-heading h2 { margin: 0; font: 500 var(--site-section-size)/1.6 var(--font-body); letter-spacing: .025em; }
 .relay-statement { padding-top: 20px; }
 .relay-statement p { font-size: var(--site-body-size); line-height: 2.1; color: #9c9c9c; margin: 0; max-width: 32em; }
+.relay-statement p + p { margin-top: 16px; }
+.relay-about-links { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 20px; }
+.relay-about-links a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: #a0c8d8; font-size: var(--site-meta-size); }
+.relay-about-links a:hover { color: #d8d8d8; }
 .relay-poster { position: relative; min-width: 0; padding: 8px; border: 1px solid #596b76; background: #10161b; }
 .relay-poster::before { content: ''; position: absolute; inset: 3px; border: 1px solid #2b3941; pointer-events: none; }
 .relay-poster img { display: block; width: 100%; height: auto; }

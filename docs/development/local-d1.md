@@ -47,6 +47,11 @@ npm run test:env -- local
 启动失败需查看具体错误。本地 `.dev.vars` 中的 `BETTER_AUTH_URL` 使用
 `http://localhost:20262`。
 
+若密码错误时出现 Vite 的 `fetch failed` 报错层，旧版 Miniflare 的 Undici
+会把带请求体的 `401` 响应误判为网络错误，见 [上游问题](https://github.com/cloudflare/workers-sdk/issues/13578)。
+项目通过 `overrides.miniflare.undici` 固定为 `7.24.8`，使无效凭据正常返回 `401`。
+拉取修复后执行 `npm install` 并重启 `npm run dev`；不需要重置数据库或关闭报错层。
+
 `npm run dev` 不会自动应用数据库迁移。更新代码后，如果接口报
 `no such column` 或 `no such table`，先检查本地迁移状态：
 

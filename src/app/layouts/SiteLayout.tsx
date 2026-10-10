@@ -136,9 +136,21 @@ function NavigationIndicator({ active, mobile, reduced }: { active: boolean; mob
 export function SiteFooter() {
   return (
     <footer className="public-footer">
-      <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
-      <span>Starward Pilgrimage</span>
-      <Link to="/rules">活动规则</Link>
+      <div className="footer-main">
+        <div className="footer-identity">
+          <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
+          <span>Starward Pilgrimage</span>
+        </div>
+        <nav className="footer-links" aria-label="页脚导航">
+          <Link to="/apply">参与指南</Link>
+          <Link to="/rules">活动规则</Link>
+          <Link to="/rules" hash="rules-privacy">信息与隐私</Link>
+        </nav>
+      </div>
+      <div className="footer-contact">
+        <span>主办方：逐星巡礼组委会</span>
+        <span>活动 QQ 群：1078039621</span>
+      </div>
     </footer>
   );
 }

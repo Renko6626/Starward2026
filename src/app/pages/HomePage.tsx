@@ -92,7 +92,10 @@ export function HomePage() {
         <ScrollReveal className="relay-about-copy">
           <div className="relay-heading"><h2 id="relay-title">关于活动</h2></div>
           <div className="relay-statement">
-            <p>逐星巡礼是以秘封组为主题的同人创作接力。参与者按约定日程发布作品。</p>
+            <p>逐星巡礼是为 2026 年秘封俱乐部之日举办的粉丝向同人创作接力活动。以堇子、莲子、梅莉为主题的画作、同人文、视频等作品，将在 11 月 12 日按各位作者约定的时点依次发布，主要平台为Bilibili，并在X上同步进行。</p>
+            <p>报名本身不需要完成作品，只需填写必要信息和创作计划，审核通过后即可参与。作品须在 11 月 11 日 23:00 前（北京时间）完成并提交；提交入口预计在接力开始前两周开放，届时提交作品内容并登记资料。</p>
+            <p>组委会有制作纪念册的计划。正式投稿后，我们会与作者另行讨论出版安排和作品使用授权，单独确认。希望多次投稿或有其他疑问，可以在活动 QQ 群内联系组委会。</p>
+            <div className="relay-about-links"><Link to="/apply">参与指南 <ArrowUpRight size={14} /></Link><Link to="/rules">完整活动规则 <ArrowUpRight size={14} /></Link></div>
           </div>
         </ScrollReveal>
       </section>

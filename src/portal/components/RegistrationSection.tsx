@@ -31,14 +31,14 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     profile: {
       creditName: application.profile?.creditName ?? "",
       bilibiliUid: application.profile?.bilibiliUid ?? "",
-      contactEmail: application.profile ? application.profile.contactEmail : application.user.email,
+      contactEmail: application.profile?.contactEmail ?? null,
       primaryContactChannel: application.profile?.primaryContactChannel ?? "QQ",
       primaryContactHandle: application.profile?.primaryContactHandle ?? "",
       backupContact: application.profile?.backupContact ?? "",
       isAnonymous: application.profile?.isAnonymous ?? true,
     },
     application: {
-      contactEmail: application.application ? application.application.contactEmail : application.profile ? application.profile.contactEmail : application.user.email,
+      contactEmail: application.application ? application.application.contactEmail : application.profile?.contactEmail ?? null,
       contactHandle: application.application?.contactHandle ?? "",
       interestFormat: application.application?.interestFormat ?? "novel",
       introText: application.application?.introText ?? "",
@@ -55,7 +55,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       let draft: ReturnType<typeof parseRegistrationDraft> = null;
       try { draft = parseRegistrationDraft(sessionStorage.getItem(registrationDraftKey(application.user.id))); } catch { /* Storage may be disabled. */ }
       const intent = readScheduleIntent(application.user.id);
-      setForm(current => ({ ...current, ...(application.editable && draft ? draft : {}), ...(intent && application.editable ? { segmentId: intent } : {}) }));
+      setForm(current => ({ ...current, ...(application.editable && draft ? { ...draft, profile: { ...draft.profile, contactEmail: current.profile.contactEmail } } : {}), ...(intent && application.editable ? { segmentId: intent } : {}) }));
       draftLoaded.current = true;
       setDraftReady(true);
     }
@@ -206,8 +206,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     finally { setSaving(false); }
   }
 
-  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => (
-    <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact" && key !== "contactEmail"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
+  const profileField = (key: "creditName" | "bilibiliUid" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => (
+    <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
   );
   return <div ref={formContainerRef} className={compact ? "creator-board creator-board--registration" : "space-y-6"} onChangeCapture={event => {
     const target = event.target;
@@ -245,11 +245,12 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       }
     }}>
       <div className="workspace-form-grid">
-        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}{profileField("contactEmail", "联系邮箱（选填）", "email")}
-        <Field label="联系渠道" error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" form="creator-registration-form" className="field-input" disabled={compact ? saving || savingProfile : disabled} value={form.profile.primaryContactChannel} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, primaryContactChannel: event.target.value } }))}>{!portalContactChannels.includes(form.profile.primaryContactChannel) ? <option value={form.profile.primaryContactChannel}>{form.profile.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>{profileField("primaryContactHandle", "联系账号")}
+        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}
+        <Field label="联系方式种类" error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" form="creator-registration-form" className="field-input" disabled={compact ? saving || savingProfile : disabled} value={form.profile.primaryContactChannel} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, primaryContactChannel: event.target.value } }))}>{!portalContactChannels.includes(form.profile.primaryContactChannel) ? <option value={form.profile.primaryContactChannel}>{form.profile.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>{profileField("primaryContactHandle", "联系方式内容")}
         {profileField("backupContact", "备用联系方式（选填）")}
       </div>
       <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
+      <p className="field-hint">请填写组委会能联系到你的方式，选择“其他”时请注明平台或渠道。联系方式需自行填写，与登录账号分开。</p>
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
     {compact ? <><Button appearance="industrial" type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "保存署名与联系"}</Button></> : null}
