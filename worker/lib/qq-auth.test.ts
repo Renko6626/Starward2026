@@ -6,20 +6,26 @@ const fixtures: SqliteD1Fixture[]=[];
 afterEach(()=>{vi.unstubAllGlobals();fixtures.splice(0).forEach(f=>f.sqlite.close());});
 function setup() {
   const f=new SqliteD1Fixture(); fixtures.push(f);
-  const env={DB:f.db,BETTER_AUTH_SECRET:"test-only-qq-secret-with-at-least-32-characters",BETTER_AUTH_URL:"http://localhost:20262",QQ_OAUTH_ENABLED:"true",QQ_APP_ID:"123456",QQ_APP_KEY:"test-qq-key"};
+  const env={DB:f.db,BETTER_AUTH_SECRET:"test-only-qq-secret-with-at-least-32-characters",BETTER_AUTH_URL:"http://localhost:20262",ALLOW_LOCAL_DEV_ORIGINS:"true",QQ_OAUTH_ENABLED:"true",QQ_APP_ID:"123456",QQ_APP_KEY:"test-qq-key"};
   let openId="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
   let responseAppId="123456";
+  let beforeUserInfo = async () => {};
   vi.stubGlobal("fetch", vi.fn(async (input: string|URL|Request)=>{
     const url=new URL(input instanceof Request?input.url:String(input));
     if(url.hostname!=="graph.qq.com") throw new Error("Unexpected external request");
     if(url.pathname==="/oauth2.0/token") return Response.json({access_token:"test-token",expires_in:3600});
     if(url.pathname==="/oauth2.0/me") return Response.json({client_id:responseAppId,openid:openId});
+    await beforeUserInfo();
     return Response.json({ret:0,nickname:"QQ 作者",figureurl_qq_1:"https://example.com/avatar.png"});
   }));
   const auth=createAuth(env);
   const request=async(path:string,body?:object,cookie="",consent:string|null=null)=>{
     (await auth.$context).skipOriginCheck=false;
     return auth.handler(new Request(`http://localhost:20262/api/auth${path}`,{method:body?"POST":"GET",headers:{"user-agent":"iPhone test-browser",origin:env.BETTER_AUTH_URL,"content-type":"application/json",cookie,...(consent?{"x-starward-rules-version":consent}:{})},body:body?JSON.stringify(body):undefined}));
+  };
+  const registerEmail=async(email:string)=>{
+    await (await auth.$context).internalAdapter.createVerificationValue({identifier:`sign-in-otp-${email}`,value:"123456:0",expiresAt:new Date(Date.now()+600000)});
+    return request("/sign-in/email-otp",{email,otp:"123456"},"",ACTIVITY_RULES_VERSION);
   };
   const cookies=(r:Response)=>r.headers.getSetCookie().map(v=>v.split(";")[0]).join("; ");
   const start=async(signUp=false,cookie="",link=false)=>{
@@ -31,7 +37,7 @@ function setup() {
     return {state,cookie:[cookie,cookies(r)].filter(Boolean).join("; ")};
   };
   const finish=(s:{state:string|null;cookie:string})=>request(`/oauth2/callback/qq?code=test-code&state=${s.state}`,undefined,s.cookie);
-  return {f,auth,request,cookies,start,finish,setOpenId:(id:string)=>{openId=id;},setAppId:(id:string)=>{responseAppId=id;}};
+  return {f,auth,request,registerEmail,cookies,setUserInfoGate:(gate:()=>Promise<void>)=>{beforeUserInfo=gate;},start,finish,setOpenId:(id:string)=>{openId=id;},setAppId:(id:string)=>{responseAppId=id;}};
 }
 it("creates one QQ account without email and reuses its session and workspace",async()=>{
   const t=setup();
@@ -57,7 +63,7 @@ it("requires consent for first signup and rejects callback state reuse or absenc
 });
 it("links QQ to an existing email user without changing user or participant",async()=>{
   const t=setup();
-  const signup=await t.request("/sign-up/email",{email:"existing@example.com",password:"a-password-123",name:"Existing"},"",ACTIVITY_RULES_VERSION);
+  const signup=await t.registerEmail("existing@example.com");
   expect(signup.status).toBe(200);const old=(await signup.json() as {user:{id:string}}).user;
   const participant=t.f.sqlite.prepare("SELECT id FROM participants").get();
   const bound=await t.finish(await t.start(false,t.cookies(signup),true));expect(bound.headers.get("location")).not.toContain("error=");
@@ -89,7 +95,7 @@ it("rejects stale consent, expired state and an identity from another QQ app", a
 it("keeps QQ ownership when another user tries to bind it, or the linking session disappears", async () => {
   const t=setup(); await t.finish(await t.start(true));
   const qqUser=t.f.sqlite.prepare("SELECT userId FROM account WHERE providerId='qq'").get();
-  const signup=await t.request("/sign-up/email",{email:"other@example.com",password:"a-password-123",name:"Other"},"",ACTIVITY_RULES_VERSION);
+  const signup=await t.registerEmail("other@example.com");
   const cookie=t.cookies(signup);
   const conflict=await t.finish(await t.start(false,cookie,true));
   expect(conflict.headers.get("location")).toContain("account_already_linked");
@@ -127,4 +133,25 @@ it("preserves existing QQ identity and sessions when a later workspace update fa
   for (const table of ["user","account","session","participants","activity_rule_acceptances"]) expect(t.f.sqlite.prepare(`SELECT count(*) AS n FROM "${table}"`).get()).toMatchObject({n:1});
   t.f.sqlite.exec("DROP TRIGGER fail_update");
   expect((await t.finish(await t.start())).headers.get("location")).not.toContain("error=");
+});
+
+it("rejects a pending QQ link when its email account is no longer verified", async () => {
+  const t=setup(); const initial=await t.registerEmail("legacy@example.com");
+  const pending=await t.start(false,t.cookies(initial),true);
+  t.f.sqlite.exec('UPDATE "user" SET emailVerified=0');
+  expect((await t.finish(pending)).headers.get("location")).toContain("error=");
+  expect(t.f.sqlite.prepare("SELECT COUNT(*) AS n FROM account WHERE providerId='qq'").get()?.n).toBe(0);
+});
+it("does not commit a QQ link when its session is revoked during the provider request", async () => {
+  const t=setup(); const initial=await t.registerEmail("owner@example.com"); const cookie=t.cookies(initial);
+  const pending=await t.start(false,cookie,true);
+  let entered!:()=>void, release!:()=>void;
+  const reached=new Promise<void>(resolve=>{entered=resolve;});
+  const gate=new Promise<void>(resolve=>{release=resolve;});
+  t.setUserInfoGate(async()=>{entered();await gate;});
+  const callback=t.finish(pending); await reached;
+  try { expect((await t.request("/revoke-sessions",{},cookie)).status).toBe(200); }
+  finally { release(); }
+  expect((await callback).headers.get("location")).toContain("error=");
+  expect(t.f.sqlite.prepare("SELECT COUNT(*) AS n FROM account WHERE providerId='qq'").get()?.n).toBe(0);
 });

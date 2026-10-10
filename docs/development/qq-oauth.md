@@ -1,6 +1,6 @@
 # QQ OAuth 接入与上线准备
 
-本站沿用 Better Auth、Workers 和 D1。当前上线入口为邮箱注册、密码登录和邮箱验证码登录，QQ 默认关闭，待授权审核和联调完成后再开放；当前页面不显示 QQ 登录或绑定入口。工作台只填写联系方式种类与内容，可选择邮箱作为联系渠道，不自动沿用登录邮箱。旧联系邮箱字段和数据保留兼容，不再提供独立输入。审核与换期状态在工作台查看，邮件仅用于主动请求的登录验证码。
+本站沿用 Better Auth、Workers 和 D1。当前上线入口为邮箱验证码验证后开户并设置密码、密码登录和邮箱验证码登录，QQ 默认关闭，待授权审核和联调完成后再开放；当前页面不显示 QQ 登录或绑定入口。工作台只填写联系方式种类与内容，可选择邮箱作为联系渠道，不自动沿用登录邮箱。旧联系邮箱字段和数据保留兼容，不再提供独立输入。审核与换期状态在工作台查看，邮件用于主动请求的注册、登录与密码重置验证码；注册和登录使用 `sign-in`，重置使用 `forget-password`。
 
 ## 配置
 
@@ -45,3 +45,19 @@ QQ 的 AppID + OpenID 保存在现有 account 表，同一个 QQ 应用身份只
 真实 QQ 网站应用审核、正式 AppID/AppKey、登记域名的授权回调、移动端 QQ 授权和真实验证码投递需要人工联调。本次未部署，不把受控响应测试当作 QQ 平台验收。
 
 交付前还在独立 PR 文件快照中验证了依赖锁文件、类型检查、完整测试及构建。QQ 入口桌面/手机截图在受控可用状态下查看，没有自动点击或填写表单；实际 QQ 授权仍需上述人工联调。
+
+
+## 邮箱验证注册与发送限制（2026-10-11）
+
+新邮箱先经 `sign-in` OTP 验证后开户，再调用 `/api/auth/set-password` 设置密码。直接密码注册禁用，密码登录要求邮箱已验证。无需新增数据库迁移，保留 Better Auth 1.6.2。
+
+`AUTH_OTP_IP_RATE_LIMITER`（每 60 秒 10 次）和 `AUTH_OTP_EMAIL_RATE_LIMITER`（每 60 秒 1 次）已声明在 Wrangler 顶层、staging 和 production；邮箱规范化并以 SHA-256 生成限流 key，注册、登录与密码重置入口共用配额。使用 Cloudflare 可信的 `cf-connecting-ip`；本地开发显式允许本地 origin 时可使用 loopback。缺少绑定、可信 IP 或 Resend 配置时返回 503，触发配额返回 429 与 60 秒重试提示。Cloudflare 原生限流适合短期防滥用，其计数按 Cloudflare 位置维护，不能视为严格的全球邮件发送总额。
+
+旧未验证邮箱账号需先 OTP 补验，业务记录保留，旧登录凭据和会话撤销后重新设置密码。已验证账号 OTP 登录不重设已有密码。QQ-only 的内部 `.invalid` 身份不受邮箱补验门槛影响。真实邮箱收件、外部邮件服务和 Cloudflare 线上限流仍需部署后的人工验证，本地 handler 测试不等于投递验收。
+
+
+### 邮件密码重置
+
+注册／登录与密码重置邮件共用 `worker/lib/auth-email.ts` 的 NASAPUNK HTML 模板，并保留纯文本版本。邮件包含逐星巡礼名称、现有月相 logo、验证码、有效期、账号操作按钮及网站链接。图片与链接使用 `BETTER_AUTH_URL` 的站点 origin；未配置时使用当前请求 origin。重置按钮进入 `/portal/login?reset=password`，链接不携带验证码。邮件客户端可能屏蔽远程图片，验证码和项目名称仍以文字显示。
+
+已开放原生 `/email-otp/request-password-reset` 和 `/email-otp/reset-password`，也允许 `send-verification-otp` 的 `forget-password` 用途，均接入同一发码限制。旧 `/forget-password/email-otp` 别名仍关闭，不开放邮箱变更或验证链接功能。密码重置配置 `revokeSessionsOnPasswordReset=true`；旧未验证账号完成重置时只清理外部绑定和旧会话，保留原生 handler 刚写入的新密码。

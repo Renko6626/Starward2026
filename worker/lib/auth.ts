@@ -14,6 +14,9 @@ import {
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { HTTPException } from "hono/http-exception";
 import { Resend } from "resend";
+import { z } from "zod";
+import { limitAuthOtpSend } from "./auth-rate-limit";
+import { buildPortalOtpEmail } from "./auth-email";
 import {
   PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS,
   PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
@@ -22,7 +25,7 @@ import {
   PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS,
   PORTAL_EMAIL_OTP_RESEND_STRATEGY,
   PORTAL_EMAIL_OTP_STORE_MODE,
-  getPortalEmailOtpValidityLabel,
+  PORTAL_PASSWORD_SETUP_HEADER,
 } from "../../src/shared/email-otp";
 import type { AppContext, AppBindings } from "./types";
 import { saveActivityRuleAcceptance } from "../data/activity-rule-acceptances";
@@ -82,6 +85,7 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
   // Better Auth defers session after-hooks beyond the request-state scope.
   // Capture only our server-created signup ID in its immediate before-hook.
   const sessionSignupIds = new WeakMap<GenericEndpointContext, string>();
+  const linkingSessions = new WeakMap<GenericEndpointContext, { userId: string; sessionId: string }>();
 
   return {
     id: "portal-entry",
@@ -97,7 +101,46 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
       return {
         options: {
           databaseHooks: {
+            account: {
+              create: {
+                async before(_account: Record<string, unknown>, context: GenericEndpointContext | null) {
+                  if (!context?.path?.startsWith('/oauth2/callback')) return;
+                  const state = await getOAuthState();
+                  if (!state?.link) return;
+                  const session = await getSessionFromCtx(context, { disableCookieCache: true });
+                  if (!session || session.user.id !== state.link.userId || (getRealAuthEmail(session.user.email) && !session.user.emailVerified)) {
+                    throw new APIError('FORBIDDEN', { code: 'QQ_LINK_SESSION_CHANGED', message: '请先验证登录邮箱，再重新绑定 QQ。' });
+                  }
+                  linkingSessions.set(context, { userId: session.user.id, sessionId: session.session.id });
+                },
+                async after(account: { id: string } & Record<string, unknown>, context: GenericEndpointContext | null) {
+                  const link = context && linkingSessions.get(context);
+                  if (!link) return;
+                  // Check after insertion so revocation overlapping the provider request
+                  // either deletes this new link, or is observed here and rolls it back.
+                  const current = await db.prepare('SELECT u.email, u.emailVerified FROM session s JOIN "user" u ON u.id = s.userId WHERE s.id = ? AND s.userId = ?')
+                    .bind(link.sessionId, link.userId).first<{ email: string; emailVerified: number }>();
+                  if (!current || (getRealAuthEmail(current.email) && !current.emailVerified)) {
+                    await db.prepare('DELETE FROM account WHERE id = ?').bind(account.id).run();
+                    throw new APIError('FORBIDDEN', { code: 'QQ_LINK_SESSION_CHANGED', message: '绑定期间登录状态已变化，请重新登录后绑定。' });
+                  }
+                },
+              },
+            },
             user: {
+              update: {
+                async before(data: Record<string, unknown>, context: GenericEndpointContext | null) {
+                  if (context?.path !== '/sign-in/email-otp' || data.emailVerified !== true) return;
+                  // Better Auth reaches this hook only after consuming a valid OTP.
+                  // An unverified signup's old password/session never proves mailbox ownership.
+                  const user = await db.prepare('SELECT id FROM "user" WHERE email = ? AND emailVerified = 0')
+                    .bind(String(context.body.email)).first<{ id: string }>();
+                  if (user) await db.batch([
+                    db.prepare('DELETE FROM account WHERE userId = ?').bind(user.id),
+                    db.prepare('DELETE FROM session WHERE userId = ?').bind(user.id),
+                  ]);
+                },
+              },
               create: {
                 async before(_user: Record<string, unknown>, context: GenericEndpointContext | null) {
                   await requireAccountCreationConsent(context);
@@ -162,9 +205,15 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
       }, {
         matcher: (context: { path?: string }) => context.path === "/sign-in/email-otp",
         handler: createAuthMiddleware(async ctx => {
-          const returned = ctx.context.returned as { user?: { id?: string } } | undefined;
+          const returned = ctx.context.returned as { user?: { id?: string; emailVerified?: boolean } } | undefined;
           if (ctx.body.__starwardNewAccount === true && returned?.user?.id) {
             ctx.setHeader(NEW_ACCOUNT_RESPONSE_HEADER, "true");
+          }
+          if (returned?.user?.id && !(ctx.context.returned instanceof APIError)) {
+            returned.user.emailVerified = true;
+            const credential = await db.prepare("SELECT id FROM account WHERE userId = ? AND providerId = 'credential' AND password IS NOT NULL")
+              .bind(returned.user.id).first();
+            if (!credential) ctx.setHeader(PORTAL_PASSWORD_SETUP_HEADER, 'true');
           }
         }),
       }],
@@ -172,15 +221,16 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
         {
           matcher: () => true,
           handler: createAuthMiddleware(async ctx => {
-            if (["/email-otp/request-password-reset", "/forget-password/email-otp", "/email-otp/reset-password", "/email-otp/change-email", "/email-otp/request-email-change", "/email-otp/verify-email"].includes(ctx.path ?? "")) throw new APIError("FORBIDDEN", { code:"email_purpose_disabled", message:"邮件仅用于登录验证码。" });
+            if (["/forget-password/email-otp", "/email-otp/change-email", "/email-otp/request-email-change", "/email-otp/verify-email"].includes(ctx.path ?? "")) throw new APIError("FORBIDDEN", { code:"email_purpose_disabled", message:"邮件仅用于登录验证码。" });
             if (ctx.path === "/sign-in/oauth2" && ctx.body?.providerId === "qq") {
               ctx.body.additionalData = ctx.body.requestSignUp === true ? { starwardRulesVersion:requireActivityRulesConsent(ctx) } : {};
             }
             const email = typeof ctx.body?.email === "string" ? ctx.body.email : typeof ctx.body?.newEmail === "string" ? ctx.body.newEmail : null;
             if (email && isReservedAuthEmail(email)) throw new APIError("FORBIDDEN", { code:"RESERVED_AUTH_EMAIL", message:"此地址不能用于邮箱登录或联系资料。" });
-            if (["/set-password", "/change-password", "/change-email"].includes(ctx.path ?? "")) {
+            if (["/set-password", "/change-password", "/change-email", "/oauth2/link", "/link-social"].includes(ctx.path ?? "")) {
               const session = await getSessionFromCtx(ctx);
-              if (session && isReservedAuthEmail(session.user.email)) throw new APIError("FORBIDDEN", { code:"QQ_ONLY_ACCOUNT", message:"此账号使用 QQ 登录。填写联系邮箱不会开通邮箱密码登录。" });
+              if (session && isReservedAuthEmail(session.user.email) && ["/set-password", "/change-password", "/change-email"].includes(ctx.path)) throw new APIError("FORBIDDEN", { code:"QQ_ONLY_ACCOUNT", message:"此账号使用 QQ 登录。填写联系邮箱不会开通邮箱密码登录。" });
+              if (session && getRealAuthEmail(session.user.email) && !session.user.emailVerified) throw new APIError('FORBIDDEN', { code: 'EMAIL_NOT_VERIFIED', message: '请先通过邮箱验证码验证登录邮箱。' });
             }
           }),
         },
@@ -190,7 +240,9 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
               context.path === "/email-otp/send-verification-otp" ||
               context.path === "/sign-in/email-otp" ||
               context.path === "/sign-in/email" ||
-              context.path === "/sign-up/email"
+              context.path === "/sign-up/email" ||
+              context.path === "/email-otp/request-password-reset" ||
+              context.path === "/email-otp/reset-password"
             );
           },
           handler: createAuthMiddleware(async (ctx) => {
@@ -203,44 +255,38 @@ function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Requ
               );
               ctx.body.email = email;
               if (ctx.path === "/sign-up/email") {
-                requireActivityRulesConsent(ctx);
-                const participant = await getParticipantByInviteEmail(
-                  db,
-                  email,
-                );
-                // Password signup does not prove ownership of an existing invitation.
-                if (participant && !participant.user_id) {
-                  throw new APIError("CONFLICT", {
-                    message:
-                      "此邮箱已有参与者资料，请先通过邮箱验证码登录，再设置密码。",
-                  });
-                }
+                throw new APIError('FORBIDDEN', { code: 'OTP_REGISTRATION_REQUIRED', message: '请先通过邮箱验证码注册，再设置登录密码。' });
               }
               return;
             }
 
-            const type =
-              ctx.path === "/sign-in/email-otp"
-                ? "sign-in"
-                : typeof ctx.body?.type === "string" ? ctx.body.type : null;
-
-            if (type !== "sign-in") {
-              throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于登录验证码。" });
+            const resetting = ctx.path === '/email-otp/request-password-reset' || ctx.path === '/email-otp/reset-password';
+            const type = resetting ? 'forget-password' : ctx.path === '/sign-in/email-otp'
+              ? 'sign-in' : typeof ctx.body?.type === 'string' ? ctx.body.type : null;
+            if (type !== 'sign-in' && type !== 'forget-password') {
+              throw new APIError('FORBIDDEN', { code: 'email_purpose_disabled', message: '邮件仅用于注册、登录和密码重置验证码。' });
             }
-
-            const rawEmail =
-              typeof ctx.body?.email === "string" ? ctx.body.email : "";
-            const email = normalizeEmailAddress(rawEmail);
-            const existingUser = await db.prepare('SELECT id FROM "user" WHERE email = ? LIMIT 1').bind(email).first();
-            // Overwrite this request-local marker; never trust a client-supplied value.
-            if (ctx.path === "/sign-in/email-otp") ctx.body.__starwardNewAccount = !existingUser;
-            if (!existingUser) requireActivityRulesConsent(ctx);
-            const participant = await getParticipantByInviteEmail(db, email);
-
+            const email = normalizeEmailAddress(typeof ctx.body?.email === 'string' ? ctx.body.email : '');
+            if (!z.string().email().max(320).safeParse(email).success) throw new APIError('BAD_REQUEST', { code: 'INVALID_EMAIL', message: '请填写有效的登录邮箱。' });
             ctx.body.email = email;
-            if (ctx.path === "/sign-in/email-otp") {
-              ctx.body.name =
-                participant?.display_name || email.split("@")[0] || "参与者";
+            if (ctx.path === '/email-otp/reset-password') {
+              // Validate before Better Auth consumes the reset code.
+              const password = typeof ctx.body.password === 'string' ? ctx.body.password : '';
+              if (password.length < 8 || password.length > 128) throw new APIError('BAD_REQUEST', { code: 'INVALID_PASSWORD_LENGTH', message: '请设置 8–128 位密码。' });
+              return;
+            }
+            if (type === 'sign-in') {
+              const existingUser = await db.prepare('SELECT id FROM "user" WHERE email = ? LIMIT 1').bind(email).first();
+              if (ctx.path === '/sign-in/email-otp') ctx.body.__starwardNewAccount = !existingUser;
+              if (!existingUser) requireActivityRulesConsent(ctx);
+              if (ctx.path === '/sign-in/email-otp') {
+                const participant = await getParticipantByInviteEmail(db, email);
+                ctx.body.name = participant?.display_name || email.split('@')[0] || '参与者';
+              }
+            }
+            if (ctx.path === '/email-otp/send-verification-otp' || ctx.path === '/email-otp/request-password-reset') {
+              if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) throw new APIError('SERVICE_UNAVAILABLE', { code: 'OTP_SEND_UNAVAILABLE', message: '验证码服务暂时不可用，请稍后再试。' });
+              await limitAuthOtpSend(env, ctx, email);
             }
           }),
         },
@@ -256,6 +302,7 @@ async function sendPortalOtpEmail(
     otp: string;
     type: "sign-in" | "email-verification" | "forget-password" | "change-email";
   },
+  siteUrl: string,
 ) {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
     throw new HTTPException(503, {
@@ -265,17 +312,15 @@ async function sendPortalOtpEmail(
   const resend = new Resend(env.RESEND_API_KEY);
   const resendFromEmail = env.RESEND_FROM_EMAIL;
   const resendFromName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
-  if (payload.type !== "sign-in") {
-    throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于登录验证码。" });
+  if (payload.type !== "sign-in" && payload.type !== "forget-password") {
+    throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于注册、登录和密码重置验证码。" });
   }
-  const subject = "Starward2026 参与者登录验证码";
-  const text = ["你正在登录 Starward2026 参与者门户。", "", `验证码：${payload.otp}`, `有效期：${getPortalEmailOtpValidityLabel()}`, "", "如果这不是你本人的操作，可以直接忽略此邮件。"].join("\n");
+  const content = buildPortalOtpEmail({ otp: payload.otp, type: payload.type, siteUrl });
 
   const response = await resend.emails.send({
     from: `${resendFromName} <${resendFromEmail}>`,
     to: payload.email,
-    subject,
-    text,
+    ...content,
   });
 
   if (response.error) {
@@ -285,7 +330,7 @@ async function sendPortalOtpEmail(
   }
 }
 
-export function buildPortalEmailOtpOptions(env: AppBindings) {
+export function buildPortalEmailOtpOptions(env: AppBindings, failedMailRequests?: WeakMap<Request, true>) {
   return {
     disableSignUp: false,
     expiresIn: PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS,
@@ -305,8 +350,16 @@ export function buildPortalEmailOtpOptions(env: AppBindings) {
         | "email-verification"
         | "forget-password"
         | "change-email";
-    }) {
-      await sendPortalOtpEmail(env, payload);
+    }, context?: GenericEndpointContext) {
+      try {
+        const siteUrl = normalizeBaseUrl(env.BETTER_AUTH_URL) ?? (context?.request && new URL(context.request.url).origin);
+        if (!siteUrl) throw new Error("The email website URL is not configured.");
+        await sendPortalOtpEmail(env, payload, siteUrl);
+      } catch (error) {
+        // 1.6.2 swallows mail errors as background failures; preserve the request result.
+        if (context?.request && failedMailRequests) failedMailRequests.set(context.request, true);
+        else throw error;
+      }
     },
   };
 }
@@ -380,24 +433,41 @@ export function createAuth(env: AppBindings) {
 
   const qq = buildQqProvider(env);
   const pendingQqSignups = new WeakMap<Request, string>();
+  const failedMailRequests = new WeakMap<Request, true>();
   const auth = betterAuth({
     secret,
     database: db,
     baseURL: baseUrl,
     basePath: "/api/auth",
     trustedOrigins: buildPortalTrustedOrigins(env),
+    advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
+    rateLimit: { enabled: !isLocalDevOriginsEnabled(env.ALLOW_LOCAL_DEV_ORIGINS), customRules: {
+      '/email-otp/send-verification-otp': { window: 60, max: 10 },
+      '/email-otp/request-password-reset': { window: 60, max: 10 },
+    } },
     onAPIError: { errorURL: baseUrl ? `${baseUrl}/portal/login` : "/portal/login" },
     session: buildPortalSessionOptions(),
     account: { accountLinking: { enabled:true, disableImplicitLinking:true, allowDifferentEmails:true } },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: true,
+      disableSignUp: true,
+      revokeSessionsOnPasswordReset: true,
+      async onPasswordReset({ user }) {
+        if (!user.emailVerified) {
+          // The native handler has already validated the OTP and saved the new password.
+          await db.batch([
+            db.prepare("DELETE FROM account WHERE userId = ? AND providerId != 'credential'").bind(user.id),
+            db.prepare('DELETE FROM session WHERE userId = ?').bind(user.id),
+          ]);
+        }
+      },
       minPasswordLength: 8,
       maxPasswordLength: 128,
     },
     plugins: [
       buildPortalEntryPlugin(env, pendingQqSignups),
-      emailOTP(buildPortalEmailOtpOptions(env)),
+      emailOTP(buildPortalEmailOtpOptions(env, failedMailRequests)),
       ...(qq ? [genericOAuth({config:[qq]})] : []),
     ],
   });
@@ -409,6 +479,7 @@ export function createAuth(env: AppBindings) {
     };
     try {
       const response = await auth.handler(request);
+      if (failedMailRequests.has(request)) return Response.json({ code: 'OTP_SEND_FAILED', message: '验证码发送失败，请稍后重试。' }, { status: 503 });
       if (isQqCallback && (response.status >= 400 || response.headers.get("location")?.includes("error="))) {
         await cleanup();
         if (response.status >= 400) return Response.redirect(new URL("/portal/login?error=qq_auth_failed", baseUrl || request.url).toString(), 302);
@@ -419,8 +490,13 @@ export function createAuth(env: AppBindings) {
         await cleanup();
         return Response.redirect(new URL("/portal/login?error=qq_auth_failed", baseUrl || request.url).toString(), 302);
       }
+      if (error instanceof APIError) {
+        const headers = new Headers(error.headers);
+        headers.set('Content-Type', 'application/json');
+        return new Response(JSON.stringify(error.body), { status: error.statusCode, headers });
+      }
       throw error;
-    } finally { pendingQqSignups.delete(request); }
+    } finally { pendingQqSignups.delete(request); failedMailRequests.delete(request); }
   } };
 
 }
@@ -458,6 +534,7 @@ export async function requireParticipantSession(c: AppContext) {
   if (!result.response) {
     return null;
   }
+  if (getRealAuthEmail(result.response.user.email) && !result.response.user.emailVerified) return null;
 
   let participant = await getParticipantByUserId(db, result.response.user.id);
 

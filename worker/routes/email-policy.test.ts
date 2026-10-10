@@ -7,7 +7,7 @@ const databases: SqliteD1Fixture[] = [];
 afterEach(() => { vi.unstubAllGlobals(); databases.splice(0).forEach(f => f.sqlite.close()); });
 it("approves and saves exchange requests without mail, and rejects legacy resend", async () => {
   const f = new SqliteD1Fixture(); databases.push(f);
-  const env: AppBindings = { DB: f.db, ALLOW_LOCAL_ADMIN_BYPASS: "true", BETTER_AUTH_SECRET: "test-signing-secret-at-least-32-characters", BETTER_AUTH_URL: "http://localhost:20262", RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "test@example.com" };
+  const env: AppBindings = { DB: f.db, ALLOW_LOCAL_DEV_ORIGINS: "true", AUTH_OTP_IP_RATE_LIMITER: { limit: async () => ({ success: true }) } as RateLimit, AUTH_OTP_EMAIL_RATE_LIMITER: { limit: async () => ({ success: true }) } as RateLimit, ALLOW_LOCAL_ADMIN_BYPASS: "true", BETTER_AUTH_SECRET: "test-signing-secret-at-least-32-characters", BETTER_AUTH_URL: "http://localhost:20262", RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "test@example.com" };
   const outgoing = vi.fn().mockResolvedValue(Response.json({ id: "mail" })); vi.stubGlobal("fetch", outgoing);
   f.sqlite.exec(`UPDATE event_windows SET is_enabled=1;
     INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt) VALUES('u1','One','one@example.com',1,'2026-01-01','2026-01-01'),('u2','Two','two@example.com',1,'2026-01-01','2026-01-01');

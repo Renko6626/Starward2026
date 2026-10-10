@@ -32,6 +32,16 @@
         "limit": 2,
         "period": 60
       }
+    },
+    {
+      "name": "AUTH_OTP_IP_RATE_LIMITER",
+      "namespace_id": "2026101101",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "AUTH_OTP_EMAIL_RATE_LIMITER",
+      "namespace_id": "2026101102",
+      "simple": { "limit": 1, "period": 60 }
     }
   ],
   /**
@@ -69,6 +79,16 @@
             "limit": 2,
             "period": 60
           }
+        },
+        {
+          "name": "AUTH_OTP_IP_RATE_LIMITER",
+          "namespace_id": "2026101101",
+          "simple": { "limit": 10, "period": 60 }
+        },
+        {
+          "name": "AUTH_OTP_EMAIL_RATE_LIMITER",
+          "namespace_id": "2026101102",
+          "simple": { "limit": 1, "period": 60 }
         }
       ],
       "routes": [
@@ -90,6 +110,10 @@
       }
     },
     "production": {
+      "ratelimits": [
+        { "name": "AUTH_OTP_IP_RATE_LIMITER", "namespace_id": "2026101101", "simple": { "limit": 10, "period": 60 } },
+        { "name": "AUTH_OTP_EMAIL_RATE_LIMITER", "namespace_id": "2026101102", "simple": { "limit": 1, "period": 60 } }
+      ],
       // Named environments do NOT inherit the top-level bindings, so the
       // production D1 binding must be declared explicitly here or every
       // DB-backed endpoint returns 503 after a production deploy.

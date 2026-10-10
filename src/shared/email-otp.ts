@@ -3,7 +3,8 @@ export const PORTAL_EMAIL_OTP_LENGTH = 6;
 export const PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS = 3;
 export const PORTAL_EMAIL_OTP_RATE_LIMIT_WINDOW_SECONDS = 60;
 export const PORTAL_EMAIL_OTP_RATE_LIMIT_MAX = 3;
-export const PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS = 30;
+export const PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS = 60;
+export const PORTAL_PASSWORD_SETUP_HEADER = 'x-starward-password-setup-required';
 export const PORTAL_EMAIL_OTP_RESEND_STRATEGY = "reuse" as const;
 export const PORTAL_EMAIL_OTP_STORE_MODE = "plain" as const;
 
