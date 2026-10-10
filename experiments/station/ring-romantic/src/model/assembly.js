@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 
+// Keep the same corner radius and envelope. Small fittings and thin strips
+// need fewer corner segments than large cabinets or passage bodies.
+function roundedGeometry(geometries, size) {
+  const [shortest, middle, longest] = size.map(Math.abs).sort((a, b) => a - b);
+  const small = longest <= 2 || (shortest <= .2 && middle <= 2);
+  return small ? geometries.roundedSmall : geometries.rounded;
+}
+
 // Each Assembly owns one group's batches. Nothing batches across rotating groups.
 export class Assembly {
   constructor(resources) { this.resources = resources; this.batches = new Map(); }
@@ -16,7 +24,7 @@ export class Assembly {
     return this;
   }
   box(material, position, size, rotation) {
-    return this.part(this.resources.geometries.rounded, material, position, size, rotation);
+    return this.part(roundedGeometry(this.resources.geometries, size), material, position, size, rotation);
   }
   beam(material, start, end, width = .25, depth = width) {
     const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
@@ -26,7 +34,8 @@ export class Assembly {
     // box would stretch its end radius by metres on long chords. Wide passage
     // envelopes and utility covers retain their existing rounded profiles.
     const structural = Math.max(width, depth) < 1 && ['silver', 'frame', 'hull', 'ringSupport'].includes(material);
-    const geometry = structural ? this.resources.geometries.box : this.resources.geometries.rounded;
+    const geometry = structural ? this.resources.geometries.box
+      : roundedGeometry(this.resources.geometries, [width, length, depth]);
     return this.part(geometry, material, a.add(b).multiplyScalar(.5).toArray(),
       [width, length, depth], new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()));
   }
