@@ -1,5 +1,10 @@
 import { HTTPException } from "hono/http-exception";
 import type { AppContext } from "./types";
+import type { AppBindings } from "./types";
+
+export function getTurnstileSecret(env: Pick<AppBindings, 'TURNSTILE_SECRET_KEY' | 'TURNSTILE_SECRET'>) {
+  return env.TURNSTILE_SECRET_KEY?.trim() || env.TURNSTILE_SECRET?.trim();
+}
 
 type TurnstileResult = {
   success: boolean;
@@ -7,7 +12,7 @@ type TurnstileResult = {
 };
 
 export async function verifyTurnstileToken(c: AppContext, token: string | undefined) {
-  const secret = c.env.TURNSTILE_SECRET_KEY ?? c.env.TURNSTILE_SECRET;
+  const secret = getTurnstileSecret(c.env);
 
   if (!secret) {
     return;

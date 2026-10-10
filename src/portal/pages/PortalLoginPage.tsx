@@ -21,6 +21,8 @@ import { getPasswordAuthErrorMessage } from "../lib/password-auth-error";
 import { resolvePortalEntryDestination } from "../lib/onboarding";
 import { StationTechnicalDrawing } from "../../app/components/StationTechnicalDrawing";
 import { PasswordResetForm } from "../components/PasswordResetForm";
+import { useTurnstileVerification } from '../../app/components/use-turnstile';
+import { getTurnstileErrorMessage, type PublicAuthProvidersResponse } from '../../shared/turnstile';
 import "./portal-login.css";
 
 export function PortalLoginPage() {
@@ -41,6 +43,15 @@ export function PortalLoginPage() {
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const newRegistration = useRef(false);
   const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [turnstileRequired, setTurnstileRequired] = useState<boolean>();
+  const verification = useTurnstileVerification(turnstileRequired, step !== 'password', `${mode}:${step}`);
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<PublicAuthProvidersResponse>('/api/auth/providers')
+      .then(config => { if (!cancelled) setTurnstileRequired(config.turnstile.enabled); })
+      .catch(() => { if (!cancelled) setError('无法读取验证设置，请刷新页面后重试。'); });
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("error");
     if (code) setError(code.includes("ACTIVITY_RULES_CHANGED")
@@ -111,6 +122,7 @@ export function PortalLoginPage() {
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (step !== 'password' && !verification.ready) { setError('请先完成人机验证。'); return; }
     setIsSigningIn(true);
     setError(null);
     setMessage(null);
@@ -121,7 +133,7 @@ export function PortalLoginPage() {
         if (response.error && (!('code' in response.error) || response.error.code !== 'PASSWORD_ALREADY_SET')) { setError(response.error.message || '密码设置失败，请重试。'); return; }
       } else {
         newRegistration.current = false;
-        const response = await authClient.signIn.email({ email: normalizedEmail, password });
+        const response = await authClient.signIn.email({ email: normalizedEmail, password }, { headers: verification.headers });
         if (response.error) {
           setError(getPasswordAuthErrorMessage(response.error));
           return;
@@ -133,6 +145,7 @@ export function PortalLoginPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "暂时无法连接，请稍后重试。");
     } finally {
+      if (step !== 'password') verification.reset();
       setIsSigningIn(false);
     }
   }
@@ -148,6 +161,7 @@ export function PortalLoginPage() {
       setError("请先阅读并同意活动规则。");
       return;
     }
+    if (!verification.ready) { setError('请先完成人机验证。'); return; }
 
     setIsSending(true);
     setError(null);
@@ -157,11 +171,11 @@ export function PortalLoginPage() {
       const response = await authClient.emailOtp.sendVerificationOtp({
         email: normalizedEmail,
         type: "sign-in",
-      }, { headers: activityRulesConsentHeaders(rulesAccepted) });
+      }, { headers: { ...activityRulesConsentHeaders(rulesAccepted), ...verification.headers } });
 
       if (response.error) {
         if (response.error.status === 429) setResendCooldownSeconds(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS);
-        setError(response.error.message || "验证码发送失败，请稍后重试。");
+        setError(getTurnstileErrorMessage(response.error) || response.error.message || "验证码发送失败，请稍后重试。");
         return;
       }
 
@@ -175,6 +189,7 @@ export function PortalLoginPage() {
     } catch {
       setError("暂时无法发送验证码，请稍后重试。");
     } finally {
+      verification.reset();
       setIsSending(false);
     }
   }
@@ -285,6 +300,7 @@ export function PortalLoginPage() {
           ))}
         </div>
         {mode === 'reset' ? <PasswordResetForm
+          verification={verification}
           initialEmail={getRealAuthEmail(sessionQuery.data?.user.email) ?? email}
           cooldownSeconds={resendCooldownSeconds}
           onCooldown={() => setResendCooldownSeconds(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS)}
@@ -326,7 +342,8 @@ export function PortalLoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
               />
             </Field>
-            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn} aria-busy={isSigningIn}>
+            {step !== 'password' ? verification.node : null}
+            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn || (step !== 'password' && !verification.ready)} aria-busy={isSigningIn}>
               {isSigningIn
                 ? "提交中…"
                 : step === "password"
@@ -349,7 +366,8 @@ export function PortalLoginPage() {
               />
             </Field>
             <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
-            <Button appearance="framed" className="button--accent" type="submit" disabled={isSending || isSigningIn || resendCooldownSeconds > 0 || (mode === "register" && !rulesAccepted)} aria-busy={isSending}>
+            {verification.node}
+            <Button appearance="framed" className="button--accent" type="submit" disabled={isSending || isSigningIn || !verification.ready || resendCooldownSeconds > 0 || (mode === "register" && !rulesAccepted)} aria-busy={isSending}>
               {isSending ? "发送中…" : resendCooldownSeconds > 0 ? getPortalEmailOtpResendCooldownText(resendCooldownSeconds) : mode === "register" ? "发送注册验证码" : "发送登录验证码"}
             </Button>
           </form>
@@ -377,10 +395,11 @@ export function PortalLoginPage() {
             <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn} aria-busy={isSigningIn}>
               {isSigningIn ? "验证中…" : mode === "register" ? "验证邮箱" : "验证并进入"}
             </Button>
+            {verification.node}
             <Button
               appearance="industrial"
               variant="secondary"
-              disabled={isSending || isSigningIn || resendCooldownSeconds > 0}
+              disabled={isSending || isSigningIn || !verification.ready || resendCooldownSeconds > 0}
               aria-busy={isSending}
               onClick={() => void sendOtp(true)}
             >
@@ -394,6 +413,7 @@ export function PortalLoginPage() {
               type="button"
               className="auth-note"
               onClick={() => {
+                verification.reset();
                 setStep("email");
                 setOtp("");
               }}

@@ -12,6 +12,9 @@ import {
   getOAuthState,
 } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
+import { captcha } from "better-auth/plugins";
+import { getTurnstileSecret } from './turnstile';
+import { TURNSTILE_AUTH_ENDPOINTS } from '../../src/shared/turnstile';
 import { HTTPException } from "hono/http-exception";
 import { Resend } from "resend";
 import { z } from "zod";
@@ -371,6 +374,20 @@ export function buildPortalSessionOptions() {
   };
 }
 
+function buildPortalCaptchaPlugin(secretKey: string) {
+  const plugin = captcha({ provider: 'cloudflare-turnstile', secretKey, endpoints: TURNSTILE_AUTH_ENDPOINTS });
+  return {
+    ...plugin,
+    onRequest: async (...args: Parameters<typeof plugin.onRequest>) => {
+      // 1.6 matches substrings: /sign-in/email also catches /sign-in/email-otp.
+      // Keep the native verifier, but only run it on our exact protected paths.
+      const path = new URL(args[0].url).pathname.replace(/\/+$/, '');
+      if (!TURNSTILE_AUTH_ENDPOINTS.some(endpoint => path === `/api/auth${endpoint}`)) return;
+      return plugin.onRequest(...args);
+    },
+  };
+}
+
 export function buildPortalTrustedOrigins(
   env: Pick<
     AppBindings,
@@ -466,6 +483,7 @@ export function createAuth(env: AppBindings) {
       maxPasswordLength: 128,
     },
     plugins: [
+      ...(getTurnstileSecret(env) ? [buildPortalCaptchaPlugin(getTurnstileSecret(env)!)] : []),
       buildPortalEntryPlugin(env, pendingQqSignups),
       emailOTP(buildPortalEmailOtpOptions(env, failedMailRequests)),
       ...(qq ? [genericOAuth({config:[qq]})] : []),
