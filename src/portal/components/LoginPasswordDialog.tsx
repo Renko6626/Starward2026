@@ -4,11 +4,13 @@ import { createPortal } from "react-dom";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { authClient } from "../lib/auth-client";
 import { requestJson } from "../../app/lib/api";
+import { useDialogMotion } from "../../app/components/use-dialog-motion";
 import { PasswordSettings } from "./PasswordSettings";
 
 export function LoginPasswordDialog({ email }: { email: string | null }) {
   const [open, setOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(dialog);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
   const [qqLinked, setQqLinked] = useState<boolean | null>(null);
@@ -38,18 +40,22 @@ export function LoginPasswordDialog({ email }: { email: string | null }) {
     const element = dialog.current;
     if (!open || !element) return;
     element.showModal();
+    enterDialog();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      stopDialog();
       if (element.open) element.close();
       document.body.style.overflow = previousOverflow;
     };
-  }, [open]);
+  }, [open, enterDialog, stopDialog]);
 
   function close() {
-    dialog.current?.close();
-    setOpen(false);
-    trigger.current?.focus({ preventScroll: true });
+    exitDialog(() => {
+      dialog.current?.close();
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+    });
   }
 
   return <>
@@ -65,7 +71,7 @@ export function LoginPasswordDialog({ email }: { email: string | null }) {
         <section className="space-y-3"><h3>QQ 登录</h3>
           {qqLinked === true ? <p>已绑定 QQ，可以使用 QQ 登录此账号。</p> : <>
             <p>绑定后可用 QQ 登录，报名、作品和排期继续保留。</p>
-            <Button disabled={!qqEnabled || qqLinked === null || binding} onClick={() => void bindQq()}>{binding ? "正在前往 QQ…" : "绑定 QQ"}</Button>
+            <Button disabled={!qqEnabled || qqLinked === null || binding} aria-busy={binding} onClick={() => void bindQq()}>{binding ? "正在前往 QQ…" : "绑定 QQ"}</Button>
             {!qqEnabled ? <p className="field-hint">QQ 登录尚未启用。</p> : null}
           </>}
           {error ? <Notice tone="error">{error}</Notice> : null}

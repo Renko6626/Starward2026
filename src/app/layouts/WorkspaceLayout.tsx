@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -26,6 +26,7 @@ export function WorkspaceLayout({
   kind,
   children,
 }: PropsWithChildren<{ kind: "portal" | "admin" }>) {
+  const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
   const [open, setOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -49,7 +50,7 @@ export function WorkspaceLayout({
     return <div className="creator-shell">
       <a className="skip-link" href="#main-content">跳至正文</a>
       <SiteHeader />
-      <main id="main-content" className="creator-content">{children}</main>
+      <main id="main-content" className="creator-content" aria-busy={pending}>{children}</main>
       <SiteFooter />
     </div>;
   }
@@ -137,8 +138,8 @@ export function WorkspaceLayout({
             <PortalAccount />
           )}
         </header>
-        <main id="main-content" className="workspace-content">
-          <div className="route-stage" key={pathname}>
+        <main id="main-content" className="workspace-content" aria-busy={pending}>
+          <div className="route-stage">
             {children}
           </div>
         </main>

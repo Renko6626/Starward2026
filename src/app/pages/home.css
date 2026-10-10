@@ -190,6 +190,30 @@
   .orbital-artwork .is-paused .orbit-entry-details,
   .orbital-artwork .is-paused .orbit-entry-live { animation-play-state: paused; }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbital-edition,
+  .orbital-subtitle,
+  .orbital-actions,
+  .orbital-bottom {
+    animation: orbital-copy-enter 520ms var(--motion-ease) both;
+  }
+  .orbital-edition { animation-delay: 90ms; }
+  .orbital-subtitle { animation-delay: 150ms; }
+  .orbital-actions { animation-delay: 220ms; }
+  .orbital-bottom { animation-delay: 320ms; }
+  .orbital-artwork { animation: orbital-artwork-enter 900ms ease 120ms both; }
+}
+
+@keyframes orbital-copy-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes orbital-artwork-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @media (max-width: 699px) {
   .orbital-artwork .orbital-artwork-desktop { display: none; }
   .orbital-artwork .orbital-artwork-mobile { display: block; }

@@ -103,6 +103,7 @@ export function PasswordSettings() {
           <Button
             type="submit"
             disabled={isSaving}
+            aria-busy={isSaving}
           >
             {isSaving ? "保存中..." : hasPassword ? "修改密码" : "设置密码"}
           </Button>

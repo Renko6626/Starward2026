@@ -11,3 +11,9 @@ createRoot(document.getElementById("root")!).render(
     <RouterProvider router={router} />
   </StrictMode>,
 );
+
+// Common UI glyphs are in the initial stylesheet. Register uncommon characters
+// after a paint; unicode-range still downloads only the shards actually needed.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  void import('./fonts-extended.css');
+}));

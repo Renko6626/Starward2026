@@ -26,6 +26,8 @@ export function mountStationScene(container, options = {}) {
   let paused = !!options.paused;
   let time = 0;
   let last = 0;
+  let lastRender = 0;
+  const renderInterval = 1000 / 30;
   const media = matchMedia('(prefers-reduced-motion: reduce)');
   const camera = new THREE.PerspectiveCamera(37, 1, 1, 3000);
   const basePosition = new THREE.Vector3();
@@ -85,12 +87,16 @@ export function mountStationScene(container, options = {}) {
     if (!ready) { ready = true; options.onReady?.(); }
   }
   function frame(now) {
-    const delta = last ? Math.min((now - last) / 1000, .05) : 0;
+    const delta = last ? (now - last) / 1000 : 0;
     last = now;
     time += delta;
     scrollProgress = THREE.MathUtils.damp(scrollProgress, targetProgress, 8, delta);
     pointer.x = THREE.MathUtils.damp(pointer.x, pointerTarget.x, 5, delta);
     pointer.y = THREE.MathUtils.damp(pointer.y, pointerTarget.y, 5, delta);
+    // Advance motion on every tick; only limit GPU submissions, preserving speed.
+    const elapsed = now - lastRender;
+    if (lastRender && elapsed < renderInterval) return;
+    lastRender = lastRender ? now - elapsed % renderInterval : now;
     updateCamera();
     draw();
   }
@@ -98,6 +104,7 @@ export function mountStationScene(container, options = {}) {
     const animate = !disposed && !contextLost && visible && !document.hidden
       && !paused && !media.matches && !options.staticFrame;
     last = 0;
+    lastRender = 0;
     renderer.setAnimationLoop(animate ? frame : null);
     updateCamera();
     draw();
@@ -211,7 +218,7 @@ export function mountStationScene(container, options = {}) {
   const sun = new THREE.DirectionalLight(0xffead0, 4.2);
   sun.position.set(-100, 90, 65);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 95, bottom: -95, near: 1, far: 300 });
   sun.shadow.normalBias = .12;
   sun.shadow.bias = -.00008;

@@ -189,6 +189,7 @@
 .ops-detail-dialog::backdrop { background: #000b; }
 .ops-detail-dialog .ops-detail { margin: 0; border: 0; padding: 0; }
 .works-page--schedule button:focus-visible, .works-page--schedule a:focus-visible, .ops-detail-dialog a:focus-visible, .ops-detail-dialog button:focus-visible { outline-color: #e7e7e7; }
+
 /* Only the layout changes at breakpoints; small sizes remain readable. */
 @media (max-width: 950px) {
   .works-page--schedule { --ops-clock-width: 94px; --ops-time-size: 18px; }

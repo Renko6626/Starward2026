@@ -5,6 +5,7 @@ import type { PublicScheduleEntry } from "../../shared/works";
 import { WorkTypeMark } from "./WorkPresentation";
 import { scheduleDay, scheduleHour, type ScheduleDay } from "../lib/schedule-layout";
 import { missionTime } from "../lib/mission-time";
+import { Crossfade } from "./Crossfade";
 import { ScheduleTrace } from "./ScheduleTrace";
 import "./schedule-board.css";
 
@@ -168,8 +169,9 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
   actions?: ReactNode;
 }) {
   return <section className="ops-detail" id={detailId} aria-label="选中时段详情">
-    <div className="ops-detail-time"><span>{entry.kind === 'extra' ? '选中追加坑位' : '选中时段'}</span><strong>{entry.scheduledAt ? <MissionClock start={missionStart} value={entry.scheduledAt} /> : entry.code}</strong><span>{entry.kind === 'extra' ? entry.name : `第 ${entry.code} 棒`}{mine ? " / 我的时段" : ""}</span></div>
-    <div className="ops-detail-copy">
+    <Crossfade valueKey={entry.id}><div className="ops-detail-time"><span>{entry.kind === 'extra' ? '选中追加坑位' : '选中时段'}</span><strong>{entry.scheduledAt ? <MissionClock start={missionStart} value={entry.scheduledAt} /> : entry.code}</strong><span>{entry.kind === 'extra' ? entry.name : `第 ${entry.code} 棒`}{mine ? " / 我的时段" : ""}</span></div>
+    </Crossfade>
+    <Crossfade valueKey={entry.id}><div className="ops-detail-copy">
       <div className="ops-detail-heading"><h2>{scheduleAuthor(entry, mine ? ownName : null)}</h2><ScheduleStatus status={entry.status} />{onClose && <button type="button" className="ops-close" onClick={onClose}>关闭</button>}</div>
       {entry.preview ? <>
         <div className="ops-detail-work">{entry.preview.workType && <WorkTypeMark type={entry.preview.workType} />}<h3>{entry.preview.previewTitle}</h3></div>
@@ -178,6 +180,7 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
         : entry.status === "reserved" ? "这个时段已被预留，正在等待报名审核。" : entry.status === "confirmed" ? "作者已确认，作品预告待公布。" : "这个时段暂不可认领。"}</p>}
       {entry.preview?.coverUrl && <img className="ops-detail-cover" src={entry.preview.coverUrl} alt={entry.preview.coverAlt || `${entry.preview.previewTitle ?? "作品"}预览`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
     </div>
+    </Crossfade>
     <div className="ops-detail-actions">
       {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link> : null}
       {actions !== undefined ? actions : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} search={{ segment: mine ? "" : entry.id }} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "选择这个时点并报名"}</Link> : null}
