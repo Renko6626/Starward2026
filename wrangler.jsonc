@@ -90,6 +90,20 @@
       }
     },
     "production": {
+      "name": "starward2026-production",
+      // These namespace IDs must also be unused by other apps in this account.
+      "ratelimits": [
+        {
+          "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
+          "namespace_id": "2026041103",
+          "simple": { "limit": 6, "period": 60 }
+        },
+        {
+          "name": "APPLICATION_SUBMIT_EMAIL_RATE_LIMITER",
+          "namespace_id": "2026041104",
+          "simple": { "limit": 2, "period": 60 }
+        }
+      ],
       // Named environments do NOT inherit the top-level bindings, so the
       // production D1 binding must be declared explicitly here or every
       // DB-backed endpoint returns 503 after a production deploy.
@@ -106,7 +120,8 @@
         "BETTER_AUTH_URL": "https://replace-with-production-domain.example.com",
         "QQ_OAUTH_ENABLED": "false"
       }
-      // Add production routes before enabling deploy:production.
+      // Add routes: [{ "pattern": "your-production-domain", "custom_domain": true }]
+      // The production tag workflow validates these settings before deployment.
     }
   },
   // "vars": {

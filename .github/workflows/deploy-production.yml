@@ -1,0 +1,120 @@
+name: Deploy production
+
+on:
+  push:
+    tags:
+      - '**-prod'
+
+permissions:
+  contents: read
+
+# Do not interrupt a release between its database migration and Worker deploy.
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A moved or deleted tag must not cause a production deployment.
+    if: github.event.created == true && github.event.deleted == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ steps.config.outputs.production_url }}
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      PYTHONUTF8: '1'
+
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.12.0'
+          cache: npm
+
+      - name: Set up Python for orbital asset generation
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Test deployment configuration checks
+        run: npm run test:deploy
+
+      - name: Validate production configuration
+        id: config
+        run: npm run check:production
+
+      - name: Refresh station previews when needed
+        run: |
+          if ! npm run station:check || ! npm run station:drawings:check; then
+            npx --no-install playwright install --with-deps chromium
+            npm run station:generate
+          fi
+
+      - name: Refresh orbital assets when needed
+        run: |
+          if ! npm run orbit:check; then
+            python -m pip install -r scripts/orbit-transfer/requirements.txt
+            npm run test:orbit
+            npm run orbit:generate
+          fi
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Run station asset tests
+        run: npm run test:station
+
+      - name: Build frontend and Worker for production
+        run: npm run build
+        env:
+          CLOUDFLARE_ENV: production
+
+      - name: Check Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN secret'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID secret'; exit 1; }
+
+      - name: Apply pending production D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # Explicit source config avoids the Vite-generated deployment config.
+        run: npx --no-install wrangler d1 migrations apply DB --remote --env production --config wrangler.jsonc
+
+      - name: Deploy frontend and Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # Vite already selected production; deploy its generated configuration.
+        # Preserve additional runtime variables set in the Cloudflare dashboard.
+        run: npx --no-install wrangler deploy --keep-vars
+
+      - name: Verify public site and API
+        env:
+          PRODUCTION_URL: ${{ steps.config.outputs.production_url }}
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 --max-time 20 "$PRODUCTION_URL/" --output /dev/null
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 --max-time 20 "$PRODUCTION_URL/api/health" --output health.json
+          node --input-type=module -e 'import { readFileSync } from "node:fs"; const health = JSON.parse(readFileSync("health.json", "utf8")); if (health.status !== "ok" || health.service !== "starward2026-worker") throw new Error("Production API health check failed");'
+
+      - name: Write deployment summary
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          PRODUCTION_URL: ${{ steps.config.outputs.production_url }}
+        run: |
+          printf 'Deployed tag: %s\n\nCommit: %s\n\nSite: %s\n' "$RELEASE_TAG" "$RELEASE_SHA" "$PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"
