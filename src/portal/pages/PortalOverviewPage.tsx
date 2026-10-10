@@ -1,23 +1,21 @@
 import { ArchiveChapter } from "../components/ArchiveChapter";
+import { ArrowUpRight } from "lucide-react";
 import "../archive.css";
 import { PortalAccount } from "../../app/layouts/WorkspaceLayout";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Notice, PageHeading, ReadError, WorkspaceSection } from "../../app/components/ui";
-import { applicationInterestFormatLabels } from "../../shared/applications";
+import { Button, Notice, PageHeading, ReadError } from "../../app/components/ui";
+import { MissionCountdown } from "../../app/components/MissionCountdown";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
-import { RelayPublicationNotice } from "../components/RelayPublicationNotice";
 import { NeighborSlots } from "../components/NeighborSlots";
 import { RegistrationProgress } from "../components/RegistrationProgress";
 import { RegistrationSection } from "../components/RegistrationSection";
 import { SwapRequests } from "../components/SwapRequests";
 import { authClient } from "../lib/auth-client";
 import { PortalHistoryPage } from "./PortalHistoryPage";
-import { PortalProfilePage } from "./PortalProfilePage";
-import { PortalProjectPage } from "./PortalProjectPage";
 
 type WorkspaceState = { dashboard: PortalDashboardResponse; application: PortalApplicationResponse; collaboration: CollaborationResponse };
 export function PortalOverviewPage() {
@@ -93,8 +91,8 @@ export function PortalOverviewPage() {
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
   const selected = collaboration.segments.find(item => item.id === (selection?.userId === userId ? selection?.segmentId : segment));
   const registration = application.application;
-  const hasReviewResult = registration?.status === "approved" || registration?.status === "rejected";
-  const hasFeedback = hasReviewResult || Boolean(registration?.adminNote) || collaboration.requests.length > 0;
+  const hasReviewResult = registration?.status === "rejected";
+  const hasFeedback = hasReviewResult || Boolean(registration?.adminNote) || collaboration.requests.some(request => request.status === "pending");
   async function refreshStatus() {
     setRefreshing(true);
     try { await refresh(); }
@@ -102,13 +100,13 @@ export function PortalOverviewPage() {
     finally { setRefreshing(false); }
   }
   return <div className="page-content creator-workspace author-archive">
+    {dashboard.participant?.status === "approved" ? <MissionCountdown target="submission" /> : null}
     <PageHeading title={<>作者档案 <span className="archive-year">逐星巡礼 / 2026</span></>}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
-    {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
-    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>署名与联系</a>{approved ? <><a href="#preview"><span>02</span>作品预告</a><a href="#review"><span>03</span>审查说明</a><a href="#relay"><span>04</span>接力安排</a></> : <a href="#plan"><span>02</span>报名信息</a>}</nav>
+    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}</nav>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
       <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
@@ -119,24 +117,13 @@ export function PortalOverviewPage() {
       </Notice> : null}
       {collaboration.requests.length ? <SwapRequests collaboration={collaboration} onSaved={refresh} /> : null}
     </section> : null}
-    {approved ? <div className="creator-board">
-      <PortalProfilePage embedded compact onSaved={refresh} />
-      <div id="project">
-          <PortalProjectPage embedded compact onSaved={refresh} revision={revision} />
-          <ArchiveChapter id="relay" number="04" title="接力安排" state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "尚未选择"}>
-            <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
-            <NeighborSlots revision={revision} />
-            <Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link>
-          </ArchiveChapter>
-          {application.application ? <div className="portal-registration-record"><WorkspaceSection id="plan" title="查看报名信息和创作意向">
-            <p>参加形式：{applicationInterestFormatLabels[application.application.interestFormat]}</p>
-            <p>{application.application.introText || "未填写创作意向。"}</p>
-            {application.application.portfolioUrl ? <p>作品或主页：<a className="text-link" href={application.application.portfolioUrl} target="_blank" rel="noreferrer">{application.application.portfolioUrl}</a></p> : null}
-            {application.application.messageToHosts ? <p>给主催的话：{application.application.messageToHosts}</p> : null}
-          </WorkspaceSection></div> : <span id="plan" />}
-
-      </div>
-    </div> : <><span id="project" /><RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} /></>}
+    <span id="project" />
+    <RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} />
+    {approved ? <ArchiveChapter id="relay" number="03" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "尚未选择"}>
+      <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
+      <NeighborSlots revision={revision} />
+      <Link className="button button--primary button--industrial button--accent relay-schedule-action" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期 <ArrowUpRight size={18} aria-hidden="true" /></Link>
+    </ArchiveChapter> : null}
     <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>
       {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，可在这里查看报名及后续操作记录。</p> : null}

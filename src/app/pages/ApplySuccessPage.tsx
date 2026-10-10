@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { CheckCircle2, ArrowRight } from "lucide-react";
+import "../components/ui/buttons.css";
 
 export function ApplySuccessPage() {
   return (
@@ -11,10 +12,10 @@ export function ApplySuccessPage() {
         恭喜您！报名已提交，所选时段已预留。请等待审核结果，若无大碍即视为您确定参与我们的活动。接下来只需要安心创作，等候后续通知即可。
       </p>
       <div className="hero-actions">
-        <Link className="button button--primary" to="/portal">
+        <Link className="button button--primary button--industrial button--accent" to="/portal">
           返回作者页面 <ArrowRight size={16} />
         </Link>
-        <Link className="button button--secondary" to="/">
+        <Link className="button button--secondary button--industrial" to="/">
           回到活动首页
         </Link>
       </div>

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { requiresRegistrationTimeConfirmation } from "./schedule-selection";
+import { getScheduleAction, requiresRegistrationTimeConfirmation } from "./schedule-selection";
 
 const original = { id: "slot-1", name: "第一棒", scheduledAt: "2026-12-20T10:00:00Z" };
 const next = { id: "slot-2", name: "第二棒", scheduledAt: "2026-12-20T11:00:00Z" };
@@ -18,4 +18,11 @@ it("requires fresh confirmation if the reservation or displayed time changes", (
   const confirmation = { from: original, to: next };
   expect(requiresRegistrationTimeConfirmation({ ...original, id: "slot-3" }, next, confirmation)).toBe(true);
   expect(requiresRegistrationTimeConfirmation(original, { ...next, scheduledAt: "2026-12-20T12:00:00Z" }, confirmation)).toBe(true);
+});
+
+it("keeps a successful time change from turning into a release action after refresh", () => {
+  expect(getScheduleAction({ status: "available", participantId: null }, "author-1")).toBe("select");
+  const changed = { status: "confirmed" as const, participantId: "author-1" };
+  expect(getScheduleAction(changed, "author-1", true)).toBeNull();
+  expect(getScheduleAction(changed, "author-1")).toBe("release");
 });

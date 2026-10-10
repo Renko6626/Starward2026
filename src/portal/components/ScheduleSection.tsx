@@ -5,6 +5,7 @@ import { requestJson } from "../../app/lib/api";
 import { createSwapInputSchema, type CollaborationMutationResponse, type CollaborationResponse, type CollaborationSegment } from "../../shared/collaboration";
 import type { PortalCurrentSegmentResponse, PortalSegmentMutationResponse } from "../../shared/portal";
 import { ScheduleGrid } from "./ScheduleGrid";
+import { getScheduleAction } from "../lib/schedule-selection";
 
 export function ScheduleSection({ collaboration, onSaved, revision, selectedSegmentId, onResult }: {
   collaboration: CollaborationResponse;
@@ -71,28 +72,30 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
 
   function actions(segment: CollaborationSegment, close: () => void) {
     if (!schedule) return <p>正在读取排期操作权限。</p>;
-    const own = segment.participantId === collaboration.participantId;
+    const operationSucceeded = Boolean(selectedSegmentId && notice && !notice.error);
+    const action = getScheduleAction(segment, collaboration.participantId, operationSucceeded);
+    if (!action) return null;
     const alreadyRequested = collaboration.requests.some(request => request.status === "pending"
       && request.recipientSegmentId === segment.id && request.requesterId === collaboration.participantId);
     return <div className="schedule-detail-actions">
-      {segment.status === "available" ? <>
+      {action === "select" ? <>
         <p>{schedule.currentSegment
           ? `将你的发布时点从 ${formatScheduledTime(schedule.currentSegment.scheduledAt)} 调整到 ${formatScheduledTime(segment.scheduledAt)}，原发布时点会同时释放。`
           : `确认后认领 ${formatScheduledTime(segment.scheduledAt)}。`}</p>
-        <Button disabled={busy || !permissionsReady || (schedule.currentSegment ? !schedule.actions.canChange : !schedule.actions.canClaim)}
+        <Button appearance="framed" className="button--accent" aria-busy={busy} disabled={busy || !permissionsReady || (schedule.currentSegment ? !schedule.actions.canChange : !schedule.actions.canClaim)}
           onClick={() => void mutate(segment.id, close)}>{schedule.currentSegment ? "确认调整到这个发布时点" : "确认认领这个发布时点"}</Button>
-      </> : own ? <>
+      </> : action === "release" ? <>
         <p>这是你当前持有的发布时点。释放后会重新开放给其他创作者。</p>
-        <Button variant="danger" disabled={busy || !permissionsReady || !schedule.actions.canRelease}
+        <Button appearance="industrial" variant="danger" aria-busy={busy} disabled={busy || !permissionsReady || !schedule.actions.canRelease}
           onClick={() => void mutate(null, close)}>确认释放当前发布时点</Button>
         <p className="field-hint">{schedule.actions.releaseHint}</p>
-      </> : segment.status === "confirmed" ? <>
+      </> : action === "swap" ? <>
         <p>{schedule.currentSegment ? `你的时点：${formatScheduledTime(schedule.currentSegment.scheduledAt)}；对方的时点：${formatScheduledTime(segment.scheduledAt)}。对方同意后交换，等待回应期间双方保留原时点。` : "先认领一个空闲发布时点，再向其他创作者请求交换。"}</p>
         {alreadyRequested ? <Notice>请求已发出，可以在待办与反馈中查看或取消。</Notice> : <>
           <Field label="换期说明（选填）"><textarea className="field-input" rows={3} maxLength={500} placeholder="简要说明希望交换时间的原因，可不填"
             value={swapMessage} disabled={busy || !permissionsReady || !collaboration.canSwap}
             onChange={event => setSwapMessage(event.target.value)} /></Field>
-          <Button disabled={busy || !permissionsReady || !collaboration.canSwap} onClick={() => void mutate(segment.id, close, true)}>发送换期请求</Button>
+          <Button appearance="framed" className="button--accent" aria-busy={busy} disabled={busy || !permissionsReady || !collaboration.canSwap} onClick={() => void mutate(segment.id, close, true)}>发送换期请求</Button>
         </>}
       </> : null}
       {!selectedSegmentId && notice?.error ? <Notice tone="error">{notice.text}</Notice> : null}

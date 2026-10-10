@@ -17,8 +17,7 @@
 .participation-status-dot { width: 6px; height: 6px; flex: none; border: 1px solid #999; border-radius: 50%; }
 .participation-status-dot.is-open { border-color: #c5ddc5; background: #c5ddc5; }
 .participation-status [role="status"] > p { margin: 0; color: #a5a5a5; font-size: var(--site-body-size); line-height: 1.9; }
-.participation-action { display: flex; justify-content: space-between; align-items: center; gap: 24px; min-height: 52px; width: 100%; margin-top: 28px; border: 1px solid #ffffff42; padding: 0 19px; background: #ffffff05; color: #eee; font-size: 13px; transition: background .15s, border-color .15s; }
-.participation-action:hover { border-color: #ffffff90; background: #ffffff0d; }
+.participation-action.button.button--industrial { display: flex; justify-content: space-between; gap: 24px; height: 52px; min-height: 52px; width: 100%; margin-top: 28px; padding: 0 19px; }
 .participation-action-note { margin: 12px 0 0; color: #929292; font-size: var(--site-meta-size); line-height: 1.8; }
 .participation-section { border-top: 1px solid #ffffff1c; margin-top: 45px; padding-top: 28px; }
 .participation-section-heading { display: flex; align-items: baseline; gap: 18px; }

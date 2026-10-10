@@ -68,6 +68,7 @@ docs/
 交付：
 
 - [delivery/todo.md](./delivery/todo.md)：活动待办
+- [delivery/work-submission-without-preview.md](./delivery/work-submission-without-preview.md)：取消预告流程的影响评估、metadata 迁移与后续作品提交方案
 - [delivery/phase-1/scope.md](./delivery/phase-1/scope.md)
 - [delivery/phase-1/plan.md](./delivery/phase-1/plan.md)
 

@@ -1,5 +1,5 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -275,13 +275,12 @@ export function PortalLoginPage() {
               />
             </Field>
             {mode === "register" ? <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSigningIn} /> : null}
-            <Button type="submit" disabled={isSigningIn || (mode === "register" && !rulesAccepted)}>
+            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn || (mode === "register" && !rulesAccepted)} aria-busy={isSigningIn}>
               {isSigningIn
                 ? "提交中…"
                 : mode === "register"
                   ? "注册并进入"
                   : "登录"}
-              <ArrowRight size={16} />
             </Button>
           </form>
         ) : step === "email" ? (
@@ -299,9 +298,8 @@ export function PortalLoginPage() {
               />
             </Field>
             <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
-            <Button type="submit" disabled={isSending || isSigningIn}>
+            <Button appearance="framed" className="button--accent" type="submit" disabled={isSending || isSigningIn} aria-busy={isSending}>
               {isSending ? "发送中…" : "发送登录验证码"}
-              <ArrowRight size={16} />
             </Button>
           </form>
         ) : (
@@ -325,12 +323,14 @@ export function PortalLoginPage() {
               />
             </Field>
             <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
-            <Button type="submit" disabled={isSigningIn}>
+            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn} aria-busy={isSigningIn}>
               {isSigningIn ? "验证中…" : "验证并进入"}
             </Button>
             <Button
+              appearance="industrial"
               variant="secondary"
               disabled={isSending || isSigningIn || resendCooldownSeconds > 0}
+              aria-busy={isSending}
               onClick={() => void sendOtp(true)}
             >
               {isSending

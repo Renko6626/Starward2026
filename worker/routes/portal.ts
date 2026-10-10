@@ -17,7 +17,7 @@ import {
   respondSwap,
   withdrawApplication,
 } from "../data/collaboration";
-import { upsertPortalApplicationInputSchema } from "../../src/shared/applications";
+import { upsertPortalApplicationInputSchema, updateApplicationIntentInputSchema } from "../../src/shared/applications";
 import type {
   PortalApplicationMutationResponse,
   PortalApplicationResponse,
@@ -40,6 +40,7 @@ import {
 import {
   getPortalApplicationByUserId,
   upsertPortalApplication,
+  updateApprovedApplicationIntent,
 } from "../data/applications";
 import { listEventWindows } from "../data/event-windows";
 import {
@@ -497,6 +498,13 @@ portalApi.patch("/application", async (c) => {
     access.db,
     access.session.user.id,
   );
+  if (existing?.status === "approved") {
+    const parsed = updateApplicationIntentInputSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return jsonError(c, 422, "invalid_request", "创作意向参数不正确。", parsed.error.flatten());
+    const result = await updateApprovedApplicationIntent(access.db, access.session.user.id, parsed.data);
+    if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+    return c.json({ ok: true, message: result.message, application: result.application } satisfies PortalApplicationMutationResponse);
+  }
   const profile = await getPortalProfileByUserId(
     access.db,
     access.session.user.id,

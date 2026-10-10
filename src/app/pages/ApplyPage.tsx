@@ -5,6 +5,7 @@ import { useApplicationIntake } from "../lib/use-application-intake";
 import { getApplicationWindowLabel } from "../../shared/windows";
 import { StationTechnicalDrawing } from "../components/StationTechnicalDrawing";
 import "./apply.css";
+import "../components/ui/buttons.css";
 
 const steps = [
   { title: "注册或登录", body: "阅读并同意活动规则后，用邮箱注册。已有账号直接登录。" },
@@ -43,7 +44,7 @@ export function ApplyPage() {
             <h2 id="participation-status-title"><span className={`participation-status-dot${isOpen ? " is-open" : ""}`} aria-hidden="true" />{status}</h2>
             <p>{statusNote}</p>
           </div>
-          <Link to={session ? "/portal" : "/portal/login"} className="participation-action">
+          <Link to={session ? "/portal" : "/portal/login"} className="button button--primary button--industrial button--accent participation-action">
             {entryLabel}<ArrowUpRight size={18} />
           </Link>
           <p className="participation-action-note">{session ? "查看报名进度和作品资料。" : "已有账号可直接登录。"}</p>

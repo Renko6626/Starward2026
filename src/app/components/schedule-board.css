@@ -175,6 +175,7 @@
 .schedule-inline-actions .schedule-detail-actions { margin-top: 0; }
 .schedule-inline-actions .field-input { width: 100%; }
 .schedule-inline-actions .button { min-height: 44px; white-space: normal; }
+.schedule-inline-actions .button.button--industrial { white-space: nowrap; }
 .schedule-inline-actions .notice { margin-top: 12px; }
 .ops-page-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 22px 0 0; }
 .ops-page-foot p { margin: 0; font-size: var(--site-meta-size); color: var(--color-on-surface-variant); }

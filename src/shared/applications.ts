@@ -43,6 +43,9 @@ export const createApplicationInputSchema = applicationInputSchema.extend({
 });
 
 export const upsertPortalApplicationInputSchema = applicationInputSchema;
+export const updateApplicationIntentInputSchema = applicationInputSchema
+  .pick({ interestFormat: true, introText: true }).strict();
+export type UpdateApplicationIntentInput = z.infer<typeof updateApplicationIntentInputSchema>;
 
 export const updateApplicationReviewInputSchema = z.object({
   status: applicationStatusSchema,

@@ -25,6 +25,17 @@ export function isRegistrationSegmentSelectable(
   return segment.status === "available" || (segment.status === "reserved" && segment.participantId === participantId);
 }
 
+export function getScheduleAction(
+  segment: Pick<CollaborationSegment, "status" | "participantId">,
+  participantId: string,
+  operationSucceeded = false,
+) {
+  if (operationSucceeded) return null;
+  if (segment.status === "available") return "select";
+  if (participantId && segment.participantId === participantId) return "release";
+  return segment.status === "confirmed" ? "swap" : null;
+}
+
 const scheduleIntentKey = (userId: string) => `starward-schedule-intent:${userId}`;
 
 export function readScheduleIntent(userId: string) {

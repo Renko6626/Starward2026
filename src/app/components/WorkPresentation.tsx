@@ -1,6 +1,7 @@
 import { ArrowUpRight, BookOpen, Film, Headphones, Orbit, Palette, PanelsTopLeft } from "lucide-react";
 import { workTypeLabels, type WorkPresentation as WorkData, type WorkType } from "../../shared/works";
 import "./works.css";
+import "./ui/buttons.css";
 
 const workIcons = { text: BookOpen, illustration: Palette, comic: PanelsTopLeft, music: Headphones, video: Film, other: Orbit };
 
@@ -41,7 +42,7 @@ export function WorkPresentation({ work }: { work: WorkData }) {
       <span className="eyebrow">ABOUT THIS OBSERVATION</span>
       <p className="work-description">{work.previewSummary || "尚未填写简介"}</p>
       {work.publicTags.length > 0 && <ul className="work-tags" aria-label="作品标签">{work.publicTags.map(tag => <li key={tag}>{tag}</li>)}</ul>}
-      {work.workUrl && <a className="button button--primary" href={work.workUrl} target="_blank" rel="noopener noreferrer">查看原作品 <ArrowUpRight size={16} aria-hidden="true" /><span className="sr-only">（在新标签页打开）</span></a>}
+      {work.workUrl && <a className="button button--primary button--industrial" href={work.workUrl} target="_blank" rel="noopener noreferrer">查看原作品 <ArrowUpRight size={16} aria-hidden="true" /><span className="sr-only">（在新标签页打开）</span></a>}
     </div>
   </div>;
 }
