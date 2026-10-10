@@ -117,7 +117,7 @@
       ],
       // Replace with the real production URL before the first production deploy.
       "vars": {
-        "BETTER_AUTH_URL": "https://replace-with-production-domain.example.com",
+        "BETTER_AUTH_URL": "https://hifuu.moe",
         "QQ_OAUTH_ENABLED": "false"
       }
       // Add routes: [{ "pattern": "your-production-domain", "custom_domain": true }]
