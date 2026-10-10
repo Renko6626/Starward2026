@@ -1,5 +1,10 @@
 # Migrations
 
+`0021_cosplay_work_types.sql` adds `cosplay` to application and work types and
+converts existing `mixed` intentions to `other`. It preserves application reviews,
+participant application links, drafts and schedule assignments. Apply this migration
+with the matching application version, before accepting new Cosplay selections.
+
 This directory holds the phase-1 D1 SQL migrations.
 
 Current order:

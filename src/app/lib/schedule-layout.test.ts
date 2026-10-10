@@ -3,7 +3,7 @@ import type { PublicScheduleEntry } from "../../shared/works";
 import { groupSchedule, scheduleHour, schedulePhase } from "./schedule-layout";
 
 const slot = (id: string, scheduledAt: string | null): PublicScheduleEntry => ({
-  id, kind: 'standard', code: id, name: id, scheduledAt, status: "available", publicAuthorName: null, preview: null, workId: null,
+  id, kind: 'standard', code: id, name: id, scheduledAt, status: "available", publicAuthorName: null, interestFormat: null, preview: null, workId: null,
 });
 
 describe("schedule layout", () => {

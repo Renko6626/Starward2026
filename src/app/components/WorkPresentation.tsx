@@ -1,13 +1,17 @@
-import { ArrowUpRight, BookOpen, Film, Headphones, Orbit, Palette, PanelsTopLeft } from "lucide-react";
+import { ArrowUpRight, BookOpen, Film, Headphones, Orbit, Palette, PanelsTopLeft, Drama } from "lucide-react";
 import { workTypeLabels, type WorkPresentation as WorkData, type WorkType } from "../../shared/works";
 import "./works.css";
 import "./ui/buttons.css";
 
-const workIcons = { text: BookOpen, illustration: Palette, comic: PanelsTopLeft, music: Headphones, video: Film, other: Orbit };
+const workIcons = { text: BookOpen, illustration: Palette, comic: PanelsTopLeft, music: Headphones, video: Film, cosplay: Drama, other: Orbit };
+
+export function WorkTypeIcon({ type }: { type: WorkType | null }) {
+  const Icon = workIcons[type ?? "other"];
+  return <Icon size={14} strokeWidth={1.8} aria-hidden="true" />;
+}
 
 export function WorkTypeMark({ type }: { type: WorkType | null }) {
-  const Icon = workIcons[type ?? "other"];
-  return <span className="work-type"><Icon size={14} aria-hidden="true" />{type ? workTypeLabels[type] : "作品"}</span>;
+  return <span className="work-type"><WorkTypeIcon type={type} />{type ? workTypeLabels[type] : "作品"}</span>;
 }
 
 export function ObservationMark() {

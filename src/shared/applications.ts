@@ -9,7 +9,7 @@ export const applicationInterestFormatValues = [
   "comic",
   "music",
   "video",
-  "mixed",
+  "cosplay",
   "other",
 ] as const;
 
@@ -153,7 +153,7 @@ export const applicationInterestFormatLabels: Record<
   comic: "漫画",
   music: "音乐",
   video: "视频",
-  mixed: "混合形式",
+  cosplay: "Cosplay",
   other: "其他",
 };
 

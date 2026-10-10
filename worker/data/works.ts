@@ -79,12 +79,14 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
       ELSE 'unavailable'
     END AS status,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
+    CASE WHEN s.status IN ('held', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
     d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     d.work_type AS workType, d.cover_url AS coverUrl, d.cover_alt AS coverAlt
     FROM schedule_segments s
     JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
     LEFT JOIN participants participant ON participant.id = s.current_participant_id AND participant.status IN ('approved', 'completed')
     LEFT JOIN portal_profiles p ON p.user_id = participant.user_id
+    LEFT JOIN applications a ON a.user_id = participant.user_id AND a.status = 'approved'
     LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
     ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({

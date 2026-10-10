@@ -78,7 +78,7 @@ export const localDevSeedFixtures = {
       user_id: "usr_seed_active",
       contact_email: "portal-approved@seed.starward.local",
       contact_handle: "Bluesky @merry-seed",
-      interest_format: "mixed",
+      interest_format: "other",
       intro_text: "已审核通过并进入参与者工作区。",
       portfolio_url: "https://example.com/approved-seed",
       message_to_hosts: "已准备进入时间段与资料阶段。",
