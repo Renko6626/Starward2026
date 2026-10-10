@@ -1749,13 +1749,6 @@ body:has(.route-pending) .navigation-progress--router { display: none; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .route-stage {
-    animation: observation-route-in 420ms var(--motion-ease) both;
-  }
-  .public-site .route-stage {
-    /* A transformed route would contain fixed backgrounds and expand their canvases. */
-    animation: observation-fade 300ms var(--motion-ease) both;
-  }
   .hero-copy > .eyebrow,
   .hero-copy > h1,
   .hero-copy > p {
@@ -1838,17 +1831,6 @@ body:has(.route-pending) .navigation-progress--router { display: none; }
     .button:not(:disabled):active {
       transform: translateY(1px);
     }
-  }
-}
-
-@keyframes observation-route-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 

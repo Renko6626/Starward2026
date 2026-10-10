@@ -100,8 +100,8 @@ export function SiteFooter() {
 
 export function SiteLayout({ children }: PropsWithChildren) {
   const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
-  const location = useLocation();
-  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const activePath = useRouterState({ select: state => state.matches.at(-1)?.pathname ?? state.location.pathname });
+  const pathname = activePath.replace(/\/+$/, "") || "/";
   const isWorkspace =
     (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
     pathname.startsWith("/admin");
@@ -112,7 +112,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
       <a className="skip-link" href="#main-content">跳至正文</a>
       <SiteHeader />
       <main id="main-content" className="public-main" aria-busy={pending}>
-        <div className="route-stage" key={pathname}>{children}</div>
+        <div className="route-stage">{children}</div>
       </main>
       <SiteFooter />
     </div>

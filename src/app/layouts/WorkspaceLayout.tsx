@@ -139,7 +139,7 @@ export function WorkspaceLayout({
           )}
         </header>
         <main id="main-content" className="workspace-content" aria-busy={pending}>
-          <div className="route-stage" key={pathname}>
+          <div className="route-stage">
             {children}
           </div>
         </main>
