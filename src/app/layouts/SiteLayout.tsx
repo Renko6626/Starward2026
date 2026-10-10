@@ -144,7 +144,8 @@ export function SiteFooter() {
         <nav className="footer-links" aria-label="页脚导航">
           <Link to="/apply">参与指南</Link>
           <Link to="/rules">活动规则</Link>
-          <Link to="/rules" hash="rules-privacy">信息与隐私</Link>
+          <a href="/tos">服务条款</a>
+          <a href="/privacy">隐私政策</a>
         </nav>
       </div>
       <div className="footer-contact">

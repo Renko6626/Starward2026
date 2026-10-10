@@ -13,5 +13,6 @@ export function ActivityRulesConsent({ accepted, onChange, disabled = false, otp
       onChange={event => onChange(event.target.checked)} />
       <span>我已阅读并同意<Link to="/rules" target="_blank" rel="noopener noreferrer">《逐星巡礼活动规则》</Link>，{ACTIVITY_RULES_CONSENT_NOTICE}</span>
     </label>
+    <p className="auth-note">账号与活动资料的处理方式见<a href="/privacy" target="_blank" rel="noopener noreferrer">《隐私政策》</a>。</p>
   </div>;
 }

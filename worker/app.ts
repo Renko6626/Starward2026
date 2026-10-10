@@ -6,8 +6,17 @@ import { portalApi } from "./routes/portal";
 import { publicApi } from "./routes/public";
 import { jsonError } from "./lib/http";
 import type { AppRouteConfig } from "./lib/types";
+import privacyHtml from "../public/privacy.html?raw";
+import tosHtml from "../public/tos.html?raw";
 
 const app = new Hono<AppRouteConfig>();
+
+// Keep the policy readable to direct HTTP clients as well as asset navigation.
+// The static asset and Worker fallback share the same complete HTML document.
+app.get("/privacy", (c) => c.html(privacyHtml));
+app.get("/privacy/", (c) => c.html(privacyHtml));
+app.get("/tos", (c) => c.html(tosHtml));
+app.get("/tos/", (c) => c.html(tosHtml));
 
 app.route("/api", publicApi);
 app.route("/api/admin", adminApi);

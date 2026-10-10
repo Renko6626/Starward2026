@@ -21,6 +21,7 @@ export function RulesPage() {
         {activityRulesSections.map(section => <section key={section.id} id={`rules-${section.id}`} className={section.id === "rights" ? "rules-section rules-section--rights" : "rules-section"} aria-labelledby={`rules-heading-${section.id}`}>
           <h2 id={`rules-heading-${section.id}`}>{section.title}</h2>
           {section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+          {section.id === "privacy" ? <p>账号及活动资料的收集、使用、共享、保留与删除方式，详见<a href="/privacy">《隐私政策》</a>。</p> : null}
         </section>)}
         <div className="rules-actions"><Link to="/apply">查看参与指南</Link><Link className="button button--secondary button--industrial" to="/portal/login">前往账号入口 <ArrowUpRight size={16} /></Link></div>
       </div>

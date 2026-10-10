@@ -166,6 +166,29 @@ More references: [Vite production environment selection](https://developers.clou
 [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/),
 [Wrangler deploy options](https://developers.cloudflare.com/workers/wrangler/commands/workers/).
 
+## Privacy policy and Google verification
+
+The public policy lives in `public/privacy.html`. Cloudflare serves this asset at
+`/privacy`; the Worker also returns the same HTML at `/privacy` and `/privacy/`
+for requests that reach application routing. Keep links to this page as ordinary
+HTML anchors so the client router does not try to resolve it as a React route.
+It must remain readable without JavaScript, authentication, or a database binding.
+`worker/privacy.test.ts` covers the direct HTTP response and content type.
+
+The Google disclosure describes basic sign-in only, as confirmed by the site
+owner: identity, email, and profile. This checkout configures email/password and
+optional QQ authentication, not a Google provider. Before releasing a version
+that changes Google authentication, reconcile the deployed provider and consent
+screen scopes with the policy; do not add broader permissions to fit policy text.
+
+After deploying, request `https://hifuu.moe/privacy` without cookies and confirm
+HTTP 200, `Content-Type: text/html`, and the complete policy in the response body.
+Also open it with JavaScript disabled and follow the homepage privacy link.
+The OAuth consent screen privacy URL remains `https://hifuu.moe/privacy`.
+Once the updated page is live, retry verification or respond to the existing
+Google verification email that the page at the same URL has been corrected.
+See [Google's privacy policy verification guidance](https://support.google.com/cloud/answer/13806988).
+
 ## Configured production email and Turnstile
 
 - Production Worker: `starward2026-production` at `https://hifuu.moe`.
