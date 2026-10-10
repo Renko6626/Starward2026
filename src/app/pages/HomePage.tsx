@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
+import { HomeSideGrid } from '../components/HomeSideGrid';
 import { MissionCountdown } from '../components/MissionCountdown';
 import { DesignReferences } from '../components/DesignReferences';
 import { StationBackdrop } from '../components/station/StationBackdrop';
@@ -29,6 +30,7 @@ export function HomePage() {
   return (
     <div className="station-home">
       <StationBackdrop paused={motionPaused} onTogglePaused={() => setMotionPaused(value => !value)} controlsContainer={motionControls} />
+      <HomeSideGrid />
       <section className="orbital-hero" aria-labelledby="home-title">
         <OrbitalArtwork paused={motionPaused} />
         <div className="orbital-copy">
