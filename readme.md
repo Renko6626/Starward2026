@@ -170,6 +170,13 @@ npm run deploy:staging
 - 本地 `.dev.vars` 中的 `BETTER_AUTH_URL` 继续用于本地开发
 - `env.production` 当前仍是模板，需补齐正式域名、正式 D1 绑定与独立 rate limit namespace 后再启用生产脚本
 
+## Production tag deployments
+
+Pushing a new tag ending in `-prod` (for example `v1.0.0-prod`) runs the production
+GitHub Actions workflow: tests, production build, D1 migrations, deployment and
+public smoke checks. Configure the production domain/database and GitHub secrets
+before the first release. See [production deployment setup](docs/development/production-deployment.md).
+
 ## License
 
 TBD

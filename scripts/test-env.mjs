@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// Run with node or npm run test:env.
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
