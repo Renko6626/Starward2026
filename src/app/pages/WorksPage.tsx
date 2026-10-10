@@ -20,10 +20,14 @@ const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai",
 const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 type OwnSchedule = { userId: string; revision: number; segmentId: string | null; author: string | null; status: string | undefined; collaboration: CollaborationResponse };
 
+// Keep only public data between visits; each mount still refreshes it. Account
+// permissions and personal schedule state remain local to the current session.
+let cachedPublicWorks: PublicWorksResponse | null = null;
+
 export function WorksPage() {
   const { data: session } = authClient.useSession();
   const userId = session?.user.id;
-  const [data, setData] = useState<PublicWorksResponse | null>(null);
+  const [data, setData] = useState<PublicWorksResponse | null>(() => cachedPublicWorks);
   const [error, setError] = useState<string | null>(null);
   const [own, setOwn] = useState<OwnSchedule | null>(null);
   const [ownWarning, setOwnWarning] = useState<string | null>(null);
@@ -41,7 +45,12 @@ export function WorksPage() {
     const controller = new AbortController();
     const refresh = () => {
       void requestJson<PublicWorksResponse>("/api/works", { signal: controller.signal })
-        .then(response => { if (!controller.signal.aborted) { setData(response); setError(null); setNow(Date.now()); } })
+        .then(response => {
+          if (!controller.signal.aborted) {
+            cachedPublicWorks = response;
+            setData(response); setError(null); setNow(Date.now());
+          }
+        })
         .catch(caught => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : "暂时无法读取接力时间表。"); });
       if (userId) void Promise.all([
         requestJson<PortalDashboardResponse>("/api/portal/dashboard", { signal: controller.signal }),
