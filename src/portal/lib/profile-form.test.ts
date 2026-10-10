@@ -13,8 +13,8 @@ const profile = {
 };
 
 describe("unified credit settings", () => {
-  it("uses the registration email even when an older draft contains another address", () => {
-    expect(normalizePortalProfileInput(profile, "REGISTERED@example.com").contactEmail).toBe("registered@example.com");
+  it("preserves contact email independently of the registration email", () => {
+    expect(normalizePortalProfileInput(profile, "REGISTERED@example.com").contactEmail).toBe("merry@example.com");
   });
   it("extracts the UID from a homepage link with a share query or subpage", () => {
     const normalized = normalizePortalProfileInput({ ...profile, bilibiliUid: " https://space.bilibili.com/12345678/dynamic?spm_id_from=333.999 " });

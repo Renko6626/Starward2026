@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type { ParticipantPortalStatus } from "../../src/shared/portal";
 import { createPrefixedId } from "../lib/ids";
 import { nowIso } from "../lib/time";
@@ -5,7 +6,7 @@ import { nowIso } from "../lib/time";
 export type ParticipantAuthRow = {
   id: string;
   user_id: string | null;
-  invite_email: string;
+  invite_email: string | null;
   display_name: string;
   contact_handle: string | null;
   status: ParticipantPortalStatus;
@@ -99,20 +100,21 @@ export async function getParticipantByUserId(db: D1Database, userId: string) {
 export async function ensureParticipantForAuthUser(
   db: D1Database,
   input: {
-    email: string;
+    email: string | null;
+    emailVerified?: boolean;
     userId: string;
   },
 ): Promise<ParticipantLinkResult> {
   const participant =
     (await getParticipantByUserId(db, input.userId)) ??
-    (await getParticipantByInviteEmail(db, input.email));
+    (input.email && input.emailVerified === true ? await getParticipantByInviteEmail(db, input.email) : null);
 
   if (participant?.user_id && participant.user_id !== input.userId) {
     return { kind: "conflict", participantId: participant.id };
   }
 
   const now = nowIso();
-  const normalizedEmail = normalizeEmailAddress(input.email);
+  const normalizedEmail = getRealAuthEmail(input.email);
 
   if (!participant) {
     const participantId = createPrefixedId("part");

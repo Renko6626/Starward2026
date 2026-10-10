@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   AdminParticipantDetail,
   AdminParticipantItem,
@@ -24,7 +25,7 @@ type ParticipantRow = {
   user_id: string | null;
   display_name: string;
   is_anonymous: number;
-  invite_email: string;
+  invite_email: string | null;
   contact_handle: string | null;
   status: "approved" | "withdrawn" | "completed";
   application_id: string | null;
@@ -894,7 +895,7 @@ function mapAdminParticipantItem(row: ParticipantRow): AdminParticipantItem {
     id: row.id,
     displayName: row.display_name,
     isAnonymous: Boolean(row.is_anonymous),
-    inviteEmail: row.invite_email,
+    inviteEmail: getRealAuthEmail(row.invite_email),
     contactHandle: row.contact_handle,
     status: row.status,
     applicationId: row.application_id,

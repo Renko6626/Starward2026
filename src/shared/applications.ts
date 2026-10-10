@@ -1,3 +1,4 @@
+import { optionalContactEmailSchema } from "./auth-identity";
 import { z } from "zod";
 import type { EventWindowSummary } from "./windows";
 import type { ParticipantPortalStatus } from "./portal";
@@ -29,7 +30,7 @@ const optionalShortTextSchema = z.string().trim().max(120).optional();
 const optionalBodyTextSchema = z.string().trim().max(1600).optional();
 
 const applicationInputSchema = z.object({
-  contactEmail: z.string().trim().email().max(320),
+  contactEmail: optionalContactEmailSchema,
   contactHandle: optionalShortTextSchema,
   interestFormat: applicationInterestFormatSchema,
   introText: z.string().trim().min(1, "请简要描述准备创作什么。").max(1600),
@@ -61,7 +62,7 @@ export type UpdateApplicationReviewInput = z.infer<
 export type ApplicationListItem = {
   id: string;
   displayName: string;
-  contactEmail: string;
+  contactEmail: string | null;
   contactHandle: string | null;
   interestFormat: ApplicationInterestFormat;
   status: ApplicationStatus;
@@ -82,11 +83,11 @@ export type ApplicationDetail = ApplicationListItem & {
   updatedAt: string;
   authUser: {
     id: string;
-    email: string;
+    email: string | null;
   } | null;
   portalProfile: {
     creditName: string;
-    contactEmail: string;
+    contactEmail: string | null;
     primaryContactChannel: string;
     primaryContactHandle: string;
     backupContact: string | null;
@@ -94,7 +95,7 @@ export type ApplicationDetail = ApplicationListItem & {
   } | null;
   participant: {
     id: string;
-    inviteEmail: string;
+    inviteEmail: string | null;
     status: ParticipantPortalStatus;
     activatedAt: string | null;
   } | null;

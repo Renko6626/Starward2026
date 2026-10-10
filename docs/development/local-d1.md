@@ -34,7 +34,7 @@ npm run test:env -- local
 | --- | --- | --- |
 | Wrangler D1 local | 无 | 可以，核心 API 使用本地数据库 |
 | 本地管理员入口 | 需要 `.dev.vars` 中的 bypass | 可以；入口脚本会为新环境打开它 |
-| Resend 邮件 OTP | 登录发送验证码接口返回不可用 | 可以浏览 seeded 页面；用打印出的本地 session 做 smoke |
+| Resend 登录邮件 OTP | 登录发送验证码接口返回不可用 | 可以浏览 seeded 页面；用打印出的本地 session 做 smoke |
 | Turnstile | 验证码校验关闭 | 可以；提交流程不要求外部验证码 |
 
 本地入口不会打印密钥值，也不会触发 Cloudflare、ACR 或 VPS 部署。停止服务器按 `Ctrl-C`；
@@ -201,3 +201,7 @@ npm run deploy:staging
   - https://developers.cloudflare.com/d1/wrangler-commands/
 - Better Auth Email OTP
   - https://better-auth.com/docs/plugins/email-otp
+
+## QQ OAuth 与可空联系邮箱
+
+QQ 默认关闭；配置与验证范围见 [QQ OAuth 接入说明](qq-oauth.md)。新增迁移 0020 允许联系邮箱为空并保留历史数据。现有库升级需要先备份再应用迁移，不用 reset 代替升级；本轮验证使用独立 persist-to 路径，未改动日常开发数据。

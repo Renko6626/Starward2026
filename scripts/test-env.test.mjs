@@ -19,6 +19,7 @@ describe("test environment launcher", () => {
     });
 
     expect(report).toEqual([
+      { name: "QQ 登录", status: "offline", detail: "未启用或配置不完整；邮箱入口仍可使用" },
       { name: "本地数据库", status: "ready", detail: "Wrangler D1 local" },
       { name: "本地管理员入口", status: "ready", detail: "loopback header bypass" },
       { name: "邮件 OTP（Resend）", status: "offline", detail: "未配置；OTP 登录会显示不可用" },

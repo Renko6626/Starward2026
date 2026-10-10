@@ -27,7 +27,7 @@ Last reviewed against official documentation: 2026-04-13
 - 前端：React + TypeScript + Vite
 - API 运行时：Hono on Cloudflare Workers
 - 数据库：Cloudflare D1
-- 参与者认证：Better Auth + 邮箱密码 / Email OTP + 30-day sliding Cookie Session
+- 参与者认证：Better Auth + QQ / 邮箱密码 / Email OTP + 30-day sliding Cookie Session
 - 反滥用：Email OTP 限流 + 服务端字段校验 + Workers Rate Limiting
 - 管理后台保护：Cloudflare Access
 - 文件存储：Cloudflare R2（仅在后续需要上传文件时启用）

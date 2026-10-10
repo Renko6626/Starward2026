@@ -28,14 +28,14 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     profile: {
       creditName: application.profile?.creditName ?? "",
       bilibiliUid: application.profile?.bilibiliUid ?? "",
-      contactEmail: application.user.email,
+      contactEmail: application.profile ? application.profile.contactEmail : application.user.email,
       primaryContactChannel: application.profile?.primaryContactChannel ?? "QQ",
       primaryContactHandle: application.profile?.primaryContactHandle ?? "",
       backupContact: application.profile?.backupContact ?? "",
       isAnonymous: application.profile?.isAnonymous ?? true,
     },
     application: {
-      contactEmail: application.user.email,
+      contactEmail: application.application ? application.application.contactEmail : application.profile ? application.profile.contactEmail : application.user.email,
       contactHandle: application.application?.contactHandle ?? "",
       interestFormat: application.application?.interestFormat ?? "novel",
       introText: application.application?.introText ?? "",
@@ -140,7 +140,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     setTimeChangeConfirmation(null);
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     if (!editable || !intake) { setError("报名设置尚未就绪或当前不能修改报名。"); return; }
-    const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: application.user.email, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
+    const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: form.profile.contactEmail, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
     const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized, turnstileToken: token ?? undefined });
     const validationErrors: Record<string, string> = parsed.success ? {} : getRegistrationFieldErrors(parsed.error.issues);
     if (!selectedSegment || selectionUnavailable) validationErrors.segmentId = "请选择一个可用的发布时间，已填写的信息会保留。";
@@ -179,7 +179,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   }
 
   const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => (
-    <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
+    <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact" && key !== "contactEmail"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
   );
   if (application.application?.status === "approved") return <div className="space-y-4">
     <Notice>报名已通过，可以安心创作。这里保留原报名资料，作品完成后再正式提交；开放期间可调整或申请换期。</Notice>
@@ -224,7 +224,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       }
     }}>
       <div className="workspace-form-grid">
-        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}<Field label="注册邮箱" error={fieldErrors["profile.contactEmail"]}><input name="profile.contactEmail" className="field-input" type="email" readOnly value={application.user.email} /></Field>
+        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}{profileField("contactEmail", "联系邮箱（选填）", "email")}
         <Field label="联系渠道" error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" form="creator-registration-form" className="field-input" disabled={compact ? saving || savingProfile : disabled} value={form.profile.primaryContactChannel} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, primaryContactChannel: event.target.value } }))}>{!portalContactChannels.includes(form.profile.primaryContactChannel) ? <option value={form.profile.primaryContactChannel}>{form.profile.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>{profileField("primaryContactHandle", "联系账号")}
         {profileField("backupContact", "备用联系方式（选填）")}
       </div>

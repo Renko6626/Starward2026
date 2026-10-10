@@ -10,6 +10,7 @@ type ApplicationRateLimitBindings = {
 type ApplicationRateLimitInput = ApplicationRateLimitBindings & {
   ipAddress?: string | null;
   contactEmail?: string | null;
+  userId?: string;
 };
 
 type ApplicationRateLimitResult =
@@ -42,17 +43,18 @@ export async function limitApplicationSubmission(
   }
 
   const contactEmail = input.contactEmail?.trim();
+  const identityKey = input.userId ? `apply:user:${input.userId}` : contactEmail ? `apply:email:${normalizeEmailAddress(contactEmail)}` : null;
 
-  if (input.emailRateLimiter && contactEmail) {
+  if (input.emailRateLimiter && identityKey) {
     const outcome = await input.emailRateLimiter.limit({
-      key: `apply:email:${normalizeEmailAddress(contactEmail)}`,
+      key: identityKey,
     });
 
     if (!outcome.success) {
       return {
         ok: false,
         code: "application_submit_rate_limited",
-        message: "该邮箱短时间内提交过于频繁，请稍后再试。",
+        message: input.userId ? "该账号短时间内提交过于频繁，请稍后再试。" : "该邮箱短时间内提交过于频繁，请稍后再试。",
         retryAfterSeconds: APPLICATION_RATE_LIMIT_RETRY_AFTER_SECONDS,
       };
     }

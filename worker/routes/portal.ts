@@ -1,7 +1,7 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import { Hono } from "hono";
 import { publicHttpsUrlSchema } from "../../src/shared/works";
 import { confirmPortalProjectRelease, getPortalReleaseState } from "../data/relay-publication";
-import { Resend } from "resend";
 import {
   workspaceApplicationInputSchema,
   createSwapInputSchema,
@@ -227,7 +227,8 @@ portalApi.post("/application-with-segment", async (c) => {
       parsed.error.flatten(),
     );
   const submissionGuard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: access.session.user.email,
+    userId: access.session.user.id,
+    contactEmail: getRealAuthEmail(access.session.user.email),
     turnstileToken: parsed.data.turnstileToken,
   });
   if (!submissionGuard.ok)
@@ -241,7 +242,7 @@ portalApi.post("/application-with-segment", async (c) => {
     const application = await saveWorkspaceApplication(
       access.db,
       access.session.user.id,
-      access.session.user.email,
+      getRealAuthEmail(access.session.user.email),
       parsed.data,
     );
     return c.json({
@@ -296,43 +297,13 @@ portalApi.post("/swaps", async (c) => {
       parsed.error.flatten(),
     );
   try {
-    const request = await createSwap(
+    await createSwap(
       access.db,
       access.participant.id,
       parsed.data.segmentId,
       parsed.data.message,
     );
-    let notification: CollaborationMutationResponse["notification"] =
-      "not_configured";
-    if (c.env.RESEND_API_KEY && c.env.RESEND_FROM_EMAIL && request.email) {
-      notification = "failed";
-      try {
-        const link = new URL(
-          "/portal",
-          c.env.BETTER_AUTH_URL || c.req.url,
-        ).toString();
-        const result = await new Resend(c.env.RESEND_API_KEY).emails.send({
-          from: `${c.env.RESEND_FROM_NAME?.trim() || "Starward2026"} <${c.env.RESEND_FROM_EMAIL}>`,
-          to: request.email,
-          subject: "你收到了一条时段交换请求",
-          text: `有创作者希望与你交换时段。请登录作者页面查看请求并决定是否同意：${link}\n请求仅能在作者页面内处理。`,
-        });
-        notification = result.error ? "failed" : "sent";
-      } catch {
-        notification = "failed";
-      }
-    }
-    return c.json(
-      {
-        ok: true,
-        message:
-          notification === "failed"
-            ? "已保存交换请求，邮件提醒发送失败，对方仍可在作者页面查看。"
-            : "已发送交换请求，等待对方回复。",
-        notification,
-      } satisfies CollaborationMutationResponse,
-      201,
-    );
+    return c.json({ ok: true, message: "交换请求已保存，对方可在作者页面查看。" } satisfies CollaborationMutationResponse, 201);
   } catch (error) {
     if (error instanceof CollaborationConflict)
       return jsonError(c, 409, "swap_conflict", error.message);
@@ -487,7 +458,8 @@ portalApi.post("/application", async (c) => {
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: access.session.user.email,
+    userId: access.session.user.id,
+    contactEmail: getRealAuthEmail(access.session.user.email),
     turnstileToken: readTurnstileToken(body),
   });
 
@@ -497,7 +469,7 @@ portalApi.post("/application", async (c) => {
 
   const result = await upsertPortalApplication(access.db, {
     userId: access.session.user.id,
-    authEmail: access.session.user.email,
+    authEmail: access.session.user.emailVerified ? getRealAuthEmail(access.session.user.email) : null,
     data: parsed.data,
   });
 
@@ -583,7 +555,8 @@ portalApi.patch("/application", async (c) => {
   }
 
   const guard = await enforceApplicationSubmissionGuards(c, {
-    contactEmail: access.session.user.email,
+    userId: access.session.user.id,
+    contactEmail: getRealAuthEmail(access.session.user.email),
     turnstileToken: readTurnstileToken(body),
   });
 
@@ -593,7 +566,7 @@ portalApi.patch("/application", async (c) => {
 
   const result = await upsertPortalApplication(access.db, {
     userId: access.session.user.id,
-    authEmail: access.session.user.email,
+    authEmail: access.session.user.emailVerified ? getRealAuthEmail(access.session.user.email) : null,
     data: parsed.data,
   });
 

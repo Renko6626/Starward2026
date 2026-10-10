@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   PortalProfile,
   UpdatePortalProfileInput,
@@ -8,7 +9,7 @@ import { nowIso } from "../lib/time";
 type PortalProfileRow = {
   credit_name: string;
   bilibili_uid: string | null;
-  contact_email: string;
+  contact_email: string | null;
   primary_contact_channel: string;
   primary_contact_handle: string;
   backup_contact: string | null;
@@ -59,7 +60,7 @@ export async function upsertPortalProfile(
         is_anonymous,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, (SELECT lower(trim(email)) FROM "user" WHERE id = ?), ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         credit_name = excluded.credit_name,
         bilibili_uid = excluded.bilibili_uid,
@@ -74,7 +75,7 @@ export async function upsertPortalProfile(
       input.userId,
       input.data.creditName.trim(),
       input.data.bilibiliUid,
-      input.userId,
+      getRealAuthEmail(input.data.contactEmail),
       input.data.primaryContactChannel.trim(),
       input.data.primaryContactHandle.trim(),
       normalizeOptionalText(input.data.backupContact),

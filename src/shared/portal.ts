@@ -1,3 +1,4 @@
+import { optionalContactEmailSchema } from "./auth-identity";
 import { z } from "zod";
 import type { RelayPublicationState } from "./relay-publication";
 import { workPublicationFieldsSchema, type WorkPublicationFields } from "./works";
@@ -45,7 +46,7 @@ export const projectDraftStatusLabels: Record<ProjectDraftStatus, string> = {
 
 export type PortalAuthUserSummary = {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   emailVerified: boolean;
 };
@@ -53,7 +54,7 @@ export type PortalAuthUserSummary = {
 export type PortalParticipantSummary = {
   id: string;
   displayName: string;
-  inviteEmail: string;
+  inviteEmail: string | null;
   contactHandle: string | null;
   status: ParticipantPortalStatus;
   activatedAt: string | null;
@@ -65,7 +66,7 @@ export type PortalParticipantSummary = {
 export type PortalProfile = {
   creditName: string;
   bilibiliUid?: string | null;
-  contactEmail: string;
+  contactEmail: string | null;
   primaryContactChannel: string;
   primaryContactHandle: string;
   backupContact: string | null;
@@ -76,7 +77,7 @@ export type PortalProfile = {
 export type PortalApplicationSummary = {
   id: string;
   displayName: string;
-  contactEmail: string;
+  contactEmail: string | null;
   contactHandle: string | null;
   interestFormat: ApplicationInterestFormat;
   status: ApplicationStatus;
@@ -242,7 +243,7 @@ export const updatePortalProfileInputSchema = z.object({
   creditName: z.string().trim().min(1, "请填写署名。").max(80),
   bilibiliUid: z.string().trim().regex(/^[1-9]\d{0,19}$/, "请填写 B站主页中的数字 UID。"),
   isAnonymous: z.boolean(),
-  contactEmail: z.string().trim().email().max(320),
+  contactEmail: optionalContactEmailSchema,
   primaryContactChannel: z.string().trim().min(1).max(40),
   primaryContactHandle: z.string().trim().min(1).max(120),
   backupContact: z.string().trim().max(160).optional(),

@@ -4,7 +4,7 @@ export function normalizeApplicationInput(
   form: CreateApplicationInput,
 ): CreateApplicationInput {
   return {
-    contactEmail: form.contactEmail.trim(),
+    contactEmail: form.contactEmail?.trim().toLowerCase() || null,
     contactHandle: normalizeOptional(form.contactHandle),
     interestFormat: form.interestFormat,
     introText: form.introText.trim(),
