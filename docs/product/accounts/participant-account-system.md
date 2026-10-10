@@ -1,6 +1,6 @@
 # Starward2026 Participant Account System PRD
 
-Last updated: 2026-04-12
+Last updated: 2026-10-10
 
 ## 1. Purpose
 
@@ -19,13 +19,13 @@ Last updated: 2026-04-12
 
 账号系统采用以下原则：
 
-- 任何访客都可以通过邮箱密码注册或邮箱验证码建立入口账号
+- 访客优先通过 QQ 授权建立入口账号，也可使用邮箱密码或邮箱验证码
 - 登录成功不等于获得参与资格
 - 正式报名只能在已登录账号内提交
 - 参与资格由后台审核和状态控制决定
 - 认证层、资料层、报名层与参与者业务层分离
 - 匿名仅影响公开展示，不影响主催识别和联系
-- 使用邮箱与密码建立账号，不要求注册邮件验证
+- QQ 开户无需邮箱；邮箱密码注册不要求注册邮件验证，联系邮箱选填
 
 一句话定义：
 
@@ -142,11 +142,11 @@ Last updated: 2026-04-12
 
 第一阶段采用以下认证模型：
 
-- Better Auth
+- Better Auth + QQ Generic OAuth（启用后为主入口）
 - 邮箱与密码（默认，不要求邮件验证）
 - Email OTP（保留）
 - Cookie Session
-- Resend（仅验证码与通知邮件需要）
+- Resend（仅登录验证码需要）
 
 账号密码使用 Better Auth 的 `credential` account，密码长度 8–128 位。注册不会标记邮箱为已验证。
 已有验证码账号登录后可在 `/portal/profile` 设置密码；修改密码须提供当前密码，并撤销其他会话。
@@ -157,7 +157,6 @@ Last updated: 2026-04-12
 第一阶段不包含：
 
 - 独立用户名登录
-- 社交登录
 - 多因素认证
 - 对主催完全匿名的参与模式
 - 绕过审核直接进入参与流程
@@ -190,7 +189,6 @@ Last updated: 2026-04-12
 
 已登录用户至少需要补充以下资料：
 
-- 当前联系邮箱
 - 主联系渠道类型
 - 主联系渠道标识
 - 公开署名模式
@@ -199,6 +197,7 @@ Last updated: 2026-04-12
 
 如有需要，可继续补充：
 
+- 联系邮箱（选填，与登录方式分开）
 - 常用笔名
 - 备用联系方式
 - 常用公开署名
@@ -392,3 +391,13 @@ Last updated: 2026-04-12
   - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
 - OWASP Email Validation and Verification Cheat Sheet
   - https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html
+
+## QQ 登录与邮件策略（2026-10-10）
+
+新用户同意当前活动规则后通过 QQ 授权直接开户；已有 QQ 账号可直接登录。QQ 登录不赋予审核通过资格。已有邮箱用户在有效会话中主动绑定 QQ，关联现有 user/participant，保留原报名、作品和排期，不按昵称或手填 QQ 号自动合并。
+
+QQ 认证通过应用内 OpenID，QQ-only 账号在 Better Auth 内部使用不可投递的兼容标识，业务接口和界面不把它展示为邮箱。真实联系邮箱允许为空，与认证邮箱独立；补填联系邮箱不会产生密码登录凭据。QQ 号仍由参与者填写作为联系资料，OAuth 不核验该号码。
+
+邮件仅用于用户主动请求的登录验证码。审核通过、补发邀请、换期不发送邮件，状态在现有作者页面查看。历史发信记录保留；旧补发端点返回 410，其他非登录 OTP 用途在生成验证码前被拒绝。
+
+接入步骤、默认关闭的配置开关和升级要求见 [QQ OAuth 接入说明](../../development/qq-oauth.md)。

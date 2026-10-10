@@ -9,6 +9,7 @@ export type ApplicationGuardResult =
 
 type ApplicationGuardInput = {
   contactEmail?: string | null;
+  userId?: string;
   turnstileToken?: string | null;
 };
 
@@ -26,6 +27,7 @@ export async function enforceApplicationSubmissionGuards(
     emailRateLimiter: c.env.APPLICATION_SUBMIT_EMAIL_RATE_LIMITER,
     ipAddress: c.req.header("cf-connecting-ip"),
     contactEmail: input.contactEmail,
+    userId: input.userId,
   });
 
   if (!rateLimit.ok) {

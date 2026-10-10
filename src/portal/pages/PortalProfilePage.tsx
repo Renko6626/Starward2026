@@ -145,7 +145,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
 
   const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
-  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label}><input className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
+  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label}><input className="field-input" type={type} required={key !== "backupContact" && key !== "contactEmail"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
   return <div className={compact ? "creator-card creator-profile-card" : embedded ? "space-y-6" : "page-content"} id={compact ? "profile" : undefined}>
     {compact ? <header className="creator-card-header"><h2 className="creator-card-title">署名与联系</h2><LoginPasswordDialog email={profileState.user.email} /></header> : !embedded ? <PageHeading title="署名与联系" /> : null}
     <div className={compact ? "creator-card-body" : undefined}>
@@ -153,7 +153,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         {profileField("creditName", "署名")}
         <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示<span className="field-hint">仅隐藏公开署名，主催仍可见</span></label>
         {profileField("bilibiliUid", "B站主页链接或 UID")}
-        <Field label="注册邮箱"><input className="field-input" type="email" readOnly value={profileState.user.email} /></Field>
+        {profileField("contactEmail", "联系邮箱（选填）", "email")}
         <Field label="联系方式"><select className="field-input" value={form.primaryContactChannel} onChange={event => setForm(current => ({ ...current, primaryContactChannel: event.target.value }))}>{!portalContactChannels.includes(form.primaryContactChannel) ? <option value={form.primaryContactChannel}>{form.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>
         {profileField("primaryContactHandle", "联系账号")}
         {profileField("backupContact", "备用联系方式（选填）")}
@@ -177,7 +177,7 @@ function buildInitialProfileForm(
     return {
       creditName: response.profile.creditName ?? "",
       bilibiliUid: response.profile.bilibiliUid ?? "",
-      contactEmail: response.user.email,
+      contactEmail: response.profile.contactEmail,
       primaryContactChannel: response.profile.primaryContactChannel,
       primaryContactHandle: response.profile.primaryContactHandle,
       backupContact: response.profile.backupContact ?? "",

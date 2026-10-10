@@ -9,7 +9,6 @@ import type {
   AdminEventWindowListResponse,
   AdminEventWindowMutationResponse,
   AdminParticipantDetailResponse,
-  AdminParticipantInviteResponse,
   AdminParticipantListResponse,
   AdminProjectDraftDetailResponse,
   AdminProjectDraftListResponse,
@@ -34,7 +33,6 @@ import {
   listProjectDrafts,
   listParticipants,
   listSegments,
-  recordParticipantInviteSent,
   updateActiveScheduleSegment,
   updateParticipant,
 } from "../data/admin";
@@ -43,12 +41,8 @@ import {
   listApplications,
   reviewApplication,
 } from "../data/applications";
-import { isParticipantPortalEligible } from "../data/participants";
 import { listEventWindows, updateEventWindow } from "../data/event-windows";
-import {
-  maybeSendParticipantApprovalNotice,
-  sendParticipantPortalInviteEmail,
-} from "../lib/participant-admin";
+
 import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
 import { getAdminIdentity, requireAdminAccess } from "../lib/admin";
 import { getRequiredDb, jsonError } from "../lib/http";
@@ -144,20 +138,7 @@ adminApi.patch("/applications/:applicationId", async (c) => {
     );
   }
 
-  const notification = await maybeSendParticipantApprovalNotice({
-    env: c.env,
-    db,
-    actorId: adminIdentity,
-    requestUrl: c.req.url,
-    previousStatus: existing.status,
-    application,
-  });
-
-  const response: AdminApplicationDetailResponse = {
-    application,
-    notification,
-  };
-
+  const response: AdminApplicationDetailResponse = { application };
   return c.json(response);
 });
 
@@ -209,43 +190,8 @@ adminApi.patch("/participants/:participantId", async (c) => {
   return c.json(response);
 });
 
-adminApi.post("/participants/:participantId/invite", async (c) => {
-  const db = getRequiredDb(c);
-  const participant = await getParticipantDetail(db, c.req.param("participantId"));
-
-  if (!participant) {
-    return jsonError(c, 404, "not_found", "未找到对应参与者。");
-  }
-
-  if (!isParticipantPortalEligible(participant.status)) {
-    return jsonError(c, 409, "participant_portal_disabled", "当前参与者状态不可发送通过提醒邮件。");
-  }
-
-  const portalLoginUrl = new URL("/portal/login", c.req.url).toString();
-  await sendParticipantPortalInviteEmail(c.env, {
-    displayName: participant.displayName,
-    email: participant.inviteEmail,
-    portalLoginUrl,
-  });
-  await recordParticipantInviteSent(db, {
-    participantId: participant.id,
-    actorId: getAdminIdentity(c),
-    portalLoginUrl,
-  });
-
-  const refreshedParticipant = await getParticipantDetail(db, participant.id);
-
-  if (!refreshedParticipant) {
-    return jsonError(c, 404, "not_found", "未找到对应参与者。");
-  }
-
-  const response: AdminParticipantInviteResponse = {
-    ok: true,
-    message: `已向 ${participant.inviteEmail} 发送参与资格通过提醒邮件。`,
-    participant: refreshedParticipant,
-  };
-
-  return c.json(response, 201);
+adminApi.post("/participants/:participantId/invite", (c) => {
+  return jsonError(c, 410, "email_notifications_disabled", "已停用邮件提醒，请在作者页面查看审核状态。");
 });
 
 const listSegmentsHandler = async (c: any) => {

@@ -5,7 +5,7 @@ export const portalContactChannels = ["QQ", "微信", "Discord", "Telegram", "Em
 export const portalProfilePlaceholders = {
   creditName: "填写作品展示使用的署名",
   bilibiliUid: "数字 UID 或 B站主页链接，供相邻作者联系",
-  contactEmail: "注册时使用的邮箱",
+  contactEmail: "联系邮箱，可不填",
   primaryContactChannel: "选择联系方式",
   primaryContactHandle: "填写所选联系渠道的账号",
   backupContact: "备用联系账号或邮箱，可不填",
@@ -31,12 +31,12 @@ export function getBilibiliProfileUrl(value: string) {
 
 export function normalizePortalProfileInput(
   input: UpdatePortalProfileInput,
-  registrationEmail?: string,
+  _registrationEmail?: string | null,
 ): UpdatePortalProfileInput {
   return {
     creditName: input.creditName.trim(),
     bilibiliUid: normalizeBilibiliUid(input.bilibiliUid),
-    contactEmail: (registrationEmail ?? input.contactEmail).trim().toLowerCase(),
+    contactEmail: input.contactEmail?.trim().toLowerCase() || null,
     primaryContactChannel: input.primaryContactChannel.trim(),
     primaryContactHandle: input.primaryContactHandle.trim(),
     backupContact: normalizeOptionalText(input.backupContact),

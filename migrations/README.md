@@ -114,3 +114,19 @@ development uses `npx wrangler d1 migrations apply starward2026 --local` and kee
 the existing accounts, sessions, applications and schedule. The public version
 and registration header are defined in `src/shared/activity-rules.ts`; update
 the version whenever the published terms change.
+
+## QQ optional contact email
+
+`0020_qq_optional_contact_email.sql` makes the profile/application contact email
+and participant invitation email nullable. Better Auth's user email remains
+required; QQ-only accounts use an internal non-deliverable identifier that is
+never written into business contact fields.
+
+The migration snapshots the rebuilt tables and their dependent events, drafts,
+swap requests and schedule references. It temporarily removes cascade children
+and swap invalidation triggers, rebuilds the three business tables, then restores
+all records, references, indexes and triggers. It does not use `foreign_keys=OFF`.
+Back up before upgrading an existing database, apply the migration before the new
+application, and run `foreign_key_check` afterwards. Never edit past migrations
+or reset a populated database for this upgrade. Rolling back application code
+alone is unsafe because the previous version assumes non-null email fields.

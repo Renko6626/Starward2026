@@ -1,0 +1,42 @@
+import { afterEach, expect, it, vi } from "vitest";
+import app from "../app";
+import { SqliteD1Fixture } from "../test/sqlite-d1";
+import { saveWorkspaceApplication } from "../data/collaboration";
+import type { AppBindings } from "../lib/types";
+const databases: SqliteD1Fixture[] = [];
+afterEach(() => { vi.unstubAllGlobals(); databases.splice(0).forEach(f => f.sqlite.close()); });
+it("approves and saves exchange requests without mail, and rejects legacy resend", async () => {
+  const f = new SqliteD1Fixture(); databases.push(f);
+  const env: AppBindings = { DB: f.db, ALLOW_LOCAL_ADMIN_BYPASS: "true", BETTER_AUTH_SECRET: "test-signing-secret-at-least-32-characters", BETTER_AUTH_URL: "http://localhost:20262", RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "test@example.com" };
+  const outgoing = vi.fn().mockResolvedValue(Response.json({ id: "mail" })); vi.stubGlobal("fetch", outgoing);
+  f.sqlite.exec(`UPDATE event_windows SET is_enabled=1;
+    INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt) VALUES('u1','One','one@example.com',1,'2026-01-01','2026-01-01'),('u2','Two','two@example.com',1,'2026-01-01','2026-01-01');
+    INSERT INTO schedule_segments(id,schedule_version_id,code,name,status,sort_order,created_at,updated_at) VALUES('s1','schedule_default','A','First','open',1,'2026-01-01','2026-01-01'),('s2','schedule_default','B','Second','open',2,'2026-01-01','2026-01-01');`);
+  const input = (segmentId: string) => ({ segmentId, profile: { creditName: "作者", bilibiliUid: "12345", contactEmail: "one@example.com", primaryContactChannel: "QQ", primaryContactHandle: "123456789", isAnonymous: false }, application: { contactEmail: "one@example.com", interestFormat: "novel" as const, introText: "准备创作" } });
+  const a = await saveWorkspaceApplication(f.db,"u1","one@example.com",input("s1"));
+  const b = await saveWorkspaceApplication(f.db,"u2","two@example.com",input("s2"));
+  for (const id of [a.id,b.id]) {
+    const r = await app.request(`/api/admin/applications/${id}`, { method:"PATCH", headers:{"content-type":"application/json"}, body:JSON.stringify({ status:"approved" }) }, env);
+    expect(r.status).toBe(200); expect(await r.json()).toMatchObject({ application:{status:"approved"} });
+  }
+  const part = f.sqlite.prepare("SELECT id FROM participants WHERE user_id='u1'").get()!;
+  const resend = await app.request(`/api/admin/participants/${part.id}/invite`,{method:"POST"},env);
+  expect(resend.status).toBe(410);
+  const { createAuth } = await import("../lib/auth");
+  const auth = createAuth(env);
+  const session = await (await auth.$context).internalAdapter.createSession("u1");
+  const { createSignedSessionCookieValue } = await import("../../scripts/lib/local-dev-bootstrap.mjs");
+  const cookie = await createSignedSessionCookieValue({ sessionToken:session.token, secret:env.BETTER_AUTH_SECRET! });
+  const swap = await app.request("/api/portal/swaps",{method:"POST",headers:{"content-type":"application/json",cookie:`better-auth.session_token=${cookie}`},body:JSON.stringify({segmentId:"s2"})},env);
+  expect(swap.status).toBe(201);
+  expect(f.sqlite.prepare("SELECT status FROM segment_swap_requests").get()).toMatchObject({status:"pending"});
+  expect(f.sqlite.prepare("SELECT count(*) AS n FROM participant_events WHERE event_type='invite_sent'").get()).toMatchObject({n:0});
+  expect(outgoing).not.toHaveBeenCalled();
+  const sent = await auth.handler(new Request("http://localhost:20262/api/auth/email-otp/send-verification-otp", { method:"POST", headers:{"content-type":"application/json",origin:env.BETTER_AUTH_URL!},body:JSON.stringify({email:"one@example.com",type:"sign-in"}) }));
+  expect(sent.status).toBe(200);
+  const code = f.sqlite.prepare("SELECT value FROM verification WHERE identifier='sign-in-otp-one@example.com'").get();
+  expect(code).toBeTruthy();
+  const login = await auth.handler(new Request("http://localhost:20262/api/auth/sign-in/email-otp", { method:"POST", headers:{"content-type":"application/json",origin:env.BETTER_AUTH_URL!},body:JSON.stringify({email:"one@example.com",otp:String(code!.value).split(":")[0]}) }));
+  expect(login.status).toBe(200);
+  expect(outgoing).toHaveBeenCalledOnce();
+});

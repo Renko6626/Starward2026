@@ -1,7 +1,7 @@
 type ApplicationIdentityInput = {
   displayName?: string | null;
   contactHandle?: string | null;
-  contactEmail: string;
+  contactEmail: string | null;
 };
 
 export function resolveApplicationDisplayName(input: ApplicationIdentityInput) {
@@ -17,5 +17,5 @@ export function resolveApplicationDisplayName(input: ApplicationIdentityInput) {
     return contactHandle;
   }
 
-  return input.contactEmail.trim().toLowerCase();
+  return input.contactEmail?.trim().toLowerCase() || "参与者";
 }

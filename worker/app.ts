@@ -14,7 +14,9 @@ app.route("/api/admin", adminApi);
 app.route("/api/portal", portalApi);
 
 app.all("/api/auth/*", async (c) => {
-  return createAuth(c.env).handler(c.req.raw);
+  const response = await createAuth(c.env).handler(c.req.raw);
+  if (c.req.path === "/api/auth/oauth2/callback/qq" && response.status >= 400) return c.redirect("/portal/login?error=qq_auth_failed");
+  return response;
 });
 
 app.onError((error, c) => {

@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   ApplicationDetail,
   ApplicationInterestFormat,
@@ -21,7 +22,7 @@ type ApplicationParticipantStatus = NonNullable<
 type ApplicationListRow = {
   id: string;
   display_name: string;
-  contact_email: string;
+  contact_email: string | null;
   contact_handle: string | null;
   interest_format: ApplicationInterestFormat;
   status: ApplicationStatus;
@@ -60,7 +61,7 @@ type ParticipantRow = {
 type PortalApplicationRow = {
   id: string;
   display_name: string;
-  contact_email: string;
+  contact_email: string | null;
   contact_handle: string | null;
   interest_format: ApplicationInterestFormat;
   intro_text: string | null;
@@ -124,7 +125,7 @@ export async function createApplication(
       .bind(
         id,
         options?.userId ?? null,
-        input.contactEmail.trim().toLowerCase(),
+        getRealAuthEmail(input.contactEmail),
         normalizeOptionalText(input.contactHandle),
         input.interestFormat,
         normalizeOptionalText(input.introText),
@@ -194,11 +195,12 @@ export async function upsertPortalApplication(
   db: D1Database,
   input: {
     userId: string;
-    authEmail: string;
+    authEmail: string | null;
     data: UpsertPortalApplicationInput;
   },
 ) {
-  await claimUnlinkedApplicationByEmail(db, input.userId, input.authEmail);
+  const authUser = await db.prepare('SELECT emailVerified FROM "user" WHERE id = ?').bind(input.userId).first<{ emailVerified: number }>();
+  if (input.authEmail && authUser?.emailVerified) await claimUnlinkedApplicationByEmail(db, input.userId, input.authEmail);
   const existing = await getPortalApplicationByUserId(db, input.userId);
   const mutation = resolvePortalApplicationMutation(
     existing?.status ?? null,
@@ -223,7 +225,7 @@ export async function upsertPortalApplication(
         db,
         {
           ...input.data,
-          contactEmail: input.authEmail.trim().toLowerCase(),
+          contactEmail: getRealAuthEmail(input.data.contactEmail),
           turnstileToken: undefined,
         },
         {
@@ -278,7 +280,7 @@ export async function upsertPortalApplication(
        WHERE user_id = ?`,
     )
     .bind(
-      input.authEmail.trim().toLowerCase(),
+      getRealAuthEmail(input.data.contactEmail),
       normalizeOptionalText(input.data.contactHandle),
       input.data.interestFormat,
       normalizeOptionalText(input.data.introText),
@@ -435,7 +437,7 @@ export async function reviewApplication(
     .first<{
       id: string;
       user_id: string | null;
-      contact_email: string;
+      contact_email: string | null;
       contact_handle: string | null;
     }>();
 
@@ -518,7 +520,7 @@ async function buildParticipantSyncPlan(
   application: {
     id: string;
     user_id: string | null;
-    contact_email: string;
+    contact_email: string | null;
     contact_handle: string | null;
   },
   now: string,
@@ -530,10 +532,10 @@ async function buildParticipantSyncPlan(
         .first<AuthUserEmailRow>()
     : null;
   const email =
-    authUser?.email?.toLowerCase() || application.contact_email.toLowerCase();
+    getRealAuthEmail(authUser?.email) ?? (application.user_id ? null : getRealAuthEmail(application.contact_email));
   const existingByApplication = await db
-    .prepare(`SELECT id FROM participants WHERE application_id = ?`)
-    .bind(application.id)
+    .prepare(`SELECT id FROM participants WHERE application_id = ? OR (user_id = ? AND ? IS NOT NULL)`)
+    .bind(application.id, application.user_id, application.user_id)
     .first<ParticipantRow>();
 
   if (existingByApplication) {
@@ -543,7 +545,8 @@ async function buildParticipantSyncPlan(
         db
           .prepare(
             `UPDATE participants
-         SET user_id = COALESCE(user_id, ?),
+         SET application_id = COALESCE(application_id, ?),
+             user_id = COALESCE(user_id, ?),
              invite_email = ?,
              contact_handle = ?,
              status = 'approved',
@@ -552,6 +555,7 @@ async function buildParticipantSyncPlan(
          WHERE id = ?`,
           )
           .bind(
+            application.id,
             application.user_id,
             email,
             application.contact_handle,
@@ -641,7 +645,7 @@ async function buildParticipantDemotionPlan(
   application: {
     id: string;
     user_id: string | null;
-    contact_email: string;
+    contact_email: string | null;
     contact_handle: string | null;
   },
   now: string,
@@ -684,13 +688,13 @@ function mapApplicationListRow(row: ApplicationListRow): ApplicationListItem {
   return {
     id: row.id,
     displayName: row.display_name,
-    contactEmail: row.contact_email,
+    contactEmail: getRealAuthEmail(row.contact_email),
     contactHandle: row.contact_handle,
     interestFormat: row.interest_format,
     status: row.status,
     createdAt: row.created_at,
     reviewedAt: row.reviewed_at,
-    authUserEmail: row.auth_email,
+    authUserEmail: getRealAuthEmail(row.auth_email),
     hasPortalProfile: Boolean(row.profile_user_id),
     participantId: row.participant_id,
     participantStatus: row.participant_status,
@@ -710,17 +714,16 @@ function mapApplicationDetailRow(row: ApplicationDetailRow): ApplicationDetail {
       row.user_id && row.auth_email
         ? {
             id: row.user_id,
-            email: row.auth_email,
+            email: getRealAuthEmail(row.auth_email),
           }
         : null,
     portalProfile:
-      row.profile_contact_email &&
       row.profile_primary_contact_channel &&
       row.profile_primary_contact_handle &&
       row.profile_credit_name
         ? {
             creditName: row.profile_credit_name,
-            contactEmail: row.profile_contact_email,
+            contactEmail: getRealAuthEmail(row.profile_contact_email),
             primaryContactChannel: row.profile_primary_contact_channel,
             primaryContactHandle: row.profile_primary_contact_handle,
             backupContact: row.profile_backup_contact,
@@ -728,10 +731,10 @@ function mapApplicationDetailRow(row: ApplicationDetailRow): ApplicationDetail {
           }
         : null,
     participant:
-      row.participant_id && row.invite_email && row.participant_status
+      row.participant_id && row.participant_status
         ? {
             id: row.participant_id,
-            inviteEmail: row.invite_email,
+            inviteEmail: getRealAuthEmail(row.invite_email),
             status: row.participant_status,
             activatedAt: row.activated_at,
           }
@@ -745,7 +748,7 @@ function mapPortalApplicationRow(
   return {
     id: row.id,
     displayName: row.display_name,
-    contactEmail: row.contact_email,
+    contactEmail: getRealAuthEmail(row.contact_email),
     contactHandle: row.contact_handle,
     interestFormat: row.interest_format,
     introText: row.intro_text,

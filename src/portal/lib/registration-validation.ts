@@ -3,7 +3,7 @@ import type { ZodIssue } from "zod";
 const fields: Record<string, { label: string; message: string }> = {
   "profile.creditName": { label: "署名", message: "请填写署名。" },
   "profile.bilibiliUid": { label: "B站主页链接或 UID", message: "请填写 B站主页链接或数字 UID，不能填写昵称。" },
-  "profile.contactEmail": { label: "注册邮箱", message: "请检查注册邮箱格式。" },
+  "profile.contactEmail": { label: "联系邮箱", message: "请填写有效联系邮箱，或留空。" },
   "profile.primaryContactChannel": { label: "联系方式类型", message: "请选择联系方式。" },
   "profile.primaryContactHandle": { label: "联系账号", message: "请填写联系账号。" },
   "profile.backupContact": { label: "备用联系方式", message: "请检查备用联系方式。" },

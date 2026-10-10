@@ -1,5 +1,5 @@
 import type { GenericEndpointContext } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, getOAuthState } from "better-auth/api";
 import { ACTIVITY_RULES_ACCEPTANCE_HEADER, ACTIVITY_RULES_VERSION } from "../../src/shared/activity-rules";
 
 export function requireActivityRulesConsent(context: GenericEndpointContext | null) {
@@ -18,4 +18,15 @@ export function requireActivityRulesConsent(context: GenericEndpointContext | nu
     });
   }
   return version;
+}
+
+export async function requireAccountCreationConsent(context: GenericEndpointContext | null) {
+  if (context?.path === "/oauth2/callback/:providerId" || context?.path === "/oauth2/callback/qq") {
+    const state = await getOAuthState();
+    const version = state?.requestSignUp === true ? state.starwardRulesVersion : null;
+    if (!version) throw new APIError("FORBIDDEN", { code:"ACTIVITY_RULES_REQUIRED", message:"ACTIVITY_RULES_REQUIRED" });
+    if (version !== ACTIVITY_RULES_VERSION) throw new APIError("CONFLICT", { code:"ACTIVITY_RULES_CHANGED", message:"ACTIVITY_RULES_CHANGED" });
+    return String(version);
+  }
+  return requireActivityRulesConsent(context);
 }

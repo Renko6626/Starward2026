@@ -40,11 +40,7 @@ describe("summarizeApplicationReviewState", () => {
     expect(summary.recommendation).toBe(
       "该记录尚未绑定作者页面账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。",
     );
-    expect(summary.inviteAction).toEqual({
-      enabled: false,
-      label: "需先建立作者页面",
-      reason: "当前还没有可发送提醒的作者页面记录。",
-    });
+    expect(summary.inviteAction).toEqual({ enabled: false, label: "邮件提醒已停用", reason: "审核结果可在作者页面查看。" });
     expect(summary.items.map((item) => item.statusLabel)).toEqual([
       "未建立入口",
       "联系资料未补充",
@@ -87,7 +83,7 @@ describe("summarizeApplicationReviewState", () => {
     ]);
   });
 
-  it("recommends sending an approval reminder after the participant qualification is opened", async () => {
+  it("reports the open workspace without an email action", async () => {
     const { summarizeApplicationReviewState } =
       await import("./application-review");
 
@@ -106,16 +102,12 @@ describe("summarizeApplicationReviewState", () => {
     );
 
     expect(summary.recommendation).toBe(
-      "该创作者资格已批准，建议发送通过提醒邮件，说明后续已解锁正式动作。",
+      "该创作者资格已批准，作者页面已开放正式操作。",
     );
-    expect(summary.inviteAction).toEqual({
-      enabled: true,
-      label: "发送通过提醒邮件",
-      reason: "创作者资格已批准，可发送提醒说明后续已解锁的正式动作。",
-    });
+    expect(summary.inviteAction).toEqual({ enabled: false, label: "邮件提醒已停用", reason: "审核结果可在作者页面查看。" });
   });
 
-  it("switches to resend wording after the participant has already activated the portal", async () => {
+  it("keeps email reminders disabled after workspace activation", async () => {
     const { summarizeApplicationReviewState } =
       await import("./application-review");
 
@@ -136,11 +128,7 @@ describe("summarizeApplicationReviewState", () => {
     expect(summary.recommendation).toBe(
       "该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。",
     );
-    expect(summary.inviteAction).toEqual({
-      enabled: true,
-      label: "补发通过提醒邮件",
-      reason: "该创作者已进入过作者页面，如需再次提醒可补发。",
-    });
+    expect(summary.inviteAction).toEqual({ enabled: false, label: "邮件提醒已停用", reason: "审核结果可在作者页面查看。" });
   });
 });
 

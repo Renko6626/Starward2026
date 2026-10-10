@@ -1,3 +1,4 @@
+import { isQqEnabled } from "../lib/qq-oauth";
 import { getPublicWork, listPublicWorks, listPublicSchedule } from "../data/works";
 import { getRequiredDb, jsonError } from "../lib/http";
 import { Hono } from "hono";
@@ -11,6 +12,8 @@ import { listEventWindows } from "../data/event-windows";
 import { getParticipationStatistics } from "../data/participation";
 
 const publicApi = new Hono<AppRouteConfig>();
+
+publicApi.get("/auth/providers", c => c.json({qq:{enabled:isQqEnabled(c.env)}}, 200, {"Cache-Control":"no-store"}));
 
 publicApi.get("/health", (c) => {
   return c.json({

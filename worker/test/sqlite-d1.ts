@@ -20,6 +20,7 @@ class Statement {
     return {
       results: this.db.prepare(this.sql).all(...this.values) as T[],
       success: true,
+      meta: this.db.prepare("SELECT changes() AS changes, last_insert_rowid() AS last_row_id").get(),
     };
   }
   async run() {
@@ -38,15 +39,16 @@ class Statement {
 export class SqliteD1Fixture {
   sqlite = new DatabaseSync(":memory:");
   beforeBatch?: () => void;
-  constructor() {
+  constructor(options: { throughMigration?: string } = {}) {
     const directory = new URL("../../migrations/", import.meta.url);
     for (const file of readdirSync(directory)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith(".sql") && (!options.throughMigration || f <= options.throughMigration))
       .sort()) {
       this.sqlite.exec(readFileSync(new URL(file, directory), "utf8"));
     }
     this.sqlite.exec("PRAGMA foreign_keys = ON");
   }
+  async exec(sql: string) { this.sqlite.exec(sql); }
   prepare(sql: string) {
     return new Statement(this.sqlite, sql);
   }
@@ -56,7 +58,7 @@ export class SqliteD1Fixture {
     this.sqlite.exec("BEGIN");
     try {
       const results = [];
-      for (const statement of statements) results.push(await statement.run());
+      for (const statement of statements) results.push(await statement.all());
       this.sqlite.exec("COMMIT");
       return results;
     } catch (error) {
@@ -65,6 +67,6 @@ export class SqliteD1Fixture {
     }
   }
   get db() {
-    return this as unknown as D1Database;
+    return { prepare: this.prepare.bind(this), batch: this.batch.bind(this), exec: this.exec.bind(this) } as unknown as D1Database;
   }
 }

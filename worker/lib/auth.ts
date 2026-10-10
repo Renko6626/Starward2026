@@ -1,3 +1,6 @@
+import { genericOAuth } from "better-auth/plugins/generic-oauth";
+import { buildQqProvider } from "./qq-oauth";
+import { getRealAuthEmail, isReservedAuthEmail } from "../../src/shared/auth-identity";
 import { betterAuth } from "better-auth";
 import type { GenericEndpointContext } from "better-auth";
 import {
@@ -5,6 +8,8 @@ import {
   createAuthEndpoint,
   createAuthMiddleware,
   setPassword,
+  getSessionFromCtx,
+  getOAuthState,
 } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { HTTPException } from "hono/http-exception";
@@ -21,7 +26,7 @@ import {
 } from "../../src/shared/email-otp";
 import type { AppContext, AppBindings } from "./types";
 import { saveActivityRuleAcceptance } from "../data/activity-rule-acceptances";
-import { requireActivityRulesConsent } from "./activity-rule-consent";
+import { requireActivityRulesConsent, requireAccountCreationConsent } from "./activity-rule-consent";
 import { NEW_ACCOUNT_RESPONSE_HEADER } from "../../src/shared/activity-rules";
 import {
   ensureParticipantForAuthUser,
@@ -65,8 +70,18 @@ function normalizeBaseUrl(value: string | undefined) {
   return trimmed.replace(/\/+$/, "");
 }
 
-function buildPortalEntryPlugin(env: AppBindings) {
+async function rollbackNewQqAccount(db: D1Database, userId: string) {
+  await db.batch([
+    db.prepare("DELETE FROM participants WHERE user_id = ?").bind(userId),
+    db.prepare('DELETE FROM "user" WHERE id = ?').bind(userId),
+  ]);
+}
+
+function buildPortalEntryPlugin(env: AppBindings, pendingQqSignups: WeakMap<Request, string>) {
   const { db } = getRequiredAuthEnv(env);
+  // Better Auth defers session after-hooks beyond the request-state scope.
+  // Capture only our server-created signup ID in its immediate before-hook.
+  const sessionSignupIds = new WeakMap<GenericEndpointContext, string>();
 
   return {
     id: "portal-entry",
@@ -85,10 +100,15 @@ function buildPortalEntryPlugin(env: AppBindings) {
             user: {
               create: {
                 async before(_user: Record<string, unknown>, context: GenericEndpointContext | null) {
-                  requireActivityRulesConsent(context);
+                  await requireAccountCreationConsent(context);
                 },
                 async after(user: { id: string } & Record<string, unknown>, context: GenericEndpointContext | null) {
-                  const version = requireActivityRulesConsent(context);
+                  const version = await requireAccountCreationConsent(context);
+                  const oauthState = context?.path?.startsWith("/oauth2/callback") ? await getOAuthState() : null;
+                  if (oauthState && !oauthState.link) {
+                    oauthState.starwardCreatedUserId = user.id;
+                    if (context?.request) pendingQqSignups.set(context.request, user.id);
+                  }
                   try {
                     await saveActivityRuleAcceptance(db, user.id, version);
                   } catch {
@@ -96,7 +116,7 @@ function buildPortalEntryPlugin(env: AppBindings) {
                     await db.prepare('DELETE FROM "user" WHERE id = ?').bind(user.id).run();
                     throw new APIError("SERVICE_UNAVAILABLE", {
                       code: "ACTIVITY_RULES_SAVE_FAILED",
-                      message: "暂时无法保存规则确认，账号尚未建立，请稍后重试。",
+                      message: context?.path?.startsWith("/oauth2/callback") ? "ACTIVITY_RULES_SAVE_FAILED" : "暂时无法保存规则确认，账号尚未建立，请稍后重试。",
                     });
                   }
                 },
@@ -104,37 +124,27 @@ function buildPortalEntryPlugin(env: AppBindings) {
             },
             session: {
               create: {
+                async before(_session: Record<string, unknown>, context: GenericEndpointContext | null) {
+                  if (!context?.path?.startsWith("/oauth2/callback")) return;
+                  const state = await getOAuthState();
+                  if (typeof state?.starwardCreatedUserId === "string") sessionSignupIds.set(context, state.starwardCreatedUserId);
+                },
                 async after(
                   session: { userId: string } & Record<string, unknown>,
                   context: GenericEndpointContext | null,
                 ) {
-                  if (
-                    !context?.path ||
-                    ![
-                      "/sign-in/email-otp",
-                      "/sign-in/email",
-                      "/sign-up/email",
-                    ].includes(context.path)
-                  ) {
-                    return;
+                  if (!context?.path || !["/sign-in/email-otp", "/sign-in/email", "/sign-up/email", "/oauth2/callback/:providerId", "/oauth2/callback/qq"].includes(context.path)) return;
+                  const user = await db.prepare('SELECT email, emailVerified FROM "user" WHERE id = ?').bind(session.userId).first<{email:string;emailVerified:number}>();
+                  if (!user) return;
+                  const createdUserId = sessionSignupIds.get(context);
+                  try {
+                    await ensureParticipantForAuthUser(db, { email:getRealAuthEmail(user.email), emailVerified:Boolean(user.emailVerified), userId:session.userId });
+
+                  } catch {
+                    await db.prepare("DELETE FROM session WHERE id = ?").bind(String(session.id)).run();
+                    if (createdUserId === session.userId) await rollbackNewQqAccount(db, session.userId);
+                    throw new APIError("SERVICE_UNAVAILABLE", { code:"WORKSPACE_SETUP_FAILED", message:context.path.startsWith("/oauth2/callback") ? "WORKSPACE_SETUP_FAILED" : "暂时无法建立作者页面，请稍后重新登录。" });
                   }
-
-                  const email =
-                    typeof context.body === "object" &&
-                    context.body !== null &&
-                    "email" in context.body &&
-                    typeof context.body.email === "string"
-                      ? context.body.email
-                      : null;
-
-                  if (!email) {
-                    return;
-                  }
-
-                  await ensureParticipantForAuthUser(db, {
-                    email,
-                    userId: session.userId,
-                  });
                 },
               },
             },
@@ -144,6 +154,12 @@ function buildPortalEntryPlugin(env: AppBindings) {
     },
     hooks: {
       after: [{
+        matcher: (context: { path?: string }) => Boolean(context.path?.startsWith("/oauth2/callback")),
+        handler: createAuthMiddleware(async ctx => {
+          const state = await getOAuthState();
+          if (typeof state?.starwardCreatedUserId === "string" && (ctx.context.responseHeaders?.get("location")?.includes("error=") || (ctx.context.returned instanceof APIError && ctx.context.returned.statusCode >= 400))) await rollbackNewQqAccount(db, state.starwardCreatedUserId);
+        }),
+      }, {
         matcher: (context: { path?: string }) => context.path === "/sign-in/email-otp",
         handler: createAuthMiddleware(async ctx => {
           const returned = ctx.context.returned as { user?: { id?: string } } | undefined;
@@ -153,6 +169,21 @@ function buildPortalEntryPlugin(env: AppBindings) {
         }),
       }],
       before: [
+        {
+          matcher: () => true,
+          handler: createAuthMiddleware(async ctx => {
+            if (["/email-otp/request-password-reset", "/forget-password/email-otp", "/email-otp/reset-password", "/email-otp/change-email", "/email-otp/request-email-change", "/email-otp/verify-email"].includes(ctx.path ?? "")) throw new APIError("FORBIDDEN", { code:"email_purpose_disabled", message:"邮件仅用于登录验证码。" });
+            if (ctx.path === "/sign-in/oauth2" && ctx.body?.providerId === "qq") {
+              ctx.body.additionalData = ctx.body.requestSignUp === true ? { starwardRulesVersion:requireActivityRulesConsent(ctx) } : {};
+            }
+            const email = typeof ctx.body?.email === "string" ? ctx.body.email : typeof ctx.body?.newEmail === "string" ? ctx.body.newEmail : null;
+            if (email && isReservedAuthEmail(email)) throw new APIError("FORBIDDEN", { code:"RESERVED_AUTH_EMAIL", message:"此地址不能用于邮箱登录或联系资料。" });
+            if (["/set-password", "/change-password", "/change-email"].includes(ctx.path ?? "")) {
+              const session = await getSessionFromCtx(ctx);
+              if (session && isReservedAuthEmail(session.user.email)) throw new APIError("FORBIDDEN", { code:"QQ_ONLY_ACCOUNT", message:"此账号使用 QQ 登录。填写联系邮箱不会开通邮箱密码登录。" });
+            }
+          }),
+        },
         {
           matcher(context: { path?: string }) {
             return (
@@ -194,7 +225,7 @@ function buildPortalEntryPlugin(env: AppBindings) {
                 : typeof ctx.body?.type === "string" ? ctx.body.type : null;
 
             if (type !== "sign-in") {
-              return;
+              throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于登录验证码。" });
             }
 
             const rawEmail =
@@ -234,26 +265,11 @@ async function sendPortalOtpEmail(
   const resend = new Resend(env.RESEND_API_KEY);
   const resendFromEmail = env.RESEND_FROM_EMAIL;
   const resendFromName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
-  const subject =
-    payload.type === "sign-in"
-      ? "Starward2026 参与者登录验证码"
-      : "Starward2026 邮件验证码";
-  const text =
-    payload.type === "sign-in"
-      ? [
-          "你正在登录 Starward2026 参与者门户。",
-          "",
-          `验证码：${payload.otp}`,
-          `有效期：${getPortalEmailOtpValidityLabel()}`,
-          "",
-          "如果这不是你本人的操作，可以直接忽略此邮件。",
-        ].join("\n")
-      : [
-          "你正在进行 Starward2026 的邮箱验证操作。",
-          "",
-          `验证码：${payload.otp}`,
-          `有效期：${getPortalEmailOtpValidityLabel()}`,
-        ].join("\n");
+  if (payload.type !== "sign-in") {
+    throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于登录验证码。" });
+  }
+  const subject = "Starward2026 参与者登录验证码";
+  const text = ["你正在登录 Starward2026 参与者门户。", "", `验证码：${payload.otp}`, `有效期：${getPortalEmailOtpValidityLabel()}`, "", "如果这不是你本人的操作，可以直接忽略此邮件。"].join("\n");
 
   const response = await resend.emails.send({
     from: `${resendFromName} <${resendFromEmail}>`,
@@ -362,13 +378,17 @@ function isLocalDevOriginsEnabled(value: string | undefined) {
 export function createAuth(env: AppBindings) {
   const { db, secret, baseUrl } = getRequiredAuthEnv(env);
 
-  return betterAuth({
+  const qq = buildQqProvider(env);
+  const pendingQqSignups = new WeakMap<Request, string>();
+  const auth = betterAuth({
     secret,
     database: db,
     baseURL: baseUrl,
     basePath: "/api/auth",
     trustedOrigins: buildPortalTrustedOrigins(env),
+    onAPIError: { errorURL: baseUrl ? `${baseUrl}/portal/login` : "/portal/login" },
     session: buildPortalSessionOptions(),
+    account: { accountLinking: { enabled:true, disableImplicitLinking:true, allowDifferentEmails:true } },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
@@ -376,10 +396,33 @@ export function createAuth(env: AppBindings) {
       maxPasswordLength: 128,
     },
     plugins: [
-      buildPortalEntryPlugin(env),
+      buildPortalEntryPlugin(env, pendingQqSignups),
       emailOTP(buildPortalEmailOtpOptions(env)),
+      ...(qq ? [genericOAuth({config:[qq]})] : []),
     ],
   });
+  return { ...auth, handler: async (request: Request) => {
+    const isQqCallback = new URL(request.url).pathname === "/api/auth/oauth2/callback/qq";
+    const cleanup = async () => {
+      const userId = pendingQqSignups.get(request);
+      if (userId) await rollbackNewQqAccount(db, userId);
+    };
+    try {
+      const response = await auth.handler(request);
+      if (isQqCallback && (response.status >= 400 || response.headers.get("location")?.includes("error="))) {
+        await cleanup();
+        if (response.status >= 400) return Response.redirect(new URL("/portal/login?error=qq_auth_failed", baseUrl || request.url).toString(), 302);
+      }
+      return response;
+    } catch (error) {
+      if (isQqCallback) {
+        await cleanup();
+        return Response.redirect(new URL("/portal/login?error=qq_auth_failed", baseUrl || request.url).toString(), 302);
+      }
+      throw error;
+    } finally { pendingQqSignups.delete(request); }
+  } };
+
 }
 
 function applyAuthResponseHeaders(c: AppContext, headers: Headers) {
@@ -420,7 +463,8 @@ export async function requireParticipantSession(c: AppContext) {
 
   if (!participant) {
     await ensureParticipantForAuthUser(db, {
-      email: result.response.user.email,
+      email: getRealAuthEmail(result.response.user.email),
+      emailVerified: result.response.user.emailVerified,
       userId: result.response.user.id,
     });
     participant = await getParticipantByUserId(db, result.response.user.id);

@@ -4,6 +4,9 @@ export type AppBindings = Env & {
   DB?: D1Database;
   APPLICATION_SUBMIT_IP_RATE_LIMITER?: RateLimit;
   APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
+  QQ_OAUTH_ENABLED?: string;
+  QQ_APP_ID?: string;
+  QQ_APP_KEY?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   BETTER_AUTH_TRUSTED_ORIGINS?: string;

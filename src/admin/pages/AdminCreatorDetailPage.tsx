@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, DetailBlock, DetailItem, Field, Notice, PageHeading, ReadError, StatusBadge } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
-import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminParticipantInviteResponse, type AdminProjectDraftItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type UpdateParticipantInput } from "../../shared/admin";
+import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminProjectDraftItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type UpdateParticipantInput } from "../../shared/admin";
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationDetailResponse, type ApplicationDetail, type UpdateApplicationReviewInput } from "../../shared/applications";
 import { getReviewNoteTemplates } from "../lib/review-note";
 import { listAvailableApplicationReviewStatuses } from "../lib/application-review";
@@ -62,7 +62,6 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
   const { participant, application, segment, draft } = state.detail;
   const profile = application?.portalProfile;
   const name = participant?.displayName ?? application?.displayName ?? "未填写署名";
-  const canInvite = participant && ["approved", "completed"].includes(participant.status);
   async function review(status: UpdateApplicationReviewInput["status"]) {
     if (!application) return;
     await mutate(async () => {
@@ -70,11 +69,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
         method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, adminNote: adminNote.trim() || undefined } satisfies UpdateApplicationReviewInput),
       });
       // The review may be saved even when its automatic email fails.
-      if (response.notification?.status === "failed") {
-        applyDetail(await readDetail());
-        throw new Error(response.notification.message);
-      }
-      return response.notification?.message ?? `已更新为${applicationStatusLabels[response.application.status]}。`;
+      return `已更新为${applicationStatusLabels[response.application.status]}。`;
     });
   }
   return <div className="page-content">
@@ -110,7 +105,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
         <details className="panel admin-disclosure"><summary>账号与审核记录</summary><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <DetailItem label="报名 ID" value={application?.id ?? "未提交"} />
           <DetailItem label="参与者 ID" value={participant?.id ?? "未关联"} />
-          <DetailItem label="登录邮箱" value={application?.authUser?.email ?? participant?.inviteEmail ?? "未绑定账号"} />
+          <DetailItem label="登录邮箱" value={application?.authUser ? application.authUser.email ?? "QQ 登录" : participant?.inviteEmail ?? "未绑定账号"} />
           <DetailItem label="用户 ID" value={participant?.userId ?? application?.authUser?.id ?? "未绑定"} />
           <DetailItem label="联系资料" value={profile ? "已填写" : "未读取到报名联系资料"} />
           <DetailItem label="审核时间" value={formatDateTime(application?.reviewedAt ?? null)} />
@@ -123,12 +118,10 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
           <Field label="审核意见（创作者可见）"><textarea className="field-input" rows={4} maxLength={2000} disabled={busy} value={adminNote} onChange={event => setAdminNote(event.target.value)} /></Field>
           <details className="admin-disclosure"><summary>常用意见</summary><div className="flex flex-wrap gap-2 pt-3">{getReviewNoteTemplates().map(template => <Button key={template.id} variant="secondary" disabled={busy} onClick={() => setAdminNote(template.body)}>{template.label}</Button>)}</div></details>
           <div className="space-y-2">{listAvailableApplicationReviewStatuses(application.status).map(status => <Button key={status} className="w-full" variant={status === "approved" ? "primary" : status === "rejected" ? "danger" : "secondary"} disabled={busy} onClick={() => void review(status)}>{actionLabels[status]}</Button>)}</div>
-          <p className="text-sm text-on-surface-variant">审核意见随上方审核动作保存。拒绝或撤回会释放预留时点，批准后自动发送通过提醒。</p>
+          <p className="text-sm text-on-surface-variant">审核意见随上方审核动作保存。拒绝或撤回会释放预留时点，批准后可在作者页面查看结果。</p>
         </section> : null}
         {participant ? <section className="panel space-y-4"><h2 className="text-lg font-medium">参与资格</h2><p>{adminParticipantStatusLabels[participant.status]}</p>
-          {canInvite ? <Button variant="secondary" className="w-full" disabled={busy} onClick={() => void mutate(async () => {
-            const response = await requestJson<AdminParticipantInviteResponse>(`/api/admin/participants/${participant.id}/invite`, { method: "POST" }); return response.message;
-          })}>补发通过提醒邮件</Button> : null}
+
           <details className="admin-disclosure"><summary>修改资格与联系备注</summary><div className="space-y-4 pt-4">
             <Field label="联系方式备注"><input className="field-input" disabled={busy} value={form.contactHandle ?? ""} maxLength={120} onChange={event => setForm(current => ({ ...current, contactHandle: event.target.value }))} /></Field>
             <Field label="参与资格"><select className="field-input" disabled={busy} value={form.status} onChange={event => setForm(current => ({ ...current, status: event.target.value as UpdateParticipantInput["status"] }))}>{Object.entries(adminParticipantStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
