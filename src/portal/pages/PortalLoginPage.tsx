@@ -35,24 +35,12 @@ export function PortalLoginPage() {
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const newRegistration = useRef(false);
   const [rulesAccepted, setRulesAccepted] = useState(false);
-  const [qqEnabled, setQqEnabled] = useState(false);
-  const [providerLoading, setProviderLoading] = useState(true);
   useEffect(() => {
-    let cancelled = false;
-    void requestJson<{qq:{enabled:boolean}}>("/api/auth/providers").then(providers => { if (!cancelled) setQqEnabled(providers.qq.enabled); }).catch(() => { if (!cancelled) setQqEnabled(false); }).finally(() => { if (!cancelled) setProviderLoading(false); });
     const code = new URLSearchParams(window.location.search).get("error");
-    if (code) setError(code.includes("signup_disabled") || code.includes("ACTIVITY_RULES_REQUIRED") ? "首次使用 QQ 前，请阅读并同意活动规则，再点击 QQ 登录。" : code.includes("ACTIVITY_RULES_CHANGED") ? "活动规则已更新，请重新确认后登录。" : code.includes("already_linked") ? "这个 QQ 已绑定其他账号，请使用原账号登录。" : "QQ 授权未完成，请重试；已有邮箱账号请先登录，再绑定 QQ。");
-    return () => { cancelled = true; };
+    if (code) setError(code.includes("ACTIVITY_RULES_CHANGED")
+      ? "活动规则已更新，请重新确认后登录。"
+      : "登录未完成，请使用邮箱登录或注册。");
   }, []);
-  async function signInQq() {
-    setIsSigningIn(true); setError(null);
-    try {
-      const destination = segment ? `/portal?segment=${encodeURIComponent(segment)}` : "/portal";
-      const response = await authClient.signIn.oauth2({providerId:"qq",callbackURL:destination,newUserCallbackURL:destination,errorCallbackURL:"/portal/login",requestSignUp:rulesAccepted}, {headers:activityRulesConsentHeaders(rulesAccepted)});
-      if (response.error) setError(response.error.message || "QQ 登录未完成，请重试。");
-    } catch { setError("QQ 登录暂时不可用，请稍后重试。"); }
-    finally { setIsSigningIn(false); }
-  }
 
   useEffect(() => {
     if (!sessionQuery.data) {
@@ -234,14 +222,7 @@ export function PortalLoginPage() {
       </div>
       <section className="auth-panel" aria-label="作者账号">
         <p className="station-entry-form-label">CREATOR ACCESS</p>
-        <h1>{qqEnabled ? "QQ 登录作者页面" : mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
-        {qqEnabled ? <div className="qq-login-entry">
-          <p className="auth-note">首次参与可直接用 QQ 建立账号，无需邮箱。已有邮箱账号请先登录，再绑定 QQ。</p>
-          <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSigningIn} />
-          <Button type="button" disabled={isSigningIn || providerLoading} onClick={() => void signInQq()}>{isSigningIn ? "正在前往 QQ…" : "QQ 登录"}<ArrowRight size={16} /></Button>
-          <p className="auth-note">已有 QQ 账号可直接登录，无需重复确认规则。</p>
-        </div> : providerLoading ? <p className="auth-note">正在读取登录方式。</p> : <p className="auth-note">QQ 登录尚未启用，可先使用邮箱入口。</p>}
-        <details className="auth-email-options" open={!qqEnabled}><summary>邮箱登录或注册</summary>
+        <h1>{mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [
@@ -387,7 +368,6 @@ export function PortalLoginPage() {
             {mode === "otp" ? "返回密码登录" : "使用邮箱验证码登录"}
           </button>
         ) : null}
-        </details>
         <div className="space-y-3 mt-6">
           {sessionQuery.isPending ? <Notice>正在检查登录状态。</Notice> : null}
           {isResolvingDestination ? (

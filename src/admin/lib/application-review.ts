@@ -37,7 +37,7 @@ export function summarizeApplicationReviewState(
         title: "入口账号",
         statusLabel: hasAuthUser ? "已建立入口" : "未建立入口",
         hint: hasAuthUser
-          ? application.authUser!.email ?? "QQ 登录"
+          ? application.authUser!.email ?? "未设置登录邮箱"
           : "对方尚未通过 /portal/login 建立入口会话。",
         completed: hasAuthUser,
         tone: hasAuthUser ? "success" : "warn",
