@@ -38,18 +38,18 @@ describe("summarizeApplicationReviewState", () => {
     const summary = summarizeApplicationReviewState(createApplicationDetail());
 
     expect(summary.recommendation).toBe(
-      "该记录尚未绑定参与者入口账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。",
+      "该记录尚未绑定作者页面账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。",
     );
     expect(summary.inviteAction).toEqual({
       enabled: false,
-      label: "需先建立工作台",
-      reason: "当前还没有可发送提醒的创作者工作台记录。",
+      label: "需先建立作者页面",
+      reason: "当前还没有可发送提醒的作者页面记录。",
     });
     expect(summary.items.map((item) => item.statusLabel)).toEqual([
       "未建立入口",
       "联系资料未补充",
       "待审核",
-      "未建立工作台",
+      "未建立作者页面",
     ]);
   });
 
@@ -77,7 +77,7 @@ describe("summarizeApplicationReviewState", () => {
     );
 
     expect(summary.recommendation).toBe(
-      "入口账号和联系资料已具备。首次登录后会自动建立工作台，可在确认作品准备情况后开放参与资格。",
+      "入口账号和联系资料已具备。首次登录后会自动建立作者页面，可在确认作品准备情况后开放参与资格。",
     );
     expect(summary.items.map((item) => item.completed)).toEqual([
       true,
@@ -139,7 +139,7 @@ describe("summarizeApplicationReviewState", () => {
     expect(summary.inviteAction).toEqual({
       enabled: true,
       label: "补发通过提醒邮件",
-      reason: "该创作者已进入过工作台，如需再次提醒可补发。",
+      reason: "该创作者已进入过作者页面，如需再次提醒可补发。",
     });
   });
 });

@@ -67,7 +67,7 @@ Last updated: 2026-04-13
 2. 已登录用户补充 `portal_profiles`
 3. 已登录用户提交 `applications`
 4. 系统在首次成功登录后创建或恢复 `participant`
-5. 已登录用户即可通过 `participant` 进入创作者工作台并维护作品资料
+5. 已登录用户即可通过 `participant` 进入作者页面并维护作品资料
 6. 管理员审核后将 `participant.status` 从 `pending` 调整为 `approved`
 
 ### 3.4 Session Lifetime
@@ -143,7 +143,7 @@ Last updated: 2026-04-13
 
 用途：
 
-- 表示创作者在活动内的工作台主体
+- 表示创作者在活动内的作者页面主体
 
 建议字段：
 

@@ -52,7 +52,7 @@ export function WorkspaceLayout({
         <Brand />
         <div className="creator-header-actions"><Link to="/apply">参与指南</Link><PortalAccount /></div>
       </header>
-      <nav className="creator-section-nav" aria-label="工作台区块导航">
+      <nav className="creator-section-nav" aria-label="作者页面区块导航">
         <a href="#plan">计划与发布时点</a><a href="#tasks">待办与反馈</a><a href="#project">作品资料</a><a href="#profile">署名与联系</a><a href="#history">操作记录</a>
       </nav>
       <main id="main-content" className="creator-content">{children}</main>
@@ -91,7 +91,7 @@ export function WorkspaceLayout({
           </button>
         </div>
         <div className="sidebar-caption">
-          {kind === "admin" ? "ORGANIZER / 活动管理" : "CREATOR / 创作空间"}
+          {kind === "admin" ? "ORGANIZER / 活动管理" : "CREATOR / 作者页面"}
         </div>
         <nav aria-label={kind === "admin" ? "管理后台导航" : "创作者导航"}>
           {items.map(({ to, label, icon: Icon }) => (
@@ -130,7 +130,7 @@ export function WorkspaceLayout({
             >
               <Menu />
             </button>
-            <span>{kind === "admin" ? "主催控制台" : "创作者空间"}</span>
+            <span>{kind === "admin" ? "主催控制台" : "作者页面"}</span>
             <span className="breadcrumb-divider">/</span>
             <strong>{current?.label}</strong>
           </div>

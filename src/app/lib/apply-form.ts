@@ -7,7 +7,7 @@ export function normalizeApplicationInput(
     contactEmail: form.contactEmail.trim(),
     contactHandle: normalizeOptional(form.contactHandle),
     interestFormat: form.interestFormat,
-    introText: normalizeOptional(form.introText),
+    introText: form.introText.trim(),
     portfolioUrl: normalizeOptional(form.portfolioUrl),
     messageToHosts: normalizeOptional(form.messageToHosts),
     turnstileToken: normalizeOptional(form.turnstileToken),

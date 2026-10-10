@@ -10,7 +10,7 @@ const draftSchema = z.object({
   }),
   application: z.object({
     contactEmail: z.string(), contactHandle: z.string().optional(),
-    interestFormat: applicationInterestFormatSchema, introText: z.string().optional(),
+    interestFormat: applicationInterestFormatSchema, introText: z.string().default(""),
     portfolioUrl: z.string().optional(), messageToHosts: z.string().optional(),
   }),
   segmentId: z.string(),

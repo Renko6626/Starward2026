@@ -44,6 +44,7 @@
 .station-entry .button--secondary { background: transparent; border-color: #ffffff30; }
 .station-entry .auth-otp-toggle { margin-top: 19px; font-size: var(--site-meta-size); color: #a7a7a7; text-decoration-color: #ffffff35; }
 .station-entry .auth-note { font-size: var(--site-meta-size); color: #aaa; }
+.station-entry input::placeholder { color: #858585; opacity: 1; }
 .station-entry .notice { border-radius: 0; font-size: var(--site-meta-size); line-height: 1.85; background: #ffffff04; }
 @media (max-width: 1050px) and (min-width: 760px) {
   .station-entry.auth-layout { grid-template-columns: 1fr 1fr; padding: 0; }

@@ -64,11 +64,11 @@ export function summarizeApplicationReviewState(
       },
       {
         key: "workspace",
-        title: "创作者工作台",
-        statusLabel: hasParticipant ? "已建立工作台" : "未建立工作台",
+        title: "作者页面",
+        statusLabel: hasParticipant ? "已建立作者页面" : "未建立作者页面",
         hint: hasParticipant
           ? `${application.participant!.id} / ${application.participant!.status} / ${application.participant!.activatedAt ? "门户已激活" : "门户未激活"}`
-          : "首次验证码登录后会自动创建创作者工作台记录。",
+          : "首次验证码登录后会自动创建作者页面记录。",
         completed: hasParticipant,
         tone: hasParticipant ? "success" : "info",
       },
@@ -137,33 +137,33 @@ function resolveRecommendation(input: {
     }
 
     if (input.hasAuthUser && input.hasProfile) {
-      return "入口账号、联系资料与工作台已具备，可继续观察作品准备情况，并在合适时点开放参与资格。";
+      return "入口账号、联系资料与作者页面已具备，可继续观察作品准备情况，并在合适时点开放参与资格。";
     }
 
     if (input.hasAuthUser) {
-      return "创作者已进入工作台，但联系资料未完成。建议先补齐资料，再决定是否开放参与资格。";
+      return "创作者已进入作者页面，但联系资料未完成。建议先补齐资料，再决定是否开放参与资格。";
     }
 
-    return "工作台记录已存在，但未读取到入口账号信息，需人工核对。";
+    return "作者页面记录已存在，但未读取到入口账号信息，需人工核对。";
   }
 
   if (input.hasAuthUser && input.hasProfile) {
-    return "入口账号和联系资料已具备。首次登录后会自动建立工作台，可在确认作品准备情况后开放参与资格。";
+    return "入口账号和联系资料已具备。首次登录后会自动建立作者页面，可在确认作品准备情况后开放参与资格。";
   }
 
   if (input.hasAuthUser) {
     return "已建立入口账号，但联系资料未完成。建议先补齐资料，再继续审核；如系历史数据，可人工例外处理。";
   }
 
-  return "该记录尚未绑定参与者入口账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。";
+  return "该记录尚未绑定作者页面账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。";
 }
 
 function resolveInviteAction(application: ApplicationDetail): ApplicationInviteAction {
   if (!application.participant) {
     return {
       enabled: false,
-      label: "需先建立工作台",
-      reason: "当前还没有可发送提醒的创作者工作台记录。",
+      label: "需先建立作者页面",
+      reason: "当前还没有可发送提醒的作者页面记录。",
     };
   }
 
@@ -187,7 +187,7 @@ function resolveInviteAction(application: ApplicationDetail): ApplicationInviteA
     return {
       enabled: true,
       label: "补发通过提醒邮件",
-      reason: "该创作者已进入过工作台，如需再次提醒可补发。",
+      reason: "该创作者已进入过作者页面，如需再次提醒可补发。",
     };
   }
 

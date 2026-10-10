@@ -69,7 +69,7 @@ export function PortalOverviewPage() {
     void refresh().catch(caught => {
       if (cancelled) return;
       if (caught instanceof ApiError && caught.status === 401) { void navigate({ to: "/portal/login", search: { segment } }); return; }
-      setError(caught instanceof Error ? caught.message : "无法读取工作台。");
+      setError(caught instanceof Error ? caught.message : "无法读取作者页面。");
     });
     return () => { cancelled = true; refreshSequence.current += 1; };
   }, [navigate, session.data, session.isPending, refresh, segment]);
@@ -79,21 +79,21 @@ export function PortalOverviewPage() {
       const response = await requestJson<{ ok: true; message: string }>("/api/portal/application/withdraw", { method: "POST" });
       setMessage(response.message); setConfirmWithdraw(false);
       try { await refresh(); }
-      catch { setError("报名已撤回并释放发布时点，但摘要暂未更新。请点击更新进度。"); }
+      catch { setError("报名已撤回，发布时间已释放。页面暂未更新，请点击“更新进度”。"); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
-  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace"><PageHeading eyebrow="CREATOR WORKSPACE" title="我的工作台" />{error ? <ReadError message={error} /> : <p>正在读取你的创作进度。</p>}</div>;
+  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace"><PageHeading title="作者页面" />{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
   const { dashboard, application, collaboration } = state;
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
   const selected = collaboration.segments.find(item => item.id === (selection?.userId === userId ? selection?.segmentId : segment));
   return <div className="page-content creator-workspace">
-    <PageHeading title="我的工作台"><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
+    <PageHeading title="作者页面"><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
     {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
-      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放预留发布时点，并保留操作记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放发布时点"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
+      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放你预留发布时点，需要您重新填写和等待审核，并保留操作记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放发布时点"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {collaboration.requests.length ? <div className="compact-feedback" id="tasks">
@@ -103,14 +103,14 @@ export function PortalOverviewPage() {
     {approved ? <div className="creator-board">
       <PortalProfilePage embedded compact onSaved={refresh} />
       <section className="creator-card creator-work-card" id="project">
-        <header className="creator-card-header"><h2 className="creator-card-title">当前作品</h2><Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link></header>
+        <header className="creator-card-header"><h2 className="creator-card-title">作品资料</h2><Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link></header>
         <div className="creator-card-body">
-          <div className="workspace-actions"><p>当前发布时点：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p><Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link></div>
+          <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
           <PortalProjectPage embedded compact onSaved={refresh} revision={revision} />
           <NeighborSlots revision={revision} />
-          {application.application ? <div className="portal-registration-record"><WorkspaceSection id="plan" title="查看原报名内容">
+          {application.application ? <div className="portal-registration-record"><WorkspaceSection id="plan" title="查看报名信息和创作意向">
             <p>参加形式：{applicationInterestFormatLabels[application.application.interestFormat]}</p>
-            <p>{application.application.introText || "未填写创作简介。"}</p>
+            <p>{application.application.introText || "未填写创作意向。"}</p>
             {application.application.portfolioUrl ? <p>作品或主页：<a className="text-link" href={application.application.portfolioUrl} target="_blank" rel="noreferrer">{application.application.portfolioUrl}</a></p> : null}
             {application.application.messageToHosts ? <p>给主催的话：{application.application.messageToHosts}</p> : null}
           </WorkspaceSection></div> : <span id="plan" />}
@@ -120,7 +120,7 @@ export function PortalOverviewPage() {
     </div> : <><span id="project" /><RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} /></>}
     <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>
-      {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，操作记录会显示在这里。</p> : null}
+      {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，可在这里查看报名及后续操作记录。</p> : null}
     </details>
   </div>;
 }

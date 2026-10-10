@@ -90,7 +90,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
             to="/portal/login"
             onClick={() => setMenuOpen(false)}
           >
-            创作者入口 <ArrowUpRight size={15} />
+            作者页面 <ArrowUpRight size={15} />
           </Link>
         </nav>
       </header>

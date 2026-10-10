@@ -6,7 +6,7 @@ import { requestJson } from "../../app/lib/api";
 import {
   PORTAL_EMAIL_OTP_LENGTH,
   PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS,
-  getPortalEmailOtpNoticeText,
+  getPortalEmailOtpValidityLabel,
   getPortalEmailOtpResendCooldownText,
   getPortalEmailOtpResendSuccessMessage,
   normalizePortalEmailOtpInput,
@@ -196,7 +196,7 @@ export function PortalLoginPage() {
     }
 
     setIsResolvingDestination(true);
-    setMessage("验证通过，正在进入创作者空间。");
+    setMessage("验证通过，正在跳转。");
   }
 
   return (
@@ -207,16 +207,16 @@ export function PortalLoginPage() {
       <div className="auth-intro">
         <div className="station-entry-heading">
           <p className="eyebrow">STARWARD PILGRIMAGE / 2026</p>
-          <h2>创作者入口</h2>
+          <h2>作者页面</h2>
         </div>
         <div className="station-entry-caption">
           <p>TORIFUNE / SIDE ELEVATION</p>
           <Link to="/apply">首次参与？阅读参与指南 <ArrowUpRight size={14} /></Link>
         </div>
       </div>
-      <section className="auth-panel" aria-label="创作者账号">
+      <section className="auth-panel" aria-label="作者账号">
         <p className="station-entry-form-label">CREATOR ACCESS</p>
-        <h1>{mode === "register" ? "建立创作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录创作者账号"}</h1>
+        <h1>{mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [
@@ -254,10 +254,11 @@ export function PortalLoginPage() {
                 placeholder="you@example.com"
               />
             </Field>
-            <Field label={mode === "register" ? "密码（8–128 位）" : "密码"}>
+            <Field label="密码">
               <input
                 className="field-input"
                 type="password"
+                placeholder={mode === "register" ? "设置 8–128 位密码" : "输入登录密码"}
                 autoComplete={
                   mode === "register" ? "new-password" : "current-password"
                 }
@@ -308,6 +309,7 @@ export function PortalLoginPage() {
                 type="text"
                 autoComplete="one-time-code"
                 inputMode="numeric"
+                placeholder={`${PORTAL_EMAIL_OTP_LENGTH} 位验证码，${getPortalEmailOtpValidityLabel()}内有效`}
                 required
                 maxLength={PORTAL_EMAIL_OTP_LENGTH}
                 pattern="[0-9]*"
@@ -318,7 +320,6 @@ export function PortalLoginPage() {
                 }
               />
             </Field>
-            <p className="auth-note">{getPortalEmailOtpNoticeText()}</p>
             <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
             <Button type="submit" disabled={isSigningIn}>
               {isSigningIn ? "验证中…" : "验证并进入"}
@@ -364,7 +365,7 @@ export function PortalLoginPage() {
         <div className="space-y-3 mt-6">
           {sessionQuery.isPending ? <Notice>正在检查登录状态。</Notice> : null}
           {isResolvingDestination ? (
-            <Notice>正在进入你的创作者空间。</Notice>
+            <Notice>正在跳转，请稍候。</Notice>
           ) : null}
           {message ? <Notice tone="success">{message}</Notice> : null}
           {error ? <Notice tone="error">{error}</Notice> : null}

@@ -19,7 +19,7 @@ describe("buildPortalEventLabel", () => {
           segmentName: "第三时段",
         }),
       }),
-    ).toBe("已认领时间段 SEG-03 · 第三时段。");
+    ).toBe("已认领时间段 SEG-03 第三时段。");
   });
 
   it("describes a changed segment using from/to payload metadata", async () => {
@@ -36,7 +36,7 @@ describe("buildPortalEventLabel", () => {
           toSegmentName: "第二时段",
         }),
       }),
-    ).toBe("已将时间段从 SEG-01 · 第一时段 调整为 SEG-02 · 第二时段。");
+    ).toBe("已将时间段从 SEG-01 第一时段 调整为 SEG-02 第二时段。");
   });
 
   it("falls back to a generic admin-review label when payload details are not needed", async () => {

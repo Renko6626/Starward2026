@@ -47,7 +47,7 @@ function setup() {
     BETTER_AUTH_SECRET: "test-only-password-auth-secret-at-least-32-characters",
     BETTER_AUTH_URL: "http://localhost:20262",
   });
-  async function request(path: string, body?: object, cookie?: string, origin = "http://localhost:20262", rulesVersion: string | null = path === "/sign-up/email" ? "2026-10-10-v2" : null) {
+  async function request(path: string, body?: object, cookie?: string, origin = "http://localhost:20262", rulesVersion: string | null = path === "/sign-up/email" ? "2026-10-10-v8" : null) {
     // Better Auth disables origin checks in test mode; exercise production behavior.
     (await auth.$context).skipOriginCheck = false;
     return auth.handler(new Request(`http://localhost:20262/api/auth${path}`, {
@@ -144,7 +144,7 @@ describe("activity rules acceptance during account creation", () => {
     const missing = await request("/sign-up/email", credentials, undefined, undefined, null);
     expect(missing.status).toBe(403);
     expect(await missing.json()).toMatchObject({ code: "ACTIVITY_RULES_REQUIRED" });
-    const outdated = await request("/sign-up/email", credentials, undefined, undefined, "2026-10-10");
+    const outdated = await request("/sign-up/email", credentials, undefined, undefined, "2026-10-10-v7");
     expect(outdated.status).toBe(409);
     expect(await outdated.json()).toMatchObject({ code: "ACTIVITY_RULES_CHANGED" });
     expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
@@ -157,7 +157,7 @@ describe("activity rules acceptance during account creation", () => {
     expect(response.status).toBe(200);
     const payload = await response.json() as { user: { id: string } };
     const acceptance = db.sqlite.prepare("SELECT user_id, rules_version, accepted_at FROM activity_rule_acceptances").get();
-    expect(acceptance).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-10-v2" });
+    expect(acceptance).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-10-v8" });
     expect(Date.parse(String(acceptance?.accepted_at))).toBeGreaterThanOrEqual(before);
     expect(Date.parse(String(acceptance?.accepted_at))).toBeLessThanOrEqual(Date.now());
     expect((await request("/sign-in/email", credentials)).status).toBe(200);
@@ -172,11 +172,11 @@ describe("activity rules acceptance during account creation", () => {
     expect((await request("/sign-in/email-otp", { ...body, type: "email-verification" })).status).toBe(403);
     expect((await request("/sign-in/email-otp", body, undefined, undefined, "old-version")).status).toBe(409);
     expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
-    const response = await request("/sign-in/email-otp", body, undefined, undefined, "2026-10-10-v2");
+    const response = await request("/sign-in/email-otp", body, undefined, undefined, "2026-10-10-v8");
     expect(response.status).toBe(200);
     expect(response.headers.get("x-starward-account-created")).toBe("true");
     const payload = await response.json() as { user: { id: string } };
-    expect(db.sqlite.prepare("SELECT user_id, rules_version FROM activity_rule_acceptances").get()).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-10-v2" });
+    expect(db.sqlite.prepare("SELECT user_id, rules_version FROM activity_rule_acceptances").get()).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-10-v8" });
   });
 
   it("requires consent before sending a signup OTP for a new email", async () => {
@@ -192,7 +192,7 @@ describe("activity rules acceptance during account creation", () => {
     db.sqlite.exec("DELETE FROM activity_rule_acceptances");
     expect((await request("/sign-in/email", credentials)).status).toBe(200);
     await issueOtp(auth);
-    const login = await request("/sign-in/email-otp", { email: credentials.email, otp: "123456", __starwardNewAccount: true }, undefined, undefined, "2026-10-10-v2");
+    const login = await request("/sign-in/email-otp", { email: credentials.email, otp: "123456", __starwardNewAccount: true }, undefined, undefined, "2026-10-10-v8");
     expect(login.status).toBe(200);
     expect(login.headers.get("x-starward-account-created")).toBeNull();
     expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM activity_rule_acceptances").get()?.count).toBe(0);

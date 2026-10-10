@@ -9,7 +9,7 @@ const profile = {
   creditName: "观测者", bilibiliUid: "12345678", contactEmail: "creator@example.com",
   primaryContactChannel: "QQ", primaryContactHandle: "12345", isAnonymous: false,
 };
-const application = { contactEmail: profile.contactEmail, interestFormat: "novel" as const };
+const application = { contactEmail: profile.contactEmail, interestFormat: "novel" as const, introText: "准备写一篇秘封组短篇小说。" };
 
 describe("registration field errors", () => {
   it("points to the invalid UID and portfolio link independently", () => {
@@ -35,12 +35,23 @@ describe("registration field errors", () => {
     });
   });
 
-  it("identifies an overlong introduction while keeping a blank introduction optional", () => {
+  it("identifies an overlong creation intention", () => {
     const result = workspaceApplicationInputSchema.safeParse({ profile, application: { ...application, introText: "文".repeat(1601) }, segmentId: "slot-14" });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("Overlong introduction was accepted");
-    expect(getRegistrationFieldErrors(result.error.issues)).toEqual({ "application.introText": "创作简介最多填写 1600 个字符。" });
-    expect(workspaceApplicationInputSchema.safeParse({ profile, application: normalizeApplicationInput({ ...application, introText: " " }), segmentId: "slot-14" }).success).toBe(true);
+    expect(getRegistrationFieldErrors(result.error.issues)).toEqual({ "application.introText": "创作意向最多填写 1600 个字符。" });
+  });
+
+  it.each([undefined, "", " \n "])("rejects a missing or blank creation intention (%j)", (introText) => {
+    const result = workspaceApplicationInputSchema.safeParse({ profile, application: { ...application, introText }, segmentId: "slot-14" });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("Missing creation intention was accepted");
+    expect(getRegistrationFieldErrors(result.error.issues)).toEqual({ "application.introText": "请简要描述准备创作什么。" });
+  });
+
+  it("accepts and trims a brief creation intention", () => {
+    const result = workspaceApplicationInputSchema.parse({ profile, application: normalizeApplicationInput({ ...application, introText: "  准备画一幅莲子和梅莉旅行的插画。  " }), segmentId: "slot-14" });
+    expect(result.application.introText).toBe("准备画一幅莲子和梅莉旅行的插画。");
   });
 
   it("attaches a derived contact-length error to the editable contact account", () => {

@@ -32,7 +32,7 @@ const applicationInputSchema = z.object({
   contactEmail: z.string().trim().email().max(320),
   contactHandle: optionalShortTextSchema,
   interestFormat: applicationInterestFormatSchema,
-  introText: optionalBodyTextSchema,
+  introText: z.string().trim().min(1, "请简要描述准备创作什么。").max(1600),
   portfolioUrl: z.string().trim().url().max(500).optional(),
   messageToHosts: optionalBodyTextSchema,
 });

@@ -315,7 +315,7 @@ portalApi.post("/swaps", async (c) => {
           from: `${c.env.RESEND_FROM_NAME?.trim() || "Starward2026"} <${c.env.RESEND_FROM_EMAIL}>`,
           to: request.email,
           subject: "你收到了一条时段交换请求",
-          text: `有创作者希望与你交换时段。请登录工作台查看请求并决定是否同意：${link}\n请求仅能在工作台内处理。`,
+          text: `有创作者希望与你交换时段。请登录作者页面查看请求并决定是否同意：${link}\n请求仅能在作者页面内处理。`,
         });
         notification = result.error ? "failed" : "sent";
       } catch {
@@ -327,7 +327,7 @@ portalApi.post("/swaps", async (c) => {
         ok: true,
         message:
           notification === "failed"
-            ? "已保存交换请求，邮件提醒发送失败，对方仍可在工作台查看。"
+            ? "已保存交换请求，邮件提醒发送失败，对方仍可在作者页面查看。"
             : "已发送交换请求，等待对方回复。",
         notification,
       } satisfies CollaborationMutationResponse,
@@ -996,7 +996,7 @@ async function getParticipantActionAccess(
         c,
         403,
         "portal_creator_missing",
-        "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+        "当前账号尚未完成作者页面初始化，请重新登录或联系主催。",
       ),
     };
   }
@@ -1032,7 +1032,7 @@ async function getProjectWorkspaceAccess(
         c,
         403,
         "portal_creator_missing",
-        "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+        "当前账号尚未完成作者页面初始化，请重新登录或联系主催。",
       ),
     };
   }

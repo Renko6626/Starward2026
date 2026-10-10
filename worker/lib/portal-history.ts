@@ -32,11 +32,11 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
     case "segment_swapped":
       return "双方已同意交换，当前时段已更新。";
     case "portal_activated":
-      return "创作者工作台已激活。";
+      return "作者页面已建立。";
     case "portal_invite_sent":
-      return "主催发送了参与资格通过提醒。";
+      return "主催发送了报名通过确认邮件。";
     case "participant_updated":
-      return "主催更新了你的参与者状态。";
+      return "主催更新了你的参与状态。";
     case "segment_claimed":
       return `已认领时间段 ${formatSegment(payload.segmentCode, payload.segmentName)}。`;
     case "segment_changed":
@@ -51,27 +51,27 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
     case "segment_admin_released":
       return `主催释放了你当前的时间段 ${formatSegment(payload.segmentCode, payload.segmentName)}。`;
     case "preview_saved":
-      return "已保存预告信息草稿。";
+      return "已保存作品预告。";
     case "preview_submitted":
-      return "已提交预告信息，等待主催审核。";
+      return "已提交作品预告，等待主催审核。";
     case "review_saved":
-      return "已保存审查说明草稿。";
+      return "已保存审查说明。";
     case "review_submitted":
-      return "已提交审查说明，等待主催查看。";
+      return "已提交审查说明，等待主催审核。";
     case "work_auto_published":
-      return "作品资料已通过，已自动公开。";
+      return "作品资料审核通过，已在站内展示。";
     case "work_release_confirmed":
       return "你已填写作品链接并确认发布。";
     case "work_link_updated":
       return "你更新了作品链接，首次发布确认时间保留。";
     case "project_preview_saved":
-      return "已保存作品预告信息。";
+      return "已保存作品预告。";
     case "project_review_saved":
       return "已保存审查说明。";
     case "work_published":
-      return "主催将你的作品发布到观测集。";
+      return "主催已在站内展示你的作品。";
     case "work_unpublished":
-      return "主催撤下了你的公开作品。";
+      return "主催已撤下作品的站内展示。";
     case "project_draft_admin_reviewed":
       return "主催更新了你的资料审核结果。";
     default:
@@ -104,7 +104,7 @@ function formatSegment(code: unknown, name: unknown) {
   const normalizedName = normalizeOptionalText(name);
 
   if (normalizedCode && normalizedName) {
-    return `${normalizedCode} · ${normalizedName}`;
+    return `${normalizedCode} ${normalizedName}`;
   }
 
   if (normalizedCode) {

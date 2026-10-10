@@ -8,11 +8,11 @@ export function ApplySuccessPage() {
       <span className="eyebrow">APPLICATION RECEIVED</span>
       <h1>已收到你的创作意向。</h1>
       <p>
-        报名已提交，所选时段已预留，接下来请等待主催审核。你可以回到创作者空间查看进度，审核通过后可填写作品资料。
+        恭喜您！报名已提交，所选时段已预留。请等待审核结果，若无大碍即视为您确定参与我们的活动。接下来只需要安心创作，等候后续通知即可。
       </p>
       <div className="hero-actions">
         <Link className="button button--primary" to="/portal">
-          返回我的工作台 <ArrowRight size={16} />
+          返回作者页面 <ArrowRight size={16} />
         </Link>
         <Link className="button button--secondary" to="/">
           回到活动首页

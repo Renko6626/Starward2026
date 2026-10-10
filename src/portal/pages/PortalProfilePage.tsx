@@ -10,7 +10,7 @@ import type {
 import { updatePortalProfileInputSchema } from "../../shared/portal";
 import { LoginPasswordDialog } from "../components/LoginPasswordDialog";
 import { authClient } from "../lib/auth-client";
-import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels } from "../lib/profile-form";
+import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels, portalProfilePlaceholders } from "../lib/profile-form";
 
 const defaultFormState: UpdatePortalProfileInput = {
   creditName: "",
@@ -70,7 +70,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         }
 
         setError(
-          caught instanceof Error ? caught.message : "无法读取当前联系资料。",
+          caught instanceof Error ? caught.message : "无法读取署名和联系方式。",
         );
         setIsLoading(false);
       });
@@ -117,7 +117,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         current ? { ...current, profile: response.profile } : current,
       );
       setMessage(response.message);
-      await onSaved?.().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"));
+      await onSaved?.().catch(() => setRefreshWarning("资料已保存，页面暂未更新，请稍后刷新。"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "资料保存失败。");
     } finally {
@@ -128,8 +128,8 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
   if (sessionQuery.isPending || isLoading) {
     return (
       <PageHeading
-        title={<>个人档案</>}
-        description={<>正在读取当前资料。</>}
+        title={<>署名与联系</>}
+        description={<>正在读取署名和联系方式。</>}
       ></PageHeading>
     );
   }
@@ -137,21 +137,21 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
   if (!profileState) {
     return (
       <div className={embedded ? "space-y-6" : "page-content"}>
-        <PageHeading title="个人档案" />
-        <ReadError message={error || "暂时无法读取个人档案。"} />
+        <PageHeading title="署名与联系" />
+        <ReadError message={error || "暂时无法读取署名与联系。"} />
       </div>
     );
   }
 
   const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
-  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} hint={key === "bilibiliUid" ? "填写 space.bilibili.com 主页链接或数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={key === "bilibiliUid" ? "https://space.bilibili.com/12345678 或数字 UID" : undefined} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
+  const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label}><input className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
   return <div className={compact ? "creator-card creator-profile-card" : embedded ? "space-y-6" : "page-content"} id={compact ? "profile" : undefined}>
-    {compact ? <header className="creator-card-header"><h2 className="creator-card-title">我的信息</h2><LoginPasswordDialog email={profileState.user.email} /></header> : !embedded ? <PageHeading title="个人档案" /> : null}
+    {compact ? <header className="creator-card-header"><h2 className="creator-card-title">署名与联系</h2><LoginPasswordDialog email={profileState.user.email} /></header> : !embedded ? <PageHeading title="署名与联系" /> : null}
     <div className={compact ? "creator-card-body" : undefined}>
       <form className={compact ? "space-y-4" : "panel space-y-6"} onSubmit={handleSubmit}>
         {profileField("creditName", "署名")}
-        <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示</label>
+        <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示<span className="field-hint">仅隐藏公开署名，主催仍可见</span></label>
         {profileField("bilibiliUid", "B站主页链接或 UID")}
         <Field label="注册邮箱"><input className="field-input" type="email" readOnly value={profileState.user.email} /></Field>
         <Field label="联系方式"><select className="field-input" value={form.primaryContactChannel} onChange={event => setForm(current => ({ ...current, primaryContactChannel: event.target.value }))}>{!portalContactChannels.includes(form.primaryContactChannel) ? <option value={form.primaryContactChannel}>{form.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>
@@ -161,8 +161,8 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         {message ? <Notice tone="success">{message}</Notice> : null}
         {error ? <Notice tone="error">{error}</Notice> : null}
         <div className="form-actions">
-          {!embedded ? <Link className="button button--secondary" to="/portal">返回工作台</Link> : null}
-          <Button disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存信息"}</Button>
+          {!embedded ? <Link className="button button--secondary" to="/portal">返回作者页面</Link> : null}
+          <Button disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存个人信息"}</Button>
         </div>
       </form>
       {!compact ? <LoginPasswordDialog email={profileState.user.email} /> : null}

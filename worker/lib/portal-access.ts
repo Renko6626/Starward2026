@@ -7,7 +7,7 @@ export function resolveParticipantActionEligibility(
     return {
       ok: false as const,
       code: "portal_creator_missing",
-      message: "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+      message: "当前账号尚未完成作者页面初始化，请重新登录或联系主催。",
     };
   }
 
@@ -15,7 +15,7 @@ export function resolveParticipantActionEligibility(
     return {
       ok: false as const,
       code: "portal_pending_review",
-      message: "当前账号已进入创作者工作台，但参与资格仍在审核中，暂时不能操作时间段或其他已放行动作。",
+      message: "当前账号已进入作者页面，但参与资格仍在审核中，暂时不能操作时间段或其他已放行动作。",
     };
   }
 
@@ -39,7 +39,7 @@ export function resolveProjectWorkspaceEligibility(
     return {
       ok: false as const,
       code: "portal_creator_missing",
-      message: "当前账号尚未完成创作者工作台初始化，请重新登录或联系主催。",
+      message: "当前账号尚未完成作者页面初始化，请重新登录或联系主催。",
     };
   }
 

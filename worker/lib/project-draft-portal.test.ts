@@ -33,7 +33,7 @@ describe("collectMissingPreviewSubmissionFields", () => {
         publicAuthorName: "示例作者",
         formatLabel: null,
       }),
-    ).toEqual(["预告标题", "预告简介", "作品形式"]);
+    ).toEqual(["作品标题", "作品简介", "作品形式"]);
   });
 });
 
@@ -46,6 +46,6 @@ describe("collectMissingReviewSubmissionFields", () => {
         contentNote: "  ",
         contentWarnings: null,
       }),
-    ).toEqual(["内容概述", "内容警示"]);
+    ).toEqual(["内容概述", "内容提醒"]);
   });
 });

@@ -54,7 +54,7 @@ export function WorksPage() {
           if (!controller.signal.aborted) {
             setOwn(null);
             setOwnWarning(caught instanceof ApiError && (caught.status === 401 || caught.status === 403)
-              ? "暂时无法读取你的登录信息，可以重新进入创作者工作台。" : "暂时无法定位你的时段，公开排程仍可查看。");
+              ? "暂时无法读取你的登录信息，可以重新进入作者页面。" : "暂时无法定位你的时段，公开排程仍可查看。");
           }
         });
     };
@@ -133,7 +133,7 @@ export function WorksPage() {
       <div><h1>接力时间表</h1></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
-    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>先选择一个空闲时点，再进入工作台填写报名资料。意向时间保存在当前浏览器标签页，提交报名成功后才会预留。</Notice> : null}
+    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>请选择您意向报名的空闲时点，点击进入填写报名资料，提交报名成功后会为您预留该时间段，允许后续改变和交换。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
@@ -151,7 +151,7 @@ export function WorksPage() {
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到工作台填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往创作者工作台</Link></div>
+      <div className="ops-page-foot"><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
     </>}
   </div>;
 }

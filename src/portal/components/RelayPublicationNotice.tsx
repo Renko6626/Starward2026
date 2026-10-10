@@ -48,7 +48,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
       setProject(current => current ? { ...current, draft: response.draft,
         release: getRelayPublicationState(current.release.scheduledAt, response.draft.releaseConfirmedAt) } : current);
       setMessage(response.message);
-      await onSaved().catch(() => setError("提交已成功，但工作台进度暂未更新，请点击更新进度。"));
+      await onSaved().catch(() => setError("链接已保存，页面暂未更新，请点击“更新进度”。"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "确认发布失败，请稍后重试。");
     } finally { setBusy(false); }
@@ -66,21 +66,21 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
     <div className="relay-publication-heading"><h2 id="relay-publication-title">{title}</h2>
       {release.scheduledAt ? <p>约定发布时间：{formatScheduledTime(release.scheduledAt)}（北京时间）</p> : null}
     </div>
-    {release.phase === "confirmed" ? <p>首次确认时间：{formatScheduledTime(release.confirmedAt)}。修改作品链接会保留这次确认。</p>
-      : release.phase === "today" ? <p>请按约定时刻在作品平台发布，再填写链接并确认。首次提交链接即记录为已确认发布。</p>
-      : release.phase === "overdue" ? <p>首次确认已关闭，请联系主催协调后续安排。</p>
+    {release.phase === "confirmed" ? <p>确认时间：{formatScheduledTime(release.confirmedAt)}。修改链接不会取消发布确认。</p>
+      : release.phase === "today" ? <p>请按约定时刻发布作品，再于今天填写公开链接，点击“确认已发布”。</p>
+      : release.phase === "overdue" ? <p>已错过当天确认，请联系主催协调。</p>
       : release.phase === "unconfigured" ? <p>请联系主催安排发布时间。</p>
-      : <p>请检查作品资料和发布安排。发布当天可以填写作品链接并确认发布。</p>}
+      : <p>按截止时间完成并提交作品。发布当天再填写公开链接并确认。</p>}
     {release.canEditLink ? <form className="relay-publication-form" onSubmit={event => void save(event)}>
-      <Field label="作品链接" hint="填写读者可以直接访问的 HTTPS 作品地址。确认后仍可修改。">
+      <Field label="作品链接">
         <input className="field-input" type="url" required maxLength={2048} value={workUrl} disabled={busy}
-          placeholder="https://…" onChange={event => { dirty.current = true; setWorkUrl(event.target.value); }} />
+          placeholder="公开可访问的 HTTPS 作品链接，确认后仍可修改" onChange={event => { dirty.current = true; setWorkUrl(event.target.value); }} />
       </Field>
       <Button type="submit" disabled={busy || !workUrl.trim()}>{busy ? "提交中…" : release.confirmedAt ? "保存作品链接" : "确认已发布"}</Button>
     </form> : null}
     {release.confirmedAt ? draft.publishedAt
       ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>
-      : <p className="field-hint">已记录发布确认，作品尚未在站内公开。首次审核通过后会自动公开；如主催已撤下作品，请联系主催。</p> : null}
+      : <p className="field-hint">已确认发布。作品预告和审查说明通过审核、公开资料齐全后，会在站内展示；如主催已撤下作品，请联系主催。</p> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error ? <Notice tone="error">{error}</Notice> : null}
   </section>;

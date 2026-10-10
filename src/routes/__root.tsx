@@ -25,7 +25,7 @@ function NotFoundPage() {
           页面未找到
         </h1>
         <p className="mx-auto mb-8 max-w-xl text-base leading-7 text-on-surface-variant">
-          这个地址没有对应的页面。你可以返回活动首页，或进入创作者空间。
+          这个地址没有对应的页面。你可以返回活动首页，或进入作者页面。
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -38,7 +38,7 @@ function NotFoundPage() {
             className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-variant px-5 py-2.5 text-base font-medium text-on-surface transition-colors hover:bg-surface-bright"
             to="/portal/login"
           >
-            参与者入口
+            作者页面
           </Link>
         </div>
       </div>

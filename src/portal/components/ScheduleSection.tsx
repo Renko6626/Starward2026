@@ -34,7 +34,7 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
         }
       })
       .catch(caught => {
-        if (!cancelled) setRefreshWarning(caught instanceof Error ? caught.message : "无法读取排期权限，请点击工作台的更新进度。");
+        if (!cancelled) setRefreshWarning(caught instanceof Error ? caught.message : "无法读取排期权限，请点击作者页面的更新进度。");
       });
     return () => { cancelled = true; };
   }, [revision]);
@@ -61,7 +61,7 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
       if ("segment" in response) setSchedule(current => current ? { ...current, currentSegment: response.segment } : current);
       if (swap) setSwapMessage("");
       close();
-      await onSaved().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请点击工作台的更新进度。"));
+      await onSaved().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请点击作者页面的更新进度。"));
     } catch (caught) {
       setNotice({ text: caught instanceof Error ? caught.message : "排期调整失败。", error: true });
     } finally {
@@ -89,14 +89,14 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
       </> : segment.status === "confirmed" ? <>
         <p>{schedule.currentSegment ? `你的时点：${formatScheduledTime(schedule.currentSegment.scheduledAt)}；对方的时点：${formatScheduledTime(segment.scheduledAt)}。对方同意后交换，等待回应期间双方保留原时点。` : "先认领一个空闲发布时点，再向其他创作者请求交换。"}</p>
         {alreadyRequested ? <Notice>请求已发出，可以在待办与反馈中查看或取消。</Notice> : <>
-          <Field label="换期说明（选填）"><textarea className="field-input" rows={3} maxLength={500}
+          <Field label="换期说明（选填）"><textarea className="field-input" rows={3} maxLength={500} placeholder="简要说明希望交换时间的原因，可不填"
             value={swapMessage} disabled={busy || !permissionsReady || !collaboration.canSwap}
             onChange={event => setSwapMessage(event.target.value)} /></Field>
           <Button disabled={busy || !permissionsReady || !collaboration.canSwap} onClick={() => void mutate(segment.id, close, true)}>发送换期请求</Button>
         </>}
       </> : null}
       {!selectedSegmentId && notice?.error ? <Notice tone="error">{notice.text}</Notice> : null}
-      {!permissionsReady ? <p className="field-hint">操作权限更新后可以确认调整。可点击工作台的更新进度重新读取。</p> : null}
+      {!permissionsReady ? <p className="field-hint">操作权限更新后可以确认调整。可点击作者页面的更新进度重新读取。</p> : null}
     </div>;
   }
 

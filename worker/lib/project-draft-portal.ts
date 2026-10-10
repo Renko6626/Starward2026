@@ -18,8 +18,8 @@ export function collectMissingPreviewSubmissionFields(input: {
   formatLabel: string | null;
 }) {
   return [
-    [normalizeOptionalText(input.previewTitle), "预告标题"],
-    [normalizeOptionalText(input.previewSummary), "预告简介"],
+    [normalizeOptionalText(input.previewTitle), "作品标题"],
+    [normalizeOptionalText(input.previewSummary), "作品简介"],
     [normalizeOptionalText(input.publicAuthorName), "个人档案署名"],
     [normalizeOptionalText(input.formatLabel), "作品形式"],
   ]
@@ -33,7 +33,7 @@ export function collectMissingReviewSubmissionFields(input: {
 }) {
   return [
     [normalizeOptionalText(input.contentNote), "内容概述"],
-    [normalizeOptionalText(input.contentWarnings), "内容警示"],
+    [normalizeOptionalText(input.contentWarnings), "内容提醒"],
   ]
     .filter(([value]) => !value)
     .map(([, label]) => label);

@@ -23,7 +23,7 @@ export function buildParticipantPortalInviteEmail(input: {
       "",
       "你已经通过 Starward2026 本期参与资格审核。",
       "",
-      `创作者工作台入口：${input.portalLoginUrl}`,
+      `作者页面入口：${input.portalLoginUrl}`,
       "",
       "使用当前邮箱和密码登录；尚未设置密码的账号可先通过邮箱验证码登录。",
       "登录后可以继续维护作品资料，并在开放窗口内处理时间段等正式动作。",

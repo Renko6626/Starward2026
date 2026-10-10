@@ -194,7 +194,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
   async function refreshSummary() {
     try { await onSaved?.(); }
-    catch { setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"); }
+    catch { setRefreshWarning("操作已完成，页面暂未更新，请稍后刷新。"); }
   }
 
   async function handlePreviewSave() {
@@ -319,43 +319,36 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     <div className={embedded ? "space-y-6" : "page-content"}>
       {!embedded ? <PageHeading
         title={<>作品资料</>}
-        description={
-          <>
-            填写公开预告和给主催的审查说明，再在开放窗口内提交。
-          </>
-        }
       >
         <div className="flex flex-wrap gap-2">
           <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
-            预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}
+            作品预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}
           </StatusBadge>
           <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
-            审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
+            审查说明：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
           </StatusBadge>
         </div>
       </PageHeading> : null}
 
       {compact ? <div className="creator-work-summary">
-        <div className="workspace-actions"><StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}</StatusBadge><StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>审查：{projectDraftStatusLabels[state.project.draft.reviewStatus]}</StatusBadge></div>
+        <div className="workspace-actions"><StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>作品预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}</StatusBadge><StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>审查说明：{projectDraftStatusLabels[state.project.draft.reviewStatus]}</StatusBadge></div>
         <h3>{state.project.draft.previewTitle || "作品尚未命名"}</h3>
-        <p>{state.project.draft.workType ? workTypeLabels[state.project.draft.workType] : "类型待填写"}</p>
-        <p>{state.project.draft.previewSummary || "保存作品简介后会显示在这里。"}</p>
-        {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">查看作品</a> : <p className="field-hint">作品链接待填写</p>}
+        {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">查看作品</a> : null}
       </div> : <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
           label="当前发布时点"
           value={
             state.project.participant.currentSegmentCode
               ? `${state.project.participant.currentSegmentCode} ${state.project.participant.currentSegmentName ?? "未命名"}`
-              : "尚未认领"
+              : "尚未选择"
           }
         />
         <SummaryCard
-          label="预告提交"
+          label="预告提交时间"
           value={getWindowLabel(state.project.windows, "preview_submit_open")}
         />
         <SummaryCard
-          label="审查提交"
+          label="说明提交时间"
           value={getWindowLabel(state.project.windows, "review_submit_open")}
         />
         <SummaryCard
@@ -374,16 +367,13 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
         </Notice>
       ) : null}
 
-      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "作品尚未公开。发布当天提交链接确认，资料审核通过后会自动公开。"}</Notice>
+      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "正式作品内容提交方式另行通知。"}</Notice>
       <details className="compact-editor" open={compact ? undefined : true}><summary>编辑作品资料</summary>
       <div className={compact ? "space-y-6" : "grid grid-cols-1 xl:grid-cols-2 gap-6"}>
         <section className={compact ? "space-y-6" : "panel space-y-6"}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-medium text-on-surface">预告信息</h2>
-              <p className="text-base text-on-surface-variant mt-1">
-                这里的标题、简介、封面和作品链接会用于公开展示。
-              </p>
+              <h2 className="text-lg font-medium text-on-surface">作品预告（公开）</h2>
             </div>
             <StatusBadge
               tone={getStatusTone(state.project.draft.previewStatus)}
@@ -393,7 +383,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
           </div>
 
           <div className="space-y-4">
-            <Field label="预告标题">
+            <Field label="作品标题">
               <input
                 className={inputClassName}
                 disabled={pendingAction !== null}
@@ -403,7 +393,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     previewTitle: event.target.value,
                   }))
                 }
-                placeholder="例如：边界面浮上试验"
+                placeholder="填写作品标题"
                 type="text"
                 value={previewForm.previewTitle}
               />
@@ -411,7 +401,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
             <div className="space-y-2">
               <p>
-                对外署名：{state.project.draft.publicAuthorName ?? "未填写"}
+                公开署名：{state.project.draft.publicAuthorName ?? "未填写"}
               </p>
               {embedded ? <a className="text-link" href="#profile">修改署名设置</a> : <Link className="text-link" to="/portal/profile">修改署名设置</Link>}
             </div>
@@ -423,13 +413,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                 {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </Field>
-            <p className="field-hint">作品链接在工作台顶部的发布确认区填写。首次提交后仍可修改。</p>
-            <Field label="封面地址（选填）" hint="填写可公开访问的 HTTPS 图片地址。不填时以标题和简介展示。">
+            <Field label="封面地址（选填）">
               <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null}
-                value={previewForm.coverUrl} placeholder="https://…" onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
+                value={previewForm.coverUrl} placeholder="公开可访问的 HTTPS 图片地址，可不填" onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
             </Field>
             <Field label="封面描述（选填）">
-              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null}
+              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null} placeholder="简要描述封面画面，可不填"
                 value={previewForm.coverAlt} onChange={event => setPreviewForm(current => ({ ...current, coverAlt: event.target.value }))} />
             </Field>
 
@@ -443,13 +432,13 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     formatLabel: event.target.value,
                   }))
                 }
-                placeholder="例如：小说 / 插画 / 漫画"
+                placeholder="例如：短篇小说、组图、手书视频"
                 type="text"
                 value={previewForm.formatLabel}
               />
             </Field>
 
-            <Field label="公开标签" hint="用逗号、顿号或换行分隔。">
+            <Field label="作品标签（选填）">
               <input
                 className={inputClassName}
                 disabled={pendingAction !== null}
@@ -459,12 +448,13 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     publicTagsText: event.target.value,
                   }))
                 }
+                placeholder="用逗号、顿号或换行分隔，可不填"
                 type="text"
                 value={previewForm.publicTagsText}
               />
             </Field>
 
-            <Field label="预告简介">
+            <Field label="作品简介">
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -475,6 +465,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={7}
+                placeholder="填写供读者查看的作品简介，审核通过后可公开展示；请勿填写私人联系方式。"
                 value={previewForm.previewSummary}
               />
             </Field>
@@ -487,7 +478,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               onClick={() => void handlePreviewSave()}
               type="button"
             >
-              {pendingAction === "preview-save" ? "保存中…" : "保存预告信息"}
+              {pendingAction === "preview-save" ? "保存中…" : "保存作品预告"}
             </Button>
             {state.project.draft.previewStatus !== "approved" ? <Button
               disabled={pendingAction !== null || !flags.previewSubmitOpen}
@@ -496,27 +487,18 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               type="button"
             >
               {pendingAction === "preview-submit"
-                ? "提交中..."
-                : "提交预告资料"}
+                ? "提交中…"
+                : "提交预告审核"}
             </Button> : null}
           </div>
 
-          <p className="text-sm text-on-surface-variant">
-            {state.project.draft.previewStatus === "approved"
-              ? "预告已通过审核，修改后直接保存即可。公开资料会同步更新。"
-              : flags.previewSubmitOpen
-              ? "当前可以提交预告资料。"
-              : "当前只可先保存草稿。"}
-          </p>
+          {state.project.draft.previewStatus !== "approved" && !flags.previewSubmitOpen ? <p className="field-hint">提交尚未开放</p> : null}
         </section>
 
         <section className={compact ? "space-y-6" : "panel space-y-6"}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-medium text-on-surface">审查说明</h2>
-              <p className="text-base text-on-surface-variant mt-1">
-                这里不对外公开，重点是帮助主催提前了解题材、风险点和需要注意的部分。
-              </p>
+              <h2 className="text-lg font-medium text-on-surface">审查说明（不公开）</h2>
             </div>
             <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
               {projectDraftStatusLabels[state.project.draft.reviewStatus]}
@@ -535,11 +517,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={6}
+                placeholder="作品完成后，简要说明内容供主催核对。"
                 value={reviewForm.contentNote}
               />
             </Field>
 
-            <Field label="内容警示">
+            <Field label="内容提醒">
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -550,11 +533,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={4}
+                placeholder="写明需要提前提醒的情节；没有则填“无”。"
                 value={reviewForm.contentWarnings}
               />
             </Field>
 
-            <Field label="给主催的补充说明">
+            <Field label="给主催的补充说明（选填）">
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -565,6 +549,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={5}
+                placeholder="其他需要告知主催的事项，可不填"
                 value={reviewForm.reviewNote}
               />
             </Field>
@@ -585,17 +570,11 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               onClick={() => void handleReviewSubmit()}
               type="button"
             >
-              {pendingAction === "review-submit" ? "提交中..." : "提交审查说明"}
+              {pendingAction === "review-submit" ? "提交中…" : "提交说明审核"}
             </Button> : null}
           </div>
 
-          <p className="text-sm text-on-surface-variant">
-            {state.project.draft.reviewStatus === "approved"
-              ? "审查说明已通过，修改后直接保存即可。"
-              : flags.reviewSubmitOpen
-              ? "当前可以提交审查说明。"
-              : "当前只可先保存草稿。"}
-          </p>
+          {state.project.draft.reviewStatus !== "approved" && !flags.reviewSubmitOpen ? <p className="field-hint">提交尚未开放</p> : null}
         </section>
       </div>
 

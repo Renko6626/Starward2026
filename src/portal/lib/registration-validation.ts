@@ -8,7 +8,7 @@ const fields: Record<string, { label: string; message: string }> = {
   "profile.primaryContactHandle": { label: "联系账号", message: "请填写联系账号。" },
   "profile.backupContact": { label: "备用联系方式", message: "请检查备用联系方式。" },
   "application.interestFormat": { label: "参加形式", message: "请选择参加形式。" },
-  "application.introText": { label: "创作简介", message: "请检查创作简介。" },
+  "application.introText": { label: "创作意向", message: "请简要描述准备创作什么。" },
   "application.portfolioUrl": { label: "作品或主页链接", message: "请填写完整链接，例如 https://example.com/works。" },
   "application.messageToHosts": { label: "给主催的话", message: "请检查给主催的话。" },
   segmentId: { label: "发布时间", message: "请选择一个可用的发布时间。" },

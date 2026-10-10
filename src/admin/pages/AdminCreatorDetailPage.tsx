@@ -101,7 +101,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
         <section className="panel space-y-4"><h2 className="text-lg font-medium">报名计划</h2>
           {application ? <>
             <div className="admin-work-summary"><span>{applicationInterestFormatLabels[application.interestFormat]}</span><span>提交于 {formatDateTime(application.createdAt)}</span></div>
-            <DetailBlock title="创作简介" value={application.introText || "未填写"} />
+            <DetailBlock title="创作意向" value={application.introText || "未填写"} />
             {application.portfolioUrl ? <p>作品或主页：<a className="text-link break-all" href={application.portfolioUrl} target="_blank" rel="noreferrer">{application.portfolioUrl}</a></p> : null}
             {application.messageToHosts ? <DetailBlock title="给主催的话" value={application.messageToHosts} /> : null}
           </> : <p className="text-on-surface-variant">该账号尚未提交报名。</p>}

@@ -40,7 +40,7 @@ describe("normalizeApplicationInput", () => {
       contactEmail: "alice@example.com",
       contactHandle: undefined,
       interestFormat: "illustration",
-      introText: undefined,
+      introText: "",
       portfolioUrl: undefined,
       messageToHosts: undefined,
       turnstileToken: undefined,

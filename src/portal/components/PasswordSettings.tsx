@@ -70,11 +70,6 @@ export function PasswordSettings() {
   return (
     <form className="panel space-y-5" onSubmit={handleSubmit}>
       <h2 className="panel-title">登录密码</h2>
-      {hasPassword === false ? (
-        <p className="text-base text-on-surface-variant">
-          为当前账号设置密码，之后可直接使用密码登录。
-        </p>
-      ) : null}
       {hasPassword !== null ? (
         <>
           {hasPassword ? (
@@ -83,6 +78,7 @@ export function PasswordSettings() {
                 className="field-input"
                 type="password"
                 autoComplete="current-password"
+                placeholder="输入当前登录密码"
                 required
                 disabled={isSaving}
                 value={currentPassword}
@@ -90,11 +86,12 @@ export function PasswordSettings() {
               />
             </Field>
           ) : null}
-          <Field label="新密码（8–128 位）">
+          <Field label="新密码">
             <input
               className="field-input"
               type="password"
               autoComplete="new-password"
+              placeholder="设置 8–128 位密码"
               required
               minLength={8}
               maxLength={128}

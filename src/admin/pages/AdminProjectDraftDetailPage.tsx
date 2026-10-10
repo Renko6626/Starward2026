@@ -251,7 +251,7 @@ export function AdminProjectDraftDetailPage() {
                 value={draft.contentNote ?? "未填写"}
               />
               <DetailBlock
-                title="内容警示"
+                title="内容提醒"
                 value={draft.contentWarnings ?? "未填写"}
               />
               <DetailBlock

@@ -2,6 +2,15 @@ import type { UpdatePortalProfileInput } from "../../shared/portal";
 
 export const portalContactChannels = ["QQ", "微信", "Discord", "Telegram", "Email", "其他"];
 
+export const portalProfilePlaceholders = {
+  creditName: "填写作品展示使用的署名",
+  bilibiliUid: "数字 UID 或 B站主页链接，供相邻作者联系",
+  contactEmail: "注册时使用的邮箱",
+  primaryContactChannel: "选择联系方式",
+  primaryContactHandle: "填写所选联系渠道的账号",
+  backupContact: "备用联系账号或邮箱，可不填",
+};
+
 const bilibiliUidPattern = /^[1-9]\d{0,19}$/;
 
 function normalizeBilibiliUid(value: string) {

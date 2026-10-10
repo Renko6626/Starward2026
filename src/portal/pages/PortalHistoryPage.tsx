@@ -46,24 +46,18 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
       setState({
         status: "error",
         message:
-          caught instanceof Error ? caught.message : "无法读取参与者历史记录。",
+          caught instanceof Error ? caught.message : "无法读取操作记录，请稍后重试。",
       });
     }
   }
 
-  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取参与记录。</p>;
+  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取操作记录。</p>;
   if (state.status === "error") return <Notice tone="error">{state.message}</Notice>;
 
   return (
     <div className={embedded ? "space-y-4" : "page-content"}>
       {!embedded ? <PageHeading
-        title={<>参与记录</>}
-        description={
-          <>
-            {state.history.participant.displayName}
-            ，在这里回顾报名、排期和作品提交的每一步。
-          </>
-        }
+        title={<>操作记录</>}
       >
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant border border-outline-variant text-sm font-mono font-medium">
           {state.history.items.length} 条记录
@@ -86,13 +80,13 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
             ))}
           </div>
         ) : (
-          <Notice>当前还没有可显示的参与者历史记录。</Notice>
+          <Notice>暂无操作记录。</Notice>
         )}
       </section>
 
       {!embedded ? <div className="flex flex-wrap gap-3">
         <Link className="button button--secondary" to="/portal">
-          返回工作台
+          返回作者页面
         </Link>
         <Link className="button button--secondary" to="/portal/project">
           前往作品资料

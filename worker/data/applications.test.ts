@@ -431,6 +431,7 @@ describe("createApplication conflicts", () => {
         {
           contactEmail: "dup@example.com",
           interestFormat: "novel",
+          introText: "准备创作一篇秘封组短篇小说。",
         },
         { userId: "user_dup" },
       ),

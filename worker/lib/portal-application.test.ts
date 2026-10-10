@@ -48,7 +48,7 @@ describe("resolvePortalApplicationMutation", () => {
       mode: "locked",
       editable: false,
       reason: "approved",
-      message: "该报名已审核通过，当前不再允许通过参与者入口修改。",
+      message: "该报名已审核通过，当前不再允许通过作者页面修改。",
     });
   });
 
@@ -59,7 +59,7 @@ describe("resolvePortalApplicationMutation", () => {
       mode: "locked",
       editable: false,
       reason: "approved",
-      message: "该报名已审核通过，当前不再允许通过参与者入口修改。",
+      message: "该报名已审核通过，当前不再允许通过作者页面修改。",
     });
   });
 });

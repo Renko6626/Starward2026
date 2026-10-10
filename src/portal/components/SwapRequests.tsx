@@ -12,7 +12,7 @@ export function SwapRequests({ collaboration, onSaved }: { collaboration: Collab
     setBusy(id); setNotice(null); setRefreshWarning(null);
     try {
       const result = await requestJson<CollaborationMutationResponse>(`/api/portal/swaps/${encodeURIComponent(id)}/respond`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
-      setNotice({ text: result.message + (result.notification === "failed" ? " 邮件暂未送达，对方可以在工作台查看请求。" : ""), error: false });
+      setNotice({ text: result.message + (result.notification === "failed" ? " 邮件暂未送达，对方可以在作者页面查看请求。" : ""), error: false });
       await onSaved().catch(() => setRefreshWarning("操作已完成，但摘要暂未更新，请稍后刷新。"));
     } catch (caught) { setNotice({ text: caught instanceof Error ? caught.message : "请求处理失败。", error: true }); }
     finally { setBusy(null); }

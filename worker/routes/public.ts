@@ -54,7 +54,7 @@ publicApi.post("/applications", async (c) => {
     {
       error: {
         code: "formal_application_moved",
-        message: "正式报名已调整为参与者入口内提交。请先通过 /portal/login 建立账号并完成联系资料。",
+        message: "正式报名已调整为作者页面内提交。请先通过 /portal/login 建立账号并完成联系资料。",
       },
     },
     410,
