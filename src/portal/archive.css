@@ -118,6 +118,3 @@
 .author-archive .archive-field-pair .form-field { grid-template-columns: 1fr; gap: 2px; }
 .author-archive .archive-field-pair .form-field > * { grid-column: 1; }
 @media (max-width: 700px) { .author-archive .archive-field-pair { grid-template-columns: 1fr; gap: 14px; } }
-
-.author-archive .archive-year { display: inline-block; vertical-align: baseline; margin-left: 16px; font: 400 var(--site-meta-size)/1.6 var(--font-label); color: #9c9c98; }
-@media (max-width: 700px) { .author-archive .archive-year { display: block; margin: 4px 0 0; font-size: var(--site-meta-size); } }

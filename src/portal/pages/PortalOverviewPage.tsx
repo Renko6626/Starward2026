@@ -6,6 +6,7 @@ import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Notice, PageHeading, ReadError } from "../../app/components/ui";
+import { ActivityIdentity } from "../../app/components/ActivityIdentity";
 import { MissionCountdown } from "../../app/components/MissionCountdown";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { CollaborationResponse } from "../../shared/collaboration";
@@ -85,7 +86,7 @@ export function PortalOverviewPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
-  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace author-archive"><PageHeading title="作者页面">{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
+  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace author-archive"><PageHeading title="作者页面" meta={<ActivityIdentity />}>{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
   const { dashboard, application, collaboration } = state;
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
@@ -101,7 +102,7 @@ export function PortalOverviewPage() {
   }
   return <div className="page-content creator-workspace author-archive">
     {dashboard.participant?.status === "approved" ? <MissionCountdown target="submission" /> : null}
-    <PageHeading title={<>作者档案 <span className="archive-year">逐星巡礼 / 2026</span></>}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
+    <PageHeading title="作者档案" meta={<ActivityIdentity />}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}

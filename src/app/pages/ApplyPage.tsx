@@ -4,6 +4,7 @@ import { authClient } from "../../portal/lib/auth-client";
 import { useApplicationIntake } from "../lib/use-application-intake";
 import { getApplicationWindowLabel } from "../../shared/windows";
 import { StationTechnicalDrawing } from "../components/StationTechnicalDrawing";
+import { ActivityIdentity } from "../components/ActivityIdentity";
 import "./apply.css";
 import "../components/ui/buttons.css";
 
@@ -32,7 +33,7 @@ export function ApplyPage() {
       <aside className="participation-aside">
         <div className="participation-aside-copy">
           <h1>参与指南</h1>
-          <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
+          <ActivityIdentity />
           <Link to="/" className="participation-back"><ArrowLeft size={14} /> 返回首页</Link>
         </div>
         <div className="participation-artwork"><StationTechnicalDrawing variant="guide" /></div>

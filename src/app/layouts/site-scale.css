@@ -45,6 +45,8 @@
 .public-nav { font-size: var(--site-label-size); }
 .public-nav { gap: 28px; }
 .public-footer { font-size: var(--site-meta-size); }
+.page-title-meta { margin: 8px 0 0; color: #9c9c98; font: 400 var(--site-meta-size)/1.6 var(--font-body); letter-spacing: .02em; }
+.page-title-year { font-family: var(--font-numeric); font-variant-numeric: lining-nums tabular-nums; }
 :is(.public-site, .creator-shell) .brand > span { white-space: nowrap; }
 
 :is(.public-site, .creator-shell) .page-content { max-width: none; }

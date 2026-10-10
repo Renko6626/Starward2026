@@ -63,17 +63,20 @@ export function PageHeading({
   title,
   description,
   eyebrow,
+  meta,
   children,
 }: PropsWithChildren<{
   title: ReactNode;
   description?: ReactNode;
   eyebrow?: string;
+  meta?: ReactNode;
 }>) {
   return (
     <header className="page-heading">
       <div>
         {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
         <h1>{title}</h1>
+        {meta}
         {description ? (
           <div className="page-description">{description}</div>
         ) : null}

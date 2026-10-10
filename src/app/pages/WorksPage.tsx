@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { ApiError, requestJson } from "../lib/api";
 import { Notice, ReadError } from "../components/ui";
 import { ObservationMark } from "../components/WorkPresentation";
+import { ActivityIdentity } from "../components/ActivityIdentity";
 import { ScheduleBoard, ScheduleStatus, ScheduleTaskDetail } from "../components/ScheduleBoard";
 import { groupSchedule, scheduleDay, schedulePhase } from "../lib/schedule-layout";
 import { authClient } from "../../portal/lib/auth-client";
@@ -152,7 +153,7 @@ export function WorksPage() {
   return <div className="works-page works-page--schedule">
     <ObservatoryBackdrop />
     <header className="ops-page-heading">
-      <div><h1>接力时间表</h1></div>
+      <div><h1>接力时间表</h1><ActivityIdentity /></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
     {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>选择空闲时间后填写报名资料，提交成功后为你预留。审核通过后可调整时间或申请换期。</Notice> : null}
