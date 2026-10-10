@@ -9,8 +9,8 @@ const arrivalTime = Date.parse(RELAY_START);
 // corotating frame. See scripts/orbit-transfer/ and the validation report.
 // The frozen reference ellipse is a geometric overlay; solid states use the
 // rotating frame. Their separation is not a measure of lunar perturbation.
-function TransferDiagram({ arrowId, rotation, position }: {
-  arrowId: string; rotation: number; position: ReturnType<typeof missionPositionAt>;
+function TransferDiagram({ arrowId, rotation, position, paused }: {
+  arrowId: string; rotation: number; position: ReturnType<typeof missionPositionAt>; paused: boolean;
 }) {
   const id = useId().replaceAll(':', '');
   const lightId = `orbit-light-${id}`;
@@ -19,6 +19,12 @@ function TransferDiagram({ arrowId, rotation, position }: {
   const trackId = (index: number) => `orbit-track-${id}-${index}`;
   const entryMaskId = (index: number) => `orbit-entry-${id}-${index}`;
   const diagram = useRef<SVGGElement>(null);
+  const pausedRef = useRef(paused);
+  const syncPlayback = useRef<(() => void) | null>(null);
+  useLayoutEffect(() => {
+    pausedRef.current = paused;
+    syncPlayback.current?.();
+  }, [paused]);
   // Start and finish the full parking circle at the actual departure point.
   const parkingPath = `M${departure.x} ${departure.y} A${parkingRadius} ${parkingRadius} 0 1 0 ${540 - departure.x} ${920 - departure.y} A${parkingRadius} ${parkingRadius} 0 1 0 ${departure.x} ${departure.y}`;
   useLayoutEffect(() => {
@@ -59,11 +65,12 @@ function TransferDiagram({ arrowId, rotation, position }: {
       frame = requestAnimationFrame(tick);
     };
     const sync = () => {
-      if (animation && visible && !document.hidden && !preference.matches) {
+      if (animation && visible && !document.hidden && !preference.matches && !pausedRef.current) {
         root.classList.remove('is-paused');
         if (!frame) frame = requestAnimationFrame(tick);
       } else stop();
     };
+    syncPlayback.current = sync;
     const start = () => {
       elapsed = 0;
       root.classList.remove('has-entered');
@@ -96,6 +103,7 @@ function TransferDiagram({ arrowId, rotation, position }: {
     preference.addEventListener('change', onPreferenceChange);
     document.addEventListener('visibilitychange', sync);
     return () => {
+      syncPlayback.current = null;
       observer.disconnect();
       preference.removeEventListener('change', onPreferenceChange);
       document.removeEventListener('visibilitychange', sync);
@@ -201,7 +209,7 @@ function TransferDiagram({ arrowId, rotation, position }: {
   );
 }
 
-export function OrbitalArtwork() {
+export function OrbitalArtwork({ paused = false }: { paused?: boolean }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const update = () => { if (!document.hidden) setNow(Date.now()); };
@@ -232,12 +240,12 @@ export function OrbitalArtwork() {
         </defs>
         <g mask={`url(#${maskId})`}>
           <g transform="translate(270 460) rotate(35) scale(1.35) translate(-270 -460)">
-            <TransferDiagram arrowId={arrowId} rotation={35} position={position} />
+            <TransferDiagram arrowId={arrowId} rotation={35} position={position} paused={paused} />
           </g>
         </g>
       </svg>
       <svg className="orbital-artwork-mobile" viewBox="0 0 390 844" preserveAspectRatio="xMidYMin slice" focusable="false">
-        <g transform="translate(70 310) rotate(15) scale(.73) translate(-270 -460)"><TransferDiagram arrowId={arrowId} rotation={15} position={position} /></g>
+        <g transform="translate(70 310) rotate(15) scale(.73) translate(-270 -460)"><TransferDiagram arrowId={arrowId} rotation={15} position={position} paused={paused} /></g>
       </svg>
     </div>
   );

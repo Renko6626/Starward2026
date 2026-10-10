@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
 import type { StationScene } from './scene';
 
-export function StationBackdrop() {
+export function StationBackdrop({ paused, onTogglePaused }: { paused: boolean; onTogglePaused: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const scene = useRef<StationScene | null>(null);
   const [ready, setReady] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
+  const pausedRef = useRef(paused);
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -72,7 +71,7 @@ export function StationBackdrop() {
         <div className="station-reading-shade" />
       </div>
       {ready && !reduced ? (
-        <button className="station-motion" type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>
+        <button className="station-motion" type="button" aria-pressed={paused} onClick={onTogglePaused}>
           {paused ? <Play size={13} /> : <Pause size={13} />}
           {paused ? '继续运行' : '暂停运行'}
         </button>
