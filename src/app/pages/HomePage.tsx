@@ -43,7 +43,10 @@ export function HomePage() {
             <Link className="button button--primary button--industrial button--accent orbital-primary" to="/apply">参与活动 <ArrowUpRight size={18} /></Link>
             <Link className="orbital-secondary" to="/works" search={{ view: 'gallery', type: 'all', q: '' }}>浏览作品 <ArrowUpRight size={15} /></Link>
           </div>
-          <p className="orbital-group"><span>活动 QQ 群</span><span className="orbital-group-number">1078039621</span></p>
+          <div className="orbital-meta">
+            <p className="orbital-event-date"><span>活动日期</span><time dateTime="2026-11-12">2026.11.12</time></p>
+            <p className="orbital-group"><span>活动 QQ 群</span><span className="orbital-group-number">1078039621</span></p>
+          </div>
         </div>
         <div className="orbital-bottom">
           <div className="orbital-status" role="status">

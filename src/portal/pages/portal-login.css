@@ -33,13 +33,13 @@
 .station-entry .auth-tabs button[aria-pressed="true"] { border-color: #ddd; color: #eee; }
 .station-entry .auth-panel form { gap: 23px; }
 .station-entry .field-label { font-size: var(--site-label-size); font-weight: 400; color: #bdbdbd; }
-.station-entry .field-input { border: 1px solid #ffffff30; border-radius: 0; background: #0e0e0ed9; color: #eee; font-size: 14px; min-height: 48px; box-shadow: none; }
+.station-entry .field-input { border: 1px solid #ffffff30; border-radius: 0; background: #0e0e0ed9; color: #eee; font-size: var(--site-body-size); min-height: 48px; box-shadow: none; }
 .station-entry .field-input::placeholder { color: #6f6f6f; }
 .station-entry .field-input:focus { border-color: #aaa; outline: 1px solid #aaa; box-shadow: none; }
 .station-entry .auth-otp-toggle { margin-top: 19px; font-size: var(--site-meta-size); color: #a7a7a7; text-decoration-color: #ffffff35; }
 .station-entry .auth-note { font-size: var(--site-meta-size); color: #aaa; }
 .station-entry input::placeholder { color: #858585; opacity: 1; }
-.station-entry .notice { border-radius: 0; font-size: var(--site-meta-size); line-height: 1.85; background: #ffffff04; }
+.station-entry .notice { border-radius: 0; font-size: var(--site-body-size); line-height: 1.85; background: #ffffff04; }
 @media (max-width: 1050px) and (min-width: 760px) {
   .station-entry.auth-layout { grid-template-columns: 1fr 1fr; padding: 0; }
   .station-entry .auth-panel { padding-left: 30px; }
@@ -59,6 +59,6 @@
   .station-entry .auth-panel { max-width: none; padding: 28px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
 }
 .activity-rules-consent { margin: 20px 0; }
-.activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.9; }
+.activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: var(--site-body-size); line-height: 1.9; }
 .activity-rules-consent input { flex: none; margin-top: 6px; }
 .activity-rules-consent a { text-decoration: underline; text-underline-offset: 3px; }

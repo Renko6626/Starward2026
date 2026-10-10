@@ -156,19 +156,21 @@ it("accepts empty draft URLs but rejects executable, invalid and credential-bear
 
 describe("public relay timetable", () => {
   it("shows approved intentions before previews and updates them without exposing pending intentions", async () => {
-    database.sqlite.exec(`UPDATE applications SET interest_format = 'cosplay' WHERE user_id = 'usr_seed_active';
-      UPDATE applications SET interest_format = 'music' WHERE user_id = 'usr_seed_pending';
+    database.sqlite.exec(`UPDATE applications SET interest_format = 'cosplay', intro_text = '制作秘封主题的角色服装与摄影作品。' WHERE user_id = 'usr_seed_active';
+      UPDATE applications SET interest_format = 'music', intro_text = '待审核的私有创作意向' WHERE user_id = 'usr_seed_pending';
       UPDATE project_drafts SET preview_status = 'draft' WHERE id = 'draft_seed_active';
       UPDATE schedule_segments SET status = 'held', current_participant_id = 'part_seed_pending' WHERE id = 'seg_seed_101'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
     const read = async () => (await (await app.request("http://localhost/api/works", {}, { DB: db })).json()) as any;
     const body = await read();
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_102'))
-      .toMatchObject({ status: 'confirmed', interestFormat: 'cosplay', preview: null });
+      .toMatchObject({ status: 'confirmed', interestFormat: 'cosplay', introText: '制作秘封主题的角色服装与摄影作品。', preview: null });
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101'))
-      .toMatchObject({ status: 'reserved', interestFormat: null });
-    database.sqlite.exec("UPDATE applications SET interest_format = 'novel' WHERE user_id = 'usr_seed_active'");
-    expect((await read()).schedule.find((entry: any) => entry.id === 'seg_seed_102').interestFormat).toBe('novel');
+      .toMatchObject({ status: 'reserved', interestFormat: null, introText: null });
+    expect(JSON.stringify(body)).not.toContain('待审核的私有创作意向');
+    database.sqlite.exec("UPDATE applications SET interest_format = 'novel', intro_text = '创作月面旅行的短篇小说。' WHERE user_id = 'usr_seed_active'");
+    expect((await read()).schedule.find((entry: any) => entry.id === 'seg_seed_102'))
+      .toMatchObject({ interestFormat: 'novel', introText: '创作月面旅行的短篇小说。' });
   });
 
   it("keeps slots and approved anonymous previews without leaking draft links", async () => {
@@ -184,7 +186,7 @@ describe("public relay timetable", () => {
     expect(slot.preview.previewTitle).toBeTruthy();
     expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
     expect(JSON.stringify(body)).not.toContain("https://example.com/private");
-    expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "interestFormat", "preview", "workId"].sort());
+    expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "interestFormat", "introText", "preview", "workId"].sort());
     database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
     const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
@@ -196,14 +198,14 @@ describe("public relay timetable", () => {
       UPDATE portal_profiles SET credit_name = '待审核私有署名' WHERE user_id = 'usr_seed_pending'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
     const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
-    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "reserved", publicAuthorName: null, interestFormat: null, preview: null });
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "reserved", publicAuthorName: null, interestFormat: null, introText: null, preview: null });
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_102')).toMatchObject({ status: "confirmed", publicAuthorName: "结界观测者" });
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_103')).toMatchObject({ status: "unavailable" });
     expect(JSON.stringify(body)).not.toContain('待审核私有署名');
     expect(JSON.stringify(body)).not.toContain('part_seed_pending');
     database.sqlite.exec("UPDATE schedule_segments SET status = 'released', current_participant_id = NULL WHERE id = 'seg_seed_101'");
     const released = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
-    expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, interestFormat: null, preview: null });
+    expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, interestFormat: null, introText: null, preview: null });
   });
 
   it("exposes published details during the relay and retains chronological slots afterwards", async () => {

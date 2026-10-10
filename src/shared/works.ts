@@ -52,6 +52,7 @@ export type PublicScheduleEntry = {
   status: "available" | "reserved" | "confirmed" | "unavailable";
   publicAuthorName: string | null;
   interestFormat: ApplicationInterestFormat | null;
+  introText: string | null;
   preview: Pick<WorkPresentation, "previewTitle" | "previewSummary" | "workType" | "coverUrl" | "coverAlt"> | null;
   workId: string | null;
 };

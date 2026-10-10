@@ -77,11 +77,11 @@ function ScheduleTask({ entry, missionStart, mine, inspected, current, ownName, 
     <span className="ops-task-copy">
       <span className="ops-task-heading">
         <span className="ops-task-author">{author}{mine && <span className="ops-mine-label">我的</span>}{current && <span className="ops-current-label">当前接力</span>}</span>
-        <span className="ops-task-state"><ScheduleStatus status={entry.status} /></span>
+        {entry.status !== "available" && <span className="ops-task-state"><ScheduleStatus status={entry.status} /></span>}
       </span>
       {inspected && entry.status === "available" ? <span className="ops-task-work ops-task-quick-action"><span className="ops-quick-desktop">再次点击选择时间</span><span className="ops-quick-mobile">点击选择时间</span> <span aria-hidden="true">↗</span></span>
         : entry.preview?.previewTitle ? <span className="ops-task-work">{entry.preview.previewTitle}</span>
-        : entry.status === "available" ? <span className="ops-task-work">选择时间</span> : null}
+        : entry.status === "available" ? <span className="ops-task-work ops-task-action">选择时间 <span aria-hidden="true">↗</span></span> : null}
     </span>
   </button>;
 }
@@ -95,10 +95,9 @@ function ScheduleRuler({ day, missionStart, selected, currentId, mineId, now, ac
     <div className="ops-ruler" aria-label={`${missionTime(dayInstant(day, 0), missionStart)} 到 ${missionTime(dayInstant(day, 24), missionStart)}，UTC+8 全天标尺`}>
       <div className="ops-scale" aria-hidden="true">
         <ScheduleTrace direction="horizontal" />
-        {Array.from({ length: 97 }, (_, index) => {
-          const hour = index / 4;
-          return <span key={index} className={`ops-tick${index % 24 === 0 ? " is-major" : index % 4 === 0 ? " is-medium" : ""}`} style={{ left: `${hour / 24 * 100}%` }}>
-            {index % 8 === 0 && <span className={index % 24 === 0 ? "is-mobile-major" : ""}>{missionTime(dayInstant(day, hour), missionStart)}</span>}
+        {Array.from({ length: 25 }, (_, hour) => {
+          return <span key={hour} className={`ops-tick${hour % 6 === 0 ? " is-major" : " is-medium"}`} style={{ left: `${hour / 24 * 100}%` }}>
+            {hour % 6 === 0 && <span className="is-mobile-major">{missionTime(dayInstant(day, hour), missionStart)}</span>}
           </span>;
         })}
       </div>
@@ -179,16 +178,17 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
   entry: PublicScheduleEntry; missionStart: number | null; mine: boolean; ownName: string | null; signedIn: boolean; ended: boolean; detailId: string; onClose?: () => void;
   actions?: ReactNode;
 }) {
+  const workType = scheduleWorkType(entry);
   return <section className="ops-detail" id={detailId} aria-label="选中时段详情">
     <Crossfade valueKey={entry.id}><div className="ops-detail-time"><span>{entry.kind === 'extra' ? '选中追加坑位' : '选中时段'}</span><strong>{entry.scheduledAt ? <MissionClock start={missionStart} value={entry.scheduledAt} /> : entry.code}</strong><span>{entry.kind === 'extra' ? entry.name : `第 ${entry.code} 棒`}{mine ? " / 我的时段" : ""}</span></div>
     </Crossfade>
     <Crossfade valueKey={entry.id}><div className="ops-detail-copy">
       <div className="ops-detail-heading"><h2>{scheduleAuthor(entry, mine ? ownName : null)}</h2><ScheduleStatus status={entry.status} />{onClose && <button type="button" className="ops-close" onClick={onClose}>关闭</button>}</div>
-      {entry.preview ? <>
-        <div className="ops-detail-work">{entry.preview.workType && <WorkTypeMark type={entry.preview.workType} />}<h3>{entry.preview.previewTitle}</h3></div>
-        {entry.preview.previewSummary && <p className="ops-detail-description">{entry.preview.previewSummary}</p>}
+      {entry.status === "confirmed" ? <>
+        <div className="ops-detail-work">{workType && <WorkTypeMark type={workType} />}<h3>创作意向</h3></div>
+        <p className="ops-detail-description">{entry.introText?.trim() || "作者暂未填写创作意向。"}</p>
       </> : <p className="ops-detail-description">{entry.status === "available" ? "在报名时选择这个发布时刻，提交后预留，审核通过后确认。"
-        : entry.status === "reserved" ? "这个时段已被预留，正在等待报名审核。" : entry.status === "confirmed" ? "作者已确认，作品预告待公布。" : "这个时段暂不可认领。"}</p>}
+        : entry.status === "reserved" ? "这个时段已被预留，正在等待报名审核。" : "这个时段暂不可认领。"}</p>}
       {entry.preview?.coverUrl && <img className="ops-detail-cover" src={entry.preview.coverUrl} alt={entry.preview.coverAlt || `${entry.preview.previewTitle ?? "作品"}预览`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
     </div>
     </Crossfade>

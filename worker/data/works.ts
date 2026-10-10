@@ -80,6 +80,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     END AS status,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
     CASE WHEN s.status IN ('held', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
+    CASE WHEN s.status IN ('held', 'completed') THEN a.intro_text ELSE NULL END AS introText,
     d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     d.work_type AS workType, d.cover_url AS coverUrl, d.cover_alt AS coverAlt
     FROM schedule_segments s
