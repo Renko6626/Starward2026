@@ -75,6 +75,7 @@ docs/
 开发：
 
 - [development/local-d1.md](./development/local-d1.md)
+- [development/production-deployment.md](./development/production-deployment.md)：`-prod` tag 自动部署、Cloudflare 权限与首次上线配置
 
 产品：
 

@@ -16,7 +16,7 @@ QQ 网站应用登记的回调为 `https://<已确认域名>/api/auth/oauth2/cal
 
 本地使用被 Git 忽略的 `.dev.vars`；真实授权应在 QQ 平台允许的域名上测试。不要把本机 localhost 或临时预览域假定为已登记回调，不要把 AppKey 放在 `VITE_` 变量、仓库或聊天里。
 
-Cloudflare secrets 使用所选环境的 `wrangler secret put QQ_APP_KEY`；AppID 和开关可放相同环境的非秘密 vars。环境需先确认，本文不自动执行配置或部署。`env.production` 仍有数据库和域名占位值，须填好后才可使用。`GET /api/auth/providers` 只暴露 QQ 配置是否启用，关闭或凭据不完整时邮箱入口继续可用。
+Cloudflare secrets 使用所选环境的 `wrangler secret put QQ_APP_KEY`；AppID 和开关可放相同环境的非秘密 vars。环境需先确认，本文不自动执行配置或部署。`env.production` 的域名为 `https://hifuu.moe`，生产 D1 占位值由 tag 部署流程按数据库名称解析或创建后替换。`GET /api/auth/providers` 只暴露 QQ 配置是否启用，关闭或凭据不完整时邮箱入口继续可用。
 
 ## 身份与现有账号
 
