@@ -47,6 +47,8 @@ Last updated: 2026-10-11
 - `/apply`
 - `/portal/login`
 
+`/portal/login` 默认显示“注册账号”。已有账号需切换到“密码登录”；邮箱验证码入口位于密码登录模式下。验证码登录允许首次开户，新邮箱须先同意当前活动规则，已有账号可直接登录。
+
 ### 3.2 Authenticated Applicant
 
 已建立会话但尚未通过审核的用户任务如下：
@@ -58,16 +60,16 @@ Last updated: 2026-10-11
 
 该阶段采用以下入口规则：
 
-- 首次登录后，如未填写联系资料，系统优先引导至 `/portal/profile`
-- 联系资料完成后，如尚未建立报名记录，系统优先引导至 `/portal/application`
-- 已存在联系资料与报名记录但仍待审核的账号优先进入 `/portal/project`
-- 已获得参与资格的账号进入 `/portal` 查看当前状态
+- 本次新注册且未携带 `segment` 时段参数、没有报名记录、参与者状态也不是 `approved` 或 `completed` 时，进入 `/works` 接力时间表，先选择时段
+- 本次新注册携带 `segment` 参数时，进入 `/portal?segment=<时段 ID>#profile`，填写资料与报名；携带参数本身不会预留时段
+- 已有账号登录，以及已登录用户再次访问登录页时，进入 `/portal`；如携带 `segment` 参数，同样保留参数并定位到资料区域
+- 登录后先读取 `/api/portal/me` 判断去向；读取失败时，新注册且未携带时段进入时间表，其他情况进入作者页面
+- 资料、报名和状态集中在 `/portal`，不再按资料完整程度依次跳转到独立页面
 
 对应入口：
 
 - `/portal`
-- `/portal/profile`
-- `/portal/application`
+- `/works`（接力时间表与时段选择）
 - `/portal/project`
 
 ### 3.3 Approved Participant
@@ -81,7 +83,7 @@ Last updated: 2026-10-11
 对应入口：
 
 - `/portal`
-- `/portal/schedule`
+- `/works`（接力时间表与换期操作）
 - `/portal/project`
 - `/portal/history`
 
@@ -124,7 +126,7 @@ Last updated: 2026-10-11
   - 与活动意向相关的静态资料快照
 
 - `participant`
-  - 审核通过后的稳定业务身份
+  - 首次成功注册或登录时创建或关联的稳定业务身份；新建记录状态为 `pending`
   - 时间段、资料、事件日志的关联主体
 
 - `admin`
@@ -142,14 +144,15 @@ Last updated: 2026-10-11
 
 第一阶段采用以下认证模型：
 
-- Better Auth + QQ Generic OAuth（启用后为主入口）
+- Better Auth（当前使用邮箱认证；QQ Generic OAuth 后端保留，默认关闭，页面无登录或绑定入口）
 - 邮箱与密码（默认，不要求邮件验证）
 - Email OTP（保留）
 - Cookie Session
 - Resend（仅登录验证码需要）
 
 账号密码使用 Better Auth 的 `credential` account，密码长度 8–128 位。注册不会标记邮箱为已验证。
-已有验证码账号登录后可在 `/portal/profile` 设置密码；修改密码须提供当前密码，并撤销其他会话。
+仅用验证码开户、尚未设置密码的账号，登录后可在 `/portal` 资料区域的“登录密码”弹窗设置密码。已有密码账号修改密码须提供当前密码，并撤销其他会话。
+当前没有自助找回或重设密码功能。忘记密码后可使用邮箱验证码恢复登录，但已有密码账号仍无法在缺少旧密码时修改密码；验证码登录不会重设密码。
 没有有效会话且邮件不可用的旧账号，需先恢复身份验证渠道；不允许通过重新注册覆盖旧账号或仅凭邮箱领取既有邀请。
 
 ### 5.2 Explicit Non-Goals
@@ -165,10 +168,10 @@ Last updated: 2026-10-11
 
 入口边界定义如下：
 
-- 公共说明入口：`/`、`/apply`
+- 公共说明与时间表入口：`/`、`/apply`、`/works`
 - 认证入口：`/portal/login`
-- 已登录待审核入口：`/portal`、`/portal/profile`、`/portal/application`、`/portal/project`
-- 已批准参与者入口：`/portal/schedule`、`/portal/history`
+- 已登录作者入口：`/portal`、`/portal/project`、`/portal/history`
+- 时间表操作入口：`/works`；具体可执行动作由服务端按参与者状态校验
 - 管理后台：`/admin/*`
 
 ### 5.4 Session Policy
@@ -272,23 +275,33 @@ Last updated: 2026-10-11
 - `/`
 - `/apply`
 - `/apply/success`
+- `/works`（默认 `view=gallery`，展示接力时间表）
 
 ### 9.2 Authenticated Applicant Surface
 
-- `/portal/login`
 - `/portal`
-- `/portal/profile`
-- `/portal/application`
+- `/portal#profile`（资料与登录密码设置）
+- `/portal#plan`（报名与参与计划）
+- `/portal/project`
+- `/portal/history`
+
+认证入口为 `/portal/login`，位于作者页面布局之外。作者页面在会话检查完成后将未登录用户引导至该入口；业务接口独立校验会话。
 
 ### 9.3 Approved Participant Surface
 
-- `/portal/schedule`
-- `/portal/project`
-- `/portal/history`
+审核通过后的账号继续使用上述作者入口，并在 `/works` 执行获准的排期操作。登录与访问页面本身不会授予参与资格。
 
 ### 9.4 Admin Surface
 
 - `/admin/*`
+
+### 9.5 Compatibility Redirects
+
+- `/portal/profile` → `/portal#profile`
+- `/portal/application` → `/portal#plan`
+- `/portal/schedule` → `/works?view=gallery&type=all&q=`
+
+这些旧地址仅保留重定向，不再承载独立的资料、报名或排期页面。
 
 ## 10. Anti-Abuse Requirements
 
@@ -299,7 +312,7 @@ Last updated: 2026-10-11
 因此：
 
 - `/apply` 不接收正式报名数据
-- 正式报名统一在 `/portal/application` 内提交
+- 正式报名统一在 `/portal` 内提交；旧 `/portal/application` 地址重定向至 `/portal#plan`
 - 旧的 `POST /api/applications` 仅保留为兼容阻断接口
 
 ### 10.2 Portal Entry
@@ -330,8 +343,8 @@ Last updated: 2026-10-11
 
 1. 访客访问公共页面并了解活动
 2. 访客在 `/portal/login` 使用邮箱密码或邮箱验证码建立或恢复会话
-3. 系统在首次成功登录后创建或恢复 `participant` 作者页面主体
-4. 已登录用户补充资料、完成报名，并可提前整理作品资料
+3. 系统在首次成功注册或登录后创建或关联 `participant` 作者页面主体，新建记录为 `pending`
+4. 新注册且未选择时段的账号通常先进入 `/works`；选择时段后在 `/portal` 补充资料、提交报名，并可提前整理作品资料
 5. 管理员结合资料与报名内容进行审核
 6. 审核通过后系统将 `participant.status` 从 `pending` 更新为 `approved`
 7. 已批准用户解锁时间段等正式动作
@@ -346,8 +359,7 @@ Last updated: 2026-10-11
 - 允许邮箱密码或邮箱验证码建立入口会话
 - `/portal/login`
 - `/portal`
-- `/portal/profile`
-- `/portal/application`
+- `/portal` 内的资料与报名区域，以及旧地址的兼容重定向
 - 后台可审核并决定是否放行为参与者
 - 已批准和未批准状态的服务端权限边界
 - 匿名公开模式的资料结构
@@ -394,7 +406,7 @@ Last updated: 2026-10-11
 
 ## QQ 登录与邮件策略（2026-10-10）
 
-新用户同意当前活动规则后通过 QQ 授权直接开户；已有 QQ 账号可直接登录。QQ 登录不赋予审核通过资格。已有邮箱用户在有效会话中主动绑定 QQ，关联现有 user/participant，保留原报名、作品和排期，不按昵称或手填 QQ 号自动合并。
+以下描述保留的 QQ 后端能力；当前开关默认关闭，页面没有 QQ 登录或绑定入口，启用前仍需审核与联调。启用后，新用户同意当前活动规则并通过 QQ 授权开户，已有 QQ 账号可登录。QQ 登录不赋予审核通过资格。已有邮箱用户在有效会话中主动绑定 QQ，关联现有 user/participant，保留原报名、作品和排期，不按昵称或手填 QQ 号自动合并。
 
 QQ 认证通过应用内 OpenID，QQ-only 账号在 Better Auth 内部使用不可投递的兼容标识，业务接口和界面不把它展示为邮箱。真实联系邮箱允许为空，与认证邮箱独立；补填联系邮箱不会产生密码登录凭据。QQ 号仍由参与者填写作为联系资料，OAuth 不核验该号码。
 
