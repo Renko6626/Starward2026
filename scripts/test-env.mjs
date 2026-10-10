@@ -28,11 +28,8 @@ export function buildLocalServiceReport(env) {
     { name: "本地数据库", status: "ready", detail: "Wrangler D1 local" },
     {
       name: "本地管理员入口",
-      status: env.ALLOW_LOCAL_ADMIN_BYPASS === "true" ? "ready" : "offline",
-      detail:
-        env.ALLOW_LOCAL_ADMIN_BYPASS === "true"
-          ? "loopback header bypass"
-          : "未开启；管理员页面需要真实 Better Auth 会话",
+      status: env.BETTER_AUTH_SECRET ? "ready" : "offline",
+      detail: "网站账号登录；需在数据库中授予管理权限",
     },
     {
       name: "邮件 OTP（Resend）",
@@ -71,7 +68,6 @@ function ensureLocalDevVars() {
   const secret = randomBytes(32).toString("base64");
   const content = template
     .replace(/replace-with-a-32-plus-character-local-secret/g, secret)
-    .replace(/# ALLOW_LOCAL_ADMIN_BYPASS="true"/g, 'ALLOW_LOCAL_ADMIN_BYPASS="true"')
     .replace(/# ALLOW_LOCAL_DEV_ORIGINS="true"/g, 'ALLOW_LOCAL_DEV_ORIGINS="true"');
   writeFileSync(path, content, { mode: 0o600 });
   console.log("Created ignored .dev.vars with a generated local-only secret.");

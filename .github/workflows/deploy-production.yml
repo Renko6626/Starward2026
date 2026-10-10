@@ -124,6 +124,11 @@ jobs:
           curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 --max-time 20 "$PRODUCTION_URL/api/health" --output health.json
           node --input-type=module -e 'import { readFileSync } from "node:fs"; const health = JSON.parse(readFileSync("health.json", "utf8")); if (health.status !== "ok" || health.service !== "starward2026-worker") throw new Error("Production API health check failed");'
 
+      - name: Verify admin authentication boundary
+        env:
+          PRODUCTION_URL: ${{ steps.config.outputs.production_url }}
+        run: node scripts/check-admin-deployment.mjs
+
       - name: Write deployment summary
         env:
           RELEASE_TAG: ${{ github.ref_name }}

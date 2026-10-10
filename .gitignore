@@ -26,6 +26,7 @@ env/
 .env.local
 .env.*.local
 *.pem
+.admin-credentials/
 
 # === Logs ===
 logs/

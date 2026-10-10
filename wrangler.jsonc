@@ -8,7 +8,9 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-04-10",
   "assets": {
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
   },
   "observability": {
     "enabled": true
@@ -49,7 +51,7 @@
    * - D1 database binding
    * - Better Auth secret
    * - Better Auth base URL
-   * - Cloudflare Access team domain and policy aud for /api/admin verification
+   * - Bootstrap the admin owner after applying the admin_roles migration
    * - Resend API key and sender
    * - Turnstile secret
    * - Replace the rate limit namespace ids if they collide with existing account-level values
@@ -143,8 +145,6 @@
   // "vars": {
   //   "BETTER_AUTH_SECRET": "replace-with-32-plus-char-secret",
   //   "BETTER_AUTH_URL": "https://your-app.example.com",
-  //   "CLOUDFLARE_ACCESS_TEAM_DOMAIN": "https://your-team.cloudflareaccess.com",
-  //   "CLOUDFLARE_ACCESS_POLICY_AUD": "replace-with-your-access-application-aud",
   //   "RESEND_API_KEY": "re_xxxxxxxxx",
   //   "RESEND_FROM_EMAIL": "noreply@example.com",
   //   "RESEND_FROM_NAME": "Starward2026",

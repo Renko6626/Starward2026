@@ -7,12 +7,9 @@
 BETTER_AUTH_SECRET="replace-with-a-32-plus-character-local-secret"
 BETTER_AUTH_URL="http://localhost:20262"
 
-# Dev-only admin bypass. When "true" AND the request host is loopback,
-# /api/admin/* uses local-admin@starward.local without Cloudflare Access.
-# Debug scripts may override this identity with the `x-admin-email` header.
-# Restart dev after changing this flag, then open http://localhost:20262/admin.
-# Leave unset (or remove) to disable. MUST stay out of deployed environments.
-ALLOW_LOCAL_ADMIN_BYPASS="true"
+# Admin pages use the same verified website sessions as production.
+# Grant a local test user a role in admin_roles after applying migrations.
+# ALLOW_LOCAL_ADMIN_BYPASS and x-admin-email no longer grant access.
 
 # Dev-only origin trust. When "true", Better Auth dynamically trusts loopback /
 # private-network (localhost, *.localhost, 127.x, 10.x, 192.168.x, 172.16-31.x)

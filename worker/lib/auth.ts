@@ -539,15 +539,22 @@ function applyAuthResponseHeaders(c: AppContext, headers: Headers) {
   });
 }
 
-export async function requireParticipantSession(c: AppContext) {
+export async function requireWebsiteSession(c: AppContext, fresh = false) {
   const auth = createAuth(c.env);
-  const db = getRequiredAuthEnv(c.env).db;
   const result = await auth.api.getSession({
     headers: c.req.raw.headers,
     returnHeaders: true,
+    query: { disableCookieCache: fresh },
   });
 
   applyAuthResponseHeaders(c, result.headers);
+  return result.response;
+}
+
+export async function requireParticipantSession(c: AppContext) {
+  const session = await requireWebsiteSession(c);
+  const db = getRequiredAuthEnv(c.env).db;
+  const result = { response: session };
 
   if (!result.response) {
     return null;

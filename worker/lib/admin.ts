@@ -1,181 +1,33 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
-import { HTTPException } from "hono/http-exception";
-import type { AppBindings, AppContext } from "./types";
-
-const adminIdentityHeaders = [
-  "cf-access-authenticated-user-email",
-  "cf-access-verified-email",
-] as const;
-
-type VerifyAdminAccessTokenInput = {
-  token: string;
-  teamDomain: string;
-  policyAud: string;
-};
-
-type VerifyAdminAccessToken = (
-  input: VerifyAdminAccessTokenInput,
-) => Promise<Pick<JWTPayload, "email">>;
-
-const LOCAL_ADMIN_BYPASS_HEADER = "x-admin-email";
-const ACCESS_JWT_HEADER = "cf-access-jwt-assertion";
-const adminJwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+import { HTTPException } from 'hono/http-exception';
+import { getRealAuthEmail } from '../../src/shared/auth-identity';
+import { requireWebsiteSession } from './auth';
+import { getRequiredDb } from './http';
+import type { AppContext } from './types';
 
 export function getAdminIdentity(c: AppContext) {
-  const identity = c.get("adminIdentity");
-
-  if (!identity) {
-    throw new HTTPException(500, {
-      message: "Admin identity missing from verified access context.",
-    });
-  }
-
+  const identity = c.get('adminIdentity');
+  if (!identity) throw new HTTPException(500, { message: 'Admin identity missing from verified context.' });
   return identity;
 }
 
 export async function requireAdminAccess(c: AppContext) {
-  const identity = await resolveAdminIdentity({
-    env: c.env,
-    headers: c.req.raw.headers,
-    requestUrl: c.req.url,
-  });
-
-  c.set("adminIdentity", identity);
+  c.header('Cache-Control', 'private, no-store');
+  const session = await requireWebsiteSession(c, true);
+  if (!session) throw new HTTPException(401, { message: '请先登录管理员账号。' });
+  const email = getRealAuthEmail(session.user.email);
+  if (!email || !session.user.emailVerified) throw new HTTPException(403, { message: '管理员必须使用已验证的真实邮箱。' });
+  const access = await getRequiredDb(c).prepare('SELECT role FROM admin_roles WHERE user_id = ?')
+    .bind(session.user.id).first<{ role: 'owner' | 'admin' }>();
+  if (!access || !['owner', 'admin'].includes(access.role)) throw new HTTPException(403, { message: '当前账号没有管理员权限。' });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)
+    && (c.req.header('origin') !== new URL(c.req.url).origin || c.req.header('sec-fetch-site') === 'cross-site')) {
+    throw new HTTPException(403, { message: '管理操作必须从本站发起。' });
+  }
+  c.set('adminIdentity', email);
+  c.set('adminUserId', session.user.id);
+  c.set('adminRole', access.role);
 }
 
-export async function resolveAdminIdentity(
-  input: {
-    env: Pick<
-      AppBindings,
-      "CLOUDFLARE_ACCESS_POLICY_AUD" | "CLOUDFLARE_ACCESS_TEAM_DOMAIN" | "ALLOW_LOCAL_ADMIN_BYPASS"
-    >;
-    headers: Headers;
-    requestUrl: string;
-  },
-  verifyAccessToken: VerifyAdminAccessToken = verifyAdminAccessToken,
-) {
-  const localBypassIdentity = getLocalAdminBypassIdentity(
-    input.env,
-    input.headers,
-    input.requestUrl,
-  );
-
-  if (localBypassIdentity) {
-    return localBypassIdentity;
-  }
-
-  const teamDomain = normalizeAccessTeamDomain(input.env.CLOUDFLARE_ACCESS_TEAM_DOMAIN);
-  const policyAud = input.env.CLOUDFLARE_ACCESS_POLICY_AUD?.trim();
-
-  if (!teamDomain || !policyAud) {
-    throw new HTTPException(503, {
-      message: "Cloudflare Access admin verification is not configured yet.",
-    });
-  }
-
-  const token = input.headers.get(ACCESS_JWT_HEADER)?.trim();
-
-  if (!token) {
-    throw new HTTPException(403, {
-      message: "Admin access requires a valid Cloudflare Access token.",
-    });
-  }
-
-  let payload: Pick<JWTPayload, "email">;
-
-  try {
-    payload = await verifyAccessToken({
-      token,
-      teamDomain,
-      policyAud,
-    });
-  } catch {
-    throw new HTTPException(403, {
-      message: "Cloudflare Access token verification failed.",
-    });
-  }
-
-  const identity =
-    normalizeIdentityValue(payload.email) ??
-    adminIdentityHeaders
-      .map((header) => normalizeIdentityValue(input.headers.get(header)))
-      .find((value) => value !== null);
-
-  if (!identity) {
-    throw new HTTPException(403, {
-      message: "Cloudflare Access token did not include an admin identity.",
-    });
-  }
-
-  return identity;
-}
-
-export async function verifyAdminAccessToken(input: VerifyAdminAccessTokenInput) {
-  const { payload } = await jwtVerify(input.token, getAccessJwks(input.teamDomain), {
-    issuer: input.teamDomain,
-    audience: input.policyAud,
-  });
-
-  return {
-    email: typeof payload.email === "string" ? payload.email : undefined,
-  };
-}
-
-function getAccessJwks(teamDomain: string) {
-  const existing = adminJwksCache.get(teamDomain);
-
-  if (existing) {
-    return existing;
-  }
-
-  const created = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
-  adminJwksCache.set(teamDomain, created);
-  return created;
-}
-
-function getLocalAdminBypassIdentity(
-  env: Pick<AppBindings, "ALLOW_LOCAL_ADMIN_BYPASS">,
-  headers: Headers,
-  requestUrl: string,
-) {
-  // The bypass is a development-only convenience. It requires an explicit
-  // opt-in flag (set only in local wrangler config) AND a loopback host, so a
-  // leaked flag or a rewritten Host header alone cannot unlock admin in prod.
-  if (!isLocalAdminBypassEnabled(env.ALLOW_LOCAL_ADMIN_BYPASS)) {
-    return null;
-  }
-
-  if (!isLocalRequest(requestUrl)) {
-    return null;
-  }
-
-  return (
-    normalizeIdentityValue(headers.get(LOCAL_ADMIN_BYPASS_HEADER)) ??
-    "local-admin@starward.local"
-  );
-}
-
-function isLocalAdminBypassEnabled(value: string | undefined) {
-  return value?.trim().toLowerCase() === "true";
-}
-
-function isLocalRequest(requestUrl: string) {
-  const hostname = new URL(requestUrl).hostname;
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-}
-
-function normalizeAccessTeamDomain(value: string | undefined) {
-  const trimmed = value?.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-  return withProtocol.endsWith("/") ? withProtocol.slice(0, -1) : withProtocol;
-}
-
-function normalizeIdentityValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+export function requireAdminOwner(c: AppContext) {
+  if (c.get('adminRole') !== 'owner') throw new HTTPException(403, { message: '只有初始管理员可以管理管理员权限。' });
 }

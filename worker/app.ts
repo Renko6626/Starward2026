@@ -8,8 +8,27 @@ import { jsonError } from "./lib/http";
 import type { AppRouteConfig } from "./lib/types";
 import privacyHtml from "../public/privacy.html?raw";
 import tosHtml from "../public/tos.html?raw";
+import { requireAdminAccess } from './lib/admin';
+import { isAdminPath, adminReturnTo } from '../src/shared/admin-access';
 
 const app = new Hono<AppRouteConfig>();
+
+app.use('*', async (c, next) => {
+  if (!isAdminPath(new URL(c.req.url).pathname)) return next();
+  try {
+    await requireAdminAccess(c);
+  } catch (error) {
+    if (!(error instanceof HTTPException)) throw error;
+    const returnTo = adminReturnTo(new URL(c.req.url).pathname + new URL(c.req.url).search) ?? '/admin';
+    const destination = error.status === 401 ? '/portal/login' : '/admin-access';
+    const search = new URLSearchParams({ returnTo });
+    if (error.status !== 401) search.set('reason', error.status === 403 ? 'forbidden' : 'unavailable');
+    return c.redirect(`${destination}?${search}`, 302);
+  }
+  if (!c.env.ASSETS) return jsonError(c, 503, 'assets_unavailable', '页面资源暂时不可用。');
+  const response = await c.env.ASSETS.fetch(c.req.raw);
+  return c.newResponse(response.body, response.status as 200, { ...Object.fromEntries(response.headers), 'Cache-Control': 'private, no-store' });
+});
 
 // Keep the policy readable to direct HTTP clients as well as asset navigation.
 // The static asset and Worker fallback share the same complete HTML document.
@@ -38,6 +57,7 @@ app.onError((error, c) => {
 });
 
 app.notFound((c) => {
+  if (!c.req.path.startsWith('/api/') && c.req.path !== '/api' && c.env.ASSETS) return c.env.ASSETS.fetch(c.req.raw);
   return jsonError(c, 404, "not_found", "未找到对应接口。");
 });
 

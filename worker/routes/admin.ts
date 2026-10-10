@@ -44,7 +44,8 @@ import {
 import { listEventWindows, updateEventWindow } from "../data/event-windows";
 
 import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
-import { getAdminIdentity, requireAdminAccess } from "../lib/admin";
+import { getAdminIdentity, requireAdminAccess, requireAdminOwner } from "../lib/admin";
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import { getRequiredDb, jsonError } from "../lib/http";
 import type { AppRouteConfig } from "../lib/types";
 
@@ -53,6 +54,40 @@ const adminApi = new Hono<AppRouteConfig>();
 adminApi.use("*", async (c, next) => {
   await requireAdminAccess(c);
   await next();
+});
+
+adminApi.get('/session', c => c.json({ email: getAdminIdentity(c), role: c.get('adminRole') }));
+
+adminApi.get('/users', async c => {
+  requireAdminOwner(c);
+  const query = (c.req.query('q') ?? '').trim().slice(0, 200);
+  const result = await getRequiredDb(c).prepare(`SELECT u.id, u.name, u.email, u.emailVerified, r.role
+    FROM "user" u LEFT JOIN admin_roles r ON r.user_id = u.id
+    WHERE (? = '' AND r.role IS NOT NULL) OR (? <> '' AND (instr(lower(u.email), lower(?)) > 0 OR instr(lower(u.name), lower(?)) > 0))
+    ORDER BY CASE r.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, u.email LIMIT 50`)
+    .bind(query, query, query, query).all<{ id: string; name: string; email: string; emailVerified: number; role: string | null }>();
+  return c.json({ users: result.results.map(user => ({ ...user, emailVerified: Boolean(user.emailVerified) })) });
+});
+
+adminApi.put('/users/:userId/role', async c => {
+  requireAdminOwner(c);
+  const body = await c.req.json().catch(() => null);
+  if (!body || !['admin', null].includes(body.role)) return jsonError(c, 422, 'invalid_request', '请选择授予或撤销管理员权限。');
+  const db = getRequiredDb(c), userId = c.req.param('userId');
+  const user = await db.prepare(`SELECT u.email, u.emailVerified, r.role FROM "user" u LEFT JOIN admin_roles r ON r.user_id = u.id WHERE u.id = ?`)
+    .bind(userId).first<{ email: string; emailVerified: number; role: string | null }>();
+  if (!user) return jsonError(c, 404, 'not_found', '未找到账号。');
+  if (user.role === 'owner') return jsonError(c, 403, 'owner_protected', '初始管理员的权限不能在此修改。');
+  if (body.role === 'admin' && (!user.emailVerified || !getRealAuthEmail(user.email))) return jsonError(c, 422, 'email_not_verified', '请先让该用户验证登录邮箱。');
+  if (body.role === user.role) return c.json({ ok: true });
+  await db.batch([
+    body.role === 'admin'
+      ? db.prepare(`INSERT INTO admin_roles (user_id, role, granted_by) VALUES (?, 'admin', ?) ON CONFLICT(user_id) DO NOTHING`).bind(userId, c.get('adminUserId'))
+      : db.prepare(`DELETE FROM admin_roles WHERE user_id = ? AND role = 'admin'`).bind(userId),
+    db.prepare('INSERT INTO admin_role_events (id, user_id, actor_user_id, action) VALUES (?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), userId, c.get('adminUserId'), body.role === 'admin' ? 'grant' : 'revoke'),
+  ]);
+  return c.json({ ok: true });
 });
 
 adminApi.get("/applications", async (c) => {

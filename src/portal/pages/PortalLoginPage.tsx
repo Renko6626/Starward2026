@@ -26,12 +26,12 @@ import { getTurnstileErrorMessage, type PublicAuthProvidersResponse } from '../.
 import "./portal-login.css";
 
 export function PortalLoginPage() {
-  const { segment, reset } = getRouteApi("/portal_/login").useSearch();
+  const { segment, reset, returnTo } = getRouteApi("/portal_/login").useSearch();
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [mode, setMode] = useState<"login" | "register" | "otp" | "reset">(reset === 'password' ? 'reset' : 'register');
+  const [mode, setMode] = useState<"login" | "register" | "otp" | "reset">(reset === 'password' ? 'reset' : returnTo ? 'login' : 'register');
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "otp" | "password">("email");
   const [allowEntry, setAllowEntry] = useState(true);
@@ -68,6 +68,7 @@ export function PortalLoginPage() {
     setIsResolvingDestination(true);
     const enter = (state: PortalMeResponse | null) => {
       if (cancelled) return;
+      if (returnTo) { window.location.assign(returnTo); return; }
       const destination = resolvePortalEntryDestination(state, { newRegistration: newRegistration.current, segment });
       if (destination === "/works") {
         void navigate({ to: "/works", search: { view: "gallery", type: "all", q: "" } });
@@ -104,7 +105,7 @@ export function PortalLoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, sessionQuery.data, segment, allowEntry, mode]);
+  }, [navigate, sessionQuery.data, segment, returnTo, allowEntry, mode]);
 
   useEffect(() => {
     if (resendCooldownSeconds <= 0) {
@@ -263,17 +264,17 @@ export function PortalLoginPage() {
       <div className="auth-intro">
         <div className="station-entry-heading">
           <p className="eyebrow">STARWARD PILGRIMAGE / 2026</p>
-          <h2>作者页面</h2>
+          <h2>{returnTo ? '活动管理' : '作者页面'}</h2>
         </div>
         <div className="station-entry-artwork"><StationTechnicalDrawing variant="entry" /></div>
         <div className="station-entry-caption">
           <Link to="/apply">首次参与？阅读参与指南 <ArrowUpRight size={14} /></Link>
         </div>
       </div>
-      <section className="auth-panel" aria-label="作者账号">
-        <p className="station-entry-form-label">CREATOR ACCESS</p>
-        <h1>{mode === 'reset' ? '重置登录密码' : step === "password" ? "设置登录密码" : mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
-        <p className="auth-note">{mode === 'reset' ? '验证码会发送到登录邮箱。重置成功后，请用新密码重新登录。' : '注册时先用验证码验证邮箱，再设置密码。报名联系方式可另行填写。'}</p>
+      <section className="auth-panel" aria-label={returnTo ? '管理员账号' : '作者账号'}>
+        <p className="station-entry-form-label">{returnTo ? 'ORGANIZER ACCESS' : 'CREATOR ACCESS'}</p>
+        <h1>{mode === 'reset' ? '重置登录密码' : step === "password" ? "设置登录密码" : mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : returnTo ? '登录管理账号' : "登录作者账号"}</h1>
+        <p className="auth-note">{mode === 'reset' ? '验证码会发送到登录邮箱。重置成功后，请用新密码重新登录。' : returnTo ? '使用已获授权的网站账号登录。新注册账号需由初始管理员授予管理权限。' : '注册时先用验证码验证邮箱，再设置密码。报名联系方式可另行填写。'}</p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [

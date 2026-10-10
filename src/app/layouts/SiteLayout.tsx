@@ -162,7 +162,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
   const pathname = activePath.replace(/\/+$/, "") || "/";
   const isWorkspace =
     (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
-    pathname.startsWith("/admin");
+    (pathname === '/admin' || pathname.startsWith('/admin/'));
   if (isWorkspace) return <>{children}</>;
   return (
     <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" ? "public-site--guide" : pathname === "/portal/login" ? "public-site--entry" : ""}`}>

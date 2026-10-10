@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RulesRouteImport } from './routes/rules'
+import { Route as AdminAccessRouteImport } from './routes/admin-access'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ApplyRouteRouteImport } from './routes/apply/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -34,6 +35,7 @@ import { Route as AdminProjectDraftsIndexRouteImport } from './routes/admin/proj
 import { Route as AdminParticipantsIndexRouteImport } from './routes/admin/participants/index'
 import { Route as AdminApplicationsIndexRouteImport } from './routes/admin/applications/index'
 import { Route as AdminSettingsWindowsRouteImport } from './routes/admin/settings/windows'
+import { Route as AdminSettingsAdminsRouteImport } from './routes/admin/settings/admins'
 import { Route as AdminProjectDraftsDraftIdRouteImport } from './routes/admin/project-drafts/$draftId'
 import { Route as AdminParticipantsParticipantIdRouteImport } from './routes/admin/participants/$participantId'
 import { Route as AdminApplicationsApplicationIdRouteImport } from './routes/admin/applications/$applicationId'
@@ -41,6 +43,11 @@ import { Route as AdminApplicationsApplicationIdRouteImport } from './routes/adm
 const RulesRoute = RulesRouteImport.update({
   id: '/rules',
   path: '/rules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAccessRoute = AdminAccessRouteImport.update({
+  id: '/admin-access',
+  path: '/admin-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
@@ -163,6 +170,11 @@ const AdminSettingsWindowsRoute = AdminSettingsWindowsRouteImport.update({
   path: '/settings/windows',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminSettingsAdminsRoute = AdminSettingsAdminsRouteImport.update({
+  id: '/settings/admins',
+  path: '/settings/admins',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminProjectDraftsDraftIdRoute =
   AdminProjectDraftsDraftIdRouteImport.update({
     id: '/$draftId',
@@ -187,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/admin-access': typeof AdminAccessRoute
   '/rules': typeof RulesRoute
   '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
   '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
@@ -207,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
+  '/admin/settings/admins': typeof AdminSettingsAdminsRoute
   '/admin/settings/windows': typeof AdminSettingsWindowsRoute
   '/admin/applications/': typeof AdminApplicationsIndexRoute
   '/admin/participants/': typeof AdminParticipantsIndexRoute
@@ -214,6 +228,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin-access': typeof AdminAccessRoute
   '/rules': typeof RulesRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
@@ -231,6 +246,7 @@ export interface FileRoutesByTo {
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
+  '/admin/settings/admins': typeof AdminSettingsAdminsRoute
   '/admin/settings/windows': typeof AdminSettingsWindowsRoute
   '/admin/applications': typeof AdminApplicationsIndexRoute
   '/admin/participants': typeof AdminParticipantsIndexRoute
@@ -242,6 +258,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/admin-access': typeof AdminAccessRoute
   '/rules': typeof RulesRoute
   '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
   '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
@@ -262,6 +279,7 @@ export interface FileRoutesById {
   '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
   '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
   '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
+  '/admin/settings/admins': typeof AdminSettingsAdminsRoute
   '/admin/settings/windows': typeof AdminSettingsWindowsRoute
   '/admin/applications/': typeof AdminApplicationsIndexRoute
   '/admin/participants/': typeof AdminParticipantsIndexRoute
@@ -274,6 +292,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apply'
     | '/portal'
+    | '/admin-access'
     | '/rules'
     | '/admin/applications'
     | '/admin/participants'
@@ -294,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
+    | '/admin/settings/admins'
     | '/admin/settings/windows'
     | '/admin/applications/'
     | '/admin/participants/'
@@ -301,6 +321,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin-access'
     | '/rules'
     | '/admin/schedule'
     | '/apply/success'
@@ -318,6 +339,7 @@ export interface FileRouteTypes {
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
+    | '/admin/settings/admins'
     | '/admin/settings/windows'
     | '/admin/applications'
     | '/admin/participants'
@@ -328,6 +350,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apply'
     | '/portal'
+    | '/admin-access'
     | '/rules'
     | '/admin/applications'
     | '/admin/participants'
@@ -348,6 +371,7 @@ export interface FileRouteTypes {
     | '/admin/applications/$applicationId'
     | '/admin/participants/$participantId'
     | '/admin/project-drafts/$draftId'
+    | '/admin/settings/admins'
     | '/admin/settings/windows'
     | '/admin/applications/'
     | '/admin/participants/'
@@ -359,6 +383,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ApplyRouteRoute: typeof ApplyRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
+  AdminAccessRoute: typeof AdminAccessRoute
   RulesRoute: typeof RulesRoute
   PortalLoginRoute: typeof PortalLoginRoute
   WorksWorkIdRoute: typeof WorksWorkIdRoute
@@ -372,6 +397,13 @@ declare module '@tanstack/react-router' {
       path: '/rules'
       fullPath: '/rules'
       preLoaderRoute: typeof RulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-access': {
+      id: '/admin-access'
+      path: '/admin-access'
+      fullPath: '/admin-access'
+      preLoaderRoute: typeof AdminAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -542,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsWindowsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/settings/admins': {
+      id: '/admin/settings/admins'
+      path: '/settings/admins'
+      fullPath: '/admin/settings/admins'
+      preLoaderRoute: typeof AdminSettingsAdminsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/project-drafts/$draftId': {
       id: '/admin/project-drafts/$draftId'
       path: '/$draftId'
@@ -620,6 +659,7 @@ interface AdminRouteRouteChildren {
   AdminProjectDraftsRouteRoute: typeof AdminProjectDraftsRouteRouteWithChildren
   AdminScheduleRoute: typeof AdminScheduleRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminSettingsAdminsRoute: typeof AdminSettingsAdminsRoute
   AdminSettingsWindowsRoute: typeof AdminSettingsWindowsRoute
 }
 
@@ -629,6 +669,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminProjectDraftsRouteRoute: AdminProjectDraftsRouteRouteWithChildren,
   AdminScheduleRoute: AdminScheduleRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminSettingsAdminsRoute: AdminSettingsAdminsRoute,
   AdminSettingsWindowsRoute: AdminSettingsWindowsRoute,
 }
 
@@ -677,6 +718,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   ApplyRouteRoute: ApplyRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
+  AdminAccessRoute: AdminAccessRoute,
   RulesRoute: RulesRoute,
   PortalLoginRoute: PortalLoginRoute,
   WorksWorkIdRoute: WorksWorkIdRoute,

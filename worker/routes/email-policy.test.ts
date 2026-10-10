@@ -1,3 +1,4 @@
+import { adminTestSession } from '../test/admin-session';
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../app";
 import { SqliteD1Fixture } from "../test/sqlite-d1";
@@ -12,15 +13,17 @@ it("approves and saves exchange requests without mail, and rejects legacy resend
   f.sqlite.exec(`UPDATE event_windows SET is_enabled=1;
     INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt) VALUES('u1','One','one@example.com',1,'2026-01-01','2026-01-01'),('u2','Two','two@example.com',1,'2026-01-01','2026-01-01');
     INSERT INTO schedule_segments(id,schedule_version_id,code,name,status,sort_order,created_at,updated_at) VALUES('s1','schedule_default','A','First','open',1,'2026-01-01','2026-01-01'),('s2','schedule_default','B','Second','open',2,'2026-01-01','2026-01-01');`);
+  const admin = await adminTestSession(f.db);
+  env.BETTER_AUTH_SECRET = admin.env.BETTER_AUTH_SECRET;
   const input = (segmentId: string) => ({ segmentId, profile: { creditName: "作者", bilibiliUid: "12345", contactEmail: "one@example.com", primaryContactChannel: "QQ", primaryContactHandle: "123456789", isAnonymous: false }, application: { contactEmail: "one@example.com", interestFormat: "novel" as const, introText: "准备创作" } });
   const a = await saveWorkspaceApplication(f.db,"u1","one@example.com",input("s1"));
   const b = await saveWorkspaceApplication(f.db,"u2","two@example.com",input("s2"));
   for (const id of [a.id,b.id]) {
-    const r = await app.request(`/api/admin/applications/${id}`, { method:"PATCH", headers:{"content-type":"application/json"}, body:JSON.stringify({ status:"approved" }) }, env);
+    const r = await app.request(`/api/admin/applications/${id}`, { method:"PATCH", headers:{...admin.headers,"content-type":"application/json"}, body:JSON.stringify({ status:"approved" }) }, env);
     expect(r.status).toBe(200); expect(await r.json()).toMatchObject({ application:{status:"approved"} });
   }
   const part = f.sqlite.prepare("SELECT id FROM participants WHERE user_id='u1'").get()!;
-  const resend = await app.request(`/api/admin/participants/${part.id}/invite`,{method:"POST"},env);
+  const resend = await app.request(`/api/admin/participants/${part.id}/invite`,{method:"POST",headers:admin.headers},env);
   expect(resend.status).toBe(410);
   const { createAuth } = await import("../lib/auth");
   const auth = createAuth(env);

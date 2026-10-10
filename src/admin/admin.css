@@ -1,0 +1,74 @@
+.admin-shell { font-family: var(--font-body); font-variant-numeric: lining-nums tabular-nums; }
+.admin-masthead, .admin-navigation, .admin-content { width: var(--site-content-width); margin-inline: auto; }
+.admin-masthead { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 30px 24px; }
+.admin-masthead .eyebrow { color: var(--color-on-surface-variant); font: 11px/1.6 var(--font-label); letter-spacing: .14em; margin-bottom: 8px; }
+.admin-masthead-title { font-size: 20px; font-weight: 500; letter-spacing: .04em; }
+.admin-account { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.admin-role, .admin-account .workspace-account { display: flex; align-items: center; gap: 8px; color: var(--color-on-surface-variant); font-size: var(--site-meta-size); }
+.admin-role { white-space: nowrap; }
+.admin-account .workspace-account > span:first-child { max-width: 260px; }
+.admin-navigation { display: flex; flex-wrap: wrap; gap: 8px 26px; border-bottom: 1px solid var(--color-outline-variant); }
+.admin-nav-link { display: inline-flex; align-items: center; gap: 9px; min-height: 52px; border-bottom: 2px solid transparent; color: var(--color-on-surface-variant); font-size: 14px; }
+.admin-nav-link:hover { color: var(--color-on-surface); }
+.admin-nav-link[aria-current="page"] { border-bottom-color: var(--color-surface-tint); color: var(--color-on-surface); }
+.admin-content { flex: 1; padding-block: 36px 64px; min-width: 0; min-height: 50vh; overflow-wrap: anywhere; }
+.admin-content .page-content { max-width: none; gap: 24px; }
+.admin-content .page-heading { padding-bottom: 24px; align-items: center; }
+.admin-content .page-heading h1 { font: 500 var(--site-title-size)/1.4 var(--font-body); letter-spacing: .02em; }
+.admin-content .page-description { font-size: 14px; }
+.admin-content .page-heading-actions { min-width: 0; max-width: 420px; }
+.admin-content .panel, .admin-content .table-frame, .admin-content .summary-card { background: var(--color-surface); border-color: var(--color-outline-variant); border-radius: var(--control-radius); box-shadow: none; }
+.admin-content .panel { padding: 24px; }
+.admin-content .panel-title { font: 500 var(--site-section-size)/1.5 var(--font-body); }
+.admin-content .field-input { background: var(--color-background); border-radius: var(--control-radius); font-size: var(--site-control-size); }
+.admin-content .field-label { font-size: var(--site-label-size); }
+.admin-content .field-input.search-input { padding-left: 14px; min-width: 0; width: 100%; }
+.admin-content .relative .search-input { padding-left: 40px; }
+.admin-content .table-frame { overflow: hidden; }
+.admin-content .data-table { font-size: 14px; }
+.admin-content .data-table thead { background: var(--color-surface-container); font: 500 var(--site-label-size)/1.6 var(--font-body); color: var(--color-on-surface-variant); }
+.admin-content .data-table th { padding: 14px 18px; }
+.admin-content .data-table td { padding: 18px; vertical-align: middle; }
+.admin-content .data-table td:first-child { min-width: 190px; }
+.admin-content .data-table .button { min-height: 40px; padding-inline: 14px; font-size: 13px; }
+.admin-content .admin-work-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--color-outline-variant); border-radius: var(--control-radius); background: var(--color-surface); padding: 0; }
+.admin-work-summary > * { display: flex; flex-direction: column-reverse; justify-content: end; gap: 8px; padding: 22px 24px; color: var(--color-on-surface-variant); font-size: 13px; line-height: 1.7; }
+.admin-work-summary > * + * { border-left: 1px solid var(--color-outline-variant); }
+.admin-work-summary strong { font: 400 30px/1.2 var(--font-label); }
+.admin-work-summary a:hover { background: var(--color-surface-container); color: var(--color-on-surface); }
+.admin-content .status-badge { border-radius: var(--control-radius); font-size: 12px; }
+.admin-content .admin-detail-grid { gap: 24px; }
+.admin-content .admin-disclosure > summary { min-height: 44px; display: flex; align-items: center; }
+.admin-access-panel { max-width: 680px; margin: 70px auto; padding: 36px 0; display: grid; gap: 24px; }
+.admin-access-panel > svg { color: var(--color-surface-tint); }
+.admin-access-panel h1 { font: 500 var(--site-title-size)/1.4 var(--font-body); }
+.admin-access-panel > p { color: var(--color-on-surface-variant); line-height: 1.9; }
+.admin-access-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.admin-user-search { display: flex; gap: 12px; max-width: 620px; }
+.admin-user-search .field-input { flex: 1; min-width: 0; }
+.admin-role-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 20px; border: 1px solid var(--color-surface-tint); background: var(--color-surface); border-radius: var(--control-radius); }
+.admin-role-confirm p { flex: 1 1 300px; line-height: 1.7; }
+@media (max-width: 800px) {
+  .admin-masthead { align-items: start; flex-direction: column; gap: 16px; padding-block: 24px 18px; }
+  .admin-account { width: 100%; justify-content: space-between; gap: 10px; }
+  .admin-account .workspace-account > span:first-child { display: inline; max-width: min(210px, 48vw); font-size: 12px; }
+  .admin-navigation { gap: 0 20px; }
+  .admin-nav-link { font-size: 13px; min-height: 48px; }
+  .admin-content { padding-block: 26px 44px; }
+  .admin-content .page-heading { align-items: stretch; }
+  .admin-content .page-heading-actions { max-width: none; width: 100%; }
+  .admin-content .panel { padding: 18px; }
+  .admin-work-summary > * { padding: 18px 14px; font-size: 12px; }
+  .admin-work-summary strong { font-size: 26px; }
+  .admin-content .data-table td { padding: 5px 0; min-width: 0; }
+  .admin-content .data-table td:first-child { min-width: 0; }
+  .admin-content .data-table tbody tr { padding: 18px; }
+  .admin-users-table td { grid-column: 1 / -1; }
+  .admin-access-panel { margin-block: 36px; padding: 16px 0; }
+}
+@media (max-width: 480px) {
+  .admin-navigation { display: grid; grid-template-columns: 1fr 1fr; }
+  .admin-content .admin-work-summary { grid-template-columns: 1fr; }
+  .admin-work-summary > * { flex-direction: row; align-items: center; justify-content: space-between; padding: 16px 18px; }
+  .admin-work-summary > * + * { border-left: 0; border-top: 1px solid var(--color-outline-variant); }
+}

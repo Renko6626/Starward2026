@@ -177,18 +177,13 @@ npm run deploy:staging
 
 ## 6. Admin Smoke Note
 
-本地管理员 bypass 默认关闭，必须显式开启：
+本地管理页面与生产环境一样使用网站登录会话及 `admin_roles` 表。
 
-- 在仓库根目录 `.dev.vars` 中设置 `ALLOW_LOCAL_ADMIN_BYPASS="true"`（可参考 `.dev.vars.example`）
-- 修改开关后重启 `npm run dev`，直接打开 `http://localhost:20262/admin`，无需 Access 登录或手动添加请求头
-- 开启后，`/api/admin/*` 仅在 loopback host（localhost / 127.0.0.1 / [::1]）下自动使用 `local-admin@starward.local` 身份，操作记录使用该身份
-- 调试脚本仍可通过 `x-admin-email` 显式指定本地管理员身份
-- 该开关只应出现在本地 `.dev.vars`（已 gitignore），不得进入 staging / production 配置；缺少开关时 hostname 为 localhost 也不再放行
-
-因此：
-
-- 数据问题由本地 seed 解决
-- 身份问题由本地 admin bypass 解决（需先开启 `ALLOW_LOCAL_ADMIN_BYPASS`）
+- 先应用迁移，再为已验证的测试账号添加 `admin` 或 `owner` 角色。
+- `/admin` 及所有子页面在身份验证通过后才提供页面内容；API 另行检查每次请求。
+- `ALLOW_LOCAL_ADMIN_BYPASS`、`x-admin-email` 和 Cloudflare Access 身份头均不再授予管理权限。
+- 只有 `owner` 可以授予或撤销其他账号的 `admin` 权限；系统只允许一个 owner。
+- 自动化权限测试使用真实 SQLite 迁移和签名会话，不依赖开发绕过开关。
 
 ## 7. Operational Notes
 

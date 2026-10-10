@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 export type AppBindings = Partial<Omit<Env, 'QQ_OAUTH_ENABLED'>> & {
   DB?: D1Database;
+  ASSETS?: Fetcher;
   APPLICATION_SUBMIT_IP_RATE_LIMITER?: RateLimit;
   APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
   AUTH_OTP_IP_RATE_LIMITER?: RateLimit;
@@ -25,6 +26,8 @@ export type AppBindings = Partial<Omit<Env, 'QQ_OAUTH_ENABLED'>> & {
 
 export type AppVariables = {
   adminIdentity?: string;
+  adminUserId?: string;
+  adminRole?: 'owner' | 'admin';
 };
 
 export type AppRouteConfig = {
