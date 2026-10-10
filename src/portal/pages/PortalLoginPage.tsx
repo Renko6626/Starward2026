@@ -1,7 +1,10 @@
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { motion, useAnimate, useReducedMotion } from "motion/react";
+import { Crossfade } from "../../app/components/Crossfade";
 import { Button, Field, Notice } from "../../app/components/ui";
+import { getTurnstileSiteKey, loadTurnstileApi } from "../../app/lib/turnstile";
 import { requestJson } from "../../app/lib/api";
 import {
   PORTAL_EMAIL_OTP_LENGTH,
@@ -36,6 +39,95 @@ export function PortalLoginPage() {
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const newRegistration = useRef(false);
   const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [turnstileEnabled, setTurnstileEnabled] = useState<boolean | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [challengeError, setChallengeError] = useState<string | null>(null);
+  const [challengeSize, setChallengeSize] = useState<"flexible" | "compact" | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const otpInput = useRef<HTMLInputElement>(null);
+  const reducedMotion = useReducedMotion();
+  const tabId = useId();
+  const [fieldsScope, animateFields] = useAnimate();
+  const challengeContainer = useRef<HTMLDivElement>(null);
+  const challengeWidget = useRef<string | undefined>(undefined);
+  const siteKey = getTurnstileSiteKey(import.meta.env);
+  const challengePending = turnstileEnabled === null || (turnstileEnabled && (!siteKey || !turnstileToken));
+  const showChallenge = mode !== "otp" || step === "email" || resendCooldownSeconds === 0;
+
+  const verifyingOtp = mode === "otp" && step === "otp";
+  const busy = isSending || isSigningIn || isResolvingDestination;
+  const challengeVisible = turnstileEnabled !== false && showChallenge;
+  const transition = { duration: reducedMotion ? 0 : .14, ease: "easeOut" as const };
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      setChallengeSize(entry.contentRect.width < 300 ? "compact" : "flexible");
+    });
+    observer.observe(form);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const animation = animateFields(fieldsScope.current, { opacity: [0, 1] }, { duration: reducedMotion ? 0 : .14 });
+    return () => animation.stop();
+  }, [mode, step, reducedMotion, animateFields, fieldsScope]);
+
+  useEffect(() => {
+    if (verifyingOtp) otpInput.current?.focus();
+  }, [verifyingOtp]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void requestJson<{ turnstileEnabled: boolean }>("/api/auth/config", { signal: controller.signal })
+      .then(config => { if (!controller.signal.aborted) setTurnstileEnabled(config.turnstileEnabled); })
+      .catch(() => { if (!controller.signal.aborted) setChallengeError("无法读取登录验证设置，请刷新后重试。"); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!turnstileEnabled || !siteKey || !showChallenge || !challengeSize || !challengeContainer.current) return;
+    let cancelled = false;
+    setChallengeError(null);
+    void loadTurnstileApi().then(api => {
+      if (cancelled || !challengeContainer.current) return;
+      challengeWidget.current = api.render(challengeContainer.current, {
+        sitekey: siteKey,
+        theme: "dark",
+        size: challengeSize,
+        callback: token => { setTurnstileToken(token); setChallengeError(null); },
+        "expired-callback": () => {
+          setTurnstileToken(null);
+          setChallengeError("验证已过期，请重新完成人机验证。");
+        },
+        "error-callback": () => {
+          setTurnstileToken(null);
+          setChallengeError("人机验证失败，请刷新后重试。");
+        },
+      });
+    }).catch(() => { if (!cancelled) setChallengeError("人机验证加载失败，请刷新后重试。"); });
+    return () => {
+      cancelled = true;
+      if (challengeWidget.current) window.turnstile?.remove?.(challengeWidget.current);
+      challengeWidget.current = undefined;
+      setTurnstileToken(null);
+    };
+  }, [turnstileEnabled, siteKey, showChallenge, challengeSize]);
+
+  function resetChallenge() {
+    setTurnstileToken(null);
+    setChallengeError(null);
+    if (challengeWidget.current) window.turnstile?.reset(challengeWidget.current);
+  }
+  function authHeaders() {
+    return {
+      ...activityRulesConsentHeaders(rulesAccepted),
+      ...(turnstileEnabled && turnstileToken ? { "x-captcha-response": turnstileToken } : {}),
+    };
+  }
+
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("error");
     if (code) setError(code.includes("ACTIVITY_RULES_CHANGED")
@@ -62,12 +154,7 @@ export function PortalLoginPage() {
 
     void requestJson<PortalMeResponse>("/api/portal/me")
       .then(enter)
-      .catch(() => enter(null))
-      .finally(() => {
-        if (!cancelled) {
-          setIsResolvingDestination(false);
-        }
-      });
+      .catch(() => enter(null));
 
     return () => {
       cancelled = true;
@@ -90,6 +177,7 @@ export function PortalLoginPage() {
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (challengePending || busy) return;
     if (mode === "register" && !rulesAccepted) {
       setError("请先阅读并同意活动规则。");
       return;
@@ -107,8 +195,8 @@ export function PortalLoginPage() {
               email: normalizedEmail,
               password,
               name: normalizedEmail.split("@")[0] || "参与者",
-            }, { headers: activityRulesConsentHeaders(rulesAccepted) })
-          : await authClient.signIn.email({ email: normalizedEmail, password });
+            }, { headers: authHeaders() })
+          : await authClient.signIn.email({ email: normalizedEmail, password }, { headers: authHeaders() });
       if (response.error) {
         newRegistration.current = false;
         setError(
@@ -122,11 +210,13 @@ export function PortalLoginPage() {
       newRegistration.current = false;
       setError("暂时无法连接，请稍后重试。");
     } finally {
+      resetChallenge();
       setIsSigningIn(false);
     }
   }
 
   async function sendOtp(isResend = false) {
+    if (challengePending || busy || (isResend && resendCooldownSeconds > 0)) return;
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -138,25 +228,24 @@ export function PortalLoginPage() {
     setError(null);
     setMessage(null);
 
-    const response = await authClient.emailOtp.sendVerificationOtp({
-      email: normalizedEmail,
-      type: "sign-in",
-    }, { headers: activityRulesConsentHeaders(rulesAccepted) });
-
-    setIsSending(false);
-
-    if (response.error) {
-      setError(response.error.message || "验证码发送失败，请稍后重试。");
-      return;
+    try {
+      const response = await authClient.emailOtp.sendVerificationOtp({
+        email: normalizedEmail,
+        type: "sign-in",
+      }, { headers: authHeaders() });
+      if (response.error) {
+        setError(response.error.message || "验证码发送失败，请稍后重试。");
+        return;
+      }
+      setStep("otp");
+      setResendCooldownSeconds(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS);
+      setMessage(isResend ? getPortalEmailOtpResendSuccessMessage(normalizedEmail) : null);
+    } catch {
+      setError("暂时无法连接，请稍后重试。");
+    } finally {
+      setIsSending(false);
+      resetChallenge();
     }
-
-    setStep("otp");
-    setResendCooldownSeconds(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS);
-    setMessage(
-      isResend
-        ? getPortalEmailOtpResendSuccessMessage(normalizedEmail)
-        : `验证码已发送到 ${normalizedEmail}。`,
-    );
   }
 
   async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
@@ -166,6 +255,7 @@ export function PortalLoginPage() {
 
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedOtp = normalizePortalEmailOtpInput(otp);
 
@@ -203,7 +293,7 @@ export function PortalLoginPage() {
     }
 
     setIsResolvingDestination(true);
-    setMessage("验证通过，正在跳转。");
+    setMessage(null);
   }
 
   return (
@@ -220,7 +310,7 @@ export function PortalLoginPage() {
       </div>
       <section className="auth-panel" aria-label="作者账号">
         <p className="station-entry-form-label">CREATOR ACCESS</p>
-        <h1>{mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1>
+        <Crossfade valueKey={mode}><h1>{mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : "登录作者账号"}</h1></Crossfade>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(
             [
@@ -232,7 +322,7 @@ export function PortalLoginPage() {
               key={value}
               type="button"
               aria-pressed={mode === value}
-              disabled={isSending || isSigningIn}
+              disabled={busy}
               onClick={() => {
                 setMode(value);
                 setError(null);
@@ -241,122 +331,127 @@ export function PortalLoginPage() {
               }}
             >
               {label}
+              {mode === value ? (
+                <motion.span className="auth-tab-indicator" layoutId={tabId} transition={transition} />
+              ) : null}
             </button>
           ))}
         </div>
-        {mode !== "otp" ? (
-          <form onSubmit={handlePasswordSubmit}>
-            <Field label="邮箱">
-              <input
-                className="field-input"
-                type="email"
-                autoComplete="username"
-                required
-                disabled={isSigningIn}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-              />
-            </Field>
-            <Field label="密码">
-              <input
-                className="field-input"
-                type="password"
-                placeholder={mode === "register" ? "设置 8–128 位密码" : "输入登录密码"}
-                autoComplete={
-                  mode === "register" ? "new-password" : "current-password"
-                }
-                required
-                minLength={mode === "register" ? 8 : undefined}
-                maxLength={128}
-                disabled={isSigningIn}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </Field>
-            {mode === "register" ? <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSigningIn} /> : null}
-            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn || (mode === "register" && !rulesAccepted)} aria-busy={isSigningIn}>
-              {isSigningIn
-                ? "提交中…"
-                : mode === "register"
-                  ? "注册并进入"
-                  : "登录"}
-            </Button>
-          </form>
-        ) : step === "email" ? (
-          <form onSubmit={handleSendOtp}>
-            <Field label="邮箱">
-              <input
-                className="field-input"
-                type="email"
-                autoComplete="email"
-                required
-                disabled={isSending || isSigningIn}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-              />
-            </Field>
-            <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
-            <Button appearance="framed" className="button--accent" type="submit" disabled={isSending || isSigningIn} aria-busy={isSending}>
-              {isSending ? "发送中…" : "发送登录验证码"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleSignIn}>
-            <p className="auth-note">验证码已发送至 {email}</p>
-            <Field label="邮箱验证码">
-              <input
-                className="field-input text-center tracking-[.4em]"
-                type="text"
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                placeholder={`${PORTAL_EMAIL_OTP_LENGTH} 位验证码，${getPortalEmailOtpValidityLabel()}内有效`}
-                required
-                maxLength={PORTAL_EMAIL_OTP_LENGTH}
-                pattern="[0-9]*"
-                disabled={isSigningIn}
-                value={otp}
-                onChange={(event) =>
-                  setOtp(normalizePortalEmailOtpInput(event.target.value))
-                }
-              />
-            </Field>
-            <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={isSending || isSigningIn} otp />
-            <Button appearance="framed" className="button--accent" type="submit" disabled={isSigningIn} aria-busy={isSigningIn}>
-              {isSigningIn ? "验证中…" : "验证并进入"}
-            </Button>
-            <Button
-              appearance="industrial"
-              variant="secondary"
-              disabled={isSending || isSigningIn || resendCooldownSeconds > 0}
-              aria-busy={isSending}
-              onClick={() => void sendOtp(true)}
-            >
-              {isSending
-                ? "发送中…"
-                : resendCooldownSeconds > 0
-                  ? getPortalEmailOtpResendCooldownText(resendCooldownSeconds)
-                  : "重新发送验证码"}
-            </Button>
-            <button
-              type="button"
-              className="auth-note"
-              onClick={() => {
+        <form ref={formRef} onSubmit={mode !== "otp" ? handlePasswordSubmit : verifyingOtp ? handleSignIn : handleSendOtp}>
+          <div className="auth-fields" ref={fieldsScope}>
+            <div hidden={verifyingOtp}>
+              <Field label="邮箱">
+                <input
+                  className="field-input"
+                  type="email"
+                  autoComplete="username"
+                  required={!verifyingOtp}
+                  disabled={busy || verifyingOtp}
+                  value={email}
+                  onChange={event => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                />
+              </Field>
+            </div>
+            <div hidden={mode === "otp"}>
+              <Field label="密码">
+                <input
+                  className="field-input"
+                  type="password"
+                  placeholder={mode === "register" ? "设置 8–128 位密码" : "输入登录密码"}
+                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                  required={mode !== "otp"}
+                  minLength={mode === "register" ? 8 : undefined}
+                  maxLength={128}
+                  disabled={busy || mode === "otp"}
+                  value={password}
+                  onChange={event => setPassword(event.target.value)}
+                />
+              </Field>
+            </div>
+            {verifyingOtp ? (
+              <div className="auth-otp-fields">
+                <p className="auth-note">验证码已发送至 {email}</p>
+                <Field label="邮箱验证码">
+                  <input
+                    ref={otpInput}
+                    className="field-input auth-otp-input"
+                    type="text"
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    placeholder={`输入 ${PORTAL_EMAIL_OTP_LENGTH} 位验证码`}
+                    aria-label="邮箱验证码"
+                    aria-describedby="auth-otp-validity"
+                    required
+                    maxLength={PORTAL_EMAIL_OTP_LENGTH}
+                    pattern="[0-9]*"
+                    disabled={busy}
+                    value={otp}
+                    onChange={event => setOtp(normalizePortalEmailOtpInput(event.target.value))}
+                  />
+                  <span id="auth-otp-validity" className="field-hint">{getPortalEmailOtpValidityLabel()}内有效</span>
+                </Field>
+              </div>
+            ) : null}
+            {mode !== "login" ? <ActivityRulesConsent accepted={rulesAccepted} onChange={setRulesAccepted} disabled={busy} otp={mode === "otp"} /> : null}
+          </div>
+          {verifyingOtp ? (
+            <div className="auth-primary-action">
+              {error ? <Notice tone="error">{error}</Notice> : null}
+              <Button appearance="framed" className="button--accent" type="submit" disabled={busy} aria-busy={isSigningIn || isResolvingDestination}>
+                {isResolvingDestination ? "正在进入…" : isSigningIn ? "验证中…" : "验证并进入"}
+              </Button>
+            </div>
+          ) : null}
+          <motion.div
+            className="auth-challenge"
+            initial={false}
+            animate={{ height: challengeVisible ? "auto" : 0, opacity: challengeVisible ? 1 : 0 }}
+            transition={transition}
+            aria-hidden={!challengeVisible}
+            inert={!challengeVisible}
+          >
+            <div className="auth-challenge-content" role="group" aria-labelledby="auth-challenge-label">
+              <span id="auth-challenge-label" className="field-label">{verifyingOtp ? "重新发送验证码的人机验证" : "人机验证"}</span>
+              <div ref={challengeContainer} className={`auth-challenge-widget${challengeSize === "compact" ? " is-compact" : ""}`} />
+              <p className={`auth-challenge-status${challengeError ? " is-error" : ""}`} aria-live="polite">
+                {challengeError || (turnstileEnabled && !siteKey ? "验证设置暂不可用，请联系主催。" : turnstileToken ? "验证通过" : "正在等待人机验证…")}
+              </p>
+            </div>
+          </motion.div>
+          {!verifyingOtp ? (
+            <div className="auth-primary-action">
+              {error ? <Notice tone="error">{error}</Notice> : null}
+              <Button appearance="framed" className="button--accent" type="submit"
+                disabled={busy || challengePending || (mode === "register" && !rulesAccepted)}
+                aria-busy={busy}>
+                {isResolvingDestination ? "正在进入…" : isSending ? "发送中…" : isSigningIn ? "提交中…" : mode === "register" ? "注册并进入" : mode === "otp" ? "发送登录验证码" : "登录"}
+              </Button>
+            </div>
+          ) : (
+            <div className="auth-resend-actions">
+              {message ? <Notice tone="success">{message}</Notice> : null}
+              <Button appearance="industrial" variant="secondary"
+                disabled={busy || resendCooldownSeconds > 0 || challengePending}
+                aria-busy={isSending}
+                onClick={() => void sendOtp(true)}>
+                {isSending ? "发送中…" : resendCooldownSeconds > 0 ? getPortalEmailOtpResendCooldownText(resendCooldownSeconds) : "重新发送验证码"}
+              </Button>
+              <button type="button" className="auth-note" disabled={busy} onClick={() => {
                 setStep("email");
                 setOtp("");
                 setResendCooldownSeconds(0);
-              }}
-            >
-              使用其他邮箱
-            </button>
-          </form>
-        )}
+                setError(null);
+                setMessage(null);
+              }}>使用其他邮箱</button>
+            </div>
+          )}
+        </form>
         {mode !== "register" ? (
           <button
             className="auth-otp-toggle"
             type="button"
-            disabled={isSending || isSigningIn}
+            disabled={busy}
             onClick={() => {
               setMode(mode === "otp" ? "login" : "otp");
               setError(null);
@@ -366,14 +461,7 @@ export function PortalLoginPage() {
             {mode === "otp" ? "返回密码登录" : "使用邮箱验证码登录"}
           </button>
         ) : null}
-        <div className="space-y-3 mt-6">
-          {sessionQuery.isPending ? <Notice>正在检查登录状态。</Notice> : null}
-          {isResolvingDestination ? (
-            <Notice>正在跳转，请稍候。</Notice>
-          ) : null}
-          {message ? <Notice tone="success">{message}</Notice> : null}
-          {error ? <Notice tone="error">{error}</Notice> : null}
-        </div>
+        {sessionQuery.isPending ? <Notice>正在检查登录状态。</Notice> : null}
       </section>
     </div>
   );

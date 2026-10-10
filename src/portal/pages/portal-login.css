@@ -24,14 +24,30 @@
 .station-entry-caption > p { margin: 0 0 10px; color: #707070; font: 9px/1.8 var(--font-label); letter-spacing: .08em; }
 .station-entry-caption a { display: inline-flex; align-items: center; gap: 15px; min-height: 44px; font-size: var(--site-meta-size); color: #aaa; }
 .station-entry-caption a:hover { color: #fff; }
-.station-entry .auth-panel { width: 100%; max-width: 460px; justify-self: end; padding: 12px 0 12px 48px; border: 0; border-left: 1px solid #ffffff21; border-radius: 0; background: none; }
+.station-entry .auth-panel { width: 100%; max-width: 460px; justify-self: end; align-self: start; margin: 48px 0 36px; padding: 0 0 0 48px; border: 0; border-left: 1px solid #ffffff21; border-radius: 0; background: none; }
 .station-entry .auth-panel .station-entry-form-label { margin: 0 0 15px; font: 9px/1.8 var(--font-label); letter-spacing: .12em; color: #888; }
 .station-entry .auth-panel h1 { margin: 0 0 12px; font: 500 var(--site-title-size)/1.4 var(--font-body); }
 .station-entry .auth-panel > p:not(.station-entry-form-label) { margin: 0 0 30px; font-size: var(--site-meta-size); line-height: 1.9; color: #aaa; }
 .station-entry .auth-tabs { gap: 26px; margin-bottom: 27px; border-color: #ffffff1f; }
-.station-entry .auth-tabs button { font-size: var(--site-meta-size); border-bottom-width: 1px; }
-.station-entry .auth-tabs button[aria-pressed="true"] { border-color: #ddd; color: #eee; }
-.station-entry .auth-panel form { gap: 23px; }
+.station-entry .auth-tabs button { position: relative; font-size: var(--site-meta-size); border-bottom-width: 1px; }
+.station-entry .auth-tabs button[aria-pressed="true"] { border-color: transparent; color: #eee; }
+.station-entry .auth-tab-indicator { position: absolute; bottom: -1px; inset-inline: 0; height: 1px; background: #ddd; }
+.station-entry .auth-panel form { gap: 0; }
+.auth-fields, .auth-otp-fields, .auth-primary-action, .auth-resend-actions { display: grid; gap: 18px; min-width: 0; }
+.auth-fields > [hidden] { display: none; }
+.station-entry .auth-panel .activity-rules-consent { margin: 0; }
+.station-entry .auth-note { overflow-wrap: anywhere; }
+.station-entry .auth-fields .auth-note { margin: 0 0 12px; }
+.auth-primary-action, .auth-resend-actions { margin-top: 18px; }
+.auth-primary-action > button, .auth-resend-actions > .button { width: 100%; }
+.auth-challenge { overflow: hidden; min-width: 0; }
+.auth-challenge-content { display: grid; gap: 8px; padding-top: 18px; }
+.auth-challenge-widget { min-height: 65px; }
+.auth-challenge-widget.is-compact { min-height: 140px; }
+.auth-challenge-status { min-height: 1.6em; margin: 0; color: #a3a3a3; font-size: var(--site-meta-size); line-height: 1.6; }
+.auth-challenge-status.is-error { color: var(--color-error); }
+.station-entry .auth-otp-input { text-align: center; letter-spacing: .4em; }
+.station-entry .auth-otp-input::placeholder { letter-spacing: normal; }
 .station-entry .field-label { font-size: var(--site-label-size); font-weight: 400; color: #bdbdbd; }
 .station-entry .field-input { border: 1px solid #ffffff30; border-radius: 0; background: #0e0e0ed9; color: #eee; font-size: var(--site-body-size); min-height: 48px; box-shadow: none; }
 .station-entry .field-input::placeholder { color: #6f6f6f; }
@@ -51,12 +67,14 @@
   .station-entry.auth-layout { display: block; min-height: auto; padding: 0 0 40px; }
   .station-entry-artwork { position: absolute; z-index: -1; inset: 110px -32% auto; height: 520px; width: auto; max-width: none; margin: 0; pointer-events: none; }
   .station-entry-artwork .station-technical-drawing { height: 100%; }
-  .station-entry .auth-intro { min-height: 0; padding: 32px 0 20px; }
+  .station-entry .auth-tabs { margin-bottom: 18px; }
+  .station-entry .auth-panel .station-entry-form-label { margin-bottom: 10px; }
+  .station-entry .auth-intro { min-height: 0; padding: 20px 0 12px; }
   .station-entry-heading > p:last-child { margin-top: 13px; font-size: var(--site-meta-size); }
   .station-entry-caption { margin-top: 0; }
   .station-entry-caption > p { display: none; }
   .station-entry-caption a { font-size: var(--site-meta-size); }
-  .station-entry .auth-panel { max-width: none; padding: 28px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
+  .station-entry .auth-panel { max-width: none; margin: 0; padding: 20px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
 }
 .activity-rules-consent { margin: 20px 0; }
 .activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: var(--site-body-size); line-height: 1.9; }

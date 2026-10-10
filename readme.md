@@ -145,8 +145,8 @@ npm run test:env -- staging
 
 `local` 会在缺少 `.dev.vars` 时生成一个被 Git 忽略的本地密钥，重建示例数据后启动
 `http://localhost:20262`。页面、Worker API、本地 D1、门户样本和管理员 smoke 流程都能
-运行；Resend 邮件和 Turnstile 没有配置时会在启动报告中标为 `[offline]`，对应的 OTP
-或验证码功能会显示不可用，不影响其它页面浏览和 seeded 数据流程。完整说明见
+运行；未配置 Resend 时 OTP 登录不可用；未配置 Turnstile 服务端密钥时关闭人机验证。
+Turnstile 用于注册、密码登录及登录验证码发送，报名页不再验证。完整说明见
 [docs/development/local-d1.md](./docs/development/local-d1.md)。
 
 ## 环境部署

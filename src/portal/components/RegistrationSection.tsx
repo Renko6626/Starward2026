@@ -5,9 +5,8 @@ import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
-import { getTurnstileSiteKey, normalizeApplicationInput } from "../../app/lib/apply-form";
-import { loadTurnstileApi } from "../../app/lib/turnstile";
-import { applicationInterestFormatLabels, updateApplicationIntentInputSchema, type ApplicationIntakeResponse } from "../../shared/applications";
+import { normalizeApplicationInput } from "../../app/lib/apply-form";
+import { applicationInterestFormatLabels, updateApplicationIntentInputSchema } from "../../shared/applications";
 import { workspaceApplicationInputSchema, type CollaborationResponse, type WorkspaceApplicationInput, type WorkspaceApplicationResponse } from "../../shared/collaboration";
 import { updatePortalProfileInputSchema, type PortalProfileMutationResponse, type PortalApplicationResponse } from "../../shared/portal";
 import { getApplicationWindowLabel } from "../../shared/windows";
@@ -85,12 +84,6 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const [timeChangeConfirmation, setTimeChangeConfirmation] = useState<RegistrationTimeChange | null>(null);
   const timeChangeDialog = useRef<HTMLDialogElement>(null);
   const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(timeChangeDialog);
-  const [intake, setIntake] = useState<ApplicationIntakeResponse | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const widgetRef = useRef<string | undefined>(undefined);
-  const siteKey = getTurnstileSiteKey(import.meta.env);
-  const required = Boolean(intake?.turnstileEnabled);
   const editable = application.editable;
   const approved = application.application?.status === "approved";
   const intentEditable = editable || approved;
@@ -111,29 +104,6 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       trigger?.focus({ preventScroll: true });
     };
   }, [timeChangeConfirmation, enterDialog, stopDialog]);
-  useEffect(() => {
-    if (!editable) return;
-    let cancelled = false;
-    void requestJson<ApplicationIntakeResponse>("/api/applications/intake").then(value => {
-      if (!cancelled) { setIntake(value); setError(null); }
-    }).catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : "无法读取报名验证设置，请稍后重试。"); });
-    return () => { cancelled = true; };
-  }, [editable]);
-  useEffect(() => {
-    if (!required || !siteKey || !editable || !containerRef.current) return;
-    let cancelled = false;
-    void loadTurnstileApi().then(api => {
-      if (cancelled || !containerRef.current) return;
-      widgetRef.current = api.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: value => setToken(value),
-        "expired-callback": () => setToken(null),
-        "error-callback": () => setToken(null),
-      });
-    }).catch(() => setError("人机验证加载失败，请刷新后重试。"));
-    return () => { cancelled = true; if (widgetRef.current) window.turnstile?.remove?.(widgetRef.current); widgetRef.current = undefined; };
-  }, [required, siteKey, editable]);
-
   function showFieldErrors(errors: Record<string, string>) {
     setFieldErrors(errors);
     setError("请修正标出的字段后重试。");
@@ -152,14 +122,13 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     if (confirmedChange) exitDialog(() => setTimeChangeConfirmation(null));
     else setTimeChangeConfirmation(null);
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
-    if (!editable || !intake) { setError("报名设置尚未就绪或当前不能修改报名。"); return; }
+    if (!editable) { setError("当前不能修改报名。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: form.profile.contactEmail, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
-    const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized, turnstileToken: token ?? undefined });
+    const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized });
     const validationErrors: Record<string, string> = parsed.success ? {} : getRegistrationFieldErrors(parsed.error.issues);
     if (!selectedSegment || selectionUnavailable) validationErrors.segmentId = "请选择一个可用的发布时间，已填写的信息会保留。";
     if (Object.keys(validationErrors).length) { showFieldErrors(validationErrors); return; }
     if (!parsed.success) { setError("报名资料格式不正确，请检查后重试。"); return; }
-    if (required && (!siteKey || !token)) { setError("请先完成人机验证后再提交。"); return; }
     const currentSegment = collaboration.segments.find(item => item.participantId === collaboration.participantId);
     if (selectedSegment && requiresRegistrationTimeConfirmation(currentSegment, selectedSegment, confirmedChange)) {
       setTimeChangeConfirmation({ from: currentSegment!, to: selectedSegment });
@@ -173,7 +142,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       saveScheduleIntent(application.user.id, "");
       await onSaved().catch(() => setRefreshWarning("报名已提交，页面暂未更新，请点击“刷新状态”。"));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "报名保存失败，请保留资料后重试。"); }
-    finally { setSaving(false); if (required) { setToken(null); window.turnstile?.reset(widgetRef.current); } }
+    finally { setSaving(false); }
   }
 
   async function saveProfile() {
@@ -280,12 +249,11 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       </Field> : null}
       {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择。</Notice> : null}
     </section> : null}
-    {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
     {intentEditable ? <div className={`registration-submit${approved ? " registration-submit--intent" : ""}`}>
       <div className="workspace-actions archive-control-actions">
         {compact && !approved ? <span className="archive-control-label" aria-hidden="true">REG / SUBMIT</span> : null}
         {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
-        <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled || (!approved && (!intake || (required && !token)))} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
+        <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
       </div>
       <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。"}</p>
     </div> : null}

@@ -15,6 +15,10 @@ const publicApi = new Hono<AppRouteConfig>();
 
 publicApi.get("/auth/providers", c => c.json({qq:{enabled:isQqEnabled(c.env)}}, 200, {"Cache-Control":"no-store"}));
 
+publicApi.get("/auth/config", c => c.json({
+  turnstileEnabled: Boolean(c.env.TURNSTILE_SECRET_KEY ?? c.env.TURNSTILE_SECRET),
+}, 200, { "Cache-Control": "no-store" }));
+
 publicApi.get("/health", (c) => {
   return c.json({
     status: "ok",
@@ -40,7 +44,6 @@ publicApi.get("/applications/intake", async (c) => {
 
   const response: ApplicationIntakeResponse = {
     isOpen: window?.isOpen ?? false,
-    turnstileEnabled: Boolean(c.env.TURNSTILE_SECRET_KEY ?? c.env.TURNSTILE_SECRET),
     window,
     statistics,
     interestFormats: Object.entries(applicationInterestFormatLabels).map(([value, label]) => ({

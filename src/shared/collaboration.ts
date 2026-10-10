@@ -6,7 +6,6 @@ export const workspaceApplicationInputSchema = z.object({
   profile: updatePortalProfileInputSchema,
   application: upsertPortalApplicationInputSchema,
   segmentId: z.string().trim().min(1).max(64),
-  turnstileToken: z.string().trim().optional(),
 });
 export type WorkspaceApplicationInput = z.infer<typeof workspaceApplicationInputSchema>;
 export type WorkspaceApplicationResponse = PortalApplicationMutationResponse;

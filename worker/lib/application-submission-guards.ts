@@ -1,6 +1,4 @@
-import { HTTPException } from "hono/http-exception";
 import { limitApplicationSubmission } from "./application-rate-limit";
-import { verifyTurnstileToken } from "./turnstile";
 import type { AppContext } from "./types";
 
 export type ApplicationGuardResult =
@@ -10,14 +8,9 @@ export type ApplicationGuardResult =
 type ApplicationGuardInput = {
   contactEmail?: string | null;
   userId?: string;
-  turnstileToken?: string | null;
 };
 
-/**
- * Enforces anti-abuse guards (rate limiting + Turnstile) before an application
- * mutation. Both checks gracefully degrade to no-ops when their bindings/secrets
- * are absent, so local dev and unconfigured environments keep working.
- */
+// Authenticated application mutations retain IP and account rate limits.
 export async function enforceApplicationSubmissionGuards(
   c: AppContext,
   input: ApplicationGuardInput,
@@ -37,21 +30,6 @@ export async function enforceApplicationSubmissionGuards(
       code: rateLimit.code,
       message: rateLimit.message,
     };
-  }
-
-  try {
-    await verifyTurnstileToken(c, input.turnstileToken ?? undefined);
-  } catch (caught) {
-    if (caught instanceof HTTPException) {
-      return {
-        ok: false,
-        status: caught.status,
-        code: "turnstile_verification_failed",
-        message: caught.message,
-      };
-    }
-
-    throw caught;
   }
 
   return { ok: true };

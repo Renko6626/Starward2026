@@ -1,3 +1,4 @@
+import { captcha } from "better-auth/plugins";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { buildQqProvider } from "./qq-oauth";
 import { getRealAuthEmail, isReservedAuthEmail } from "../../src/shared/auth-identity";
@@ -380,6 +381,11 @@ export function createAuth(env: AppBindings) {
 
   const qq = buildQqProvider(env);
   const pendingQqSignups = new WeakMap<Request, string>();
+  const turnstileSecret = env.TURNSTILE_SECRET_KEY ?? env.TURNSTILE_SECRET;
+  const captchaEndpoints = ["/sign-up/email", "/sign-in/email", "/email-otp/send-verification-otp"];
+  const captchaPlugin = turnstileSecret ? captcha({
+    provider: "cloudflare-turnstile", secretKey: turnstileSecret, endpoints: captchaEndpoints,
+  }) : null;
   const auth = betterAuth({
     secret,
     database: db,
@@ -396,6 +402,14 @@ export function createAuth(env: AppBindings) {
       maxPasswordLength: 128,
     },
     plugins: [
+      ...(captchaPlugin ? [{
+        ...captchaPlugin,
+        // The plugin uses substring matching; email-otp verification must stay
+        // outside the password-login challenge, including URLs with query strings.
+        onRequest: (request, context) => captchaEndpoints.some(path =>
+          new URL(request.url).pathname === `/api/auth${path}`)
+          ? captchaPlugin.onRequest(request, context) : Promise.resolve(undefined),
+      } satisfies typeof captchaPlugin] : []),
       buildPortalEntryPlugin(env, pendingQqSignups),
       emailOTP(buildPortalEmailOtpOptions(env)),
       ...(qq ? [genericOAuth({config:[qq]})] : []),

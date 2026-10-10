@@ -38,9 +38,7 @@ const applicationInputSchema = z.object({
   messageToHosts: optionalBodyTextSchema,
 });
 
-export const createApplicationInputSchema = applicationInputSchema.extend({
-  turnstileToken: z.string().trim().min(1).optional(),
-});
+export const createApplicationInputSchema = applicationInputSchema;
 
 export const upsertPortalApplicationInputSchema = applicationInputSchema;
 export const updateApplicationIntentInputSchema = applicationInputSchema
@@ -116,7 +114,6 @@ export type ParticipationStatistics = {
 
 export type ApplicationIntakeResponse = {
   isOpen: boolean;
-  turnstileEnabled: boolean;
   window: EventWindowSummary | null;
   statistics: ParticipationStatistics | null;
   interestFormats: Array<{

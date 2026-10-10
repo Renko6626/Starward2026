@@ -230,7 +230,6 @@ portalApi.post("/application-with-segment", async (c) => {
   const submissionGuard = await enforceApplicationSubmissionGuards(c, {
     userId: access.session.user.id,
     contactEmail: getRealAuthEmail(access.session.user.email),
-    turnstileToken: parsed.data.turnstileToken,
   });
   if (!submissionGuard.ok)
     return jsonError(
@@ -461,7 +460,6 @@ portalApi.post("/application", async (c) => {
   const guard = await enforceApplicationSubmissionGuards(c, {
     userId: access.session.user.id,
     contactEmail: getRealAuthEmail(access.session.user.email),
-    turnstileToken: readTurnstileToken(body),
   });
 
   if (!guard.ok) {
@@ -565,7 +563,6 @@ portalApi.patch("/application", async (c) => {
   const guard = await enforceApplicationSubmissionGuards(c, {
     userId: access.session.user.id,
     contactEmail: getRealAuthEmail(access.session.user.email),
-    turnstileToken: readTurnstileToken(body),
   });
 
   if (!guard.ok) {
@@ -918,17 +915,6 @@ portalApi.get("/history", async (c) => {
 });
 
 export { portalApi };
-
-function readTurnstileToken(body: unknown): string | undefined {
-  if (body && typeof body === "object" && "turnstileToken" in body) {
-    const token = (body as { turnstileToken?: unknown }).turnstileToken;
-    if (typeof token === "string" && token.trim().length > 0) {
-      return token.trim();
-    }
-  }
-
-  return undefined;
-}
 
 async function getPortalSessionAccess(
   c: AppContext,

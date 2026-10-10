@@ -227,7 +227,6 @@ export async function upsertPortalApplication(
         {
           ...input.data,
           contactEmail: getRealAuthEmail(input.data.contactEmail),
-          turnstileToken: undefined,
         },
         {
           userId: input.userId,

@@ -35,10 +35,16 @@ npm run test:env -- local
 | Wrangler D1 local | 无 | 可以，核心 API 使用本地数据库 |
 | 本地管理员入口 | 需要 `.dev.vars` 中的 bypass | 可以；入口脚本会为新环境打开它 |
 | Resend 登录邮件 OTP | 登录发送验证码接口返回不可用 | 可以浏览 seeded 页面；用打印出的本地 session 做 smoke |
-| Turnstile | 验证码校验关闭 | 可以；提交流程不要求外部验证码 |
+| Turnstile | 未配置服务端密钥时，人机验证关闭 | 可以；报名页不做人机验证 |
 
 本地入口不会打印密钥值，也不会触发 Cloudflare、ACR 或 VPS 部署。停止服务器按 `Ctrl-C`；
 再次启动会重新 reset seeded 数据。
+
+### Turnstile 验证范围
+
+Turnstile 用于邮箱密码注册、密码登录和登录验证码的发送/重发。输入邮件验证码完成登录不再验证；已登录的报名提交与更新只保留会话、权限检查和账号/IP 限流。
+
+启用时，在 `.env.local` 设置 `VITE_TURNSTILE_SITE_KEY`，在 `.dev.vars` 设置 `TURNSTILE_SECRET_KEY`，然后重启开发服务。`/api/auth/config` 返回 `turnstileEnabled`；报名 intake 接口不再提供验证配置。生产环境的 Site Key 需在前端构建时注入，Secret Key 仅放在 Worker secrets 中。
 
 ### 2.2 手动本地 D1 命令
 

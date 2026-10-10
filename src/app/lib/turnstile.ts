@@ -1,5 +1,14 @@
+export function getTurnstileSiteKey(env: {
+  VITE_TURNSTILE_SITE_KEY?: string | undefined;
+}) {
+  const trimmed = env.VITE_TURNSTILE_SITE_KEY?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export type TurnstileRenderOptions = {
   sitekey: string;
+  theme?: "light" | "dark" | "auto";
+  size?: "normal" | "flexible" | "compact";
   callback?: (token: string) => void;
   "expired-callback"?: () => void;
   "error-callback"?: () => void;
