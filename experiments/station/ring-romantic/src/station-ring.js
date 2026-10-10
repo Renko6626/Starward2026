@@ -9,8 +9,9 @@ import { createEnergyThermal } from './model/energy-thermal.js';
 import { createOperations } from './model/operations.js';
 import { createEvaAirlock } from './model/eva-airlock.js';
 
-export function createRingStation() {
+export function createRingStation({ geometryTransform } = {}) {
   const resources = createStationResources(), context = { layout, resources };
+  resources.geometryTransform = geometryTransform;
   // One display slowdown for both rings, preserving the confirmed operating
   // speed ratio. Operating targets do not establish mass/inertia balance.
   const mainOperatingSpeed = Math.sqrt(layout.confirmed.gravityTarget * 9.80665 / layout.working.floorRadius);
@@ -53,13 +54,15 @@ export function createRingStation() {
   envelopeBox('Main propulsion aft region / not a plume calculation', [layout.working.engineExit + 12, 0, 0], [24, 28, 28]);
   envelopeBox('Fixed wings / static deployed envelope', [23 + layout.working.energyAxialOffset, 0, 0], [30, 90, 208]);
   const inverseRoot = new THREE.Matrix4();
-  function update(time) {
+  function update(time, updateMarkers = true) {
     main.object.rotation.x = time * layout.working.mainDisplaySpeed;
     // Exterior travel pose only: the independent cabin is currently matched
     // to the main rotor. Boarding, spin matching and docking are not animated.
     main.transferCabin.rotation.x = main.object.rotation.x;
     counter.object.rotation.x = time * counterDisplaySpeed;
     counter.transferCabin.rotation.x = counter.object.rotation.x;
+    // The homepage has no viewer labels; let the renderer update matrices once.
+    if (!updateMarkers) return;
     object.updateWorldMatrix(true, true); inverseRoot.copy(object.matrixWorld).invert();
     markerBindings.forEach(([, point], i) => {
       // Preserve the Vector3 reference retained by the viewer's spread object.

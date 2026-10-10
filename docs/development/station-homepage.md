@@ -218,3 +218,82 @@ ORBIT_PYTHON=.venv-orbit/bin/python npm run orbit:generate
 首页通过 `useApplicationIntake(30_000)` 定时读取，隐藏页面期间跳过轮询，恢复可见时刷新；避免重叠请求，卸载时中止请求并清理监听器。其他调用方默认仍只读取一次。接口和浏览器请求禁用缓存。数据库不可用或统计读取失败返回 `statistics: null`，页面显示读取失败；未公布或空时间表显示“时间表准备中”，避免将这些情况显示为可报名的零占用时段。
 
 聚合口径由 `worker/data/participation.test.ts` 使用真实迁移和 SQLite 验证；布局仅加载桌面／手机页面截图，不执行自动交互流程。
+
+
+## Homepage rendering performance (2026-10-10)
+
+The homepage batches rigid assemblies across their nested construction groups.
+Repeated geometry stays instanced; compatible unique meshes use the existing
+geometry merger. Rings, transfer cabins and the pointing antenna remain separate
+moving roots. Named anchors and their hierarchy are retained for signal lamps and
+antenna targeting. When adding a new independently moving part, exclude its pivot
+from its containing rigid batch and batch that pivot separately.
+
+The homepage calls `station.update(time, false)` to skip viewer-marker positions
+and their extra full-tree matrix update. Standalone viewers retain marker updates
+by default. Materials, textures, lighting, shadows, model detail and the 30 FPS
+render cap are preserved.
+
+Resolution starts at the existing DPR limits (1.75 desktop / 1.4 mobile). If actual
+rendered frames average below 24 FPS over two seconds, the buffer scale drops by
+15%, down to 60% of the original dimensions. Four healthy two-second windows
+restore one step. CSS size, camera composition and animation speed are unchanged;
+star point sizes follow the buffer ratio. Pause, visibility and resize reset the
+measurement window, and static asset captures stay at full quality.
+
+Local Chromium/SwiftShader measurements at 1440 x 900, including the shadow pass:
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Draw calls per frame | 1,186 | 716 |
+| Triangles per frame | 2,576,112 | 2,576,112 |
+| Renderer geometry resources | 293 | 206 |
+| Texture resources | 19 | 19 |
+
+Before/after PNG comparisons changed 58 of 1,296,000 pixels at the initial desktop
+pose, 59 at a rotated pose, and 53 of 329,160 pixels in the mobile rotated pose.
+These tiny rasterization differences do not establish equivalence at every pose.
+Geometry tests also cover nested transforms, repeated instances, moving roots,
+named anchors, pivot boundaries, shadow/layer flags and colored instances.
+
+Validation: TypeScript check, 270 application tests and 13 station tests passed.
+Posters and technical drawings were regenerated and their source checks passed.
+Browser checks covered buffer adaptation, resize, pause/resume, reduced motion,
+context loss/restoration and disposal, without page errors. A longer software
+rendering stress check timed out, so no device FPS or battery-life claim is made.
+The full build is blocked by the unchanged orbital-data fingerprint check; direct
+Vite compilation also encounters this session's Windows `os.userInfo()` /
+`uv_os_get_passwd` error. No deployment was performed.
+
+
+### Homepage triangle budget (2026-10-10)
+
+The homepage now supplies an optional geometry transform to `createRingStation`.
+The default model and technical viewers continue to use the full-detail mesh.
+The distant-view transform is cached per source geometry, retaining instancing:
+
+- Small rounded fittings use closed 44-triangle bevels with smooth edge normals,
+  replacing 108-triangle rounded boxes while retaining the outer dimensions.
+- Larger rounded bodies use one corner subdivision instead of two (108 vs 300
+  triangles). Shared cylinders use 12 radial sides and spheres use 12 x 8 segments.
+- Curved shells use fewer sweep/corner subdivisions. Formed panels retain every
+  cross-section point, sheet thickness, edge rims and both UV channels, with fewer
+  samples along the arc. Construction recipes use a WeakMap so metadata does not
+  fragment the existing material batches.
+
+Measured at 1440 x 900 in the static homepage capture, including shadows:
+`2,576,112 -> 1,232,992` triangles per frame (52.14% fewer), with 716 draw calls.
+The station alone has `605,964` triangles versus `1,277,524` in the full model
+(52.57% fewer); an actual-model browser assertion checked the half-triangle budget.
+Lighting, shadows, materials, textures, animation and camera composition remain.
+The coarser bevels and curves cause small shading/silhouette differences, so this
+profile is intended for the homepage's distant camera, not close-up inspection.
+
+Desktop, mobile and rotated-pose images were compared. Mean absolute RGB channel
+difference was 0.162/255 for desktop, 0.197/255 for mobile and 0.158/255 for the
+rotated desktop pose; visual inspection found no broad composition change.
+TypeScript, 278 application tests and 18 station tests passed. The geometry tests
+cover closed bevel topology, outward winding, bounds, normals, UVs, source
+immutability and shared-geometry caching. Posters and drawings were regenerated.
+The normal build still stops at the pre-existing orbital-data fingerprint check.
+These are geometry/submission measurements, not a claim of doubled device FPS.

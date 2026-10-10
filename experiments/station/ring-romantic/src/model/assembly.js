@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 
+// Construction recipes allow a distant-view mesh without changing the full model.
+// Keep these outside userData so they do not split compatible material batches.
+export const geometryRecipes = new WeakMap();
+
 // Keep the same corner radius and envelope. Small fittings and thin strips
 // need fewer corner segments than large cabinets or passage bodies.
 function roundedGeometry(geometries, size) {
@@ -16,6 +20,7 @@ export class Assembly {
     this.rotation = new THREE.Euler(); this.quaternion = new THREE.Quaternion();
   }
   part(geometry, materialName, position, scale = [1, 1, 1], rotation = [0, 0, 0]) {
+    geometry = this.resources.geometryTransform?.(geometry) ?? geometry;
     const material = this.resources.materials[materialName];
     if (!material) throw new Error(`Unknown station material: ${materialName}`);
     if (!this.batches.has(geometry)) this.batches.set(geometry, new Map());
@@ -72,7 +77,7 @@ export function pipe(a, material, points, radius = .12) {
 
 // Sweep a rounded rectangular pressure-shell envelope around X, in the YZ plane.
 // Cross-section is broad axially. Rounded edges consume exterior envelope only.
-export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1, steps = 24) {
+export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1, steps = 24, cornerSegments = 5) {
   const cross = [];
   const hx = axialWidth / 2, hr = radialHeight / 2;
   const c = Math.min(corner, hx, hr);
@@ -80,8 +85,8 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
     const theta = side * Math.PI / 2;
     const cx = Math.cos(theta + Math.PI / 4) > 0 ? hx - c : -hx + c;
     const cr = Math.sin(theta + Math.PI / 4) > 0 ? hr - c : -hr + c;
-    for (let j = 0; j <= 5; j++) {
-      const t = theta + j * Math.PI / 10;
+    for (let j = 0; j <= cornerSegments; j++) {
+      const t = theta + j * Math.PI / (2 * cornerSegments);
       cross.push([cx + c * Math.cos(t), cr + c * Math.sin(t)]);
     }
   }
@@ -113,6 +118,7 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geometry.setIndex(indices); geometry.computeVertexNormals();
+  geometryRecipes.set(geometry, { type: 'arc', args: [radius, axialWidth, radialHeight, angle, corner, steps, cornerSegments] });
   return geometry;
 }
 
@@ -120,10 +126,10 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
 // outward x normal, outward radial normal]. UV0 measures metres / 2 for finish
 // grain; UV1 maps each complete face for panel edges and captive fasteners.
 // Separate rim vertices keep folded sheet edges sharp without faceting corners.
-export function arcPanelGeometry(radius, profile, angle, offset = .065, thickness = .025, steps = 12) {
+export function arcPanelGeometry(radius, profile, angle, offset = .065, thickness = .025, steps = 12, minSteps = 2) {
   // Use the requested subdivision count as a ceiling. Narrow tiles need fewer
   // angular samples; retain at least two spans and every cross-section point.
-  steps = Math.min(steps, Math.max(2, Math.ceil(Math.abs(angle) / (Math.PI / 120))));
+  steps = Math.min(steps, Math.max(minSteps, Math.ceil(Math.abs(angle) / (Math.PI / 120))));
   const positions = [], normals = [], uv = [], uv1 = [], indices = [];
   const distances = [0];
   for (let k = 1; k < profile.length; k++) distances.push(distances[k - 1]
@@ -181,7 +187,9 @@ export function arcPanelGeometry(radius, profile, angle, offset = .065, thicknes
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(uv1, 2));
-  geometry.setIndex(indices); return geometry;
+  geometry.setIndex(indices);
+  geometryRecipes.set(geometry, { type: 'panel', args: [radius, profile, angle, offset, thickness, steps] });
+  return geometry;
 }
 
 // Open rectangular truss, with corner chords, alternating diagonals and end plates.

@@ -3,7 +3,9 @@ import { createRingStation } from '../../../../experiments/station/ring-romantic
 import { createEnvironment } from '../../../../experiments/station/ring-romantic/src/materials.js';
 import { createStars, createPlanet, createMoon } from '../../../../experiments/station/ring-romantic/src/space.js';
 import { mobileBreakpoint } from './config.js';
-import { batchStaticMeshes } from './static-batches.js';
+import { batchRigidMeshes } from './static-batches.js';
+import { createRenderQuality } from './render-quality.js';
+import { createHomepageGeometryOptimizer } from './homepage-geometry.js';
 
 export function mountStationScene(container, options = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
@@ -28,6 +30,9 @@ export function mountStationScene(container, options = {}) {
   let last = 0;
   let lastRender = 0;
   const renderInterval = 1000 / 30;
+  const quality = createRenderQuality();
+  let qualityScale = 1;
+  let viewportWidth = 0, viewportHeight = 0;
   const media = matchMedia('(prefers-reduced-motion: reduce)');
   const camera = new THREE.PerspectiveCamera(37, 1, 1, 3000);
   const basePosition = new THREE.Vector3();
@@ -64,7 +69,7 @@ export function mountStationScene(container, options = {}) {
   }
   function draw() {
     if (disposed || contextLost || document.hidden || !visible) return;
-    station.update(time);
+    station.update(time, false);
     if (antenna) {
       antenna.quaternion.copy(antennaAim);
       // A short calibration sweep, followed by a long hold on the Earth target.
@@ -86,6 +91,14 @@ export function mountStationScene(container, options = {}) {
     renderer.render(scene, camera);
     if (!ready) { ready = true; options.onReady?.(); }
   }
+  function updateResolution() {
+    // Keep CSS layout and camera composition independent of GPU resolution.
+    const baseRatio = Math.min(devicePixelRatio, narrow ? 1.4 : 1.75);
+    const ratio = baseRatio * qualityScale;
+    renderer.setDrawingBufferSize(viewportWidth, viewportHeight, ratio);
+    stars.material.uniforms.pixelRatio.value = ratio;
+    stars.getObjectByName('Bright star optics').material.uniforms.pixelRatio.value = ratio;
+  }
   function frame(now) {
     const delta = last ? (now - last) / 1000 : 0;
     last = now;
@@ -97,6 +110,8 @@ export function mountStationScene(container, options = {}) {
     const elapsed = now - lastRender;
     if (lastRender && elapsed < renderInterval) return;
     lastRender = lastRender ? now - elapsed % renderInterval : now;
+    const nextScale = quality.sample(now);
+    if (nextScale !== qualityScale) { qualityScale = nextScale; updateResolution(); }
     updateCamera();
     draw();
   }
@@ -105,6 +120,7 @@ export function mountStationScene(container, options = {}) {
       && !paused && !media.matches && !options.staticFrame;
     last = 0;
     lastRender = 0;
+    quality.reset();
     renderer.setAnimationLoop(animate ? frame : null);
     updateCamera();
     draw();
@@ -112,11 +128,10 @@ export function mountStationScene(container, options = {}) {
   function resize() {
     const { width, height } = container.getBoundingClientRect();
     if (!width || !height || disposed || contextLost) return;
-    // Capture mobile at 2x resolution while keeping the same CSS viewport.
+    viewportWidth = width; viewportHeight = height;
     narrow = width < mobileBreakpoint;
-    const ratio = Math.min(devicePixelRatio, narrow ? 1.4 : 1.75);
-    renderer.setPixelRatio(ratio);
-    renderer.setSize(width, height);
+    quality.reset();
+    updateResolution();
     camera.aspect = width / height;
     camera.fov = narrow ? 43 : 37;
     basePosition.set(-120, 310, 170).multiplyScalar(narrow ? 1.58 : .93);
@@ -144,8 +159,6 @@ export function mountStationScene(container, options = {}) {
     const band = stars.getObjectByName('Galactic dust band');
     band.quaternion.copy(camera.quaternion);
     band.rotateX(.12); band.rotateZ(-.3);
-    stars.material.uniforms.pixelRatio.value = ratio;
-    stars.getObjectByName('Bright star optics').material.uniforms.pixelRatio.value = ratio;
     draw();
   }
   function movePointer(event) {
@@ -194,8 +207,15 @@ export function mountStationScene(container, options = {}) {
     environment?.dispose(); renderer.dispose(); renderer.domElement.remove();
   }
   try {
-  station = createRingStation();
-  const retired = batchStaticMeshes(station.object.getObjectByName('Fixed group / no ring rotation'));
+  station = createRingStation({ geometryTransform: createHomepageGeometryOptimizer() });
+  // Each root moves as one rigid assembly; the pointing dish is independent.
+  antenna = station.object.getObjectByName('Pointable main dish / +Z boresight');
+  const retired = new Set();
+  for (const group of station.object.children) {
+    if (group === station.envelopes) continue;
+    for (const geometry of batchRigidMeshes(group, { exclude: [antenna] })) retired.add(geometry);
+  }
+  if (antenna) for (const geometry of batchRigidMeshes(antenna)) retired.add(geometry);
   const retained = new Set();
   station.object.traverse(object => { if (object.geometry) retained.add(object.geometry); });
   retired.forEach(geometry => { if (!retained.has(geometry)) geometry.dispose(); });
