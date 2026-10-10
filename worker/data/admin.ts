@@ -483,6 +483,25 @@ export async function updateActiveScheduleSegment(
     };
   }
 
+  if ('mode' in input && input.mode === 'fill-empty-time') {
+    if (existingSegment.kind !== 'standard') {
+      return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
+    }
+    // Check emptiness and active version in the write itself. Concurrent claims
+    // may change any other column; this operation never writes those columns.
+    const result = await db.prepare(`UPDATE schedule_segments
+      SET scheduled_at = ?, updated_at = ?
+      WHERE id = ? AND schedule_version_id = ? AND kind = 'standard' AND scheduled_at IS NULL
+        AND EXISTS (SELECT 1 FROM schedule_versions WHERE id = ? AND status = 'active')
+    `).bind(new Date(input.scheduledAt).toISOString(), nowIso(), segmentId, scheduleVersionId, scheduleVersionId).run();
+    if (result.meta.changes !== 1) {
+      return { ok: false, status: 409, code: 'segment_schedule_changed', message: '该格已有发布时间或生效排期已变化，请重新预览。' };
+    }
+    const item = await getAdminSegmentItem(db, segmentId);
+    if (!item) return { ok: false, status: 404, code: 'segment_not_found', message: '未找到对应发布时点。' };
+    return { ok: true, item, message: '已补填发布时间。' };
+  }
+
   const nextScheduledAt = input.scheduledAt === undefined ? existingSegment.scheduled_at : input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null;
   if (existingSegment.kind === 'extra' && nextScheduledAt) {
     return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
