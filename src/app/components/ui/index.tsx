@@ -4,12 +4,15 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useRef,
   useState,
   type ReactNode,
   type ButtonHTMLAttributes,
   type PropsWithChildren,
 } from "react";
 import { cn } from "../../lib/cn";
+import { animate, press } from 'motion';
+import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 
 type Tone = "muted" | "info" | "warning" | "warn" | "success" | "error";
 const toneClass = (tone: Tone) =>
@@ -216,13 +219,51 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger";
 }) {
+  const root = useRef<HTMLButtonElement>(null);
+  const reduced = useReducedMotion();
+  const busy = props['aria-busy'] === true || props['aria-busy'] === 'true';
+  const feedback = useAnimationControls();
+  const previousBusy = useRef(busy);
+  const [idleWidth, setIdleWidth] = useState<number>();
+  useEffect(() => {
+    if (previousBusy.current === busy) return;
+    previousBusy.current = busy;
+    feedback.stop();
+    feedback.set({ opacity: reduced ? 1 : .6 });
+    void feedback.start({ opacity: 1, transition: { duration: reduced ? 0 : .12 } });
+  }, [busy, reduced, feedback]);
+  useEffect(() => {
+    if (props['aria-busy'] === undefined || busy || !root.current) return;
+    const element = root.current;
+    const observer = new ResizeObserver(() => setIdleWidth(element.getBoundingClientRect().width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [busy, props['aria-busy']]);
+  useEffect(() => {
+    if (!root.current || reduced || props.disabled) return;
+    const element = root.current;
+    let animation: ReturnType<typeof animate> | undefined;
+    const unbind = press(element, () => {
+      animation?.stop();
+      animation = animate(element, { scale: .98 }, { duration: .08 });
+      return () => {
+        animation?.stop();
+        animation = animate(element, { scale: 1 }, { duration: .12 });
+      };
+    });
+    return () => { unbind(); animation?.stop(); element.style.removeProperty('transform'); };
+  }, [reduced, props.disabled]);
   return (
     <button
+      ref={root}
       type="button"
       className={cn("button", `button--${variant}`, className)}
       {...props}
+      style={{ ...props.style, ...(busy && idleWidth ? { width: idleWidth } : {}) }}
     >
-      {children}
+      <motion.span className="button-feedback" initial={false} animate={feedback}>
+        {busy && <span className="button-busy-indicator" aria-hidden="true" />}{children}
+      </motion.span>
     </button>
   );
 }

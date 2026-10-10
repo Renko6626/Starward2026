@@ -10,6 +10,7 @@ import { workspaceApplicationInputSchema, type CollaborationResponse, type Works
 import { updatePortalProfileInputSchema, type PortalProfileMutationResponse, type PortalApplicationResponse } from "../../shared/portal";
 import { getApplicationWindowLabel } from "../../shared/windows";
 import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels, portalProfilePlaceholders } from "../lib/profile-form";
+import { useDialogMotion } from "../../app/components/use-dialog-motion";
 import { LoginPasswordDialog } from "./LoginPasswordDialog";
 import { parseRegistrationDraft, registrationDraftKey } from "../lib/registration-draft";
 import { isRegistrationSegmentSelectable, readScheduleIntent, requiresRegistrationTimeConfirmation, saveScheduleIntent, type RegistrationTimeChange } from "../lib/schedule-selection";
@@ -81,6 +82,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [timeChangeConfirmation, setTimeChangeConfirmation] = useState<RegistrationTimeChange | null>(null);
   const timeChangeDialog = useRef<HTMLDialogElement>(null);
+  const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(timeChangeDialog);
   const [intake, setIntake] = useState<ApplicationIntakeResponse | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,13 +97,15 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     dialog.showModal();
+    enterDialog();
     document.body.style.overflow = "hidden";
     return () => {
+      stopDialog();
       if (dialog.open) dialog.close();
       document.body.style.overflow = previousOverflow;
       trigger?.focus({ preventScroll: true });
     };
-  }, [timeChangeConfirmation]);
+  }, [timeChangeConfirmation, enterDialog, stopDialog]);
   useEffect(() => {
     let cancelled = false;
     void requestJson<ApplicationIntakeResponse>("/api/applications/intake").then(value => {
@@ -137,7 +141,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   async function submit(event?: FormEvent<HTMLFormElement>, confirmedChange?: RegistrationTimeChange) {
     event?.preventDefault();
     if (saving || savingProfile) return;
-    setTimeChangeConfirmation(null);
+    if (confirmedChange) exitDialog(() => setTimeChangeConfirmation(null));
+    else setTimeChangeConfirmation(null);
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     if (!editable || !intake) { setError("报名设置尚未就绪或当前不能修改报名。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: form.profile.contactEmail, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
@@ -200,7 +205,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   }}><form hidden noValidate id="creator-registration-form" onSubmit={event => void submit(event)} />
     <dialog ref={timeChangeDialog} className="registration-time-dialog" aria-labelledby="registration-time-dialog-title"
       aria-describedby="registration-time-dialog-description"
-      onCancel={event => { event.preventDefault(); setTimeChangeConfirmation(null); }}>
+      onCancel={event => { event.preventDefault(); exitDialog(() => setTimeChangeConfirmation(null)); }}>
       {timeChangeConfirmation ? <>
         <h2 id="registration-time-dialog-title">确认更改发布时间？</h2>
         <dl className="registration-time-change">
@@ -209,8 +214,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         </dl>
         <p id="registration-time-dialog-description">以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。</p>
         <div className="workspace-actions">
-          <Button variant="secondary" autoFocus onClick={() => setTimeChangeConfirmation(null)}>返回修改</Button>
-          <Button onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
+          <Button variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
+          <Button disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
         </div>
       </> : null}
     </dialog>
@@ -231,7 +236,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
-    {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
+    {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
     {profileMessage ? <Notice tone="success">{profileMessage}</Notice> : null}
       </div>
     </section>

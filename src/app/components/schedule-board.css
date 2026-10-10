@@ -190,24 +190,6 @@
 .ops-detail-dialog .ops-detail { margin: 0; border: 0; padding: 0; }
 .works-page--schedule button:focus-visible, .works-page--schedule a:focus-visible, .ops-detail-dialog a:focus-visible, .ops-detail-dialog button:focus-visible { outline-color: #e7e7e7; }
 
-@media (prefers-reduced-motion: no-preference) {
-  .ops-detail-dialog[open] {
-    animation: ops-detail-dialog-in 240ms var(--motion-ease) both;
-  }
-  .ops-detail-dialog[open]::backdrop {
-    animation: ops-detail-backdrop-in 240ms ease both;
-  }
-}
-
-@keyframes ops-detail-dialog-in {
-  from { opacity: 0; transform: translateY(12px) scale(.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes ops-detail-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 /* Only the layout changes at breakpoints; small sizes remain readable. */
 @media (max-width: 950px) {
   .works-page--schedule { --ops-clock-width: 94px; --ops-time-size: 18px; }

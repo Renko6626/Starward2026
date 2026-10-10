@@ -13,6 +13,7 @@ import { scheduleMissionStart } from "../lib/mission-time";
 import { ScheduleSection } from "../../portal/components/ScheduleSection";
 import { readScheduleIntent, saveScheduleIntent } from "../../portal/lib/schedule-selection";
 import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
+import { useDialogMotion } from "../components/use-dialog-motion";
 import { PageSkeleton } from '../components/NavigationFeedback';
 
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
@@ -33,6 +34,7 @@ export function WorksPage() {
   const [mobile, setMobile] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(dialog);
   const detailTrigger = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export function WorksPage() {
   const mineId = mine?.id ?? null;
   const { phase, currentId } = schedulePhase(schedule, now);
   const selected = schedule.find(entry => entry.id === selectedId) ?? mine ?? schedule.find(entry => entry.id === currentId) ?? schedule[0];
+  const hasSelected = Boolean(selected);
   const selectedKey = selected?.kind === 'extra' ? 'extra' : selected?.scheduledAt ? scheduleDay(selected.scheduledAt) : "pending";
   useEffect(() => {
     const element = dialog.current;
@@ -97,15 +100,18 @@ export function WorksPage() {
     }
     // Keep one detail component mounted while switching between inline and modal views.
     if (element.open) element.close();
-    if (detailOpen) element.showModal();
+    if (detailOpen) { element.showModal(); enterDialog(); }
     else if (!mobile) element.open = true;
     const previousOverflow = document.body.style.overflow;
     if (detailOpen) document.body.style.overflow = "hidden";
     return () => {
+      stopDialog();
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("transform");
       if (element.open) element.close();
       if (detailOpen) document.body.style.overflow = previousOverflow;
     };
-  }, [mobile, detailOpen, selectedKey, selected?.id]);
+  }, [mobile, detailOpen, selectedKey, hasSelected, enterDialog, stopDialog]);
   const count = (status: "available" | "confirmed" | "reserved" | "unavailable") => schedule.filter(entry => entry.status === status).length;
   const timedDays = days.filter(day => day.date);
   const firstDate = timedDays[0]?.date;
@@ -121,8 +127,10 @@ export function WorksPage() {
     if (mobile || id === selected?.id) setDetailOpen(true);
   }
   function closeDetail() {
-    setDetailOpen(false);
-    detailTrigger.current?.focus({ preventScroll: true });
+    exitDialog(() => {
+      setDetailOpen(false);
+      detailTrigger.current?.focus({ preventScroll: true });
+    });
   }
   const actions = selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
     : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
