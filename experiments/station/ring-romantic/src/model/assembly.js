@@ -116,6 +116,9 @@ export function arcGeometry(radius, axialWidth, radialHeight, angle, corner = 1,
 // grain; UV1 maps each complete face for panel edges and captive fasteners.
 // Separate rim vertices keep folded sheet edges sharp without faceting corners.
 export function arcPanelGeometry(radius, profile, angle, offset = .065, thickness = .025, steps = 12) {
+  // Use the requested subdivision count as a ceiling. Narrow tiles need fewer
+  // angular samples; retain at least two spans and every cross-section point.
+  steps = Math.min(steps, Math.max(2, Math.ceil(Math.abs(angle) / (Math.PI / 120))));
   const positions = [], normals = [], uv = [], uv1 = [], indices = [];
   const distances = [0];
   for (let k = 1; k < profile.length; k++) distances.push(distances[k - 1]
