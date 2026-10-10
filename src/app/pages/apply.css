@@ -6,10 +6,9 @@
 .participation-aside-copy { position: relative; z-index: 1; padding: 40px 32px 0 0; }
 .participation-back { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: #999; font-size: var(--site-meta-size); }
 .participation-back:hover { color: #fff; }
-.participation-kicker { margin: 12px 0 2px; color: #818181; font: 9px/1.6 var(--font-label); letter-spacing: .13em; }
 .participation-aside h1 { margin: 0; font: 500 var(--site-title-size)/1.4 var(--font-body); letter-spacing: .025em; }
 .participation-intro { margin: 26px 0 0; font: 400 var(--site-body-size)/1.8 var(--font-body); letter-spacing: .03em; color: #c6c6c6; }
-.participation-aside-note { margin: 20px 0 0; color: #929292; font-size: 12px; line-height: 1.9; }
+.participation-aside-note { margin: 20px 0 0; color: #929292; font-size: var(--site-meta-size); line-height: 1.9; }
 .participation-artwork { margin: 38px 0 0; }
 .participation-content { padding: 80px clamp(34px, 5.5vw, 88px) 60px 48px; border-left: 1px solid #ffffff12; }
 .participation-section-label { margin: 0 0 20px; font-size: var(--site-meta-size); color: #999; }
@@ -17,20 +16,19 @@
 .participation-status-dot { width: 6px; height: 6px; flex: none; border: 1px solid #999; border-radius: 50%; }
 .participation-status-dot.is-open { border-color: #c5ddc5; background: #c5ddc5; }
 .participation-status [role="status"] > p { margin: 0; color: #a5a5a5; font-size: var(--site-body-size); line-height: 1.9; }
-.participation-action { display: flex; justify-content: space-between; align-items: center; gap: 24px; min-height: 52px; width: 100%; margin-top: 28px; border: 1px solid #ffffff42; padding: 0 19px; background: #ffffff05; color: #eee; font-size: 13px; transition: background .15s, border-color .15s; }
-.participation-action:hover { border-color: #ffffff90; background: #ffffff0d; }
+.participation-action.button.button--industrial { display: flex; justify-content: space-between; gap: 24px; height: 52px; min-height: 52px; width: 100%; margin-top: 28px; padding: 0 19px; }
 .participation-action-note { margin: 12px 0 0; color: #929292; font-size: var(--site-meta-size); line-height: 1.8; }
 .participation-section { border-top: 1px solid #ffffff1c; margin-top: 45px; padding-top: 28px; }
 .participation-section-heading { display: flex; align-items: baseline; gap: 18px; }
-.participation-section-heading > span { color: #777; font: 10px/1.6 var(--font-label); }
+.participation-section-heading > span { color: #777; font: var(--site-meta-size)/1.6 var(--font-numeric); }
 .participation-section-heading h2 { margin: 0; font: 500 var(--site-section-size)/1.55 var(--font-body); }
 .participation-section-lead { margin: 17px 0 0; color: #a5a5a5; font-size: var(--site-body-size); line-height: 1.95; }
 .participation-steps { list-style: none; margin: 28px 0 0; padding: 0; }
 .participation-steps li { display: grid; grid-template-columns: 25px minmax(0, 1fr); gap: 18px; position: relative; padding-bottom: 28px; }
 .participation-steps li:last-child { padding-bottom: 0; }
 .participation-steps li:not(:last-child)::after { content: ''; position: absolute; top: 25px; bottom: 9px; left: 8px; width: 1px; background: #ffffff17; }
-.participation-step-number { padding-top: 3px; font: 10px/1.6 var(--font-label); color: #858585; }
-.participation-steps h3, .participation-reminders h3 { margin: 0 0 7px; font-size: 14px; font-weight: 500; color: #d6d6d6; }
+.participation-step-number { padding-top: 3px; font: var(--site-meta-size)/1.6 var(--font-numeric); color: #858585; }
+.participation-steps h3, .participation-reminders h3 { margin: 0 0 7px; font-size: var(--site-body-size); font-weight: 500; color: #d6d6d6; }
 .participation-steps p, .participation-reminders p { margin: 0; font-size: var(--site-body-size); line-height: 1.95; color: #a0a0a0; }
 .participation-success-note { margin: 22px 0 0; padding-left: 14px; border-left: 2px solid #ffffff42; color: #a5a5a5; font-size: var(--site-body-size); line-height: 1.8; }
 .participation-success-note strong, .participation-followup strong { color: #e7e7e7; font-weight: 500; }
@@ -41,7 +39,7 @@
 .participation-reminders { display: grid; gap: 23px; margin-top: 23px; }
 .participation-closing { margin-top: 36px; padding-top: 25px; border-top: 1px solid #ffffff1c; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; }
 .participation-closing p { margin: 0; color: #999; font-size: var(--site-meta-size); }
-.participation-closing a { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; color: #dedede; font-size: 12px; }
+.participation-closing a { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; color: #dedede; font-size: var(--site-meta-size); }
 .participation-closing a:hover { color: #fff; }
 @media (max-width: 1050px) and (min-width: 760px) {
   .participation-guide { grid-template-columns: 40% minmax(0, 1fr); }
@@ -55,7 +53,6 @@
   .participation-guide { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 1fr; }
   .participation-aside { position: static; padding: 0 0 28px; }
   .participation-aside-copy { padding: 27px 0 0; }
-  .participation-kicker { font-size: 8px; }
   .participation-intro { margin-top: 18px; }
   .participation-aside-note { margin-top: 14px; font-size: var(--site-meta-size); }
   .participation-artwork { position: absolute; z-index: -1; inset: 125px -32% auto; height: 600px; margin: 0; max-width: none; pointer-events: none; }

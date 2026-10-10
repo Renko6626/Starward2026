@@ -7,6 +7,7 @@ import type {
   CreateApplicationInput,
   UpsertPortalApplicationInput,
   UpdateApplicationReviewInput,
+  UpdateApplicationIntentInput,
 } from "../../src/shared/applications";
 import type { PortalApplicationDetail } from "../../src/shared/portal";
 import { createPrefixedId } from "../lib/ids";
@@ -307,6 +308,27 @@ export async function upsertPortalApplication(
     message: "已更新报名资料。",
     application: updated,
   };
+}
+
+export async function updateApprovedApplicationIntent(
+  db: D1Database,
+  userId: string,
+  input: UpdateApplicationIntentInput,
+) {
+  const result = await db.prepare(`UPDATE applications
+    SET interest_format = ?, intro_text = ?, updated_at = ?
+    WHERE user_id = ? AND status = 'approved'`)
+    .bind(input.interestFormat, input.introText.trim(), nowIso(), userId).run();
+  if (result.meta.changes !== 1) return {
+    ok: false as const, status: 409, code: "portal_application_changed",
+    message: "报名状态已变化，请刷新后重试。",
+  };
+  const application = await getPortalApplicationByUserId(db, userId);
+  if (!application) return {
+    ok: false as const, status: 409, code: "portal_application_missing",
+    message: "报名记录已变化，请刷新后重试。",
+  };
+  return { ok: true as const, message: "创作意向已保存，报名审核结果和发布时间保持不变。", application };
 }
 
 export async function listApplications(db: D1Database) {

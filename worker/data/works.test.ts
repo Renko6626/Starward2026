@@ -155,6 +155,24 @@ it("accepts empty draft URLs but rejects executable, invalid and credential-bear
 
 
 describe("public relay timetable", () => {
+  it("shows approved intentions before previews and updates them without exposing pending intentions", async () => {
+    database.sqlite.exec(`UPDATE applications SET interest_format = 'cosplay', intro_text = '制作秘封主题的角色服装与摄影作品。' WHERE user_id = 'usr_seed_active';
+      UPDATE applications SET interest_format = 'music', intro_text = '待审核的私有创作意向' WHERE user_id = 'usr_seed_pending';
+      UPDATE project_drafts SET preview_status = 'draft' WHERE id = 'draft_seed_active';
+      UPDATE schedule_segments SET status = 'held', current_participant_id = 'part_seed_pending' WHERE id = 'seg_seed_101'`);
+    const app = new Hono<AppRouteConfig>().route("/api", publicApi);
+    const read = async () => (await (await app.request("http://localhost/api/works", {}, { DB: db })).json()) as any;
+    const body = await read();
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_102'))
+      .toMatchObject({ status: 'confirmed', interestFormat: 'cosplay', introText: '制作秘封主题的角色服装与摄影作品。', preview: null });
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101'))
+      .toMatchObject({ status: 'reserved', interestFormat: null, introText: null });
+    expect(JSON.stringify(body)).not.toContain('待审核的私有创作意向');
+    database.sqlite.exec("UPDATE applications SET interest_format = 'novel', intro_text = '创作月面旅行的短篇小说。' WHERE user_id = 'usr_seed_active'");
+    expect((await read()).schedule.find((entry: any) => entry.id === 'seg_seed_102'))
+      .toMatchObject({ interestFormat: 'novel', introText: '创作月面旅行的短篇小说。' });
+  });
+
   it("keeps slots and approved anonymous previews without leaking draft links", async () => {
     database.sqlite.exec(`UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active';
       UPDATE project_drafts SET preview_status = 'approved', work_url = 'https://example.com/private' WHERE id = 'draft_seed_active';
@@ -168,7 +186,7 @@ describe("public relay timetable", () => {
     expect(slot.preview.previewTitle).toBeTruthy();
     expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
     expect(JSON.stringify(body)).not.toContain("https://example.com/private");
-    expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "preview", "workId"].sort());
+    expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "interestFormat", "introText", "preview", "workId"].sort());
     database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
     const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
@@ -180,14 +198,14 @@ describe("public relay timetable", () => {
       UPDATE portal_profiles SET credit_name = '待审核私有署名' WHERE user_id = 'usr_seed_pending'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
     const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
-    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "reserved", publicAuthorName: null, preview: null });
+    expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "reserved", publicAuthorName: null, interestFormat: null, introText: null, preview: null });
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_102')).toMatchObject({ status: "confirmed", publicAuthorName: "结界观测者" });
     expect(body.schedule.find((entry: any) => entry.id === 'seg_seed_103')).toMatchObject({ status: "unavailable" });
     expect(JSON.stringify(body)).not.toContain('待审核私有署名');
     expect(JSON.stringify(body)).not.toContain('part_seed_pending');
     database.sqlite.exec("UPDATE schedule_segments SET status = 'released', current_participant_id = NULL WHERE id = 'seg_seed_101'");
     const released = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
-    expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, preview: null });
+    expect(released.schedule.find((entry: any) => entry.id === 'seg_seed_101')).toMatchObject({ status: "available", publicAuthorName: null, interestFormat: null, introText: null, preview: null });
   });
 
   it("exposes published details during the relay and retains chronological slots afterwards", async () => {
@@ -219,6 +237,35 @@ describe("public relay timetable", () => {
     expect(await updateActiveScheduleSegment(db, slot.id, { ...input, scheduledAt: null }, actor))
       .toMatchObject({ ok: true, item: { scheduledAt: null } });
   });
+});
+
+it("migrates mixed types to other, permits cosplay and preserves existing approvals, drafts and assignments", () => {
+  const legacy = new DatabaseSync(":memory:");
+  try {
+    const migration = "0021_cosplay_work_types.sql";
+    for (const file of readdirSync("migrations").filter(file => file.endsWith(".sql") && file < migration).sort()) {
+      legacy.exec(readFileSync(`migrations/${file}`, "utf8"));
+    }
+    legacy.exec(buildLocalSeedSql());
+    legacy.exec("UPDATE applications SET interest_format = 'mixed' WHERE user_id = 'usr_seed_active'");
+    legacy.exec("PRAGMA foreign_keys = ON");
+    const tables = ['applications', 'participants', 'project_drafts', 'schedule_segments', 'participant_events', 'segment_swap_requests'];
+    const before = tables.map(table => legacy.prepare(`SELECT * FROM ${table} ORDER BY id`).all());
+    legacy.exec(`BEGIN; ${readFileSync(`migrations/${migration}`, "utf8")} COMMIT;`);
+    tables.forEach((table, index) => {
+      const expected = before[index].map(row => table === 'applications' && row.interest_format === 'mixed'
+        ? { ...row, interest_format: 'other' } : row);
+      expect(legacy.prepare(`SELECT * FROM ${table} ORDER BY id`).all()).toEqual(expected);
+    });
+    expect(legacy.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    legacy.exec("UPDATE applications SET interest_format = 'cosplay' WHERE user_id = 'usr_seed_active'");
+    legacy.exec("UPDATE project_drafts SET work_type = 'cosplay' WHERE id = 'draft_seed_active'");
+    expect(legacy.prepare("SELECT interest_format FROM applications WHERE user_id = 'usr_seed_active'").get())
+      .toMatchObject({ interest_format: 'cosplay' });
+    expect(legacy.prepare("SELECT work_type FROM project_drafts WHERE id = 'draft_seed_active'").get())
+      .toMatchObject({ work_type: 'cosplay' });
+    expect(() => legacy.exec("UPDATE applications SET interest_format = 'mixed'")).toThrow();
+  } finally { legacy.close(); }
 });
 
 describe('additional schedule slots', () => {

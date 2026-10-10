@@ -1,0 +1,58 @@
+.button.button--industrial { position: relative; box-sizing: border-box; height: 44px; min-height: 44px; padding: 0 18px; border: 1px solid #606f76; border-radius: 2px; font-size: var(--site-control-size, 15px); font-weight: 500; line-height: 1.5; white-space: nowrap; cursor: pointer; box-shadow: none; translate: 0 0; transition: color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out, translate 80ms ease-out; }
+.button.button--industrial.button--primary, .button.button--industrial.button--secondary { background: #111518; border-color: #606f76; color: #deded9; }
+.button.button--industrial:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):hover { background: #1b2226; border-color: #98aab3; color: #f1f1ec; }
+.button.button--industrial:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { background: #0b1013; border-color: #adbec6; translate: 0 1px; transition-duration: 80ms; }
+.button.button--industrial.button--accent { background: #a0c8d8; border-color: #a0c8d8; color: #10232a; }
+.button.button--industrial.button--accent:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):hover { background: #b9d7e3; border-color: #b9d7e3; color: #10232a; }
+.button.button--industrial.button--accent:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { background: #8eb6c6; border-color: #8eb6c6; }
+.button.button--industrial.button--danger { background: #191210; border-color: #a16b59; color: #e7b5a3; }
+.button.button--industrial.button--danger:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):hover { background: #2b1914; border-color: #d59a83; color: #f0c7b7; }
+.button.button--industrial.button--danger:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { background: #160d0a; border-color: #d59a83; }
+.button.button--industrial[aria-pressed]::after { content: ''; position: absolute; inset: auto 10px 3px; height: 2px; background: #a0c8d8; opacity: 0; transition: opacity 120ms ease-out; pointer-events: none; }
+.button.button--industrial[aria-pressed="true"]::after { opacity: 1; }
+.button.button--industrial:focus-visible { outline: 2px solid #deded9; outline-offset: 4px; }
+.button.button--industrial:disabled, .button.button--industrial[aria-disabled="true"] { cursor: not-allowed; opacity: 1; background: #141719; border-color: #39434a; color: #919b9f; }
+.button.button--industrial:disabled::after, .button.button--industrial[aria-disabled="true"]::after { background: #687c86; }
+.button.button--industrial[aria-busy="true"] { cursor: progress; opacity: 1; background: #172026; border-color: #718994; color: #cad7dd; }
+.button--industrial .button-busy-indicator { display: none; }
+.button.button--industrial[aria-busy="true"]::after { content: none; }
+.button.button--industrial[aria-busy="true"]::before {
+  content: ''; position: absolute; inset: -3px -1px auto; height: 2px; pointer-events: none;
+  background-image: linear-gradient(#a0c8d8, #a0c8d8), linear-gradient(#42545e, #42545e), linear-gradient(#42545e, #42545e);
+  background-size: calc((100% - 8px) / 3) 100%; background-position: left, center, right; background-repeat: no-repeat;
+  animation: industrial-button-progress 900ms steps(1, end) infinite;
+}
+@keyframes industrial-button-progress {
+  0%, 100% { background-image: linear-gradient(#a0c8d8, #a0c8d8), linear-gradient(#42545e, #42545e), linear-gradient(#42545e, #42545e); }
+  33.333% { background-image: linear-gradient(#42545e, #42545e), linear-gradient(#a0c8d8, #a0c8d8), linear-gradient(#42545e, #42545e); }
+  66.666% { background-image: linear-gradient(#42545e, #42545e), linear-gradient(#42545e, #42545e), linear-gradient(#a0c8d8, #a0c8d8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button.button--industrial, .button.button--industrial::after { transition: none; }
+  .button.button--industrial:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { translate: 0 0; }
+  .button.button--industrial[aria-busy="true"]::before { animation: none; }
+}
+
+.button.button--industrial.button--framed {
+  --button-face: #161f24; --button-face-border: #627780;
+  padding: 3px; background: #0b1115; border-color: #627780;
+}
+.button--framed .button-feedback {
+  box-sizing: border-box; width: 100%; height: 100%; padding-left: 12px;
+  justify-content: space-between; gap: 14px; border: 1px solid var(--button-face-border);
+  background: var(--button-face); transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.button--framed .button-switch-bay {
+  display: flex; align-items: center; justify-content: center; align-self: stretch;
+  flex: 0 0 32px; border-left: 1px solid var(--button-face-border); background: #10191f; color: #a0c8d8;
+}
+.button.button--industrial.button--framed:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):hover { background: #0b1115; border-color: #98aab3; }
+.button.button--industrial.button--framed:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { background: #080d10; border-color: #adbec6; }
+.button.button--industrial.button--framed.button--accent { --button-face: #a0c8d8; --button-face-border: #83a7b6; color: #10232a; }
+.button.button--industrial.button--framed.button--accent:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):hover { --button-face: #b9d7e3; --button-face-border: #a0c8d8; background: #0b1115; }
+.button.button--industrial.button--framed.button--accent:where(:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])):active { --button-face: #8eb6c6; background: #080d10; }
+.button.button--industrial.button--framed:disabled, .button.button--industrial.button--framed[aria-disabled="true"] { --button-face: #182025; --button-face-border: #39434a; background: #0b1115; color: #919b9f; border-color: #39434a; }
+.button.button--industrial.button--framed[aria-busy="true"] { --button-face: #213039; --button-face-border: #718994; background: #0b1115; color: #cad7dd; border-color: #718994; }
+.button--framed:disabled .button-switch-bay, .button--framed[aria-disabled="true"] .button-switch-bay { color: #788a93; }
+.button--framed[aria-busy="true"] .button-switch-bay { color: #a0c8d8; }
+@media (prefers-reduced-motion: reduce) { .button--framed .button-feedback { transition: none; } }

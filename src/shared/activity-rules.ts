@@ -3,6 +3,7 @@ export const ACTIVITY_RULES_UPDATED_AT = "2026-10-11";
 export const ACTIVITY_RULES_ACCEPTANCE_HEADER = "x-starward-rules-version";
 export const NEW_ACCOUNT_RESPONSE_HEADER = "x-starward-account-created";
 export const ACTIVITY_RULES_TITLE = "逐星巡礼活动规则";
+export const WORK_SUBMISSION_DEADLINE = "2026-11-11T23:00:00+08:00";
 export const ACTIVITY_RULES_CONSENT_NOTICE = "了解纪念册制作及作品使用授权，知悉发行与收入处理方案将另行协商公布。";
 export const ACTIVITY_RULES_CONSENT_TEXT = `我已阅读并同意《逐星巡礼活动规则》，${ACTIVITY_RULES_CONSENT_NOTICE}`;
 

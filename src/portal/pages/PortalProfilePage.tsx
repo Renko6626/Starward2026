@@ -185,7 +185,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         {error ? <ArchiveResult compact={compact} tone="error" message={error} /> : null}
         <div className="form-actions">
           {!embedded ? <Link className="button button--secondary" to="/portal">返回作者页面</Link> : null}
-          <Button disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存个人信息"}</Button>
+          <Button appearance={compact ? "industrial" : "default"} disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存个人信息"}</Button>
         </div>
       </form>
       <LoginPasswordDialog email={profileState.user.email} />

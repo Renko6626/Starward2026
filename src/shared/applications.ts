@@ -9,7 +9,7 @@ export const applicationInterestFormatValues = [
   "comic",
   "music",
   "video",
-  "mixed",
+  "cosplay",
   "other",
 ] as const;
 
@@ -43,6 +43,9 @@ export const createApplicationInputSchema = applicationInputSchema.extend({
 });
 
 export const upsertPortalApplicationInputSchema = applicationInputSchema;
+export const updateApplicationIntentInputSchema = applicationInputSchema
+  .pick({ interestFormat: true, introText: true }).strict();
+export type UpdateApplicationIntentInput = z.infer<typeof updateApplicationIntentInputSchema>;
 
 export const updateApplicationReviewInputSchema = z.object({
   status: applicationStatusSchema,
@@ -150,7 +153,7 @@ export const applicationInterestFormatLabels: Record<
   comic: "漫画",
   music: "音乐",
   video: "视频",
-  mixed: "混合形式",
+  cosplay: "Cosplay",
   other: "其他",
 };
 

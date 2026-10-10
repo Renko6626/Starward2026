@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
+import { HomeSideGrid } from '../components/HomeSideGrid';
 import { MissionCountdown } from '../components/MissionCountdown';
 import { DesignReferences } from '../components/DesignReferences';
 import { StationBackdrop } from '../components/station/StationBackdrop';
@@ -9,6 +10,7 @@ import { ScrollReveal } from '../components/ScrollReveal';
 import { useApplicationIntake } from '../lib/use-application-intake';
 import { getApplicationWindowLabel } from '../../shared/windows';
 import './home.css';
+import '../components/ui/buttons.css';
 
 const steps = [
   { number: '01', title: '注册账号', body: '使用邮箱建立账号，已有账号直接登录。' },
@@ -28,17 +30,22 @@ export function HomePage() {
   return (
     <div className="station-home">
       <StationBackdrop paused={motionPaused} onTogglePaused={() => setMotionPaused(value => !value)} controlsContainer={motionControls} />
+      <HomeSideGrid />
       <section className="orbital-hero" aria-labelledby="home-title">
         <OrbitalArtwork paused={motionPaused} />
         <div className="orbital-copy">
           <div className="orbital-title">
             <h1 id="home-title">逐星巡礼</h1>
-            <p className="orbital-edition">Starward Pilgrimage</p>
+            <p className="orbital-edition"><img src="/brand/starward-pilgrimage.svg" width={13181} height={1200} alt="Starward Pilgrimage" /></p>
           </div>
           <p className="orbital-subtitle">2026年秘封俱乐部之日创作接力</p>
           <div className="orbital-actions">
-            <Link className="orbital-primary" to="/apply">参与活动 <ArrowUpRight size={18} /></Link>
+            <Link className="button button--primary button--industrial button--accent orbital-primary" to="/apply">参与活动 <ArrowUpRight size={18} /></Link>
             <Link className="orbital-secondary" to="/works" search={{ view: 'gallery', type: 'all', q: '' }}>浏览作品 <ArrowUpRight size={15} /></Link>
+          </div>
+          <div className="orbital-meta">
+            <p className="orbital-event-date"><span>活动日期</span><time dateTime="2026-11-12">2026.11.12</time></p>
+            <p className="orbital-group"><span>活动 QQ 群</span><span className="orbital-group-number">1078039621</span></p>
           </div>
         </div>
         <div className="orbital-bottom">
@@ -78,11 +85,15 @@ export function HomePage() {
         </div>
       </section>
       <section id="about-relay" className="relay-intro" aria-labelledby="relay-title">
-        <ScrollReveal className="relay-heading">
-          <h2 id="relay-title">关于活动</h2>
+        <ScrollReveal className="relay-poster">
+          <img src="/images/starward-2026-poster.webp" width={1280} height={829} loading="lazy" decoding="async"
+            alt="逐星巡礼 2026 宣传图，堇子、莲子和梅莉漂浮在空间站舱内。" />
         </ScrollReveal>
-        <ScrollReveal className="relay-statement">
-          <p>逐星巡礼是以秘封组为主题的同人创作接力。参与者按约定日程发布作品。</p>
+        <ScrollReveal className="relay-about-copy">
+          <div className="relay-heading"><h2 id="relay-title">关于活动</h2></div>
+          <div className="relay-statement">
+            <p>逐星巡礼是以秘封组为主题的同人创作接力。参与者按约定日程发布作品。</p>
+          </div>
         </ScrollReveal>
       </section>
       <DesignReferences />

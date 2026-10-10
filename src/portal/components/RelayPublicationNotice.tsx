@@ -76,7 +76,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
         <input className="field-input" type="url" required maxLength={2048} value={workUrl} disabled={busy}
           placeholder="公开可访问的 HTTPS 作品链接，确认后仍可修改" onChange={event => { dirty.current = true; setWorkUrl(event.target.value); }} />
       </Field>
-      <Button type="submit" disabled={busy || !workUrl.trim()}>{busy ? "提交中…" : release.confirmedAt ? "保存作品链接" : "确认已发布"}</Button>
+      <div className="archive-control"><span className="archive-control-label" aria-hidden="true">RELEASE / {release.confirmedAt ? "SAVE" : "CONFIRM"}</span><Button appearance={release.confirmedAt ? "industrial" : "framed"} className={release.confirmedAt ? undefined : "button--accent"} type="submit" disabled={busy || !workUrl.trim()} aria-busy={busy}>{busy ? "提交中…" : release.confirmedAt ? "保存作品链接" : "确认已发布"}</Button></div>
     </form> : null}
     {release.confirmedAt ? draft.publishedAt
       ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>

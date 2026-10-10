@@ -12,7 +12,8 @@ import {
   saveWorkspaceApplication,
   withdrawApplication,
 } from "./collaboration";
-import { getApplicationDetail, reviewApplication, upsertPortalApplication } from "./applications";
+import { getApplicationDetail, getPortalApplicationByUserId, reviewApplication, upsertPortalApplication, updateApprovedApplicationIntent } from "./applications";
+import { updateApplicationIntentInputSchema } from "../../src/shared/applications";
 
 const fixtures: SqliteD1Fixture[] = [];
 afterEach(() => {
@@ -68,6 +69,34 @@ async function approvedPair(f: SqliteD1Fixture) {
 }
 
 describe("workspace reservations", () => {
+  it("saves approved authors' creative intent without reopening review or touching their slot", async () => {
+    const f = fixture();
+    const { one } = await approvedPair(f);
+    const before = (await getPortalApplicationByUserId(f.db, "u1"))!;
+    const other = await getPortalApplicationByUserId(f.db, "u2");
+    const segment = f.sqlite.prepare("SELECT * FROM schedule_segments WHERE id='s1'").get();
+    const participant = f.sqlite.prepare("SELECT * FROM participants WHERE id=?").get(one);
+    f.sqlite.exec("UPDATE event_windows SET is_enabled=0 WHERE key='application_open'");
+    const parsed = updateApplicationIntentInputSchema.parse({ interestFormat: "illustration", introText: "  莲子和梅莉旅行的插画。  " });
+    expect(updateApplicationIntentInputSchema.safeParse({ ...parsed, status: "pending", segmentId: "s2" }).success).toBe(false);
+    const result = await updateApprovedApplicationIntent(f.db, "u1", parsed);
+    expect(result).toMatchObject({ ok: true, application: {
+      id: before.id, interestFormat: "illustration", introText: "莲子和梅莉旅行的插画。",
+      status: "approved", reviewedBy: before.reviewedBy, reviewedAt: before.reviewedAt, adminNote: before.adminNote,
+      contactEmail: before.contactEmail, contactHandle: before.contactHandle, portfolioUrl: before.portfolioUrl, messageToHosts: before.messageToHosts,
+    } });
+    expect(f.sqlite.prepare("SELECT * FROM schedule_segments WHERE id='s1'").get()).toEqual(segment);
+    expect(f.sqlite.prepare("SELECT * FROM participants WHERE id=?").get(one)).toEqual(participant);
+    expect(await getPortalApplicationByUserId(f.db, "u2")).toEqual(other);
+  });
+
+  it("rejects the approved-intent save path when the caller's application is not approved", async () => {
+    const f = fixture();
+    const pending = await saveWorkspaceApplication(f.db, "u1", "one@example.com", input("s1"));
+    expect(await updateApprovedApplicationIntent(f.db, "u1", { interestFormat: "music", introText: "一首曲子。" })).toMatchObject({ ok: false, status: 409 });
+    expect(await getPortalApplicationByUserId(f.db, "u1")).toEqual(pending);
+  });
+
   it("lets a QQ account apply and pass review without a contact email", async () => {
     const f = fixture();
     f.sqlite.exec(`UPDATE "user" SET email='internal@qq.starward.invalid',emailVerified=0 WHERE id='u1'`);

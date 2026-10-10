@@ -4,6 +4,7 @@ import { updatePortalProfileInputSchema } from "../../shared/portal";
 import { normalizeApplicationInput } from "../../app/lib/apply-form";
 import { normalizePortalProfileInput } from "./profile-form";
 import { getRegistrationFieldErrors } from "./registration-validation";
+import { updateApplicationIntentInputSchema } from "../../shared/applications";
 
 const profile = {
   creditName: "观测者", bilibiliUid: "12345678", contactEmail: "creator@example.com",
@@ -12,6 +13,11 @@ const profile = {
 const application = { contactEmail: profile.contactEmail, interestFormat: "novel" as const, introText: "准备写一篇秘封组短篇小说。" };
 
 describe("registration field errors", () => {
+  it("points an invalid standalone intent save to its existing form field", () => {
+    const result = updateApplicationIntentInputSchema.safeParse({ interestFormat: "novel", introText: "   " });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(getRegistrationFieldErrors(result.error.issues, "application")).toEqual({ "application.introText": "请简要描述准备创作什么。" });
+  });
   it("points to the invalid UID and portfolio link independently", () => {
     const result = workspaceApplicationInputSchema.safeParse({
       profile: normalizePortalProfileInput({ ...profile, bilibiliUid: "作者昵称" }),

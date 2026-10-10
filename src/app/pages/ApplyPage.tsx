@@ -4,7 +4,9 @@ import { authClient } from "../../portal/lib/auth-client";
 import { useApplicationIntake } from "../lib/use-application-intake";
 import { getApplicationWindowLabel } from "../../shared/windows";
 import { StationTechnicalDrawing } from "../components/StationTechnicalDrawing";
+import { ActivityIdentity } from "../components/ActivityIdentity";
 import "./apply.css";
+import "../components/ui/buttons.css";
 
 const steps = [
   { title: "注册或登录", body: "阅读并同意活动规则后，用邮箱注册。已有账号直接登录。" },
@@ -31,7 +33,7 @@ export function ApplyPage() {
       <aside className="participation-aside">
         <div className="participation-aside-copy">
           <h1>参与指南</h1>
-          <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
+          <ActivityIdentity />
           <Link to="/" className="participation-back"><ArrowLeft size={14} /> 返回首页</Link>
         </div>
         <div className="participation-artwork"><StationTechnicalDrawing variant="guide" /></div>
@@ -43,7 +45,7 @@ export function ApplyPage() {
             <h2 id="participation-status-title"><span className={`participation-status-dot${isOpen ? " is-open" : ""}`} aria-hidden="true" />{status}</h2>
             <p>{statusNote}</p>
           </div>
-          <Link to={session ? "/portal" : "/portal/login"} className="participation-action">
+          <Link to={session ? "/portal" : "/portal/login"} className="button button--primary button--industrial button--accent participation-action">
             {entryLabel}<ArrowUpRight size={18} />
           </Link>
           <p className="participation-action-note">{session ? "查看报名进度和作品资料。" : "已有账号可直接登录。"}</p>

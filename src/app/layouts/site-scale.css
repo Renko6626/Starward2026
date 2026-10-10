@@ -6,16 +6,19 @@
   --site-content-offset: max(var(--site-gutter), calc((100% - var(--site-content-max)) / 2));
   --site-header-height: 96px;
   --site-title-size: 32px;
-  --site-section-size: 18px;
-  --site-body-size: 14px;
+  --site-section-size: 20px;
+  --site-body-size: 16px;
   --site-label-size: 13px;
-  --site-meta-size: 12px;
+  --site-meta-size: 13px;
+  --site-control-size: 15px;
+  --font-numeric: var(--font-label);
 }
 
 .public-site, .creator-shell {
   --font-headline: var(--font-body);
   --font-editorial: var(--font-body);
   font-size: var(--site-body-size);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .public-header {
@@ -42,6 +45,8 @@
 .public-nav { font-size: var(--site-label-size); }
 .public-nav { gap: 28px; }
 .public-footer { font-size: var(--site-meta-size); }
+.page-title-meta { margin: 8px 0 0; color: #9c9c98; font: 400 var(--site-meta-size)/1.6 var(--font-body); letter-spacing: .02em; }
+.page-title-year { font-family: var(--font-numeric); font-variant-numeric: lining-nums tabular-nums; }
 :is(.public-site, .creator-shell) .brand > span { white-space: nowrap; }
 
 :is(.public-site, .creator-shell) .page-content { max-width: none; }
@@ -49,10 +54,12 @@
   font: 500 var(--site-title-size)/1.4 var(--font-body);
 }
 :is(.public-site, .creator-shell) .page-description,
-:is(.public-site, .creator-shell) .field-input,
-:is(.public-site, .creator-shell) .button { font-size: var(--site-body-size); }
+:is(.public-site, .creator-shell) .field-input { font-size: var(--site-body-size); }
+:is(.public-site, .creator-shell) .button { font-size: var(--site-control-size); }
 :is(.public-site, .creator-shell) .field-label { font-size: var(--site-label-size); }
 :is(.public-site, .creator-shell) .field-hint { font-size: var(--site-meta-size); }
+:is(.public-site, .creator-shell) :is(.notice, .field-error) { font-size: var(--site-body-size); }
+:is(.public-site, .creator-shell) :is(time, .ops-mission-time, .ops-task-clock, .mission-clock, .chapter-number, .participation-step-number, .relay-step-number, .relay-statistics strong, .orbital-group-number, .schedule-slot-code) { font-family: var(--font-numeric); font-variant-numeric: lining-nums tabular-nums; }
 
 @media (max-width: 800px) {
   .public-nav { top: var(--site-header-height); gap: 0; padding-inline: var(--site-gutter); }

@@ -1,0 +1,30 @@
+.mission-countdown { width: var(--site-content-width); margin: auto; padding: 70px 0 64px; border-bottom: 1px solid #c3c3c326; }
+.mission-countdown-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 42px; }
+.mission-countdown-heading h2 { margin: 0; font: 500 var(--site-section-size)/1.5 var(--font-body); color: #bdbdbd; }
+.mission-countdown-heading > span { font: 500 12px/1.5 var(--font-label); letter-spacing: .06em; color: #a0a0a0; }
+.mission-countdown-body { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
+.mission-clock { display: flex; align-items: flex-start; gap: clamp(16px, 2.2vw, 36px); font-family: var(--font-label); }
+.mission-clock-prefix { font-size: clamp(24px, 3vw, 44px); line-height: 1.35; color: #777; padding-top: 6px; }
+.mission-clock-unit { position: relative; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.mission-clock-unit + .mission-clock-unit::before { content: ':'; position: absolute; top: 0; left: calc(-1 * clamp(16px, 2.2vw, 36px) / 2 - .2em); font-size: clamp(36px, 5vw, 72px); line-height: 1; color: #555; }
+.mission-clock-value { font-size: clamp(36px, 5vw, 72px); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; color: #e6e6e6; }
+.mission-clock-started { font: 700 clamp(28px, 3vw, 42px)/1.5 var(--font-headline); }
+.mission-clock-label { font: var(--site-meta-size)/1.5 var(--font-body); color: #a0a0a0; letter-spacing: .04em; }
+.mission-start { display: flex; flex-direction: column; gap: 12px; color: #aaa; font-size: var(--site-meta-size); white-space: nowrap; }
+.mission-start time { font: 500 21px/1.3 var(--font-label); letter-spacing: .06em; color: #c7c7c7; }
+@media (max-width: 1000px) {
+  .mission-countdown-body { flex-direction: column; align-items: flex-start; gap: 38px; }
+  .mission-start { gap: 8px; }
+}
+@media (max-width: 699px) {
+  .mission-countdown { width: var(--site-content-width); padding: 46px 0; }
+  .mission-countdown-heading { margin-bottom: 32px; gap: 12px; }
+  .mission-countdown-heading h2 { font-size: var(--site-section-size); }
+  .mission-countdown-heading > span { font-size: 12px; }
+  .mission-clock { width: 100%; gap: 12px; }
+  .mission-clock-prefix { font-size: 19px; padding-top: 3px; }
+  .mission-clock-value, .mission-clock-unit + .mission-clock-unit::before { font-size: clamp(25px, 7.5vw, 44px); }
+  .mission-clock-unit + .mission-clock-unit::before { left: -10px; }
+  .mission-clock-label { font-size: 12px; letter-spacing: 0; }
+  .mission-start time { font-size: 19px; }
+}

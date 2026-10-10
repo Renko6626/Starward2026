@@ -124,7 +124,11 @@ export function mountStationScene(container, options = {}) {
     cameraRight.crossVectors(orbitAxis, basePosition).normalize();
     if (narrow) { pointer.set(0, 0); pointerTarget.set(0, 0); }
     updateCamera();
-    camera.setViewOffset(width, height, narrow ? 0 : -width * .19, narrow ? height * .17 : -height * .01, width, height);
+    // Shift in CSS pixels without changing FOV or distance. Keep the composition
+    // anchored after 1920px while the rendered starfield continues to fill the viewport.
+    const compositionWidth = Math.min(width, 1920);
+    const stationShift = Math.min(100, Math.max(0, (width - 1440) * .25));
+    camera.setViewOffset(width, height, narrow ? 0 : -compositionWidth * .19 - stationShift, narrow ? height * .17 : -height * .01, width, height);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     const place = (object, x, y, distance) => {

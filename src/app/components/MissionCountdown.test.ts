@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countdownAt } from './MissionCountdown';
+import { WORK_SUBMISSION_DEADLINE } from '../../shared/activity-rules';
 
 describe('mission countdown', () => {
   it('uses midnight Beijing time and separates remaining units', () => {
@@ -17,4 +18,10 @@ describe('mission countdown', () => {
       expect(countdownAt(Date.parse(now))).toEqual({ started: true, values: [0, 0, 0, 0] });
     }
   });
+});
+
+it('counts down to the work deadline in Beijing time separately from relay start', () => {
+  const deadline = Date.parse(WORK_SUBMISSION_DEADLINE);
+  expect(countdownAt(Date.parse('2026-11-10T22:58:30+08:00'), deadline)).toEqual({ started: false, values: [1, 0, 1, 30] });
+  expect(countdownAt(deadline)).toEqual({ started: false, values: [0, 1, 0, 0] });
 });

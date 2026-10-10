@@ -14,7 +14,7 @@ const fields: Record<string, { label: string; message: string }> = {
   segmentId: { label: "发布时间", message: "请选择一个可用的发布时间。" },
 };
 
-export function getRegistrationFieldErrors(issues: readonly ZodIssue[], prefix?: "profile") {
+export function getRegistrationFieldErrors(issues: readonly ZodIssue[], prefix?: "profile" | "application") {
   const errors: Record<string, string> = {};
   for (const issue of issues) {
     const path = [...(prefix ? [prefix] : []), ...issue.path].join(".");

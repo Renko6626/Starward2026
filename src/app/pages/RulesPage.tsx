@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ACTIVITY_RULES_TITLE, ACTIVITY_RULES_VERSION, ACTIVITY_RULES_UPDATED_AT, activityRulesSections } from "../../shared/activity-rules";
 import "./rules.css";
+import "../components/ui/buttons.css";
 
 export function RulesPage() {
   return <article className="rules-page" aria-labelledby="rules-title">
@@ -21,7 +22,7 @@ export function RulesPage() {
           <h2 id={`rules-heading-${section.id}`}>{section.title}</h2>
           {section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
         </section>)}
-        <div className="rules-actions"><Link to="/apply">查看参与指南</Link><Link className="button button--secondary" to="/portal/login">前往账号入口 <ArrowUpRight size={16} /></Link></div>
+        <div className="rules-actions"><Link to="/apply">查看参与指南</Link><Link className="button button--secondary button--industrial" to="/portal/login">前往账号入口 <ArrowUpRight size={16} /></Link></div>
       </div>
     </div>
   </article>;

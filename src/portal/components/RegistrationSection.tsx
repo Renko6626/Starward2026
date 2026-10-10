@@ -7,7 +7,7 @@ import { Button, Field, Notice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { getTurnstileSiteKey, normalizeApplicationInput } from "../../app/lib/apply-form";
 import { loadTurnstileApi } from "../../app/lib/turnstile";
-import { applicationInterestFormatLabels, type ApplicationIntakeResponse } from "../../shared/applications";
+import { applicationInterestFormatLabels, updateApplicationIntentInputSchema, type ApplicationIntakeResponse } from "../../shared/applications";
 import { workspaceApplicationInputSchema, type CollaborationResponse, type WorkspaceApplicationInput, type WorkspaceApplicationResponse } from "../../shared/collaboration";
 import { updatePortalProfileInputSchema, type PortalProfileMutationResponse, type PortalApplicationResponse } from "../../shared/portal";
 import { getApplicationWindowLabel } from "../../shared/windows";
@@ -72,7 +72,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     saveScheduleIntent(application.user.id, form.segmentId);
   }, [form, draftReady, application.user.id, application.editable]);
   const selectedSegment = collaboration.segments.find(item => item.id === form.segmentId);
-  const selectionUnavailable = Boolean(form.segmentId && (!selectedSegment || !isRegistrationSegmentSelectable(selectedSegment, collaboration.participantId)));
+  const selectionUnavailable = application.editable && Boolean(form.segmentId && (!selectedSegment || !isRegistrationSegmentSelectable(selectedSegment, collaboration.participantId)));
   const selectableSegments = collaboration.segments.filter(item => isRegistrationSegmentSelectable(item, collaboration.participantId));
   const [refreshWarning, setRefreshWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -92,6 +92,9 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const siteKey = getTurnstileSiteKey(import.meta.env);
   const required = Boolean(intake?.turnstileEnabled);
   const editable = application.editable;
+  const approved = application.application?.status === "approved";
+  const intentEditable = editable || approved;
+  const intentDisabled = !intentEditable || saving || savingProfile;
   const disabled = !editable || saving || savingProfile;
   useEffect(() => {
     const dialog = timeChangeDialog.current;
@@ -109,12 +112,13 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     };
   }, [timeChangeConfirmation, enterDialog, stopDialog]);
   useEffect(() => {
+    if (!editable) return;
     let cancelled = false;
     void requestJson<ApplicationIntakeResponse>("/api/applications/intake").then(value => {
       if (!cancelled) { setIntake(value); setError(null); }
     }).catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : "无法读取报名验证设置，请稍后重试。"); });
     return () => { cancelled = true; };
-  }, []);
+  }, [editable]);
   useEffect(() => {
     if (!required || !siteKey || !editable || !containerRef.current) return;
     let cancelled = false;
@@ -144,6 +148,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   async function submit(event?: FormEvent<HTMLFormElement>, confirmedChange?: RegistrationTimeChange) {
     event?.preventDefault();
     if (saving || savingProfile) return;
+    if (approved) { await saveIntent(); return; }
     if (confirmedChange) exitDialog(() => setTimeChangeConfirmation(null));
     else setTimeChangeConfirmation(null);
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
@@ -186,16 +191,24 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     finally { setSavingProfile(false); }
   }
 
+  async function saveIntent() {
+    setError(null); setMessage(null); setRefreshWarning(null); setFieldErrors({});
+    const parsed = updateApplicationIntentInputSchema.safeParse({ interestFormat: form.application.interestFormat, introText: form.application.introText });
+    if (!parsed.success) { showFieldErrors(getRegistrationFieldErrors(parsed.error.issues, "application")); return; }
+    setSaving(true);
+    try {
+      const response = await requestJson<WorkspaceApplicationResponse>("/api/portal/application", {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data),
+      });
+      setMessage(response.message);
+      await onSaved().catch(() => setRefreshWarning("创作意向已保存，页面暂未更新，请点击“刷新状态”。"));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "创作意向保存失败，请稍后重试。"); }
+    finally { setSaving(false); }
+  }
+
   const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => (
     <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact" && key !== "contactEmail"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
   );
-  if (application.application?.status === "approved") return <div className="space-y-4">
-    <Notice>报名已通过，可以安心创作。这里保留原报名资料，作品完成后再正式提交；开放期间可调整或申请换期。</Notice>
-    <p>参加形式：{applicationInterestFormatLabels[application.application.interestFormat]}</p>
-    <p>{application.application.introText || "未填写创作意向。"}</p>
-    {application.application.portfolioUrl ? <p>作品或主页：<a className="text-link" href={application.application.portfolioUrl} target="_blank" rel="noreferrer">{application.application.portfolioUrl}</a></p> : null}
-    {application.application.messageToHosts ? <p>给主催的话：{application.application.messageToHosts}</p> : null}
-  </div>;
   return <div ref={formContainerRef} className={compact ? "creator-board creator-board--registration" : "space-y-6"} onChangeCapture={event => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
@@ -217,12 +230,12 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         </dl>
         <p id="registration-time-dialog-description">以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。</p>
         <div className="workspace-actions">
-          <Button variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
-          <Button disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
+          <Button appearance={compact ? "industrial" : "default"} variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
+          <Button appearance={compact ? "industrial" : "default"} disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
         </div>
       </> : null}
     </dialog>
-    <ArchiveChapter enabled={compact} id="profile" number="01" title="署名与联系" state={application.profile?.creditName} defaultOpen={!application.profile}>
+    <ArchiveChapter enabled={compact} id="profile" number="01" title="基本信息" state={application.profile?.creditName} defaultOpen={!application.profile}>
       <LoginPasswordDialog email={application.user.email} />
       <div className={compact ? "creator-card-body" : undefined}>
     <fieldset className="form-section" aria-label="署名与联系" disabled={compact ? saving || savingProfile : disabled} onKeyDown={event => {
@@ -239,15 +252,15 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
-    {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
+    {compact ? <><Button appearance="industrial" type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "保存署名与联系"}</Button></> : null}
     {profileMessage ? <ArchiveResult compact={compact} message={profileMessage} /> : null}
       </div>
     </ArchiveChapter>
-    <ArchiveChapter enabled={compact} id="plan" number="02" title="报名信息" defaultOpen>
+    <ArchiveChapter enabled={compact} id="plan" number="02" title="创作意向" state={application.application ? applicationInterestFormatLabels[application.application.interestFormat] : undefined} defaultOpen={!application.application || application.application.status === "rejected" || application.application.status === "withdrawn"}>
 
       <div className={compact ? "creator-card-body" : undefined}>
-    {!editable ? <Notice>{`${getApplicationWindowLabel(application.window)}，暂时不能提交或修改报名。`}</Notice> : null}
-    <fieldset className="form-section" aria-label="创作意向" disabled={disabled}>
+    {!intentEditable ? <Notice>{`${getApplicationWindowLabel(application.window)}，暂时不能提交或修改报名。`}</Notice> : null}
+    <fieldset className="form-section" aria-label="创作意向" disabled={intentDisabled}>
       <div className="workspace-form-grid">
         <Field label="预计作品类型" error={fieldErrors["application.interestFormat"]}><select name="application.interestFormat" form="creator-registration-form" className="field-input" value={form.application.interestFormat} onChange={event => setForm(current => ({ ...current, application: { ...current.application, interestFormat: event.target.value as WorkspaceApplicationInput["application"]["interestFormat"] } }))}>{Object.entries(applicationInterestFormatLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
       </div>
@@ -268,13 +281,14 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择。</Notice> : null}
     </section> : null}
     {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
-    <div className="registration-submit">
-      <div className="workspace-actions">
-        {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
-        <Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
+    {intentEditable ? <div className={`registration-submit${approved ? " registration-submit--intent" : ""}`}>
+      <div className="workspace-actions archive-control-actions">
+        {compact && !approved ? <span className="archive-control-label" aria-hidden="true">REG / SUBMIT</span> : null}
+        {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
+        <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled || (!approved && (!intake || (required && !token)))} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
       </div>
-      <p className="registration-submit-note">提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。</p>
-    </div>
+      <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。"}</p>
+    </div> : null}
       </div>
     </ArchiveChapter>
     {message ? <ArchiveResult compact={compact} message={message} /> : null}

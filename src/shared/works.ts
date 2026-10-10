@@ -1,9 +1,10 @@
 import { z } from "zod";
+import type { ApplicationInterestFormat } from "./applications";
 
-export const workTypeSchema = z.enum(["text", "illustration", "comic", "music", "video", "other"]);
+export const workTypeSchema = z.enum(["text", "illustration", "comic", "music", "video", "cosplay", "other"]);
 export type WorkType = z.infer<typeof workTypeSchema>;
 export const workTypeLabels: Record<WorkType, string> = {
-  text: "文字", illustration: "插画", comic: "漫画", music: "音乐", video: "视频", other: "其他",
+  text: "文字", illustration: "插画", comic: "漫画", music: "音乐", video: "视频", cosplay: "Cosplay", other: "其他",
 };
 
 export const publicHttpsUrlSchema = z.string().trim().max(2048).url("请填写完整的网址。").refine(
@@ -50,6 +51,8 @@ export type PublicScheduleEntry = {
   scheduledAt: string | null;
   status: "available" | "reserved" | "confirmed" | "unavailable";
   publicAuthorName: string | null;
+  interestFormat: ApplicationInterestFormat | null;
+  introText: string | null;
   preview: Pick<WorkPresentation, "previewTitle" | "previewSummary" | "workType" | "coverUrl" | "coverAlt"> | null;
   workId: string | null;
 };

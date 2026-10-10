@@ -474,8 +474,9 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
-            <Button variant="secondary"
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant archive-control-actions">
+            {compact ? <span className="archive-control-label" aria-hidden="true">PREVIEW / REVIEW</span> : null}
+            <Button appearance={compact ? "industrial" : "default"} variant="secondary"
               disabled={pendingAction !== null}
               aria-busy={pendingAction === "preview-save"}
               onClick={() => void handlePreviewSave()}
@@ -483,7 +484,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             >
               {pendingAction === "preview-save" ? "保存中…" : "保存作品预告"}
             </Button>
-            {state.project.draft.previewStatus !== "approved" ? <Button
+            {state.project.draft.previewStatus !== "approved" ? <Button appearance={compact ? "industrial" : "default"}
               disabled={pendingAction !== null || !flags.previewSubmitOpen}
               aria-busy={pendingAction === "preview-submit"}
               onClick={() => void handlePreviewSubmit()}
@@ -558,8 +559,9 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             </Field>
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant">
-            <Button variant="secondary"
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-outline-variant archive-control-actions">
+            {compact ? <span className="archive-control-label" aria-hidden="true">REVIEW / SUBMIT</span> : null}
+            <Button appearance={compact ? "industrial" : "default"} variant="secondary"
               disabled={pendingAction !== null}
               aria-busy={pendingAction === "review-save"}
               onClick={() => void handleReviewSave()}
@@ -567,7 +569,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
             >
               {pendingAction === "review-save" ? "保存中…" : "保存审查说明"}
             </Button>
-            {state.project.draft.reviewStatus !== "approved" ? <Button
+            {state.project.draft.reviewStatus !== "approved" ? <Button appearance={compact ? "industrial" : "default"}
               disabled={pendingAction !== null || !flags.reviewSubmitOpen}
               aria-busy={pendingAction === "review-submit"}
               onClick={() => void handleReviewSubmit()}
