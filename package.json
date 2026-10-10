@@ -43,6 +43,7 @@
     "resend": "^6.10.0",
     "tailwind-merge": "^3.3.1",
     "three": "0.180.0",
+    "vivus": "0.4.6",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -53,6 +54,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.180.0",
+    "@types/vivus": "^0.4.7",
     "@vitejs/plugin-react": "^5.1.1",
     "playwright": "^1.63.0",
     "tailwindcss": "^4.1.14",
