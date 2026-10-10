@@ -37,7 +37,7 @@ export function summarizeApplicationReviewState(
         title: "入口账号",
         statusLabel: hasAuthUser ? "已建立入口" : "未建立入口",
         hint: hasAuthUser
-          ? application.authUser!.email
+          ? application.authUser!.email ?? "QQ 登录"
           : "对方尚未通过 /portal/login 建立入口会话。",
         completed: hasAuthUser,
         tone: hasAuthUser ? "success" : "warn",
@@ -130,7 +130,7 @@ function resolveRecommendation(input: {
 
     if (input.participant.status === "approved" || input.participant.status === "completed") {
       if (!input.participant.activatedAt) {
-        return "该创作者资格已批准，建议发送通过提醒邮件，说明后续已解锁正式动作。";
+        return "该创作者资格已批准，作者页面已开放正式操作。";
       }
 
       return "该创作者已进入正式流程。后续维护建议转到创作者详情页继续处理。";
@@ -158,42 +158,6 @@ function resolveRecommendation(input: {
   return "该记录尚未绑定作者页面账号，不符合当前正式报名规则。建议先引导对方完成入口登录，再继续处理；如系历史数据，需人工核对。";
 }
 
-function resolveInviteAction(application: ApplicationDetail): ApplicationInviteAction {
-  if (!application.participant) {
-    return {
-      enabled: false,
-      label: "需先建立作者页面",
-      reason: "当前还没有可发送提醒的作者页面记录。",
-    };
-  }
-
-  if (application.participant.status === "withdrawn") {
-    return {
-      enabled: false,
-      label: "当前状态不可发送",
-      reason: "已撤回的创作者不应继续发送通过提醒。",
-    };
-  }
-
-  if (application.participant.status !== "approved" && application.participant.status !== "completed") {
-    return {
-      enabled: false,
-      label: "尚未开放资格",
-      reason: "只有已批准的创作者才需要发送通过提醒。",
-    };
-  }
-
-  if (application.participant.activatedAt) {
-    return {
-      enabled: true,
-      label: "补发通过提醒邮件",
-      reason: "该创作者已进入过作者页面，如需再次提醒可补发。",
-    };
-  }
-
-  return {
-    enabled: true,
-    label: "发送通过提醒邮件",
-    reason: "创作者资格已批准，可发送提醒说明后续已解锁的正式动作。",
-  };
+function resolveInviteAction(_application: ApplicationDetail): ApplicationInviteAction {
+  return { enabled: false, label: "邮件提醒已停用", reason: "审核结果可在作者页面查看。" };
 }

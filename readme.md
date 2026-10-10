@@ -17,7 +17,7 @@ Starward2026 的目标范围包含以下三类能力：
 | 前端 | React + TypeScript + Vite |
 | API | Hono on Cloudflare Workers |
 | 数据库 | Cloudflare D1 |
-| 参与者认证 | Better Auth + 邮箱密码 / Email OTP + Cookie Session |
+| 参与者认证 | Better Auth + QQ / 邮箱密码 / Email OTP + Cookie Session |
 | 反滥用 | Cloudflare Turnstile + Workers Rate Limiting |
 | 管理后台保护 | Cloudflare Access |
 | 文件存储 | Cloudflare R2（仅在需要上传文件时启用） |
@@ -111,11 +111,15 @@ npm run dev
 
 ## 参与者认证
 
-- `/portal/login` 默认支持邮箱与密码登录，新用户可直接注册，无需验证邮件。
+- `/portal/login` 在 QQ 配置启用后优先展示 QQ 入口，新用户同意规则后直接 QQ 授权开户，无需邮箱。
+- 已有邮箱账号可在“登录与密码”中绑定 QQ，使用原账号和原报名、作品、排期。尚未绑定的 QQ 登录会建立独立账号；本期不提供自动合并。
+- 联系邮箱选填，填写它不会添加邮箱登录方式。QQ-only 账号不展示邮箱密码设置。
+- 邮箱密码和邮箱验证码保留为次级入口；QQ 未启用时仍可使用邮箱入口。
+- QQ 配置与迁移见 [QQ OAuth 接入说明](docs/development/qq-oauth.md)。
 - 密码由 Better Auth 哈希后存入现有 `account` 表，不需要额外数据库迁移。
 - `/portal/profile` 支持修改密码；原验证码账号可先登录，再设置密码，沿用原账号与参与者资料。
-- 密码注册、登录和会话读取只依赖 D1、`BETTER_AUTH_SECRET` 与站点 URL，不依赖 Resend。
-- 保留邮箱验证码登录和审核通知，只有这些邮件功能需要 Resend；此次不提供邮件找回密码。
+- 密码注册、登录和会话读取只依赖 D1、`BETTER_AUTH_SECRET` 与站点 URL，不依赖 Resend，仅用于登录验证码。
+- 保留邮箱验证码登录，仅此邮件功能需要 Resend。审核通过、邀请和换期都不发送邮件，不提供邮件找回密码。
 - 原验证码账号若已退出且邮件不可用，需要先恢复身份验证渠道才能设置密码；重新注册不会覆盖原账号。已有未关联账号的邀请也需先验证邮箱后领取。
 
 ## 没有 VPS 时的测试入口

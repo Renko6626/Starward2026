@@ -38,7 +38,7 @@ export type AdminParticipantItem = {
   isAnonymous: boolean;
   id: string;
   displayName: string;
-  inviteEmail: string;
+  inviteEmail: string | null;
   contactHandle: string | null;
   status: ParticipantPortalStatus;
   applicationId: string | null;
@@ -163,7 +163,7 @@ export type AdminProjectDraftListResponse = {
 
 export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFields & {
   releaseConfirmedAt: string | null;
-  participantInviteEmail: string;
+  participantInviteEmail: string | null;
   participantContactHandle: string | null;
   participantStatus: ParticipantPortalStatus;
   segmentName: string | null;

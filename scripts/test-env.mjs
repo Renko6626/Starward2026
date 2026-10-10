@@ -18,7 +18,13 @@ export function parseMode(value) {
 }
 
 export function buildLocalServiceReport(env) {
+  const qqReady = env.QQ_OAUTH_ENABLED?.trim().toLowerCase() === "true" && /^\d+$/.test(env.QQ_APP_ID?.trim() ?? "") && Boolean(env.QQ_APP_KEY?.trim()) && Boolean(env.BETTER_AUTH_URL?.trim());
   return [
+    {
+      name: "QQ 登录",
+      status: qqReady ? "ready" : "offline",
+      detail: qqReady ? "配置已齐备；真实授权还需核对 QQ 平台登记的回调" : "未启用或配置不完整；邮箱入口仍可使用",
+    },
     { name: "本地数据库", status: "ready", detail: "Wrangler D1 local" },
     {
       name: "本地管理员入口",
@@ -33,7 +39,7 @@ export function buildLocalServiceReport(env) {
       status: env.RESEND_API_KEY && env.RESEND_FROM_EMAIL ? "ready" : "offline",
       detail:
         env.RESEND_API_KEY && env.RESEND_FROM_EMAIL
-          ? "使用配置的邮件服务"
+          ? "仅发送用户主动请求的登录验证码"
           : "未配置；OTP 登录会显示不可用",
     },
     {

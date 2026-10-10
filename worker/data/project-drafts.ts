@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   AdminProjectDraftDetail,
   UpdateProjectDraftInput,
@@ -33,7 +34,7 @@ type ProjectDraftRow = {
   id: string;
   participant_id: string;
   participant_name: string;
-  participant_invite_email: string;
+  participant_invite_email: string | null;
   participant_contact_handle: string | null;
   participant_status: ParticipantPortalStatus;
   segment_code: string | null;
@@ -699,7 +700,7 @@ function mapAdminProjectDraftDetail(
     id: row.id,
     participantId: row.participant_id,
     participantName: row.participant_name,
-    participantInviteEmail: row.participant_invite_email,
+    participantInviteEmail: getRealAuthEmail(row.participant_invite_email),
     participantContactHandle: row.participant_contact_handle,
     participantStatus: row.participant_status,
     segmentCode: row.segment_code,

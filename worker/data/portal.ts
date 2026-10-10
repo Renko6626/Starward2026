@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   PortalApplicationDetail,
   PortalApplicationSummary,
@@ -33,7 +34,7 @@ export function mapPortalAuthUser(user: {
 }): PortalAuthUserSummary {
   return {
     id: user.id,
-    email: user.email,
+    email: getRealAuthEmail(user.email),
     name: user.name,
     emailVerified: user.emailVerified,
   };
@@ -43,7 +44,7 @@ export function mapPortalParticipant(participant: ParticipantAuthRow): PortalPar
   return {
     id: participant.id,
     displayName: participant.display_name,
-    inviteEmail: participant.invite_email,
+    inviteEmail: getRealAuthEmail(participant.invite_email),
     contactHandle: participant.contact_handle,
     status: participant.status,
     activatedAt: participant.activated_at,

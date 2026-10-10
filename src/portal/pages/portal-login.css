@@ -69,3 +69,10 @@
 .activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.9; }
 .activity-rules-consent input { flex: none; margin-top: 6px; }
 .activity-rules-consent a { text-decoration: underline; text-underline-offset: 3px; }
+
+.qq-login-entry { display: grid; gap: 12px; margin-bottom: 24px; }
+.qq-login-entry .button { width: 100%; }
+.qq-login-entry .activity-rules-consent { margin: 8px 0; }
+.auth-email-options { margin-top: 20px; }
+.auth-email-options > summary { cursor: pointer; padding: 12px 0; font-size: 14px; }
+.auth-email-options .auth-tabs { margin-top: 16px; }

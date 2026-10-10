@@ -4,12 +4,12 @@ import { applicationInterestFormatSchema } from "../../shared/applications";
 // Accept incomplete fields: this is an unsent form, never a valid submission.
 const draftSchema = z.object({
   profile: z.object({
-    creditName: z.string(), bilibiliUid: z.string(), contactEmail: z.string(),
+    creditName: z.string(), bilibiliUid: z.string(), contactEmail: z.string().nullable(),
     primaryContactChannel: z.string(), primaryContactHandle: z.string(),
     backupContact: z.string().optional(), isAnonymous: z.boolean(),
   }),
   application: z.object({
-    contactEmail: z.string(), contactHandle: z.string().optional(),
+    contactEmail: z.string().nullable(), contactHandle: z.string().optional(),
     interestFormat: applicationInterestFormatSchema, introText: z.string().default(""),
     portfolioUrl: z.string().optional(), messageToHosts: z.string().optional(),
   }),

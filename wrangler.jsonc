@@ -15,6 +15,7 @@
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
+  "vars": { "QQ_OAUTH_ENABLED": "false" },
   "ratelimits": [
     {
       "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
@@ -84,7 +85,8 @@
         }
       ],
       "vars": {
-        "BETTER_AUTH_URL": "https://hifuu-staging.mucwiki-edge.link"
+        "BETTER_AUTH_URL": "https://hifuu-staging.mucwiki-edge.link",
+        "QQ_OAUTH_ENABLED": "false"
       }
     },
     "production": {
@@ -101,7 +103,8 @@
       ],
       // Replace with the real production URL before the first production deploy.
       "vars": {
-        "BETTER_AUTH_URL": "https://replace-with-production-domain.example.com"
+        "BETTER_AUTH_URL": "https://replace-with-production-domain.example.com",
+        "QQ_OAUTH_ENABLED": "false"
       }
       // Add production routes before enabling deploy:production.
     }

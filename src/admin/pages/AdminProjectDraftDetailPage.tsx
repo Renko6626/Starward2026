@@ -169,7 +169,7 @@ export function AdminProjectDraftDetailPage() {
               <DetailItem label="参与者" value={draft.participantName} />
               <DetailItem
                 label="联系邮箱"
-                value={draft.participantInviteEmail}
+                value={draft.participantInviteEmail ?? "QQ 登录"}
               />
               <DetailItem
                 label="参与状态"

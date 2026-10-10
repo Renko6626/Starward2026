@@ -1,3 +1,4 @@
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   CollaborationResponse,
   PortalNeighbor,
@@ -52,7 +53,7 @@ async function atomic(
 export async function saveWorkspaceApplication(
   db: D1Database,
   userId: string,
-  authEmail: string,
+  authEmail: string | null,
   input: WorkspaceApplicationInput,
 ) {
   const application = await db
@@ -141,7 +142,7 @@ export async function saveWorkspaceApplication(
         userId,
         p.creditName,
         p.bilibiliUid,
-        authEmail.trim().toLowerCase(),
+        getRealAuthEmail(p.contactEmail),
         p.primaryContactChannel,
         p.primaryContactHandle,
         normalizeOptionalText(p.backupContact),
@@ -169,7 +170,7 @@ export async function saveWorkspaceApplication(
       .bind(
         applicationId,
         userId,
-        authEmail.trim().toLowerCase(),
+        getRealAuthEmail(p.contactEmail),
         normalizeOptionalText(a.contactHandle),
         a.interestFormat,
         normalizeOptionalText(a.introText),
@@ -192,7 +193,7 @@ export async function saveWorkspaceApplication(
         participantId,
         userId,
         applicationId,
-        authEmail.toLowerCase(),
+        getRealAuthEmail(authEmail),
         normalizeOptionalText(a.contactHandle),
         now,
         now,
@@ -442,16 +443,7 @@ export async function createSwap(
         now,
       ),
   ]);
-  const recipient = await db
-    .prepare(
-      `SELECT COALESCE(pp.contact_email, p.invite_email) AS email
-        FROM participants p
-        LEFT JOIN portal_profiles pp ON pp.user_id = p.user_id
-        WHERE p.id = ?`,
-    )
-    .bind(pair.recipientId)
-    .first<{ email: string }>();
-  return { id, email: recipient?.email };
+  return { id };
 }
 const pairValid = `EXISTS (SELECT 1
         FROM participants

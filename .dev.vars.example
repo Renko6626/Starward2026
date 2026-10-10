@@ -23,3 +23,8 @@ ALLOW_LOCAL_DEV_ORIGINS="true"
 
 # Comma/newline separated list of additional trusted origins (all environments).
 # BETTER_AUTH_TRUSTED_ORIGINS="https://dev.example.com"
+
+# QQ website OAuth; keep disabled until the application and callback are configured.
+QQ_OAUTH_ENABLED="false"
+# QQ_APP_ID="your-qq-website-app-id"
+# QQ_APP_KEY="configure-server-side-only"
