@@ -27,6 +27,10 @@
 .orbital-title { margin-bottom: 16px; }
 .orbital-edition { margin: 8px 0 0; font-size: clamp(18px, 2.2vw, 32px); line-height: 1.2; }
 .orbital-edition img { display: block; height: 1.2em; width: auto; }
+.home-wordmark { position: relative; display: block; }
+.home-wordmark-outline { position: absolute; inset: 0; width: 100%; height: 100%; color: #a0c8d8; opacity: 0; pointer-events: none; }
+.home-wordmark.is-drawing img { opacity: 0; }
+.home-wordmark.is-drawing .home-wordmark-outline { opacity: 1; }
 .orbital-edition { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); }
 .orbital-copy h1 { margin: 0; font: 500 clamp(45px, 5.25vw, 84px)/1.2 var(--font-brand-cn); letter-spacing: .035em; color: #fff; transform: skewX(-8deg); transform-origin: left bottom; }
 .orbital-copy h1 { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); }
@@ -194,17 +198,31 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .orbital-edition,
+  .orbital-copy h1 { animation: orbital-title-enter 800ms var(--motion-ease) both; }
   .orbital-subtitle,
   .orbital-actions,
+  .orbital-meta,
   .orbital-bottom {
     animation: orbital-copy-enter 520ms var(--motion-ease) both;
   }
-  .orbital-edition { animation-delay: 90ms; }
-  .orbital-subtitle { animation-delay: 150ms; }
-  .orbital-actions { animation-delay: 220ms; }
-  .orbital-bottom { animation-delay: 320ms; }
+  .orbital-subtitle { animation-delay: 850ms; }
+  .orbital-actions { animation-delay: 980ms; }
+  .orbital-meta { animation-delay: 1050ms; }
+  .orbital-bottom { animation-delay: 1000ms; }
   .orbital-artwork { animation: orbital-artwork-enter 900ms ease 120ms both; }
+}
+
+@keyframes orbital-title-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-12px) skewX(-8deg);
+    clip-path: polygon(-12% -10%, -12% -10%, 0% 110%, -12% 110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) skewX(-8deg);
+    clip-path: polygon(-12% -10%, 112% -10%, 100% 110%, -12% 110%);
+  }
 }
 
 @keyframes orbital-copy-enter {

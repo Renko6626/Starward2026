@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
 import { HomeSideGrid } from '../components/HomeSideGrid';
+import { HomeWordmark } from '../components/HomeWordmark';
 import { MissionCountdown } from '../components/MissionCountdown';
 import { DesignReferences } from '../components/DesignReferences';
 import { StationBackdrop } from '../components/station/StationBackdrop';
@@ -36,7 +37,7 @@ export function HomePage() {
         <div className="orbital-copy">
           <div className="orbital-title">
             <h1 id="home-title">逐星巡礼</h1>
-            <p className="orbital-edition"><img src="/brand/starward-pilgrimage.svg" width={13181} height={1200} alt="Starward Pilgrimage" /></p>
+            <p className="orbital-edition"><HomeWordmark /></p>
           </div>
           <p className="orbital-subtitle">2026年秘封俱乐部之日创作接力</p>
           <div className="orbital-actions">
