@@ -107,7 +107,7 @@
       // Named environments do NOT inherit the top-level bindings, so the
       // production D1 binding must be declared explicitly here or every
       // DB-backed endpoint returns 503 after a production deploy.
-      // Replace database_id with the real production D1 id before deploying.
+      // CI resolves this placeholder by database_name, creating the dedicated DB if absent.
       "d1_databases": [
         {
           "binding": "DB",
@@ -115,12 +115,11 @@
           "database_id": "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
         }
       ],
-      // Replace with the real production URL before the first production deploy.
+      "routes": [{ "pattern": "hifuu.moe", "custom_domain": true }],
       "vars": {
         "BETTER_AUTH_URL": "https://hifuu.moe",
         "QQ_OAUTH_ENABLED": "false"
       }
-      // Add routes: [{ "pattern": "your-production-domain", "custom_domain": true }]
       // The production tag workflow validates these settings before deployment.
     }
   },

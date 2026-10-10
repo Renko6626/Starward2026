@@ -173,9 +173,10 @@ npm run deploy:staging
 ## Production tag deployments
 
 Pushing a new tag ending in `-prod` (for example `v1.0.0-prod`) runs the production
-GitHub Actions workflow: tests, production build, D1 migrations, deployment and
+GitHub Actions workflow: production D1 lookup/creation, tests, production build,
+D1 migrations, deployment and
 public smoke checks. Configure the production domain/database and GitHub secrets
-before the first release. See [production deployment setup](docs/development/production-deployment.md).
+before the first release; the database UUID can be resolved automatically. See [production deployment setup](docs/development/production-deployment.md).
 
 ## License
 

@@ -9,7 +9,8 @@ The workflow must exist in the tagged commit.
 ## Release sequence
 
 1. Install dependencies from `package-lock.json` using Node 24.12.0.
-2. Test the deployment checks and validate the production Wrangler configuration.
+2. Test the deployment checks, resolve or create the dedicated production D1
+   database, and validate the production Wrangler configuration.
 3. Regenerate station previews and orbital assets if the tagged source fails their
    freshness checks. CI installs Chromium and the pinned Python dependencies as
    needed; generated files are build artifacts and are not committed back to Git.
@@ -21,8 +22,8 @@ The workflow must exist in the tagged commit.
 8. Check the public homepage and `/api/health`, then write the tag, commit and URL
    to the Actions run summary.
 
-The Cloudflare API token is available only to the credential, migration and
-deployment steps. `wrangler deploy --keep-vars` preserves extra runtime variables
+The Cloudflare API token is available only to the database bootstrap, credential,
+migration and deployment steps. `wrangler deploy --keep-vars` preserves extra runtime variables
 configured in the Cloudflare dashboard. Variables explicitly declared in
 `env.production.vars` still take precedence. Worker secrets survive redeploys.
 
@@ -34,13 +35,17 @@ but does not automatically roll back the Worker or database.
 
 ## One-time production configuration
 
-Create a separate production D1 database in the target Cloudflare account. Update
-`env.production` in [wrangler.jsonc](../../wrangler.jsonc):
+The workflow resolves `starward2026-prod` by exact name in the target Cloudflare
+account and creates it if absent. It writes the resolved UUID only to the CI
+checkout before the build and migrations; it does not commit generated IDs.
+Existing UUIDs configured explicitly are preserved. Staging names and UUIDs
+cannot be reused, and other production settings are checked before any resource
+is created. Update `env.production` in [wrangler.jsonc](../../wrangler.jsonc):
 
 - `name`: `starward2026-production` by default. Match the existing production
   Worker name if it has already been created.
-- `d1_databases`: replace `REPLACE_WITH_PRODUCTION_D1_DATABASE_ID` with the
-  production database UUID; set `database_name` to the actual database name.
+- `d1_databases`: keep `REPLACE_WITH_PRODUCTION_D1_DATABASE_ID` to enable automatic
+  lookup/creation using `database_name`, or provide an existing production UUID.
   Keep `binding: "DB"`. The guard rejects the database used by staging.
 - `vars.BETTER_AUTH_URL`: the real HTTPS origin, such as `https://event.your-domain.tld`,
   with no path, query or credentials.
@@ -56,8 +61,11 @@ The production domain's DNS zone must be active in the target Cloudflare account
 This workflow expects a Custom Domain. If deployment should use only
 `workers.dev`, adjust the guard and URL configuration first.
 
-Run `npm run check:production` to confirm these settings. The current production
-placeholders deliberately fail this check until real resources are configured.
+Run `npm run check:production` to validate fully resolved settings. When using
+automatic database bootstrap, this standalone check still rejects the placeholder;
+the workflow runs `scripts/production-database.mjs` first, using the GitHub secrets.
+Bootstrap requires a valid production domain and route and fails on missing or
+insufficient Cloudflare credentials.
 
 Configure the runtime separately for `starward2026-production`:
 
@@ -87,7 +95,7 @@ custom token with these permissions:
 | Scope | Permission | Purpose |
 | --- | --- | --- |
 | Account | Workers Scripts: Edit/Write | Upload and deploy the Worker and frontend assets |
-| Account | D1: Edit/Write | Apply production database migrations |
+| Account | D1: Edit/Write | Find/create the production database and apply migrations |
 | Zone | Workers Routes: Edit/Write | Configure the production Workers Custom Domain |
 | Zone | Zone: Read | Resolve the production domain's zone |
 
