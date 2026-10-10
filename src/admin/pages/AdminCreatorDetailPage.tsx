@@ -105,7 +105,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
         <details className="panel admin-disclosure"><summary>账号与审核记录</summary><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <DetailItem label="报名 ID" value={application?.id ?? "未提交"} />
           <DetailItem label="参与者 ID" value={participant?.id ?? "未关联"} />
-          <DetailItem label="登录邮箱" value={application?.authUser ? application.authUser.email ?? "QQ 登录" : participant?.inviteEmail ?? "未绑定账号"} />
+          <DetailItem label="登录邮箱" value={application?.authUser ? application.authUser.email ?? "未设置登录邮箱" : participant?.inviteEmail ?? "未绑定账号"} />
           <DetailItem label="用户 ID" value={participant?.userId ?? application?.authUser?.id ?? "未绑定"} />
           <DetailItem label="联系资料" value={profile ? "已填写" : "未读取到报名联系资料"} />
           <DetailItem label="审核时间" value={formatDateTime(application?.reviewedAt ?? null)} />

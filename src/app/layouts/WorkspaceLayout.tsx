@@ -1,3 +1,4 @@
+import { ArchiveBackground } from "../../portal/components/ArchiveBackground";
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -47,7 +48,8 @@ export function WorkspaceLayout({
     .reverse()
     .find((item) => navPath === item.to || navPath.startsWith(`${item.to}/`));
   if (kind === "portal") {
-    return <div className="creator-shell">
+    return <div className={`creator-shell${pathname === "/portal" || pathname === "/portal/" ? " author-archive-shell" : ""}`}>
+      {pathname === "/portal" || pathname === "/portal/" ? <ArchiveBackground /> : null}
       <a className="skip-link" href="#main-content">跳至正文</a>
       <SiteHeader />
       <main id="main-content" className="creator-content" aria-busy={pending}>{children}</main>

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { Pause, Play } from 'lucide-react';
 import type { StationScene } from './scene';
 
-export function StationBackdrop({ paused, onTogglePaused }: { paused: boolean; onTogglePaused: () => void }) {
+export function StationBackdrop({ paused, onTogglePaused, controlsContainer }: { paused: boolean; onTogglePaused: () => void; controlsContainer: RefObject<HTMLDivElement | null> }) {
   const root = useRef<HTMLDivElement>(null);
   const scene = useRef<StationScene | null>(null);
   const [ready, setReady] = useState(false);
@@ -70,12 +71,12 @@ export function StationBackdrop({ paused, onTogglePaused }: { paused: boolean; o
         <div className="orbital-shade" />
         <div className="station-reading-shade" />
       </div>
-      {ready && !reduced ? (
+      {ready && !reduced && controlsContainer.current ? createPortal(
         <button className="station-motion" type="button" aria-pressed={paused} onClick={onTogglePaused}>
           {paused ? <Play size={13} /> : <Pause size={13} />}
           {paused ? '继续运行' : '暂停运行'}
         </button>
-      ) : null}
+      , controlsContainer.current) : null}
     </>
   );
 }

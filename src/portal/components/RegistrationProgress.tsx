@@ -35,6 +35,12 @@ export function RegistrationProgress({ application, participantStatus, current, 
     : "当前不能提交或修改报名，请查看参与指南或联系主催。";
 
   return <section className="registration-progress" aria-label="报名进度">
+    <dl className="archive-register">
+      <div><dt>作者</dt><dd>{application.profile?.creditName || application.user.name || "尚未填写署名"}</dd></div>
+      <div><dt>发布时间 / 北京时间</dt><dd>{time ? formatScheduledTime(time.scheduledAt) : "尚未选择"}<small>{time ? timeStatus : null}</small></dd></div>
+      <div><dt>接力序号</dt><dd>{time?.code || "—"}</dd></div>
+      <div><dt>报名</dt><dd>{label}</dd></div>
+    </dl>
     <div className="registration-progress-body">
       <div className="registration-progress-copy"><h2>{label}</h2><p>{next}</p></div>
       <div className="registration-progress-time"><h3>发布时间（北京时间）</h3><p>{time ? formatScheduledTime(time.scheduledAt) : "尚未选择"}</p>{time ? <span>{timeStatus}</span> : null}</div>

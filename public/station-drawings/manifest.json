@@ -1,5 +1,5 @@
 {
-  "fingerprint": "ec450ac50c525b87fb463fc3f4fe87f33aa88711b051b3d21970ef4dc29641f4",
+  "fingerprint": "383365a6e7a678e7e6f3c4aec5506378d761259ccfc1f2c421805cb05d4c7894",
   "dependencies": {
     "three": "0.180.0",
     "vite": "7.3.2",
@@ -11,16 +11,52 @@
       "file": "overview.png",
       "width": 1600,
       "height": 1100,
-      "sha256": "c057d53f26e5c2c3da3c7ce7955e6e07d7514e176147a3468e804025c0c7d82a",
-      "bytes": 113990
+      "sha256": "7431c94a97c11a99db60b36dd6608cc5866c300970ca72bb837b372f0852424e",
+      "bytes": 86826
     },
     "sideElevation": {
       "name": "sideElevation",
       "file": "side-elevation.png",
       "width": 1260,
       "height": 850,
-      "sha256": "b478cd2bce3d16a67213a29185d366f8b940543cf3d96547cff5e67613874a6c",
-      "bytes": 52500
+      "sha256": "20d4be3883b2335c595f496d0daa8af72d9b2e6cd3cfe0e5591a7fff15647c38",
+      "bytes": 62375
+    },
+    "assembly": {
+      "name": "assembly",
+      "file": "assembly.svg",
+      "width": 1120,
+      "height": 930,
+      "view": "side",
+      "sha256": "b8d203a4a276653fab0b8ebd76e224651ddb9b013096eaea6d079f8db31370a4",
+      "bytes": 109650
+    },
+    "endView": {
+      "name": "endView",
+      "file": "end-view.svg",
+      "width": 1120,
+      "height": 930,
+      "view": "front",
+      "sha256": "c34acb0760ac6927df5c3fdf37c093eb8088e0084a2c0add9b139b79d891bea3",
+      "bytes": 334860
+    },
+    "docking": {
+      "name": "docking",
+      "file": "docking.svg",
+      "width": 1120,
+      "height": 650,
+      "view": "dock",
+      "sha256": "32e5164d58691535cafd48175c38c3918080a6aa9f9adf3164b0a3b72692bb3b",
+      "bytes": 145504
+    },
+    "propulsion": {
+      "name": "propulsion",
+      "file": "propulsion.svg",
+      "width": 1120,
+      "height": 650,
+      "view": "aft",
+      "sha256": "31c8459c64f30e175d9f221ddef56f9588a58d91c875908773a385b6f9c878f7",
+      "bytes": 105177
     }
   }
 }

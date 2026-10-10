@@ -1,3 +1,5 @@
+import { ArchiveChapter } from "../components/ArchiveChapter";
+import "../archive.css";
 import { PortalAccount } from "../../app/layouts/WorkspaceLayout";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
@@ -85,7 +87,7 @@ export function PortalOverviewPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
-  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace"><PageHeading title="作者页面">{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
+  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace author-archive"><PageHeading title="作者页面">{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
   const { dashboard, application, collaboration } = state;
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
@@ -99,13 +101,14 @@ export function PortalOverviewPage() {
     catch (caught) { setError(caught instanceof Error ? caught.message : "状态刷新失败，请稍后重试。"); }
     finally { setRefreshing(false); }
   }
-  return <div className="page-content creator-workspace">
-    <PageHeading title="作者页面"><PortalAccount /><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
+  return <div className="page-content creator-workspace author-archive">
+    <PageHeading title={<>作者档案 <span className="archive-year">逐星巡礼 / 2026</span></>}><PortalAccount /><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
     {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
+    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>署名与联系</a>{approved ? <><a href="#preview"><span>02</span>作品预告</a><a href="#review"><span>03</span>审查说明</a><a href="#relay"><span>04</span>接力安排</a></> : <a href="#plan"><span>02</span>报名信息</a>}</nav>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
       <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
@@ -118,12 +121,13 @@ export function PortalOverviewPage() {
     </section> : null}
     {approved ? <div className="creator-board">
       <PortalProfilePage embedded compact onSaved={refresh} />
-      <section className="creator-card creator-work-card" id="project">
-        <header className="creator-card-header"><h2 className="creator-card-title">作品资料</h2><Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link></header>
-        <div className="creator-card-body">
-          <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
+      <div id="project">
           <PortalProjectPage embedded compact onSaved={refresh} revision={revision} />
-          <NeighborSlots revision={revision} />
+          <ArchiveChapter id="relay" number="04" title="接力安排" state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "尚未选择"}>
+            <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
+            <NeighborSlots revision={revision} />
+            <Link className="text-link" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期</Link>
+          </ArchiveChapter>
           {application.application ? <div className="portal-registration-record"><WorkspaceSection id="plan" title="查看报名信息和创作意向">
             <p>参加形式：{applicationInterestFormatLabels[application.application.interestFormat]}</p>
             <p>{application.application.introText || "未填写创作意向。"}</p>
@@ -131,8 +135,7 @@ export function PortalOverviewPage() {
             {application.application.messageToHosts ? <p>给主催的话：{application.application.messageToHosts}</p> : null}
           </WorkspaceSection></div> : <span id="plan" />}
 
-        </div>
-      </section>
+      </div>
     </div> : <><span id="project" /><RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} /></>}
     <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>

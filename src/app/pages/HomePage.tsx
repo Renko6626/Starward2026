@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowDown, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { OrbitalArtwork } from '../components/OrbitalArtwork';
 import { MissionCountdown } from '../components/MissionCountdown';
 import { DesignReferences } from '../components/DesignReferences';
@@ -11,13 +11,14 @@ import { getApplicationWindowLabel } from '../../shared/windows';
 import './home.css';
 
 const steps = [
-  { number: '01', title: '注册账号', body: '使用邮箱注册，已有账号直接登录。' },
+  { number: '01', title: '注册账号', body: '使用邮箱建立账号，已有账号直接登录。' },
   { number: '02', title: '选择时段', body: '在时间表选择意向发布时间。' },
-  { number: '03', title: '填写资料', body: '填写基本信息和创作意向，确认时间后提交报名。' },
+  { number: '03', title: '提交报名', body: '填写联系资料和创作意向，确认时间后提交。' },
 ];
 
 export function HomePage() {
   const [motionPaused, setMotionPaused] = useState(false);
+  const motionControls = useRef<HTMLDivElement>(null);
   const intake = useApplicationIntake(30_000);
   const statistics = intake.status === 'ready' ? intake.payload.statistics : null;
   const isOpen = intake.status === 'ready' && intake.payload.isOpen;
@@ -26,7 +27,7 @@ export function HomePage() {
     : getApplicationWindowLabel(intake.payload.window);
   return (
     <div className="station-home">
-      <StationBackdrop paused={motionPaused} onTogglePaused={() => setMotionPaused(value => !value)} />
+      <StationBackdrop paused={motionPaused} onTogglePaused={() => setMotionPaused(value => !value)} controlsContainer={motionControls} />
       <section className="orbital-hero" aria-labelledby="home-title">
         <OrbitalArtwork paused={motionPaused} />
         <div className="orbital-copy">
@@ -46,26 +47,27 @@ export function HomePage() {
             <span>报名状态</span><strong>{status}</strong>
             {intake.status === 'error' ? <span className="orbital-status-error">{intake.message}</span> : null}
           </div>
-          <a className="orbital-scroll" href="#participate-relay">参与方式 <ArrowDown size={13} /></a>
+          <div className="orbital-controls">
+            <a className="orbital-scroll" href="#participate-relay">参与方式 <ArrowDown size={13} /></a>
+            <div ref={motionControls} />
+          </div>
         </div>
       </section>
       <MissionCountdown />
       <section id="participate-relay" className="relay-route" aria-labelledby="route-title">
-        <div className="relay-route-heading"><h2 id="route-title">参与活动</h2></div>
+        <div className="relay-route-heading"><h2 id="route-title">参与活动</h2><Link to="/apply">查看参与指南 <ArrowUpRight size={15} /></Link></div>
         <ol className="relay-steps">
-          {steps.map((step, index) => <li key={step.number}>
-            <ScrollReveal className="relay-step">
-              <span className="relay-step-number" aria-hidden="true">{step.number}</span>
-              <h3>{step.title}</h3><p>{step.body}</p>
-            </ScrollReveal>
-            {index < steps.length - 1 ? <ArrowRight className="relay-step-arrow" size={18} aria-hidden="true" /> : null}
+          {steps.map(step => <li key={step.number}>
+            <div className="relay-step">
+              <div className="relay-step-heading"><span className="relay-step-number" aria-hidden="true">{step.number}</span><h3>{step.title}</h3></div>
+              <p>{step.body}</p>
+            </div>
           </li>)}
         </ol>
         <div className="relay-actions">
           <Link className="relay-start" to="/portal/login">开始报名 <ArrowUpRight size={18} /></Link>
-          <Link to="/apply">查看参与指南 <ArrowUpRight size={15} /></Link>
+          <p className="relay-enrollment-note">提交后预留时段，审核通过后确认。</p>
         </div>
-        <p className="relay-enrollment-note">提交后预留时段，审核通过后确认。</p>
         <div className="relay-statistics" aria-live="polite">
           {statistics ? <dl>
             <div><dt>已注册创作者</dt><dd><strong>{statistics.registeredCreators}</strong><span>人</span></dd></div>

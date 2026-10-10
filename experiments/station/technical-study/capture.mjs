@@ -9,7 +9,12 @@ import { projectRoot, publishAssets } from '../../../scripts/station-assets.mjs'
 export const drawingViews = [
   { name: 'overview', file: 'overview.png', width: 1600, height: 1100 },
   { name: 'sideElevation', file: 'side-elevation.png', width: 1260, height: 850 },
+  { name: 'assembly', file: 'assembly.svg', width: 1120, height: 930, view: 'side' },
+  { name: 'endView', file: 'end-view.svg', width: 1120, height: 930, view: 'front' },
+  { name: 'docking', file: 'docking.svg', width: 1120, height: 650, view: 'dock' },
+  { name: 'propulsion', file: 'propulsion.svg', width: 1120, height: 650, view: 'aft' },
 ];
+const drawingFontPath = 'src/assets/fonts/ibm-plex-mono-400.woff2';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -22,6 +27,7 @@ export async function fingerprintDrawings(root = projectRoot) {
   const files = (await Promise.all(['experiments/station/ring-romantic/src', 'experiments/station/technical-study']
     .map(directory => filesUnder(join(root, directory))))).flat()
     .filter(path => ['.js', '.mjs', '.html'].includes(extname(path))).sort();
+  files.push(join(root, drawingFontPath));
   const hash = createHash('sha256');
   for (const file of files) {
     hash.update(relative(root, file).split(sep).join('/'));
@@ -53,6 +59,7 @@ export async function checkDrawings(root = projectRoot) {
 }
 async function generateDrawings() {
   const initial = await fingerprintDrawings();
+  const fontBase64 = (await readFile(join(projectRoot, drawingFontPath))).toString('base64');
   const { build } = await import('vite');
   const { chromium } = await import('playwright');
   const root = fileURLToPath(new URL('.', import.meta.url));
@@ -63,7 +70,8 @@ async function generateDrawings() {
     await build({ configFile: false, root, logLevel: 'warn', resolve: { dedupe: ['three'] }, build: { outDir: temporary, emptyOutDir: true } });
     server = createServer(async (request, response) => {
       try {
-        const path = resolve(temporary, '.' + (request.url === '/' ? '/index.html' : new URL(request.url, 'http://localhost').pathname));
+        const pathname = new URL(request.url, 'http://localhost').pathname;
+        const path = resolve(temporary, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (!path.startsWith(temporary + sep)) { response.writeHead(403).end(); return; }
         response.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/woff2' })[extname(path)] || 'application/octet-stream');
         response.end(await readFile(path));
@@ -84,7 +92,32 @@ async function generateDrawings() {
         const manifest = { ...initial, images: {} };
         for (const view of drawingViews) {
           let bytes;
-          if (view.name === 'overview') bytes = await page.screenshot({ path: join(staged, view.file) });
+          if (view.view) {
+            await page.goto(`http://127.0.0.1:${server.address().port}/?view=${view.view}`, { waitUntil: 'networkidle' });
+            await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', { timeout: 30000 });
+            const geometry = await page.locator('#page-sheet').innerHTML();
+            await page.addStyleTag({ content: '#annotations, header, footer { visibility: hidden; }' });
+            const raster = await page.locator('#drawing').screenshot();
+            const viewTop = view.height === 650 ? 240 : 100;
+            const frameTop = view.height === 650 ? 280 : 145;
+            const frameHeight = view.height === 650 ? 530 : 850;
+            bytes = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="200 ${viewTop} 1120 ${view.height}" width="1120" height="${view.height}">
+<style>
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;src:url("data:font/woff2;base64,${fontBase64}") format("woff2")}
+svg{background:#090909}text{font-family:"IBM Plex Mono",monospace;font-weight:400;fill:#81949c;text-anchor:middle}
+.frame,.zone-tick{fill:none;stroke:#637984;stroke-width:1.2}.coordinate{font-size:23px}
+.datum{fill:none;stroke:#536f7d;stroke-width:1;stroke-dasharray:18 5 3 5}
+.dimension,.dimension path{fill:none;stroke:#a8bec9;stroke-width:1.3}.extension{opacity:.55}
+.dimension text,.dimension-label{fill:#b7cbd5;stroke:none;font-size:27px;paint-order:stroke;stroke:#090909;stroke-width:7px;stroke-linejoin:round}
+.leader path,.leader circle{fill:none;stroke:#8da7b4;stroke-width:1.2}.leader text{font-size:23px;fill:#a8bec9}
+.detail-boundary{fill:none;stroke:#6c8795;stroke-width:1;stroke-dasharray:10 5}.view-ref{font-size:23px;fill:#bacbd3}
+.scale{fill:none;stroke:#81949c;stroke-width:1.4}.scale-label,.unit-label{font-size:20px}
+</style>
+<defs><clipPath id="drawing-clip"><rect x="240" y="${frameTop}" width="1050" height="${frameHeight}"/></clipPath></defs>
+<image clip-path="url(#drawing-clip)" href="data:image/png;base64,${raster.toString('base64')}" x="170" y="140" width="1260" height="850"/>
+${geometry}</svg>`);
+            await writeFile(join(staged, view.file), bytes);
+          } else if (view.name === 'overview') bytes = await page.screenshot({ path: join(staged, view.file) });
           else {
             // Element screenshots include overlapping siblings. Hide annotations.
             await page.addStyleTag({ content: '#annotations, header, footer { visibility: hidden; }' });
