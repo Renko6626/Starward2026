@@ -18,15 +18,14 @@
   font-size: var(--site-body-size);
 }
 
-.public-header, .creator-header {
+.public-header {
   width: var(--site-content-width);
   min-height: var(--site-header-height);
   height: var(--site-header-height);
   margin-inline: auto;
 }
 
-.public-main, .public-footer,
-.creator-section-nav, .creator-content, .creator-footer {
+.public-main, .public-footer, .creator-content {
   width: var(--site-content-width);
   margin-inline: auto;
 }
@@ -40,10 +39,9 @@
   letter-spacing: .08em;
 }
 :is(.public-site, .creator-shell) .brand-emblem { width: 44px; }
-.public-nav, .creator-header-actions, .creator-section-nav { font-size: var(--site-label-size); }
+.public-nav { font-size: var(--site-label-size); }
 .public-nav { gap: 28px; }
-.public-footer, .creator-footer { font-size: var(--site-meta-size); }
-.creator-header .workspace-account { display: flex; align-items: center; min-width: 0; }
+.public-footer { font-size: var(--site-meta-size); }
 :is(.public-site, .creator-shell) .brand > span { white-space: nowrap; }
 
 :is(.public-site, .creator-shell) .page-content { max-width: none; }
@@ -58,23 +56,9 @@
 
 @media (max-width: 800px) {
   .public-nav { top: var(--site-header-height); gap: 0; padding-inline: var(--site-gutter); }
-  .creator-header { height: auto; }
 }
 @media (max-width: 640px) {
   :root { --site-gutter: 16px; --site-title-size: 28px; }
-  .creator-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px 44px;
-    gap: 0 12px;
-    height: var(--site-header-height);
-    padding-block: 4px;
-  }
-  .creator-header > .brand { grid-column: 1; grid-row: 1 / -1; }
-  .creator-header-actions { display: contents; }
-  .creator-header-actions > a { grid-column: 2; grid-row: 1; justify-self: end; display: flex; align-items: center; min-height: 44px; padding-block: 0; }
-  .creator-header .workspace-account { grid-column: 2; grid-row: 2; justify-self: end; gap: 4px; }
-  .creator-header .workspace-account > span { max-width: clamp(44px, calc(100vw - 286px), 104px); font-size: var(--site-meta-size); }
 }
 
 .public-site .success-page h1 { font: 500 var(--site-title-size)/1.4 var(--font-body); }

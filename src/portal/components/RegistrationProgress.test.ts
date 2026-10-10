@@ -14,6 +14,6 @@ it("distinguishes an actual withdrawal from an unsent registration", () => {
 });
 
 it("shows the review and approved stages after submission", () => {
-  expect(getRegistrationProgress("pending", "pending").label).toBe("待审核");
-  expect(getRegistrationProgress("approved", "approved").label).toBe("已报名");
+  expect(getRegistrationProgress("pending", "pending").label).toBe("报名待审核");
+  expect(getRegistrationProgress("approved", "approved").label).toBe("报名已通过");
 });

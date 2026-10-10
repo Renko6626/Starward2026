@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Brand } from "./SiteLayout";
+import { Brand, SiteHeader, SiteFooter } from "./SiteLayout";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { authClient } from "../../portal/lib/auth-client";
 
@@ -48,15 +48,9 @@ export function WorkspaceLayout({
   if (kind === "portal") {
     return <div className="creator-shell">
       <a className="skip-link" href="#main-content">跳至正文</a>
-      <header className="creator-header">
-        <Brand />
-        <div className="creator-header-actions"><Link to="/apply">参与指南</Link><PortalAccount /></div>
-      </header>
-      <nav className="creator-section-nav" aria-label="作者页面区块导航">
-        <a href="#plan">计划与发布时点</a><a href="#tasks">待办与反馈</a><a href="#project">作品资料</a><a href="#profile">署名与联系</a><a href="#history">操作记录</a>
-      </nav>
+      <SiteHeader />
       <main id="main-content" className="creator-content">{children}</main>
-      <footer className="creator-footer"><span>逐星巡礼 2026</span><Link to="/">返回活动首页 <ArrowUpRight size={14} /></Link></footer>
+      <SiteFooter />
     </div>;
   }
   return (
@@ -156,7 +150,7 @@ export function WorkspaceLayout({
   );
 }
 
-function PortalAccount() {
+export function PortalAccount() {
   const { data } = authClient.useSession();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);

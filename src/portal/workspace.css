@@ -1,16 +1,6 @@
-.creator-shell { min-height: 100dvh; background: var(--color-background); color: var(--color-on-surface); }
-.creator-header, .creator-section-nav, .creator-content, .creator-footer { width: var(--site-content-width); margin-inline: auto; }
-.creator-header { min-height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--color-outline-variant); }
-.creator-header-actions { display: flex; align-items: center; gap: 28px; font-size: 13px; color: var(--color-on-surface-variant); }
-.creator-header-actions > a { padding-block: 14px; }
-.creator-header .workspace-account { gap: 12px; }
-.creator-header .workspace-account > span { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.creator-section-nav { display: flex; gap: 28px; padding-block: 16px; overflow-x: auto; font-size: 13px; color: var(--color-on-surface-variant); }
-.creator-section-nav a { padding-block: 8px; flex: none; }
-.creator-section-nav a:hover, .creator-header-actions a:hover { color: var(--color-on-surface); }
-.creator-content { padding-block: 28px 64px; min-height: 65vh; }
-.creator-footer { padding-block: 24px; border-top: 1px solid var(--color-outline-variant); color: var(--color-on-surface-variant); font-size: 12px; display: flex; justify-content: space-between; gap: 20px; }
-.creator-footer a { display: inline-flex; align-items: center; gap: 8px; }
+.creator-shell { min-height: 100dvh; display: flex; flex-direction: column; background: var(--color-background); color: var(--color-on-surface); }
+.creator-content { width: var(--site-content-width); margin-inline: auto; }
+.creator-content { flex: 1; padding-top: 28px; min-height: 65vh; }
 .creator-workspace { display: grid; gap: 24px; }
 .creator-workspace .page-heading { margin-bottom: 4px; }
 .creator-workspace .page-heading h1 { font: 500 var(--site-title-size)/1.4 var(--font-body); }
@@ -79,11 +69,10 @@
 .workspace-empty { color: var(--color-on-surface-variant); font-size: 14px; line-height: 1.9; }
 .creator-workspace .text-link { font-size: 14px; }
 .creator-board { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 18px; align-items: start; }
-.creator-board--registration { align-items: stretch; }
+.creator-board--registration { align-items: start; }
 .creator-registration-card { display: flex; flex-direction: column; }
 .creator-registration-card > .creator-card-body { flex: 1; display: flex; flex-direction: column; }
-.creator-registration-card > .creator-card-body > .registration-submit { margin-top: auto; }
-.registration-submit { padding-top: 48px; }
+.registration-submit { padding-top: 8px; }
 .registration-submit-note { margin: 12px 0 0; font-size: 12px; line-height: 1.8; color: var(--color-on-surface-variant); }
 .creator-board > [hidden] { display: none; }
 .creator-card { border: 1px solid var(--color-outline-variant); border-radius: var(--control-radius); background: var(--color-surface); min-width: 0; scroll-margin-top: 24px; }
@@ -125,23 +114,15 @@
 .compact-feedback { display: grid; gap: 12px; }
 .compact-feedback .notice { margin: 0; }
 .registration-time-summary { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--color-outline-variant); border-radius: var(--control-radius); }
-.registration-time-summary h3 { font-size: 15px; font-weight: 500; line-height: 1.7; }
 .registration-time-summary .button { justify-self: start; }
 .registration-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; padding: 14px 18px; border: 1px solid var(--color-outline-variant); background: var(--color-surface); border-radius: var(--control-radius); }
-.registration-progress-steps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 0 0 10px; margin: 0; list-style: none; border-bottom: 1px solid var(--color-outline-variant); }
-.registration-progress-steps li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-on-surface-variant); }
-.registration-progress-steps li > span { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--color-outline-variant); border-radius: 50%; font-family: var(--font-label); }
-.registration-progress-steps .is-current { color: var(--color-on-surface); font-weight: 500; }
-.registration-progress-steps .is-current > span { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
-.registration-progress-steps .is-complete > span { border-color: var(--color-primary); color: var(--color-primary); }
-.registration-progress-body { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 18px; }
+.registration-progress-body { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 18px; }
 .registration-progress-copy h2 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
 .registration-progress-copy p { font-size: 13px; line-height: 1.7; color: var(--color-on-surface-variant); }
-.registration-progress-copy .registration-progress-next { margin-top: 4px; color: var(--color-on-surface); }
 .registration-progress-time { border-left: 1px solid var(--color-outline-variant); padding-left: 18px; min-width: 0; }
 .registration-progress-time h3, .registration-progress-time > span { font-size: 12px; color: var(--color-on-surface-variant); }
 .registration-progress-time p { font-size: 16px; line-height: 1.7; margin: 4px 0; overflow-wrap: anywhere; }
-.registration-progress-actions { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; align-self: center; align-items: stretch; gap: 8px; margin: 0; }
+.registration-progress-actions { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-self: center; align-items: stretch; gap: 8px; margin: 0; }
 .registration-progress-actions > .text-link { text-align: center; }
 .registration-progress-actions > button.text-link { padding: 0 8px; min-height: 44px; border: 0; background: none; color: var(--color-on-surface-variant); cursor: pointer; }
 .registration-progress-actions > button.text-link:disabled { opacity: .5; cursor: default; }
@@ -161,7 +142,6 @@
 }
 @media (max-width: 640px) {
   .registration-progress { grid-template-columns: minmax(0, 1fr); padding: 12px 14px; gap: 10px; }
-  .registration-progress-steps { gap: 8px 16px; }
   .registration-progress-body { grid-template-columns: 1fr; gap: 10px; }
   .registration-progress-time { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; border-left: 0; padding: 8px 0 0; border-top: 1px solid var(--color-outline-variant); }
   .registration-progress-time p { font-size: 14px; margin: 0; }
@@ -173,14 +153,9 @@
 .neighbor-card p, .neighbor-card a { overflow-wrap: anywhere; }
 @media (max-width: 800px) {
   .creator-board { grid-template-columns: 1fr; }
-  .registration-submit { padding-top: 24px; }
 }
 @media (max-width: 640px) {
-  .creator-header, .creator-section-nav, .creator-content, .creator-footer { width: var(--site-content-width); }
-  .creator-header { min-height: var(--site-header-height); gap: 12px; flex-wrap: wrap; padding-block: 16px; }
-  .creator-header-actions { gap: 14px; }
-  .creator-header .workspace-account > span { max-width: 150px; font-size: 11px; }
-  .creator-section-nav { gap: 22px; padding-block: 8px; }
+  .creator-content { width: var(--site-content-width); }
   .creator-content { padding-top: 22px; }
   .creator-workspace { gap: 16px; }
   .workspace-summary { padding: 20px; }
@@ -218,3 +193,15 @@
 .relay-publication-heading p { margin-top: 0.35rem; }
 .relay-publication-form { display: grid; gap: 0.75rem; }
 .relay-publication-form .button { justify-self: start; }
+
+.registration-feedback-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.registration-time-dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 40px); margin: auto; padding: 24px; overflow-y: auto; border: 1px solid var(--color-outline-variant); border-radius: var(--control-radius); background: var(--color-surface); color: var(--color-on-surface); }
+.registration-time-dialog::backdrop { background: #000b; }
+.registration-time-dialog h2 { margin: 0 0 20px; font-size: 20px; font-weight: 500; }
+.registration-time-change { display: grid; gap: 12px; margin: 0 0 18px; }
+.registration-time-change > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+.registration-time-change dt, .registration-time-dialog > p { color: var(--color-on-surface-variant); font-size: 14px; line-height: 1.8; }
+.registration-time-change dd { margin: 0; }
+
+.creator-workspace .workspace-account { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--color-on-surface-variant); }
+.creator-workspace .page-heading-actions { flex-wrap: wrap; }

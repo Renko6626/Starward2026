@@ -72,19 +72,6 @@ export function WorksPage() {
     return () => query.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    if (!data?.schedule.length) {
-      setDetailOpen(false);
-      return;
-    }
-    const element = dialog.current;
-    if (!mobile || !detailOpen || !element) return;
-    element.showModal();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { if (element.open) element.close(); document.body.style.overflow = previousOverflow; };
-  }, [mobile, detailOpen, data?.schedule.length]);
-
   const schedule = data?.schedule ?? [];
   const days = groupSchedule(schedule);
   const missionStart = scheduleMissionStart(schedule);
@@ -101,6 +88,23 @@ export function WorksPage() {
   const { phase, currentId } = schedulePhase(schedule, now);
   const selected = schedule.find(entry => entry.id === selectedId) ?? mine ?? schedule.find(entry => entry.id === currentId) ?? schedule[0];
   const selectedKey = selected?.kind === 'extra' ? 'extra' : selected?.scheduledAt ? scheduleDay(selected.scheduledAt) : "pending";
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) {
+      setDetailOpen(false);
+      return;
+    }
+    // Keep one detail component mounted while switching between inline and modal views.
+    if (element.open) element.close();
+    if (detailOpen) element.showModal();
+    else if (!mobile) element.open = true;
+    const previousOverflow = document.body.style.overflow;
+    if (detailOpen) document.body.style.overflow = "hidden";
+    return () => {
+      if (element.open) element.close();
+      if (detailOpen) document.body.style.overflow = previousOverflow;
+    };
+  }, [mobile, detailOpen, selectedKey, selected?.id]);
   const count = (status: "available" | "confirmed" | "reserved" | "unavailable") => schedule.filter(entry => entry.status === status).length;
   const timedDays = days.filter(day => day.date);
   const firstDate = timedDays[0]?.date;
@@ -113,7 +117,7 @@ export function WorksPage() {
       && schedule.some(entry => entry.id === id && entry.status === "available")) {
       saveScheduleIntent(userId, id);
     }
-    if (mobile) setDetailOpen(true);
+    if (mobile || id === selected?.id) setDetailOpen(true);
   }
   function closeDetail() {
     setDetailOpen(false);
@@ -125,7 +129,7 @@ export function WorksPage() {
     : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash={selected.id === mineId ? "plan" : "profile"}
       onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
   const detail = selected ? <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null}
-    signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} actions={actions} /> : null;
+    signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={actions} /> : null;
 
   return <div className="works-page works-page--schedule">
     <ObservatoryBackdrop />
@@ -133,18 +137,19 @@ export function WorksPage() {
       <div><h1>接力时间表</h1></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
-    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>请选择您意向报名的空闲时点，点击进入填写报名资料，提交报名成功后会为您预留该时间段，允许后续改变和交换。</Notice> : null}
+    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>选择空闲时间后填写报名资料，提交成功后为你预留。审核通过后可调整时间或申请换期。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
       <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
+      <p className="ops-interaction-hint">{mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
       {days.map(day => <Fragment key={day.key}>
         <ScheduleBoard missionStart={missionStart} day={day} selectedId={selected?.id ?? null} mineId={mineId} ownName={identity?.author ?? null} currentId={currentId} now={now} active={phase === "active"} onSelect={select} />
-        {!mobile && selectedKey === day.key && detail}
+        {selectedKey === day.key && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label="时段详情与操作"
+          onCancel={event => { event.preventDefault(); closeDetail(); }} onClose={event => { if (!event.currentTarget.open) setDetailOpen(false); }}>
+          {detail}
+        </dialog>}
       </Fragment>)}
-      {mobile && selected && <dialog ref={dialog} className="ops-detail-dialog" aria-label="选中时段详情" onCancel={event => { event.preventDefault(); closeDetail(); }} onClose={() => setDetailOpen(false)}>
-        <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null} signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={closeDetail} actions={actions} />
-      </dialog>}
       <div className="ops-summary" role="status"><strong>{phase === "ended" ? "标准排程已结束" : phase === "active" ? "接力进行中" : "排程已公布"}</strong>
         <span><b>{count("confirmed")}</b><ScheduleStatus status="confirmed" /></span><span><b>{count("reserved")}</b><ScheduleStatus status="reserved" /></span><span><b>{count("available")}</b><ScheduleStatus status="available" /></span>
         {count("unavailable") > 0 && <span><b>{count("unavailable")}</b><ScheduleStatus status="unavailable" /></span>}
