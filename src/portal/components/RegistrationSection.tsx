@@ -13,6 +13,7 @@ import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChanne
 import { LoginPasswordDialog } from "./LoginPasswordDialog";
 import { parseRegistrationDraft, registrationDraftKey } from "../lib/registration-draft";
 import { isRegistrationSegmentSelectable, readScheduleIntent, saveScheduleIntent } from "../lib/schedule-selection";
+import { getRegistrationFieldErrors } from "../lib/registration-validation";
 
 export function RegistrationSection({ application, collaboration, onSaved, compact = false, onSelectionChange }: {
   compact?: boolean;
@@ -74,7 +75,10 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const [saving, setSaving] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const formContainerRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [intake, setIntake] = useState<ApplicationIntakeResponse | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,15 +109,27 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     return () => { cancelled = true; if (widgetRef.current) window.turnstile?.remove?.(widgetRef.current); widgetRef.current = undefined; };
   }, [required, siteKey, editable]);
 
+  function showFieldErrors(errors: Record<string, string>) {
+    setFieldErrors(errors);
+    setError("请修正标出的字段后重试。");
+    requestAnimationFrame(() => {
+      const input = formContainerRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      input?.scrollIntoView({ block: "center" });
+      input?.focus({ preventScroll: true });
+    });
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null); setMessage(null); setRefreshWarning(null);
+    setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     if (!editable || !intake) { setError("报名设置尚未就绪或当前不能修改报名。"); return; }
-    if (!selectedSegment || selectionUnavailable) { setError("请先选择一个可用的发布时点，已填写的信息会保留。"); return; }
-    if (required && (!siteKey || !token)) { setError("请先完成人机验证后再提交。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, contactEmail: application.user.email, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
     const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized, turnstileToken: token ?? undefined });
-    if (!parsed.success) { setError("请补全署名、有效的 B站主页链接或 UID、联系方式和创作计划，并选择一个发布时点。请检查邮箱和链接格式。"); return; }
+    const validationErrors: Record<string, string> = parsed.success ? {} : getRegistrationFieldErrors(parsed.error.issues);
+    if (!selectedSegment || selectionUnavailable) validationErrors.segmentId = "请选择一个可用的发布时间，已填写的信息会保留。";
+    if (Object.keys(validationErrors).length) { showFieldErrors(validationErrors); return; }
+    if (!parsed.success) { setError("报名资料格式不正确，请检查后重试。"); return; }
+    if (required && (!siteKey || !token)) { setError("请先完成人机验证后再提交。"); return; }
     setSaving(true);
     try {
       const response = await requestJson<WorkspaceApplicationResponse>("/api/portal/application-with-segment", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
@@ -126,20 +142,22 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   }
 
   async function saveProfile() {
-    setError(null); setMessage(null); setRefreshWarning(null);
+    setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     const parsed = updatePortalProfileInputSchema.safeParse(normalizePortalProfileInput(form.profile, application.user.email));
-    if (!parsed.success) { setError("请补全署名、有效的 B站主页链接或 UID 和联系方式。"); return; }
+    if (!parsed.success) { showFieldErrors(getRegistrationFieldErrors(parsed.error.issues, "profile")); return; }
     setSavingProfile(true);
     try {
-      const response = await requestJson<PortalProfileMutationResponse>("/api/portal/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
-      setMessage(response.message);
+      await requestJson<PortalProfileMutationResponse>("/api/portal/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
+      setProfileMessage(application.application
+        ? "个人信息已保存，本次保存未修改报名内容或发布时间。"
+        : "个人信息已保存，你还没有提交报名。请继续填写创作计划，确认发布时间后提交报名。");
       await onSaved().catch(() => setRefreshWarning("信息已保存，但摘要暂未更新，请稍后刷新。"));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "信息保存失败。"); }
     finally { setSavingProfile(false); }
   }
 
   const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => (
-    <Field label={label} hint={key === "bilibiliUid" ? "填写 space.bilibili.com 主页链接或数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={key === "bilibiliUid" ? "https://space.bilibili.com/12345678 或数字 UID" : undefined} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
+    <Field label={label} error={fieldErrors[`profile.${key}`]} hint={key === "bilibiliUid" ? "填写 space.bilibili.com 主页链接或数字 UID，用于相邻作者联系，不在公开作品页展示。" : undefined}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={key === "bilibiliUid" ? "https://space.bilibili.com/12345678 或数字 UID" : undefined} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={key !== "backupContact"} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>
   );
   if (application.application?.status === "approved") return <div className="space-y-4">
     <Notice>报名已通过，创作计划已锁定。可以在时间表调整时间，或在作品资料中补充正式内容。</Notice>
@@ -148,7 +166,16 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     {application.application.portfolioUrl ? <p>作品或主页：<a className="text-link" href={application.application.portfolioUrl} target="_blank" rel="noreferrer">{application.application.portfolioUrl}</a></p> : null}
     {application.application.messageToHosts ? <p>给主催的话：{application.application.messageToHosts}</p> : null}
   </div>;
-  return <div className={compact ? "creator-board" : "space-y-6"}><form hidden id="creator-registration-form" onSubmit={event => void submit(event)} />
+  return <div ref={formContainerRef} className={compact ? "creator-board" : "space-y-6"} onChangeCapture={event => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
+    const key = target.name;
+    if (key.startsWith("profile.")) setProfileMessage(null);
+    if (fieldErrors[key]) {
+      setFieldErrors(current => { const next = { ...current }; delete next[key]; return next; });
+      setError(null);
+    }
+  }}><form hidden noValidate id="creator-registration-form" onSubmit={event => void submit(event)} />
     <section className={compact ? "creator-card creator-profile-card" : undefined} id={compact ? "profile" : undefined}>
       {compact ? <header className="creator-card-header"><h2 className="creator-card-title">我的信息</h2><LoginPasswordDialog email={application.user.email} /></header> : null}
       <div className={compact ? "creator-card-body" : undefined}>
@@ -159,14 +186,15 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       }
     }}>
       <div className="workspace-form-grid">
-        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}<Field label="注册邮箱"><input className="field-input" type="email" readOnly value={application.user.email} /></Field>
-        <Field label="联系方式"><select form="creator-registration-form" className="field-input" disabled={compact ? saving || savingProfile : disabled} value={form.profile.primaryContactChannel} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, primaryContactChannel: event.target.value } }))}>{!portalContactChannels.includes(form.profile.primaryContactChannel) ? <option value={form.profile.primaryContactChannel}>{form.profile.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>{profileField("primaryContactHandle", "联系账号")}
+        {profileField("creditName", "署名")}{profileField("bilibiliUid", "B站主页链接或 UID")}<Field label="注册邮箱" error={fieldErrors["profile.contactEmail"]}><input name="profile.contactEmail" className="field-input" type="email" readOnly value={application.user.email} /></Field>
+        <Field label="联系方式" error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" form="creator-registration-form" className="field-input" disabled={compact ? saving || savingProfile : disabled} value={form.profile.primaryContactChannel} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, primaryContactChannel: event.target.value } }))}>{!portalContactChannels.includes(form.profile.primaryContactChannel) ? <option value={form.profile.primaryContactChannel}>{form.profile.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>{profileField("primaryContactHandle", "联系账号")}
         {profileField("backupContact", "备用联系方式（选填）")}
       </div>
-      <label className="checkbox-field"><input form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
+      <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
       <p className="field-hint">匿名只影响公开展示，主催仍可查看署名和联系方式。</p>
     </fieldset>
-    {compact ? <Button type="button" variant="secondary" disabled={saving || savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "保存信息"}</Button> : null}
+    {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存个人信息"}</Button><p className="field-hint">保存个人信息不会提交报名，也不会预留发布时间。</p></> : null}
+    {profileMessage ? <Notice tone="success">{profileMessage}</Notice> : null}
       </div>
     </section>
     <section className={compact ? "creator-card creator-work-card" : undefined} id={compact ? "plan" : undefined}>
@@ -177,17 +205,17 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     <fieldset className="form-section" disabled={disabled}>
       <legend>创作计划</legend>
       <div className="workspace-form-grid">
-        <Field label="参加形式"><select form="creator-registration-form" className="field-input" value={form.application.interestFormat} onChange={event => setForm(current => ({ ...current, application: { ...current.application, interestFormat: event.target.value as WorkspaceApplicationInput["application"]["interestFormat"] } }))}>{Object.entries(applicationInterestFormatLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-        <Field label="作品或主页链接（选填）"><input form="creator-registration-form" type="url" className="field-input" value={form.application.portfolioUrl ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, portfolioUrl: event.target.value } }))} /></Field>
+        <Field label="参加形式" error={fieldErrors["application.interestFormat"]}><select name="application.interestFormat" form="creator-registration-form" className="field-input" value={form.application.interestFormat} onChange={event => setForm(current => ({ ...current, application: { ...current.application, interestFormat: event.target.value as WorkspaceApplicationInput["application"]["interestFormat"] } }))}>{Object.entries(applicationInterestFormatLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+        <Field label="作品或主页链接（选填）" error={fieldErrors["application.portfolioUrl"]}><input name="application.portfolioUrl" form="creator-registration-form" type="url" className="field-input" value={form.application.portfolioUrl ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, portfolioUrl: event.target.value } }))} /></Field>
       </div>
-      <Field label="创作简介"><textarea form="creator-registration-form" className="field-input" rows={5} value={form.application.introText ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, introText: event.target.value } }))} /></Field>
-      <Field label="给主催的话（选填）"><textarea form="creator-registration-form" className="field-input" rows={3} value={form.application.messageToHosts ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, messageToHosts: event.target.value } }))} /></Field>
+      <Field label="创作简介（选填）" error={fieldErrors["application.introText"]} hint="可以写准备创作的主题、大致内容和作品形式，几句话即可；尚未确定的部分可以注明。最多 1600 个字符。"><textarea name="application.introText" form="creator-registration-form" className="field-input" rows={5} placeholder="例如：准备写一篇秘封组短篇小说，讲述两人在秋夜寻找一座废弃观测站的故事，篇幅暂未确定。" value={form.application.introText ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, introText: event.target.value } }))} /></Field>
+      <Field label="给主催的话（选填）" error={fieldErrors["application.messageToHosts"]}><textarea name="application.messageToHosts" form="creator-registration-form" className="field-input" rows={3} value={form.application.messageToHosts ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, messageToHosts: event.target.value } }))} /></Field>
     </fieldset>
     <section className="registration-time-summary" aria-label="报名发布时点">
       <h3>{selectedSegment ? `已选发布时间：${formatScheduledTime(selectedSegment.scheduledAt)}` : "尚未选择发布时点"}</h3>
       <p className="field-hint">意向时间保存在当前浏览器标签页。提交报名成功后才会预留，审核通过后确认。</p>
-      {editable ? <Field label="发布时间（北京时间）">
-        <select form="creator-registration-form" className="field-input" required disabled={disabled}
+      {editable ? <Field label="发布时间（北京时间）" error={fieldErrors.segmentId}>
+        <select name="segmentId" form="creator-registration-form" className="field-input" required disabled={disabled}
           value={form.segmentId} onChange={event => setForm(current => ({ ...current, segmentId: event.target.value }))}>
           <option value="">请选择发布时间</option>
           {selectionUnavailable ? <option value={form.segmentId} disabled>{selectedSegment ? `${formatScheduledTime(selectedSegment.scheduledAt)}（已不可选）` : "原意向时点已不可用"}</option> : null}

@@ -1,5 +1,9 @@
 import {
+  Children,
+  cloneElement,
+  isValidElement,
   useEffect,
+  useId,
   useState,
   type ReactNode,
   type ButtonHTMLAttributes,
@@ -77,13 +81,23 @@ export function PageHeading({
 export function Field({
   label,
   hint,
+  error,
   children,
-}: PropsWithChildren<{ label: string; hint?: string }>) {
+}: PropsWithChildren<{ label: string; hint?: string; error?: string }>) {
+  const errorId = useId();
   return (
     <label className="form-field">
       <span className="field-label">{label}</span>
-      {children}
+      {error ? Children.map(children, child => {
+        if (!isValidElement<{ "aria-describedby"?: string; "aria-invalid"?: boolean }>(child)
+          || !["input", "select", "textarea"].includes(String(child.type))) return child;
+        return cloneElement(child, {
+          "aria-invalid": true,
+          "aria-describedby": [child.props["aria-describedby"], errorId].filter(Boolean).join(" "),
+        });
+      }) : children}
       {hint ? <span className="field-hint">{hint}</span> : null}
+      {error ? <span id={errorId} className="field-error" role="alert">{error}</span> : null}
     </label>
   );
 }
