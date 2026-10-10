@@ -30,9 +30,9 @@ export function ApplyPage() {
     <div className="participation-guide">
       <aside className="participation-aside">
         <div className="participation-aside-copy">
-          <Link to="/" className="participation-back"><ArrowLeft size={14} /> 返回首页</Link>
-          <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
           <h1>参与指南</h1>
+          <p className="participation-kicker">STARWARD PILGRIMAGE / 2026</p>
+          <Link to="/" className="participation-back"><ArrowLeft size={14} /> 返回首页</Link>
         </div>
         <div className="participation-artwork"><StationTechnicalDrawing variant="guide" /></div>
       </aside>

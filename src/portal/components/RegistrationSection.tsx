@@ -1,3 +1,5 @@
+import { ArchiveChapter, revealArchiveTarget } from "./ArchiveChapter";
+import { ArchiveResult } from "./ArchiveResult";
 import { formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -133,6 +135,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     setError("请修正标出的字段后重试。");
     requestAnimationFrame(() => {
       const input = formContainerRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      if (input) revealArchiveTarget(input);
       input?.scrollIntoView({ block: "center" });
       input?.focus({ preventScroll: true });
     });
@@ -219,8 +222,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         </div>
       </> : null}
     </dialog>
-    <section className={compact ? "creator-card creator-profile-card" : undefined} id={compact ? "profile" : undefined}>
-      {compact ? <header className="creator-card-header"><h2 className="creator-card-title">署名与联系</h2><LoginPasswordDialog email={application.user.email} /></header> : null}
+    <ArchiveChapter enabled={compact} id="profile" number="01" title="署名与联系" state={application.profile?.creditName} defaultOpen={!application.profile}>
+      <LoginPasswordDialog email={application.user.email} />
       <div className={compact ? "creator-card-body" : undefined}>
     <fieldset className="form-section" aria-label="署名与联系" disabled={compact ? saving || savingProfile : disabled} onKeyDown={event => {
       if (compact && event.key === "Enter" && event.target instanceof HTMLInputElement && !event.nativeEvent.isComposing) {
@@ -237,11 +240,11 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
     {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
-    {profileMessage ? <Notice tone="success">{profileMessage}</Notice> : null}
+    {profileMessage ? <ArchiveResult compact={compact} message={profileMessage} /> : null}
       </div>
-    </section>
-    <section className={compact ? "creator-card creator-work-card creator-registration-card" : undefined} id={compact ? "plan" : undefined}>
-      {compact ? <header className="creator-card-header"><h2 className="creator-card-title">报名信息</h2></header> : null}
+    </ArchiveChapter>
+    <ArchiveChapter enabled={compact} id="plan" number="02" title="报名信息" defaultOpen>
+
       <div className={compact ? "creator-card-body" : undefined}>
     {!editable ? <Notice>{`${getApplicationWindowLabel(application.window)}，暂时不能提交或修改报名。`}</Notice> : null}
     <fieldset className="form-section" aria-label="创作意向" disabled={disabled}>
@@ -263,15 +266,19 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         {selectableSegments.length === 0 ? <p className="field-hint">当前没有可选时间，请稍后查看时间表。</p> : null}
       </Field> : null}
       {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择。</Notice> : null}
-      {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
     </section> : null}
     {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
-    {message ? <Notice tone="success">{message}</Notice> : null}{refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     <div className="registration-submit">
-      <div className="workspace-actions"><Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button></div>
+      <div className="workspace-actions">
+        {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
+        <Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
+      </div>
       <p className="registration-submit-note">提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。</p>
     </div>
       </div>
-    </section>
+    </ArchiveChapter>
+    {message ? <ArchiveResult compact={compact} message={message} /> : null}
+    {refreshWarning ? <ArchiveResult compact={compact} tone="warning" message={refreshWarning} /> : null}
+    {error ? <ArchiveResult compact={compact} tone="error" message={error} /> : null}
   </div>;
 }
