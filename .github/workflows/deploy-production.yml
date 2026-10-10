@@ -81,12 +81,17 @@ jobs:
       - name: Run station asset tests
         run: npm run test:station
 
+      - name: Apply optional Turnstile site-key override
+        if: vars.VITE_TURNSTILE_SITE_KEY != ''
+        env:
+          TURNSTILE_SITE_KEY_OVERRIDE: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+        run: echo "VITE_TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY_OVERRIDE" >> "$GITHUB_ENV"
+
       - name: Build frontend and Worker for production
         run: npm run build
         env:
           CLOUDFLARE_ENV: production
-          # Public widget key; the private secret stays in the Worker runtime.
-          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          # The public key defaults to .env.production. Secrets stay on the Worker.
 
       - name: Check Cloudflare credentials
         env:

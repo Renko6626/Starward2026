@@ -165,3 +165,14 @@ already-applied schema.
 More references: [Vite production environment selection](https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/),
 [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/),
 [Wrangler deploy options](https://developers.cloudflare.com/workers/wrangler/commands/workers/).
+
+## Configured production email and Turnstile
+
+- Production Worker: `starward2026-production` at `https://hifuu.moe`.
+- D1: `starward2026-prod`; the resolved production UUID is recorded in `wrangler.jsonc`.
+- Sender: `逐星巡礼 <noreply@hifuu.moe>`.
+- Runtime secrets: `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, and `TURNSTILE_SECRET_KEY` are managed on the Worker; never put their values in the repository.
+- The production Turnstile widget allows `hifuu.moe` and uses managed mode. The public site key is in `.env.production`. GitHub environment variable `VITE_TURNSTILE_SITE_KEY`, when nonempty, overrides it during a release build.
+- `.env.production` follows Vite's build mode, not the Wrangler environment. A staging production-mode build must override `VITE_TURNSTILE_SITE_KEY` with a widget key valid for its staging hostname if Turnstile is enabled there.
+- Resend sending uses the verified `resend._domainkey` TXT record and DNS-only `send` / `rsend` CNAME records. Receiving remains disabled.
+- Local credential files (`*.pem`, `cloudflare.env`) and `.cloudflare-deploy/` are ignored by Git.

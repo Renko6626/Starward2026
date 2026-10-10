@@ -70,3 +70,7 @@ public/.station-assets-*/
 # Local trajectory generation
 .orbit-build-*/
 .venv-orbit/
+
+# Isolated Cloudflare deployment snapshot
+.cloudflare-deploy/
+cloudflare.env

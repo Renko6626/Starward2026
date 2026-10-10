@@ -127,12 +127,14 @@
         {
           "binding": "DB",
           "database_name": "starward2026-prod",
-          "database_id": "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
+          "database_id": "800d3172-7b0c-4676-9eee-ea94decb6f81"
         }
       ],
       "routes": [{ "pattern": "hifuu.moe", "custom_domain": true }],
       "vars": {
         "BETTER_AUTH_URL": "https://hifuu.moe",
+        "RESEND_FROM_EMAIL": "noreply@hifuu.moe",
+        "RESEND_FROM_NAME": "逐星巡礼",
         "QQ_OAUTH_ENABLED": "false"
       }
       // The production tag workflow validates these settings before deployment.
