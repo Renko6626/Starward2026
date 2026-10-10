@@ -217,8 +217,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         </dl>
         <p id="registration-time-dialog-description">以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。</p>
         <div className="workspace-actions">
-          <Button variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
-          <Button disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
+          <Button appearance={compact ? "industrial" : "default"} variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
+          <Button appearance={compact ? "industrial" : "default"} disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
         </div>
       </> : null}
     </dialog>
@@ -239,7 +239,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
-    {compact ? <><Button type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
+    {compact ? <><Button appearance={compact ? "industrial" : "default"} type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "仅保存署名与联系"}</Button></> : null}
     {profileMessage ? <ArchiveResult compact={compact} message={profileMessage} /> : null}
       </div>
     </ArchiveChapter>
@@ -269,9 +269,10 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     </section> : null}
     {required && editable ? <Field label="人机验证"><div ref={containerRef} />{!siteKey ? <span>验证设置暂不可用，请联系主催。</span> : null}</Field> : null}
     <div className="registration-submit">
-      <div className="workspace-actions">
-        {editable ? <Link className="button button--secondary" to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
-        <Button form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
+      <div className="workspace-actions archive-control-actions">
+        {compact ? <span className="archive-control-label" aria-hidden="true">REG / SUBMIT</span> : null}
+        {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
+        <Button appearance={compact ? "framed" : "default"} className="button--accent" form="creator-registration-form" type="submit" disabled={disabled || !intake || (required && !token)} aria-busy={saving}>{saving ? "提交中…" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
       </div>
       <p className="registration-submit-note">提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。</p>
     </div>

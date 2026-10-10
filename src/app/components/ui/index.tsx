@@ -13,6 +13,8 @@ import {
 import { cn } from "../../lib/cn";
 import { animate, press } from 'motion';
 import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
+import { Power } from 'lucide-react';
+import './buttons.css';
 
 type Tone = "muted" | "info" | "warning" | "warn" | "success" | "error";
 const toneClass = (tone: Tone) =>
@@ -215,9 +217,11 @@ export function Button({
   children,
   className,
   variant = "primary",
+  appearance = "default",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger";
+  appearance?: "default" | "industrial" | "framed";
 }) {
   const root = useRef<HTMLButtonElement>(null);
   const reduced = useReducedMotion();
@@ -240,7 +244,7 @@ export function Button({
     return () => observer.disconnect();
   }, [busy, props['aria-busy']]);
   useEffect(() => {
-    if (!root.current || reduced || props.disabled) return;
+    if (!root.current || reduced || props.disabled || appearance !== "default") return;
     const element = root.current;
     let animation: ReturnType<typeof animate> | undefined;
     const unbind = press(element, () => {
@@ -252,17 +256,18 @@ export function Button({
       };
     });
     return () => { unbind(); animation?.stop(); element.style.removeProperty('transform'); };
-  }, [reduced, props.disabled]);
+  }, [reduced, props.disabled, appearance]);
   return (
     <button
       ref={root}
       type="button"
-      className={cn("button", `button--${variant}`, className)}
+      className={cn("button", `button--${variant}`, appearance !== "default" && "button--industrial", appearance === "framed" && "button--framed", className)}
       {...props}
       style={{ ...props.style, ...(busy && idleWidth ? { width: idleWidth } : {}) }}
     >
       <motion.span className="button-feedback" initial={false} animate={feedback}>
         {busy && <span className="button-busy-indicator" aria-hidden="true" />}{children}
+        {appearance === "framed" && <span className="button-switch-bay" aria-hidden="true"><Power size={14} strokeWidth={2} /></span>}
       </motion.span>
     </button>
   );

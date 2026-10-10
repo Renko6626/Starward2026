@@ -102,11 +102,11 @@ export function PortalOverviewPage() {
     finally { setRefreshing(false); }
   }
   return <div className="page-content creator-workspace author-archive">
-    <PageHeading title={<>作者档案 <span className="archive-year">逐星巡礼 / 2026</span></>}><PortalAccount /><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
+    <PageHeading title={<>作者档案 <span className="archive-year">逐星巡礼 / 2026</span></>}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
     {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
-      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
+      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
     <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>署名与联系</a>{approved ? <><a href="#preview"><span>02</span>作品预告</a><a href="#review"><span>03</span>审查说明</a><a href="#relay"><span>04</span>接力安排</a></> : <a href="#plan"><span>02</span>报名信息</a>}</nav>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}

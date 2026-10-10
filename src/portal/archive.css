@@ -10,9 +10,9 @@
 .author-archive .page-heading { align-items: center; padding: 20px 0; margin: 0; border-bottom: 2px solid #d0d0ca; }
 .author-archive .page-heading h1 { font-size: 32px; font-weight: 500; }
 .author-archive .page-heading-actions { font-size: 12px; gap: 12px; }
-.author-archive .button { min-height: 40px; padding: 8px 18px; border-radius: 0; font-size: 13px; }
-.author-archive .button--primary { background: #002f49; border: 1px solid #86a5b2; color: #deedf2; }
-.author-archive .button--secondary { background: #09090970; border-color: #60605a; color: #deded9; }
+.author-archive .archive-control { display: grid; justify-items: start; gap: 6px; }
+.author-archive .archive-control-label { color: #999d95; font: 10px/1.4 var(--font-label); letter-spacing: .04em; }
+.author-archive .archive-control-actions > .archive-control-label { flex-basis: 100%; }
 .author-archive .text-link { color: #c3c3bd; font-size: 13px; }
 .author-archive .creator-board { display: block; }
 .author-archive .registration-progress { display: flex; flex-wrap: wrap; gap: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
@@ -28,6 +28,7 @@
 .author-archive .registration-progress-copy p { font-size: 12px; }
 .author-archive .registration-progress-actions { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
 .author-archive .registration-progress-actions .button { border: 0; padding: 0; background: transparent; color: #bbb; text-decoration: underline; text-underline-offset: 4px; font-size: 12px; min-height: 32px; }
+.author-archive .registration-progress-actions .button:hover, .author-archive .registration-progress-actions .button:active { background: transparent; color: #eee; }
 .archive-index { display: flex; gap: 25px; align-items: center; flex-wrap: wrap; padding: 13px 0; font-size: 12px; border-block: 1px solid #555; background: #09090978; }
 .archive-index > span { color: #90908e; font-size: 11px; margin-right: 12px; }
 .archive-index a { display: flex; gap: 8px; color: #b6b6b2; }
