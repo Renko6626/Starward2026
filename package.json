@@ -20,7 +20,7 @@
     "station:assets": "node scripts/station-assets.mjs",
     "station:check": "node scripts/station-assets.mjs --check",
     "station:update": "npm run station:generate && npm run build",
-    "test:station": "node --test scripts/station-assets.test.mjs scripts/station-drawings.test.mjs",
+    "test:station": "node --test scripts/station-assets.test.mjs scripts/station-drawings.test.mjs scripts/station-batches.test.mjs",
     "prebuild": "npm run station:check && npm run station:drawings:check && npm run orbit:check",
     "orbit:generate": "node scripts/orbit-assets.mjs",
     "orbit:check": "node scripts/orbit-assets.mjs --check",

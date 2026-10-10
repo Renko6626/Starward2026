@@ -10,16 +10,21 @@ function roundedGeometry(geometries, size) {
 
 // Each Assembly owns one group's batches. Nothing batches across rotating groups.
 export class Assembly {
-  constructor(resources) { this.resources = resources; this.batches = new Map(); }
+  constructor(resources) {
+    this.resources = resources; this.batches = new Map();
+    this.position = new THREE.Vector3(); this.scale = new THREE.Vector3();
+    this.rotation = new THREE.Euler(); this.quaternion = new THREE.Quaternion();
+  }
   part(geometry, materialName, position, scale = [1, 1, 1], rotation = [0, 0, 0]) {
     const material = this.resources.materials[materialName];
     if (!material) throw new Error(`Unknown station material: ${materialName}`);
     if (!this.batches.has(geometry)) this.batches.set(geometry, new Map());
     const byMaterial = this.batches.get(geometry);
     if (!byMaterial.has(material)) byMaterial.set(material, []);
-    const quaternion = rotation.isQuaternion ? rotation : new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation));
+    const quaternion = rotation.isQuaternion ? rotation : this.quaternion.setFromEuler(
+      this.rotation.set(rotation[0], rotation[1], rotation[2], rotation[3] ?? 'XYZ'));
     byMaterial.get(material).push(new THREE.Matrix4().compose(
-      new THREE.Vector3(...position), quaternion, new THREE.Vector3(...scale),
+      this.position.fromArray(position), quaternion, this.scale.fromArray(scale),
     ));
     return this;
   }
@@ -129,9 +134,11 @@ export function arcPanelGeometry(radius, profile, angle, offset = .065, thicknes
     positions.push(...p); normals.push(...n); uv.push(...tex); uv1.push(...panelTex); return index;
   };
   const quad = (a, b, c, d, outward) => {
-    const point = i => new THREE.Vector3().fromArray(positions, i * 3);
-    const normal = point(b).sub(point(a)).cross(point(c).sub(point(a)));
-    if (normal.dot(new THREE.Vector3(...outward)) >= 0) indices.push(a, b, c, a, c, d);
+    const aa = a * 3, bb = b * 3, cc = c * 3;
+    const bx = positions[bb] - positions[aa], by = positions[bb + 1] - positions[aa + 1], bz = positions[bb + 2] - positions[aa + 2];
+    const cx = positions[cc] - positions[aa], cy = positions[cc + 1] - positions[aa + 1], cz = positions[cc + 2] - positions[aa + 2];
+    const nx = by * cz - bz * cy, ny = bz * cx - bx * cz, nz = bx * cy - by * cx;
+    if (nx * outward[0] + ny * outward[1] + nz * outward[2] >= 0) indices.push(a, b, c, a, c, d);
     else indices.push(a, c, b, a, d, c);
   };
   for (let face = 0; face < 2; face++) for (let i = 0; i <= steps; i++) {

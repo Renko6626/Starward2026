@@ -1,5 +1,5 @@
 {
-  "fingerprint": "b084621cba66ab330afd9a8a20431547fac99ea85263b5ccaec89901a5ae3124",
+  "fingerprint": "ec450ac50c525b87fb463fc3f4fe87f33aa88711b051b3d21970ef4dc29641f4",
   "dependencies": {
     "three": "0.180.0",
     "vite": "7.3.2",
