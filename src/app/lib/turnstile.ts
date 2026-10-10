@@ -1,8 +1,11 @@
 export type TurnstileRenderOptions = {
   sitekey: string;
+  theme?: 'dark' | 'light' | 'auto';
+  size?: 'normal' | 'compact' | 'flexible';
   callback?: (token: string) => void;
   "expired-callback"?: () => void;
   "error-callback"?: () => void;
+  "timeout-callback"?: () => void;
 };
 
 export type TurnstileApi = {
@@ -31,7 +34,9 @@ export async function loadTurnstileApi() {
   }
 
   if (!window.__starwardTurnstileLoader__) {
+    let timeout: number | undefined;
     window.__starwardTurnstileLoader__ = new Promise<TurnstileApi>((resolve, reject) => {
+      timeout = window.setTimeout(() => reject(new Error('Turnstile script loading timed out.')), 15000);
       const existingScript = document.querySelector<HTMLScriptElement>(
         `script[src="${TURNSTILE_SCRIPT_SRC}"]`,
       );
@@ -66,7 +71,11 @@ export async function loadTurnstileApi() {
         { once: true },
       );
       document.head.append(script);
-    });
+    }).catch(error => {
+      window.__starwardTurnstileLoader__ = undefined;
+      document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SCRIPT_SRC}"]`)?.remove();
+      throw error;
+    }).finally(() => { if (timeout !== undefined) window.clearTimeout(timeout); });
   }
 
   return window.__starwardTurnstileLoader__;

@@ -85,6 +85,8 @@ jobs:
         run: npm run build
         env:
           CLOUDFLARE_ENV: production
+          # Public widget key; the private secret stays in the Worker runtime.
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
 
       - name: Check Cloudflare credentials
         env:

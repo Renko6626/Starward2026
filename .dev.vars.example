@@ -21,6 +21,11 @@ ALLOW_LOCAL_ADMIN_BYPASS="true"
 # BETTER_AUTH_TRUSTED_ORIGINS instead.
 ALLOW_LOCAL_DEV_ORIGINS="true"
 
+# Turnstile is off when the Worker secret is absent. For local testing, put a
+# matching public test site key in `.env.local` as VITE_TURNSTILE_SITE_KEY and
+# its test secret in `.dev.vars`; production secrets belong in Cloudflare.
+# TURNSTILE_SECRET_KEY="replace-with-turnstile-secret"
+
 # Comma/newline separated list of additional trusted origins (all environments).
 # BETTER_AUTH_TRUSTED_ORIGINS="https://dev.example.com"
 

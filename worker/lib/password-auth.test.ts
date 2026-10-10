@@ -28,11 +28,11 @@ function setup(overrides: Partial<AppBindings> = {}) {
   };
   const sent = vi.fn().mockImplementation(async () => Response.json({ id: "mail" })); vi.stubGlobal("fetch", sent);
   const auth = createAuth(env);
-  async function request(path: string, body?: object, cookie = "", consent: string | null = null, origin = env.BETTER_AUTH_URL!) {
+  async function request(path: string, body?: object, cookie = "", consent: string | null = null, origin = env.BETTER_AUTH_URL!, captchaToken?: string) {
     (await auth.$context).skipOriginCheck = false;
     return auth.handler(new Request(`${env.BETTER_AUTH_URL}/api/auth${path}`, {
       method: body ? "POST" : "GET", headers: { "content-type": "application/json", origin, cookie,
-        "cf-connecting-ip": "203.0.113.10", ...(consent ? { "x-starward-rules-version": consent } : {}) },
+        "cf-connecting-ip": "203.0.113.10", ...(consent ? { "x-starward-rules-version": consent } : {}), ...(captchaToken ? { 'x-captcha-response': captchaToken } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     }));
   }
@@ -55,6 +55,64 @@ function setup(overrides: Partial<AppBindings> = {}) {
   return { db, env, auth, request, issueOtp, register, withPassword, sent };
 }
 function cookies(response: Response) { return response.headers.getSetCookie().map(value => value.split(";")[0]).join("; "); }
+
+describe('Turnstile protected authentication', () => {
+  function protect() {
+    const t = setup({ TURNSTILE_SECRET_KEY: 'test-turnstile-secret' });
+    const used = new Set<string>();
+    t.sent.mockImplementation(async (url: string, init: RequestInit) => {
+      if (String(url).includes('challenges.cloudflare.com')) {
+        const body = JSON.parse(String(init.body));
+        const success = body.response.startsWith('valid-') && !used.has(body.response);
+        used.add(body.response);
+        return Response.json({ success, 'error-codes': success ? [] : ['timeout-or-duplicate'] });
+      }
+      return Response.json({ id: 'mail' });
+    });
+    const mailCalls = () => t.sent.mock.calls.filter(([url]) => String(url).includes('api.resend.com'));
+    return { ...t, mailCalls };
+  }
+  it('rejects missing, invalid and replayed tokens before issuing OTPs or sending mail', async () => {
+    const t = protect();
+    const body = { email: credentials.email, type: 'sign-in' };
+    const send = (token?: string) => t.request('/email-otp/send-verification-otp', body, '', ACTIVITY_RULES_VERSION, t.env.BETTER_AUTH_URL!, token);
+    expect((await send()).status).toBe(400);
+    expect((await send('invalid')).status).toBe(403);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+    expect(t.mailCalls()).toHaveLength(0);
+    expect((await send('valid-send')).status).toBe(200);
+    const code = t.db.sqlite.prepare('SELECT value FROM verification').get();
+    expect((await send('valid-send')).status).toBe(403);
+    expect(t.mailCalls()).toHaveLength(1);
+    expect(t.db.sqlite.prepare('SELECT value FROM verification').get()).toEqual(code);
+    expect((await send('valid-second')).status).toBe(429);
+  });
+  it('protects password login and reset sends, while OTP proof and password setup need no second challenge', async () => {
+    const t = protect(); await t.withPassword();
+    const before = t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n;
+    expect((await t.request('/sign-in/email', credentials)).status).toBe(400);
+    expect((await t.request('/sign-in/email/', credentials)).ok).toBe(false);
+    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'invalid')).status).toBe(403);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n).toBe(before);
+    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'valid-login')).status).toBe(200);
+    const body = { email: credentials.email };
+    expect((await t.request('/email-otp/request-password-reset', body)).status).toBe(400);
+    expect((await t.request('/email-otp/request-password-reset', body, '', null, t.env.BETTER_AUTH_URL!, 'valid-reset')).status).toBe(200);
+    const otp = String(t.db.sqlite.prepare("SELECT value FROM verification WHERE identifier=?").get(`forget-password-otp-${credentials.email}`)?.value).split(':')[0];
+    expect((await t.request('/email-otp/reset-password', { email: credentials.email, otp, password: 'new-password-123' })).status).toBe(200);
+    expect(t.mailCalls()).toHaveLength(1);
+  });
+  it('fails closed when the verification service is unavailable and exposes only the enabled flag', async () => {
+    const t = protect();
+    t.sent.mockImplementation(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+    const response = await t.request('/email-otp/send-verification-otp', { email: credentials.email, type: 'sign-in' }, '', ACTIVITY_RULES_VERSION, t.env.BETTER_AUTH_URL!, 'valid-send');
+    expect(response.ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+    expect(t.mailCalls()).toHaveLength(0);
+    const config = await app.request('/api/auth/providers', {}, t.env);
+    expect(await config.json()).toEqual({ qq: { enabled: false }, turnstile: { enabled: true } });
+  });
+});
 
 describe("verified email registration", () => {
   it("blocks direct password registration without creating any account or workspace", async () => {
