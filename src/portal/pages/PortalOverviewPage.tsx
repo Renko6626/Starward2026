@@ -1,4 +1,4 @@
-import { formatScheduledTime } from "../../app/lib/format";
+import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Notice, PageHeading, ReadError, WorkspaceSection } from "../../app/components/ui";
@@ -24,6 +24,7 @@ export function PortalOverviewPage() {
   const [state, setState] = useState<WorkspaceState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [selection, setSelection] = useState<{ userId: string; segmentId: string } | null>(null);
   const userId = session.data?.user.id;
   const onSelectionChange = useCallback((segmentId: string) => {
@@ -79,7 +80,7 @@ export function PortalOverviewPage() {
       const response = await requestJson<{ ok: true; message: string }>("/api/portal/application/withdraw", { method: "POST" });
       setMessage(response.message); setConfirmWithdraw(false);
       try { await refresh(); }
-      catch { setError("报名已撤回，发布时间已释放。页面暂未更新，请点击“更新进度”。"); }
+      catch { setError("报名已撤回，发布时间已释放。页面暂未更新，请点击“刷新状态”。"); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
@@ -88,18 +89,32 @@ export function PortalOverviewPage() {
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
   const selected = collaboration.segments.find(item => item.id === (selection?.userId === userId ? selection?.segmentId : segment));
+  const registration = application.application;
+  const hasReviewResult = registration?.status === "approved" || registration?.status === "rejected";
+  const hasFeedback = hasReviewResult || Boolean(registration?.adminNote) || collaboration.requests.length > 0;
+  async function refreshStatus() {
+    setRefreshing(true);
+    try { await refresh(); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "状态刷新失败，请稍后重试。"); }
+    finally { setRefreshing(false); }
+  }
   return <div className="page-content creator-workspace">
-    <PageHeading title="作者页面"><Button variant="secondary" onClick={() => void refresh().catch(caught => setError(caught instanceof Error ? caught.message : "进度更新失败，请稍后重试。"))}>更新进度</Button></PageHeading>
+    <PageHeading title="作者页面"><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
     {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
-      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后会释放你预留发布时点，需要您重新填写和等待审核，并保留操作记录。确认撤回这次报名？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回并释放发布时点"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
+      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
-    {collaboration.requests.length ? <div className="compact-feedback" id="tasks">
-      <h2 className="creator-card-title">待办与反馈</h2>
+    {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
+      <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
+      {registration && (hasReviewResult || registration.adminNote) ? <Notice tone={registration.status === "approved" ? "success" : "warning"}>
+        <p>{registration.status === "approved" ? "报名审核通过" : registration.status === "rejected" ? "报名审核未通过" : "上次报名反馈"}{registration.reviewedAt ? `（${formatDateTime(registration.reviewedAt)}）` : ""}</p>
+        {registration.adminNote ? <p className="registration-feedback-note">{registration.adminNote}</p> : null}
+        {registration.status === "rejected" && application.editable ? <a className="text-link" href="#plan">修改报名资料</a> : null}
+      </Notice> : null}
       {collaboration.requests.length ? <SwapRequests collaboration={collaboration} onSaved={refresh} /> : null}
-    </div> : null}
+    </section> : null}
     {approved ? <div className="creator-board">
       <PortalProfilePage embedded compact onSaved={refresh} />
       <section className="creator-card creator-work-card" id="project">

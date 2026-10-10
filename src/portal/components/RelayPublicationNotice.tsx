@@ -48,7 +48,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
       setProject(current => current ? { ...current, draft: response.draft,
         release: getRelayPublicationState(current.release.scheduledAt, response.draft.releaseConfirmedAt) } : current);
       setMessage(response.message);
-      await onSaved().catch(() => setError("链接已保存，页面暂未更新，请点击“更新进度”。"));
+      await onSaved().catch(() => setError("链接已保存，页面暂未更新，请点击“刷新状态”。"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "确认发布失败，请稍后重试。");
     } finally { setBusy(false); }
