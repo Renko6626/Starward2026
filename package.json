@@ -17,7 +17,7 @@
     "cf-typegen": "wrangler types",
     "check": "tsc -b --pretty false",
     "check:production": "node scripts/production-deploy.mjs",
-    "test:deploy": "node --test scripts/production-deploy.test.mjs",
+    "test:deploy": "node --test scripts/production-deploy.test.mjs scripts/production-database.test.mjs",
     "test": "vitest run",
     "station:assets": "node scripts/station-assets.mjs",
     "station:check": "node scripts/station-assets.mjs --check",
