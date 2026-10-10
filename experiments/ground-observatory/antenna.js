@@ -22,7 +22,7 @@ const D = antennaDimensions;
 const v = p => new THREE.Vector3(...p);
 const tau = Math.PI * 2;
 
-export function createAntennaArray() {
+export function createAntennaArray({ detailed = true } = {}) {
   const antenna = new THREE.Group();
   antenna.name = 'forty-metre-offset-observatory';
   antenna.userData.dimensions = D;
@@ -38,7 +38,7 @@ export function createAntennaArray() {
   };
   const panelFinishes = [[0xa2b0c0,0.34],[0x9dacbd,0.42],[0xa0afbf,0.38],
     [0x9cabbc,0.46],[0xa1b0c0,0.40],[0x9eadbe,0.36]];
-  const panelMaterials = panelFinishes.map(([color, roughness]) => {
+  const panelMaterials = (detailed ? panelFinishes : panelFinishes.slice(0, 2)).map(([color, roughness]) => {
     const material = new THREE.MeshStandardMaterial({ color, metalness: 0.82, roughness });
     // Preserve the physical 8 mm gaps. A filtered edge finish keeps subpixel
     // joints legible in distant views without widening or displacing the panels.
@@ -86,7 +86,7 @@ export function createAntennaArray() {
     // Small flats remain solid; structural sections use actual walls. Long heavy
     // cross-ties use open I sections with web stiffeners instead of square blocks.
     const centre = start.clone().add(end).multiplyScalar(0.5);
-    if (Math.min(width, depth) < 0.10) {
+    if (!detailed || Math.min(width, depth) < 0.10) {
       size.set(width, length, depth);
       instance(parent, cube, material, centre.toArray(), size.toArray(), quaternion);
       return;
@@ -128,11 +128,12 @@ export function createAntennaArray() {
     parent.add(result); return result;
   }
   function cylinder(parent, position, radius, height, material = materials.steel, horizontal = false) {
-    const object = mesh(parent, new THREE.CylinderGeometry(radius, radius, height, 48), material, 'housing');
+    const object = mesh(parent, new THREE.CylinderGeometry(radius, radius, height, detailed ? 48 : 16), material, 'housing');
     object.position.set(...position); if (horizontal) object.rotation.z = Math.PI / 2;
     return object;
   }
   function ring(parent, centre, radius, diameter, material, inXY = false, count = 96) {
+    if (!detailed) count = Math.min(count, 32);
     for (let i = 0; i < count; i++) {
       const a = i / count * tau, b = (i + 1) / count * tau;
       const p = angle => inXY ? [centre[0] + radius * Math.cos(angle), centre[1] + radius * Math.sin(angle), centre[2]]
@@ -150,7 +151,7 @@ export function createAntennaArray() {
       const x = cx - width / 2 + width * i / bays;
       beam(parent, [x,cy-0.065,cz-depth/2], [x,cy-0.065,cz+depth/2], 0.10, materials.steel, 0.18);
     }
-    const bars = Math.ceil(width / 0.10), panels = Math.ceil(depth / 1.5);
+    const bars = Math.ceil(width / (detailed ? 0.10 : 0.30)), panels = Math.ceil(depth / 1.5);
     for (let j = 0; j < panels; j++) for (let i = 0; i <= bars; i++)
       box(parent, [cx-width/2+width*i/bars,cy+0.0425,cz-depth/2+(j+0.5)*depth/panels], [0.006,0.035,depth/panels-0.008], materials.steel);
     for (let j = 1; j < panels; j++) {
@@ -182,6 +183,7 @@ export function createAntennaArray() {
   }
   function node(parent, position, normalAxis = 'z') {
     box(parent, position, normalAxis === 'z' ? [0.48, 0.48, 0.018] : [0.018, 0.48, 0.48], materials.dark);
+    if (!detailed) return;
     for (const a of [-0.16, 0.16]) for (const b of [-0.16, 0.16]) {
       const p = normalAxis === 'z' ? [position[0] + a, position[1] + b, position[2] + 0.018] : [position[0] + 0.018, position[1] + a, position[2] + b];
       const rotation = new THREE.Quaternion().setFromAxisAngle(v(normalAxis === 'z' ? [1, 0, 0] : [0, 0, 1]), Math.PI / 2);
@@ -190,6 +192,7 @@ export function createAntennaArray() {
   }
 
   function fastener(parent, position, radius = 0.022, axis = 'z') {
+    if (!detailed) return;
     const rotation = axis === 'y' ? new THREE.Quaternion()
       : new THREE.Quaternion().setFromAxisAngle(v(axis === 'x' ? [0, 0, 1] : [1, 0, 0]), Math.PI / 2);
     instance(parent, bolt, materials.hardware, position, [radius, 0.024, radius], rotation);
@@ -225,7 +228,7 @@ export function createAntennaArray() {
   function sleeve(parent, position, outer, inner, height, material, horizontal = false, name = 'annular-housing') {
     const shape = new THREE.Shape(); shape.absarc(0,0,outer,0,tau,false);
     const hole = new THREE.Path(); hole.absarc(0,0,inner,0,tau,true); shape.holes.push(hole);
-    const geometry = new THREE.ExtrudeGeometry(shape, {depth: height, bevelEnabled: false, curveSegments: 48});
+    const geometry = new THREE.ExtrudeGeometry(shape, {depth: height, bevelEnabled: false, curveSegments: detailed ? 48 : 16});
     geometry.rotateX(-Math.PI/2); geometry.translate(0,-height/2,0);
     const object = mesh(parent, geometry, material, name);
     if (horizontal) object.rotation.z = Math.PI/2;
@@ -444,13 +447,13 @@ export function createAntennaArray() {
     const boundary = [];
     for (let i = 0; i < polygon.length; i++) {
       const a = polygon[i], b = polygon[(i + 1) % polygon.length];
-      const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.55));
+      const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / (detailed ? 0.55 : 1.2)));
       for (let j = 0; j < steps; j++) boundary.push([THREE.MathUtils.lerp(a[0], b[0], j / steps), THREE.MathUtils.lerp(a[1], b[1], j / steps)]);
     }
     const positions = [], normals = [], uvs = [];
     const cx = polygon.reduce((sum, p) => sum + p[0], 0) / polygon.length;
     const cy = polygon.reduce((sum, p) => sum + p[1], 0) / polygon.length;
-    const rings = Math.max(1,Math.ceil(Math.max(...boundary.map(p => Math.hypot(p[0]-cx,p[1]-cy)))/0.40));
+    const rings = Math.max(1,Math.ceil(Math.max(...boundary.map(p => Math.hypot(p[0]-cx,p[1]-cy)))/(detailed ? 0.40 : 1.2)));
     function vertex(x, y, offset, edgeNormal = null) {
       positions.push(x, y, sag(x, y) - offset);
       normals.push(...(edgeNormal || new THREE.Vector3(-x / (2 * D.parentFocalLength), -(y + D.apertureOffset) / (2 * D.parentFocalLength), 1).normalize()).toArray());

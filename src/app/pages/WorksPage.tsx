@@ -13,15 +13,21 @@ import { scheduleMissionStart } from "../lib/mission-time";
 import { ScheduleSection } from "../../portal/components/ScheduleSection";
 import { readScheduleIntent, saveScheduleIntent } from "../../portal/lib/schedule-selection";
 import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
+import { useDialogMotion } from "../components/use-dialog-motion";
+import { PageSkeleton } from '../components/NavigationFeedback';
 
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
 const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 type OwnSchedule = { userId: string; revision: number; segmentId: string | null; author: string | null; status: string | undefined; collaboration: CollaborationResponse };
 
+// Keep only public data between visits; each mount still refreshes it. Account
+// permissions and personal schedule state remain local to the current session.
+let cachedPublicWorks: PublicWorksResponse | null = null;
+
 export function WorksPage() {
   const { data: session } = authClient.useSession();
   const userId = session?.user.id;
-  const [data, setData] = useState<PublicWorksResponse | null>(null);
+  const [data, setData] = useState<PublicWorksResponse | null>(() => cachedPublicWorks);
   const [error, setError] = useState<string | null>(null);
   const [own, setOwn] = useState<OwnSchedule | null>(null);
   const [ownWarning, setOwnWarning] = useState<string | null>(null);
@@ -32,13 +38,19 @@ export function WorksPage() {
   const [mobile, setMobile] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(dialog);
   const detailTrigger = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     const refresh = () => {
       void requestJson<PublicWorksResponse>("/api/works", { signal: controller.signal })
-        .then(response => { if (!controller.signal.aborted) { setData(response); setError(null); setNow(Date.now()); } })
+        .then(response => {
+          if (!controller.signal.aborted) {
+            cachedPublicWorks = response;
+            setData(response); setError(null); setNow(Date.now());
+          }
+        })
         .catch(caught => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : "暂时无法读取接力时间表。"); });
       if (userId) void Promise.all([
         requestJson<PortalDashboardResponse>("/api/portal/dashboard", { signal: controller.signal }),
@@ -87,6 +99,7 @@ export function WorksPage() {
   const mineId = mine?.id ?? null;
   const { phase, currentId } = schedulePhase(schedule, now);
   const selected = schedule.find(entry => entry.id === selectedId) ?? mine ?? schedule.find(entry => entry.id === currentId) ?? schedule[0];
+  const hasSelected = Boolean(selected);
   const selectedKey = selected?.kind === 'extra' ? 'extra' : selected?.scheduledAt ? scheduleDay(selected.scheduledAt) : "pending";
   useEffect(() => {
     const element = dialog.current;
@@ -96,15 +109,18 @@ export function WorksPage() {
     }
     // Keep one detail component mounted while switching between inline and modal views.
     if (element.open) element.close();
-    if (detailOpen) element.showModal();
+    if (detailOpen) { element.showModal(); enterDialog(); }
     else if (!mobile) element.open = true;
     const previousOverflow = document.body.style.overflow;
     if (detailOpen) document.body.style.overflow = "hidden";
     return () => {
+      stopDialog();
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("transform");
       if (element.open) element.close();
       if (detailOpen) document.body.style.overflow = previousOverflow;
     };
-  }, [mobile, detailOpen, selectedKey, selected?.id]);
+  }, [mobile, detailOpen, selectedKey, hasSelected, enterDialog, stopDialog]);
   const count = (status: "available" | "confirmed" | "reserved" | "unavailable") => schedule.filter(entry => entry.status === status).length;
   const timedDays = days.filter(day => day.date);
   const firstDate = timedDays[0]?.date;
@@ -120,8 +136,10 @@ export function WorksPage() {
     if (mobile || id === selected?.id) setDetailOpen(true);
   }
   function closeDetail() {
-    setDetailOpen(false);
-    detailTrigger.current?.focus({ preventScroll: true });
+    exitDialog(() => {
+      setDetailOpen(false);
+      detailTrigger.current?.focus({ preventScroll: true });
+    });
   }
   const actions = selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
     : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
@@ -140,7 +158,7 @@ export function WorksPage() {
     {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>选择空闲时间后填写报名资料，提交成功后为你预留。审核通过后可调整时间或申请换期。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
-    {!data ? !error && <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
+    {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
       <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
       <p className="ops-interaction-hint">{mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
       {days.map(day => <Fragment key={day.key}>

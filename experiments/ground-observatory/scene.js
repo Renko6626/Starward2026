@@ -5,36 +5,39 @@ import { createAntennaArray } from './antenna.js';
 export const antennaViews = ['overview', 'front', 'back', 'side', 'arm', 'drive', 'base'];
 
 // Local procedural sky: no remote HDR/image dependency, and stars stay infinitely distant.
-function createNightSky() {
-  const width = 2048, height = 1024, canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const sky = ctx.createLinearGradient(0, 0, 0, height);
-  sky.addColorStop(0, '#020711'); sky.addColorStop(0.48, '#101d32');
-  sky.addColorStop(0.56, '#080e19'); sky.addColorStop(1, '#02050a');
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
-  let seed = 731;
-  const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-  // A faint, inclined stellar band breaks uniformity without drawing an invented constellation.
-  for (let i = 0; i < 1100; i++) {
-    const x = random() * width, band = 0.30 + 0.13 * Math.sin(x / width * Math.PI * 2 + 0.6);
-    const y = (band + (random() + random() + random() - 1.5) * 0.045) * height;
-    const alpha = 0.04 + random() * 0.11;
-    ctx.fillStyle = `rgba(124,153,197,${alpha})`; ctx.beginPath(); ctx.arc(x, y, 0.4 + random() * 0.6, 0, Math.PI * 2); ctx.fill();
-  }
-  for (let i = 0; i < 2400; i++) {
-    const x = random() * width, y = Math.acos(random()) / Math.PI * height;
-    const bright = random(), radius = bright > 0.97 ? 0.55 : 0.15 + random() * 0.25;
-    const alpha = 0.10 + Math.pow(bright, 5) * 0.72;
-    ctx.fillStyle = `rgba(193,214,243,${alpha})`; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
-    if (bright > 0.985) {
-      const glow = ctx.createRadialGradient(x, y, 0, x, y, 1.5);
-      glow.addColorStop(0, 'rgba(170,203,247,0.12)'); glow.addColorStop(1, 'rgba(170,203,247,0)');
-      ctx.fillStyle = glow; ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+function createNightSky(includeBackground = true) {
+  let background = null;
+  if (includeBackground) {
+    const width = 2048, height = 1024, canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, '#020711'); sky.addColorStop(0.48, '#101d32');
+    sky.addColorStop(0.56, '#080e19'); sky.addColorStop(1, '#02050a');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
+    let seed = 731;
+    const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    // A faint, inclined stellar band breaks uniformity without drawing an invented constellation.
+    for (let i = 0; i < 1100; i++) {
+      const x = random() * width, band = 0.30 + 0.13 * Math.sin(x / width * Math.PI * 2 + 0.6);
+      const y = (band + (random() + random() + random() - 1.5) * 0.045) * height;
+      const alpha = 0.04 + random() * 0.11;
+      ctx.fillStyle = `rgba(124,153,197,${alpha})`; ctx.beginPath(); ctx.arc(x, y, 0.4 + random() * 0.6, 0, Math.PI * 2); ctx.fill();
     }
+    for (let i = 0; i < 2400; i++) {
+      const x = random() * width, y = Math.acos(random()) / Math.PI * height;
+      const bright = random(), radius = bright > 0.97 ? 0.55 : 0.15 + random() * 0.25;
+      const alpha = 0.10 + Math.pow(bright, 5) * 0.72;
+      ctx.fillStyle = `rgba(193,214,243,${alpha})`; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      if (bright > 0.985) {
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, 1.5);
+        glow.addColorStop(0, 'rgba(170,203,247,0.12)'); glow.addColorStop(1, 'rgba(170,203,247,0)');
+        ctx.fillStyle = glow; ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      }
+    }
+    background = new THREE.CanvasTexture(canvas);
+    background.mapping = THREE.EquirectangularReflectionMapping; background.colorSpace = THREE.SRGBColorSpace;
   }
-  const background = new THREE.CanvasTexture(canvas);
-  background.mapping = THREE.EquirectangularReflectionMapping; background.colorSpace = THREE.SRGBColorSpace;
   // Separate low-frequency HDR sky radiance makes PBR metal readable at any view angle.
   const ew = 256, eh = 128, pixels = new Float32Array(ew * eh * 4);
   const moon = new THREE.Vector3(-0.65, 0.65, -0.40).normalize();
@@ -54,7 +57,11 @@ function createNightSky() {
 }
 
 export function mountArray(container, { view = null, animate = false } = {}) {
+  const inspection = antennaViews.includes(view);
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  // Synchronous shader-log reads stall the background's first frame even after
+  // compilation. Keep diagnostics in the dedicated model inspection views.
+  renderer.debug.checkShaderErrors = inspection;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -64,9 +71,8 @@ export function mountArray(container, { view = null, animate = false } = {}) {
   renderer.shadowMap.autoUpdate = false;
   container.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  const antenna = createAntennaArray(); scene.add(antenna);
-  const inspection = antennaViews.includes(view);
-  const sky = createNightSky();
+  const antenna = createAntennaArray({ detailed: inspection }); scene.add(antenna);
+  let sky = null;
   let environment = null;
   const rebuildEnvironment = () => {
     // Render targets lose their generated pixels on context restoration; retain CPU radiance.
@@ -76,9 +82,7 @@ export function mountArray(container, { view = null, animate = false } = {}) {
     scene.environment = environment.texture;
     sky.radiance.dispose(); pmrem.dispose(); previous?.dispose();
   };
-  rebuildEnvironment();
   scene.environmentIntensity = 0.8;
-  if (inspection) scene.background = view === 'overview' ? sky.background : new THREE.Color(0x060d19);
   scene.add(new THREE.HemisphereLight(0x88a6d0, 0x192331, 0.26));
   const key = new THREE.DirectionalLight(0xb9d1ff, 3.6);
   key.position.set(-70, 90, -65); key.target.position.set(0, 24, 0); scene.add(key.target, key);
@@ -113,7 +117,12 @@ export function mountArray(container, { view = null, animate = false } = {}) {
     base: new THREE.Vector3(-1, 0.5, -1.25),
   };
   let controls = null, initialized = false, orthoFrame = null;
-  const render = () => renderer.render(scene, camera);
+  let compiled = false, disposed = false;
+  const render = () => {
+    if (!compiled || disposed || contextLost) return;
+    renderer.render(scene, camera);
+    container.classList.add('ready');
+  };
   const resize = () => {
     const { width, height } = container.getBoundingClientRect(); if (!width || !height) return;
     const aspect = width / height;
@@ -157,7 +166,6 @@ export function mountArray(container, { view = null, animate = false } = {}) {
     }
     camera.updateProjectionMatrix(); renderer.setSize(width, height);
     initialized = true; controls?.update(); render();
-    container.classList.add('ready');
   };
   const observer = new ResizeObserver(resize); observer.observe(container); resize();
   if (inspection) {
@@ -177,7 +185,7 @@ export function mountArray(container, { view = null, animate = false } = {}) {
   const restAzimuth = azimuth.rotation.y, restElevation = reflector.rotation.x;
   let frame = 0, elapsed = 0, previousTime = null, lastShadow = -Infinity;
   let visible = true, contextLost = false;
-  const moving = () => animate && !inspection && !motion.matches && !document.hidden && visible && !contextLost;
+  const moving = () => compiled && !disposed && animate && !inspection && !motion.matches && !document.hidden && visible && !contextLost;
   const stop = () => {
     cancelAnimationFrame(frame); frame = 0; previousTime = null;
   };
@@ -222,7 +230,26 @@ export function mountArray(container, { view = null, animate = false } = {}) {
   renderer.domElement.addEventListener('webglcontextlost', lost);
   const restored = () => {contextLost = false; rebuildEnvironment(); renderer.shadowMap.needsUpdate = true; resize(); syncMotion();};
   renderer.domElement.addEventListener('webglcontextrestored', restored);
+  // Let the driver compile in parallel before the first render uses the
+  // programs. Resize and motion callbacks must not render while this is pending.
+  const compilation = (async () => {
+    // Separate model construction from environment generation so pending data
+    // and route paints can run. This is a task yield, not an entrance delay.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (disposed) return;
+    sky = createNightSky(view === 'overview');
+    rebuildEnvironment();
+    if (inspection) scene.background = view === 'overview' ? sky.background : new THREE.Color(0x060d19);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (disposed) return;
+    await renderer.compileAsync(scene, camera);
+  })();
+  void compilation.then(() => {
+    if (disposed) return;
+    compiled = true; render(); syncMotion();
+  }).catch(error => { if (!disposed) console.warn('Observatory antenna unavailable', error); });
   return () => {
+    disposed = true;
     stop(); visibility?.disconnect();
     motion.removeEventListener('change', syncMotion);
     document.removeEventListener('visibilitychange', syncMotion);
@@ -230,13 +257,19 @@ export function mountArray(container, { view = null, animate = false } = {}) {
     controls?.removeEventListener('change', render); controls?.dispose();
     renderer.domElement.removeEventListener('webglcontextlost', lost);
     renderer.domElement.removeEventListener('webglcontextrestored', restored);
-    const geometries = new Set(), materials = new Set();
-    scene.traverse(object => {
-      if (object.geometry) geometries.add(object.geometry);
-      if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => materials.add(material));
-    });
-    geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose());
-    key.shadow.dispose(); environment.dispose(); sky.background.dispose();
-    renderer.dispose(); renderer.domElement.remove();
+    container.classList.remove('ready'); renderer.domElement.remove();
+    // compileAsync polls renderer-owned programs. Release them only after its
+    // final poll, including when the user leaves during compilation.
+    const release = () => {
+      const geometries = new Set(), materials = new Set();
+      scene.traverse(object => {
+        if (object.geometry) geometries.add(object.geometry);
+        if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => materials.add(material));
+      });
+      geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose());
+      key.shadow.dispose(); environment?.dispose(); sky?.background?.dispose(); sky?.radiance.dispose();
+      renderer.dispose();
+    };
+    void compilation.then(release, release);
   };
 }

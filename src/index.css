@@ -2,6 +2,39 @@
 
 @import "./fonts.css";
 
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 200;
+  pointer-events: none;
+  animation: navigation-feedback-show 0s 100ms both;
+}
+.navigation-progress span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: #dcc394;
+  animation: navigation-feedback-move 1.1s ease-in-out infinite;
+}
+body:has(.route-pending) .navigation-progress--router { display: none; }
+@keyframes navigation-feedback-show { from { opacity: 0; } to { opacity: 1; } }
+@keyframes navigation-feedback-move { from { transform: translateX(-100%); } to { transform: translateX(390%); } }
+.page-skeleton { padding: 36px 24px; min-height: 260px; }
+.page-skeleton-heading { width: min(240px, 60%); height: 28px; background: #ffffff0c; margin-bottom: 32px; }
+.page-skeleton-lines { display: grid; gap: 16px; }
+.page-skeleton-lines span { display: block; height: 56px; background: #ffffff08; }
+.page-skeleton--schedule { padding-inline: 0; }
+.page-skeleton--schedule .page-skeleton-lines { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton--schedule .page-skeleton-lines span { height: 180px; }
+@media (max-width: 640px) {
+  .page-skeleton--schedule .page-skeleton-lines { grid-template-columns: 1fr; }
+  .page-skeleton--schedule .page-skeleton-lines span { height: 72px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress span { animation: none; width: 100%; }
+}
+
 @theme {
   --color-background: #090909;
   --color-on-background: #e7e7e7;
@@ -286,6 +319,7 @@
     color: var(--color-on-surface-variant);
   }
   .public-nav a {
+    position: relative;
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -297,8 +331,20 @@
     color: var(--color-primary);
   }
   .public-nav a[data-status="active"] {
-    text-decoration-line: underline;
+    text-decoration-line: none;
   }
+  .navigation-active-mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6px;
+    height: 1px;
+    background: currentColor;
+    pointer-events: none;
+  }
+  .public-nav .nav-entry .navigation-active-mark { left: 32px; }
+  .navigation-toggle-icon { display: grid; width: 24px; height: 24px; }
+  .navigation-toggle-icon > span { grid-area: 1 / 1; display: flex; }
   .public-nav .nav-entry {
     display: flex;
     gap: 18px;
@@ -1363,21 +1409,15 @@
     z-index: 40;
     border-bottom: 1px solid var(--color-outline-variant);
     padding: 16px 20px;
-    opacity: 0;
-    transform: translateY(-8px);
-    visibility: hidden;
-    pointer-events: none;
-    transition:
-      opacity var(--motion-panel) ease,
-      transform var(--motion-panel) var(--motion-ease),
-      visibility 0s var(--motion-panel);
   }
-  .public-nav.is-open {
-    opacity: 1;
-    transform: translateY(0);
-    visibility: visible;
-    pointer-events: auto;
-    transition-delay: 0s;
+  .public-nav .navigation-active-mark,
+  .public-nav .nav-entry .navigation-active-mark {
+    left: 0;
+    right: auto;
+    top: calc(50% - 9px);
+    bottom: auto;
+    width: 2px;
+    height: 18px;
   }
   .public-nav a,
   .public-nav .nav-entry {
@@ -1716,12 +1756,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .route-stage {
-    animation: observation-route-in 420ms var(--motion-ease) both;
-  }
-  .public-site .route-stage {
-    animation: none;
-  }
   .hero-copy > .eyebrow,
   .hero-copy > h1,
   .hero-copy > p {
@@ -1807,17 +1841,6 @@
   }
 }
 
-@keyframes observation-route-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (max-width: 540px) and (prefers-reduced-motion: no-preference) {
   .schedule-track-item {
     animation-duration: 600ms;
@@ -1855,3 +1878,13 @@
   .admin-segment-row > summary > span { overflow-wrap: anywhere; }
   .admin-segment-row > summary > span:first-child { grid-column: 1 / -1; }
 }
+
+/* Local feedback never moves the page or duplicates editable controls. */
+.crossfade { display: grid; min-width: 0; }
+.crossfade-layer { grid-area: 1 / 1; min-width: 0; }
+.crossfade-layer[inert] { pointer-events: none; }
+.button-feedback { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.button-busy-indicator { width: 12px; height: 12px; flex: none; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: observation-spin 700ms linear infinite; }
+:is(.ops-detail-dialog, .registration-time-dialog, .login-password-dialog)::backdrop { opacity: var(--dialog-backdrop-opacity, 1); }
+@property --dialog-backdrop-opacity { syntax: '<number>'; inherits: true; initial-value: 1; }
+@media (prefers-reduced-motion: reduce) { .button-busy-indicator { animation: none; } }

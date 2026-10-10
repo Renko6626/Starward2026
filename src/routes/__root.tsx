@@ -1,5 +1,6 @@
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
 import { SiteLayout } from "../app/layouts/SiteLayout";
+import { NavigationFeedback } from "../app/components/NavigationFeedback";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -8,9 +9,9 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   return (
-    <SiteLayout>
+    <><NavigationFeedback /><SiteLayout>
       <Outlet />
-    </SiteLayout>
+    </SiteLayout></>
   );
 }
 

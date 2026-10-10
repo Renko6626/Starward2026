@@ -1,6 +1,6 @@
 # 网站字体
 
-全站采用本地托管的 WOFF2 字体，定义在 `src/fonts.css`，角色变量在 `src/index.css`。
+全站采用本地托管的 WOFF2 字体，常用字定义在 `src/fonts.css`，扩展字定义在 `src/fonts-extended.css`，角色变量在 `src/index.css`。扩展字体表在首屏绘制后注册；首页和各入口共用的 Plex Sans 400、思源黑体 400 常用字提前加载。
 
 | 角色 | 字体 | 字重 |
 | --- | --- | --- |
@@ -25,4 +25,6 @@
 
 ## 维护
 
-子集由 fontTools 生成：按目标 Unicode 字符集调用 `fontTools.subset.Subsetter`，保留 CFF 子程序，保留 `kern`／`liga` 布局特性并移除屏幕显示不需要的 hinting，输出 `TTFont.flavor = 'woff2'`，Brotli quality 为 6。每条 `@font-face` 的 `unicode-range` 与对应文件实际 cmap 一致。更新字体版本时，须同步常用字和扩展块资产、CSS 范围和授权，并查看中英混排标题及倒计时截图。构建不依赖 Python、字体下载服务或额外 npm 包。
+文案更新后可运行 `python scripts/font-core.py`（需要 `fonttools` 和 `brotli`）。脚本从仓库已有字体分片提取当前 UI 汉字的原始 CFF 轮廓、字宽和排版度量，写入常用字子集，同时从扩展 CSS 的 `unicode-range` 排除这些字，避免一个新字触发整个扩展块下载。扩展文件保留原始覆盖，以支持作者输入的任意文字；英文真实字重、字距和连字表不变。生成结果提交仓库，日常构建无需 Python 或字体下载。
+
+更新字体版本时，须同步常用字和扩展块资产、CSS 范围和授权，并查看中英混排标题及倒计时截图。
