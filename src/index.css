@@ -2,6 +2,39 @@
 
 @import "./fonts.css";
 
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 200;
+  pointer-events: none;
+  animation: navigation-feedback-show 0s 100ms both;
+}
+.navigation-progress span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: #dcc394;
+  animation: navigation-feedback-move 1.1s ease-in-out infinite;
+}
+body:has(.route-pending) .navigation-progress--router { display: none; }
+@keyframes navigation-feedback-show { from { opacity: 0; } to { opacity: 1; } }
+@keyframes navigation-feedback-move { from { transform: translateX(-100%); } to { transform: translateX(390%); } }
+.page-skeleton { padding: 36px 24px; min-height: 260px; }
+.page-skeleton-heading { width: min(240px, 60%); height: 28px; background: #ffffff0c; margin-bottom: 32px; }
+.page-skeleton-lines { display: grid; gap: 16px; }
+.page-skeleton-lines span { display: block; height: 56px; background: #ffffff08; }
+.page-skeleton--schedule { padding-inline: 0; }
+.page-skeleton--schedule .page-skeleton-lines { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton--schedule .page-skeleton-lines span { height: 180px; }
+@media (max-width: 640px) {
+  .page-skeleton--schedule .page-skeleton-lines { grid-template-columns: 1fr; }
+  .page-skeleton--schedule .page-skeleton-lines span { height: 72px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress span { animation: none; width: 100%; }
+}
+
 @theme {
   --color-background: #090909;
   --color-on-background: #e7e7e7;
@@ -1720,7 +1753,8 @@
     animation: observation-route-in 420ms var(--motion-ease) both;
   }
   .public-site .route-stage {
-    animation: none;
+    /* A transformed route would contain fixed backgrounds and expand their canvases. */
+    animation: observation-fade 300ms var(--motion-ease) both;
   }
   .hero-copy > .eyebrow,
   .hero-copy > h1,

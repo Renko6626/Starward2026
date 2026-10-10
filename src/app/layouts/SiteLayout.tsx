@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ScrollProgress } from "../components/ScrollProgress";
 
@@ -99,6 +99,7 @@ export function SiteFooter() {
 }
 
 export function SiteLayout({ children }: PropsWithChildren) {
+  const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const isWorkspace =
@@ -110,7 +111,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
       <ScrollProgress key={pathname} />
       <a className="skip-link" href="#main-content">跳至正文</a>
       <SiteHeader />
-      <main id="main-content" className="public-main">
+      <main id="main-content" className="public-main" aria-busy={pending}>
         <div className="route-stage" key={pathname}>{children}</div>
       </main>
       <SiteFooter />

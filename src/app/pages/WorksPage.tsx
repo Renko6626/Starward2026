@@ -13,6 +13,7 @@ import { scheduleMissionStart } from "../lib/mission-time";
 import { ScheduleSection } from "../../portal/components/ScheduleSection";
 import { readScheduleIntent, saveScheduleIntent } from "../../portal/lib/schedule-selection";
 import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
+import { PageSkeleton } from '../components/NavigationFeedback';
 
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
 const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -140,7 +141,7 @@ export function WorksPage() {
     {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>选择空闲时间后填写报名资料，提交成功后为你预留。审核通过后可调整时间或申请换期。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
-    {!data ? !error && <p className="works-empty" role="status">正在读取接力时间表…</p> : schedule.length === 0 ?
+    {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
       <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
       <p className="ops-interaction-hint">{mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
       {days.map(day => <Fragment key={day.key}>
