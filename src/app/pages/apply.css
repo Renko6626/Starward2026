@@ -57,7 +57,8 @@
   .participation-aside-note { margin-top: 14px; font-size: var(--site-meta-size); }
   .participation-artwork { position: absolute; z-index: -1; inset: 125px -32% auto; height: 600px; margin: 0; max-width: none; pointer-events: none; }
   .participation-artwork .station-technical-drawing { height: auto; }
-  .participation-content { border-left: 0; padding: 30px 0 44px; }
+  .participation-content { position: relative; isolation: isolate; border-left: 0; padding: 30px 0 44px; }
+  .participation-content::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: linear-gradient(90deg, #090909c7, #0909098c 65%, #09090926); -webkit-mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent); }
   .participation-status { border-top: 1px solid #ffffff1c; padding-top: 27px; }
   .participation-section-heading { gap: 13px; }
   .participation-section-heading h2 { font-size: var(--site-section-size); }
