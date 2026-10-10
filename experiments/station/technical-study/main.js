@@ -151,7 +151,7 @@ const leader = (point, x, y, label) => {
   geometry += `<g class="leader"><path d="M${px} ${py}L${end+(x<px?35:-35)} ${y}H${end}"/><circle cx="${px}" cy="${py}" r="3"/><text x="${x}" y="${y-10}" text-anchor="${x<px?'start':'end'}">${label}</text></g>`;
 };
 if (view === 'side') {
-  vertical(new THREE.Vector3(w.mainX,0,c.mainOuterRadius),new THREE.Vector3(w.mainX,0,-c.mainOuterRadius),1035,`Ø${c.mainOuterRadius*2}`);
+  vertical(new THREE.Vector3(w.mainX,0,c.mainOuterRadius),new THREE.Vector3(w.mainX,0,-c.mainOuterRadius),1220,`Ø${c.mainOuterRadius*2}`);
   vertical(new THREE.Vector3(w.counterX,0,c.counterDiameter/2),new THREE.Vector3(w.counterX,0,-c.counterDiameter/2),470,`Ø${c.counterDiameter}`);
   horizontal(new THREE.Vector3(w.counterX,0,-c.mainOuterRadius),new THREE.Vector3(w.mainX,0,-c.mainOuterRadius),835,`${w.mainX-w.counterX} REF`);
   horizontal(new THREE.Vector3(w.coreFront,0,0),new THREE.Vector3(w.engineExit,0,0),880,`${w.engineExit-w.coreFront} REF`);
@@ -167,25 +167,29 @@ if (view === 'side') {
 } else if (view === 'front') {
   const radius=c.mainOuterRadius/(halfWidth*2)*width;
   const reserve=c.counterDiameter/2/(halfWidth*2)*width;
-  geometry+=`<path class="dimension" marker-start="url(#arrow)" marker-end="url(#arrow)" d="M${ax-radius} ${ay}H${ax+radius}"/><text class="dimension-label" x="${ax}" y="${ay-18}">Ø${c.mainOuterRadius*2}</text>`;
+  geometry+=`<path class="dimension" marker-start="url(#arrow)" marker-end="url(#arrow)" d="M${ax-radius} ${ay}H${ax+radius}"/><text class="dimension-label" x="${ax-radius*.42}" y="${ay-18}">Ø${c.mainOuterRadius*2}</text>`;
   leader(new THREE.Vector3(0,0,c.counterDiameter/2),1120,320,`Ø${c.counterDiameter}`);
-  leader(new THREE.Vector3(0,c.mainOuterRadius,0),380,265,`${c.mainSpokes}× 90°`);
+  // Point at the nearby upper spoke, keeping the leader away from the hub.
+  const spokeAngle = Math.PI / 2 + Math.PI / w.mainSegments;
+  const spokeRadius = c.mainOuterRadius * .6;
+  leader(new THREE.Vector3(0,spokeRadius*Math.cos(spokeAngle),spokeRadius*Math.sin(spokeAngle)),470,285,`${c.mainSpokes}× 90°`);
   geometry+=`<circle class="datum" cx="${ax}" cy="${ay}" r="${reserve}"/>`;
 } else if (view === 'dock') {
-  vertical(new THREE.Vector3(-51,0,4.5),new THREE.Vector3(-51,0,-4.5),1110,'Ø9 REF');
-  horizontal(new THREE.Vector3(-58,0,-4.5),new THREE.Vector3(-44,0,-4.5),770,'14 REF');
+  vertical(new THREE.Vector3(-51,0,4.5),new THREE.Vector3(-51,0,-4.5),740,'Ø9 REF');
+  horizontal(new THREE.Vector3(-58,0,-4.5),new THREE.Vector3(-44,0,-4.5),800,'14 REF');
   leader(station.markers[4].position,350,340,'DOCK');
-  leader(station.markers[6].position,1080,365,'EVA');
+  leader(station.markers[6].position,835,345,'EVA');
 } else {
   horizontal(new THREE.Vector3(w.engineExit-w.mainNozzleLength,0,0),new THREE.Vector3(w.engineExit,0,0),765,`${w.mainNozzleLength} REF`);
-  leader(station.markers[11].position,340,325,`${c.mainTanks}× TANK`);
+  leader(station.markers[11].position,500,345,`${c.mainTanks}× TANK`);
   leader(station.markers[12].position,1135,690,`${c.mainEngines}× Ø${w.mainNozzleDiameter}`);
   const tankExtent = Math.max(...Array.from({ length: c.mainTanks }, (_, i) => Math.abs(Math.sin(i * Math.PI * 2 / c.mainTanks)) * w.tankCircleRadius)) + w.tankRadius;
   vertical(new THREE.Vector3(54,0,tankExtent),new THREE.Vector3(54,0,-tankExtent),1100,`${(2*tankExtent).toFixed(1)} REF`);
 }
 const scaleMetres=detail?5:20, scaleLength=scaleMetres/(camera.right-camera.left)*width;
 const sy=bottom-48;
-geometry+=`<path class="scale" d="M300 ${sy-12}v12h${scaleLength}v-12 M${300+scaleLength/2} ${sy-6}v6"/><text class="scale-label" x="300" y="${sy+26}">0</text><text class="scale-label" x="${300+scaleLength}" y="${sy+26}">${scaleMetres} m</text>`;
+const scaleX = view === 'aft' ? 460 : 300;
+geometry+=`<path class="scale" d="M${scaleX} ${sy-12}v12h${scaleLength}v-12 M${scaleX+scaleLength/2} ${sy-6}v6"/><text class="scale-label" x="${scaleX}" y="${sy+26}">0</text><text class="scale-label" x="${scaleX+scaleLength}" y="${sy+26}">${scaleMetres} m</text>`;
 geometry+=`<text class="unit-label" x="${right-50}" y="${bottom-25}">m</text>`;
 document.querySelector('#page-sheet').innerHTML=geometry;
 document.querySelector('#annotations').innerHTML=geometry;

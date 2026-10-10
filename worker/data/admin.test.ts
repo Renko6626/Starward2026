@@ -200,6 +200,47 @@ function readSegment(db: SqliteD1Database, id: string) {
   };
 }
 describe("updateActiveScheduleSegment", () => {
+  it('fills only time while preserving a claim and description changed after the initial read', async () => {
+    const db = new SqliteD1Database();
+    seedSchedule(db); seedParticipant(db, 'part_a'); seedSegment(db, { id: 'seg_quick' });
+    seedProjectDraft(db, 'draft_quick', 'part_a', 'seg_quick');
+    const prepare = db.prepare.bind(db);
+    db.prepare = (sql: string) => {
+      if (sql.includes('AND scheduled_at IS NULL')) db.sqlite.prepare(`UPDATE schedule_segments
+        SET status = 'held', current_participant_id = 'part_a', description = '新说明', claimed_at = ? WHERE id = 'seg_quick'`).run(TS);
+      return prepare(sql);
+    };
+    const result = await updateActiveScheduleSegment(db as unknown as D1Database, 'seg_quick',
+      { mode: 'fill-empty-time', scheduledAt: '2026-11-12T00:00:00+08:00' }, 'admin');
+    expect(result.ok).toBe(true);
+    expect(db.sqlite.prepare('SELECT scheduled_at,status,current_participant_id,description,claimed_at FROM schedule_segments').get()).toEqual({
+      scheduled_at: '2026-11-11T16:00:00.000Z', status: 'held', current_participant_id: 'part_a', description: '新说明', claimed_at: TS,
+    });
+    expect(db.sqlite.prepare('SELECT segment_id FROM project_drafts').get()?.segment_id).toBe('seg_quick');
+    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM participant_events').get()?.n).toBe(0);
+  });
+  it('does not overwrite a time filled between reading and updating', async () => {
+    const db = new SqliteD1Database(); seedSchedule(db); seedSegment(db, { id: 'seg_quick' });
+    const prepare = db.prepare.bind(db);
+    db.prepare = (sql: string) => {
+      if (sql.includes('AND scheduled_at IS NULL')) db.sqlite.prepare("UPDATE schedule_segments SET scheduled_at = '2026-11-12T12:00:00.000Z'").run();
+      return prepare(sql);
+    };
+    const result = await updateActiveScheduleSegment(db as unknown as D1Database, 'seg_quick',
+      { mode: 'fill-empty-time', scheduledAt: '2026-11-12T00:00:00Z' }, 'admin');
+    expect(result).toMatchObject({ ok: false, status: 409 });
+    expect(db.sqlite.prepare('SELECT scheduled_at FROM schedule_segments').get()?.scheduled_at).toBe('2026-11-12T12:00:00.000Z');
+  });
+  it('rejects extra slots and retains release metadata on standard slots', async () => {
+    const db = new SqliteD1Database(); seedSchedule(db); seedSegment(db, { id: 'seg_extra' });
+    db.sqlite.exec("UPDATE schedule_segments SET kind = 'extra'");
+    const input = { mode: 'fill-empty-time' as const, scheduledAt: '2026-11-12T00:00:00Z' };
+    expect(await updateActiveScheduleSegment(db as unknown as D1Database, 'seg_extra', input, 'admin')).toMatchObject({ ok: false, status: 422 });
+    seedSegment(db, { id: 'seg_released', status: 'released' });
+    db.sqlite.prepare("UPDATE schedule_segments SET released_at = ? WHERE id = 'seg_released'").run(TS);
+    expect((await updateActiveScheduleSegment(db as unknown as D1Database, 'seg_released', input, 'admin')).ok).toBe(true);
+    expect(db.sqlite.prepare("SELECT status,released_at FROM schedule_segments WHERE id = 'seg_released'").get()).toEqual({ status: 'released', released_at: TS });
+  });
   it("assigns an approved participant to an open segment", async () => {
     const db = new SqliteD1Database();
     seedSchedule(db);

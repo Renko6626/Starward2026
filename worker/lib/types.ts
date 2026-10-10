@@ -1,9 +1,11 @@
 import type { Context } from "hono";
 
-export type AppBindings = Env & {
+export type AppBindings = Partial<Omit<Env, 'QQ_OAUTH_ENABLED'>> & {
   DB?: D1Database;
   APPLICATION_SUBMIT_IP_RATE_LIMITER?: RateLimit;
   APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
+  AUTH_OTP_IP_RATE_LIMITER?: RateLimit;
+  AUTH_OTP_EMAIL_RATE_LIMITER?: RateLimit;
   QQ_OAUTH_ENABLED?: string;
   QQ_APP_ID?: string;
   QQ_APP_KEY?: string;

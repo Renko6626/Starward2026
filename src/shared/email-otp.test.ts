@@ -22,7 +22,7 @@ describe("portal email otp copy", () => {
       "已重新发送当前有效验证码到 help_bot@outlook.com。",
     );
     expect(getPortalEmailOtpResendCooldownText(PORTAL_EMAIL_OTP_RESEND_COOLDOWN_SECONDS)).toBe(
-      "30s 后可重新发送",
+      "60s 后可重新发送",
     );
   });
 

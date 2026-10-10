@@ -56,7 +56,8 @@
   .station-entry-caption { margin-top: 0; }
   .station-entry-caption > p { display: none; }
   .station-entry-caption a { font-size: var(--site-meta-size); }
-  .station-entry .auth-panel { max-width: none; padding: 28px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
+  .station-entry .auth-panel { position: relative; isolation: isolate; max-width: none; padding: 28px 0 0; border-left: 0; border-top: 1px solid #ffffff21; }
+  .station-entry .auth-panel::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: linear-gradient(90deg, #090909d9, #090909b3 65%, #09090933); -webkit-mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent); }
 }
 .activity-rules-consent { margin: 20px 0; }
 .activity-rules-consent .checkbox-field { display: flex; align-items: flex-start; gap: 10px; font-size: var(--site-body-size); line-height: 1.9; }

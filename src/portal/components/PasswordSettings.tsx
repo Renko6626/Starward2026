@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from '@tanstack/react-router';
 import { requestJson } from "../../app/lib/api";
 import { authClient } from "../lib/auth-client";
 import { Button, Field, Notice } from "../../app/components/ui";
@@ -119,6 +120,7 @@ export function PasswordSettings() {
           {error}
         </Notice>
       ) : null}
+      {hasPassword ? <Link className="auth-note" to="/portal/login" search={{ reset: 'password' }}>忘记当前密码？通过邮箱重置</Link> : null}
     </form>
   );
 }

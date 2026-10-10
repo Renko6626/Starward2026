@@ -1,5 +1,5 @@
 {
-  "fingerprint": "383365a6e7a678e7e6f3c4aec5506378d761259ccfc1f2c421805cb05d4c7894",
+  "fingerprint": "73d357bef571d7a335035ed75d8302ecf0f2ea18e01417fc90b3fd6733a4efe7",
   "dependencies": {
     "three": "0.180.0",
     "vite": "7.3.2",
@@ -11,8 +11,8 @@
       "file": "overview.png",
       "width": 1600,
       "height": 1100,
-      "sha256": "7431c94a97c11a99db60b36dd6608cc5866c300970ca72bb837b372f0852424e",
-      "bytes": 86826
+      "sha256": "1ee387e978065f949fe2d05f600650a34db4a6d1f6b2fcf2bb2ceec2029426a3",
+      "bytes": 86802
     },
     "sideElevation": {
       "name": "sideElevation",
@@ -28,7 +28,7 @@
       "width": 1120,
       "height": 930,
       "view": "side",
-      "sha256": "b8d203a4a276653fab0b8ebd76e224651ddb9b013096eaea6d079f8db31370a4",
+      "sha256": "f6575b2fe523e3d911912a40b0b1e538112491812a3dbff1257bb928514dac90",
       "bytes": 109650
     },
     "endView": {
@@ -37,8 +37,8 @@
       "width": 1120,
       "height": 930,
       "view": "front",
-      "sha256": "c34acb0760ac6927df5c3fdf37c093eb8088e0084a2c0add9b139b79d891bea3",
-      "bytes": 334860
+      "sha256": "b98e94c5a67ed078333adfa2edb85d2524e5da93a2fbf7947629b8660ac8f589",
+      "bytes": 334902
     },
     "docking": {
       "name": "docking",
@@ -46,8 +46,8 @@
       "width": 1120,
       "height": 650,
       "view": "dock",
-      "sha256": "32e5164d58691535cafd48175c38c3918080a6aa9f9adf3164b0a3b72692bb3b",
-      "bytes": 145504
+      "sha256": "d8040d770d187c030d9ffd172a584956ee11dab5590188944929f71e00cc0336",
+      "bytes": 145499
     },
     "propulsion": {
       "name": "propulsion",
@@ -55,7 +55,7 @@
       "width": 1120,
       "height": 650,
       "view": "aft",
-      "sha256": "31c8459c64f30e175d9f221ddef56f9588a58d91c875908773a385b6f9c878f7",
+      "sha256": "138a7914a367fa65e001dcd42f9f8cf1bce24f74b8cd0d2854c59a12053db970",
       "bytes": 105177
     }
   }

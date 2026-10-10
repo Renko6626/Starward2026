@@ -3,6 +3,7 @@ import { APIError, getOAuthState, getSessionFromCtx } from "better-auth/api";
 import { getCurrentAuthContext } from "@better-auth/core/context";
 import type { GenericEndpointContext } from "better-auth";
 import type { AppBindings } from "./types";
+import { getRealAuthEmail } from "../../src/shared/auth-identity";
 
 export function isQqEnabled(env: AppBindings) {
   return env.QQ_OAUTH_ENABLED?.trim().toLowerCase() === "true" && /^\d+$/.test(env.QQ_APP_ID?.trim() ?? "") && Boolean(env.QQ_APP_KEY?.trim()) && Boolean(env.BETTER_AUTH_URL?.trim());
@@ -51,6 +52,7 @@ export function buildQqProvider(env: AppBindings): GenericOAuthConfig | null {
         const ctx=await getCurrentAuthContext();
         const session=await getSessionFromCtx(ctx as GenericEndpointContext,{disableCookieCache:true});
         if(!session || session.user.id!==state.link.userId) throw new APIError("FORBIDDEN",{code:"QQ_LINK_SESSION_CHANGED",message:"绑定期间登录状态已变化，请重新登录后绑定。"});
+        if(getRealAuthEmail(session.user.email) && !session.user.emailVerified) throw new APIError("FORBIDDEN",{code:"EMAIL_NOT_VERIFIED",message:"请先验证登录邮箱，再绑定 QQ。"});
       }
       const data=await qqRequest("/user/get_user_info",{access_token:tokens.accessToken,oauth_consumer_key:appId,openid:identity.openid});
       return {id:buildQqAccountId(appId,identity.openid),name:typeof data.nickname==="string"&&data.nickname.trim()?data.nickname:"QQ 作者",email:await buildQqInternalEmail(appId,identity.openid),emailVerified:false,image:typeof data.figureurl_qq_1==="string"&&data.figureurl_qq_1.startsWith("https://")?data.figureurl_qq_1:undefined};
