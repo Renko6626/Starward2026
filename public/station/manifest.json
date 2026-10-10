@@ -1,5 +1,5 @@
 {
-  "fingerprint": "ba766cc097b6d853c91aa65bce9d3179459e5a4e914252025832fcdf451c6fc5",
+  "fingerprint": "04fea9749028561ba8431c088dda2c6a04864db17f7f64504b1644febfc9569b",
   "dependencies": {
     "three": "0.180.0",
     "vite": "7.3.2",
@@ -10,15 +10,15 @@
       "file": "desktop.jpg",
       "width": 1600,
       "height": 1000,
-      "sha256": "f1d5d86b22163621d710ba0e2af1b0364d0d41f53147c78a92d00294784aa468",
-      "bytes": 106634
+      "sha256": "4192679707a5d3a7c5e46bdc754e086a73a007b5358f4418c1f6623ae73b3a33",
+      "bytes": 106772
     },
     "mobile": {
       "file": "mobile.jpg",
       "width": 780,
       "height": 1688,
-      "sha256": "a778d770136b732942d4c2888c209d42dfb91fd11414d7c6ade07dabb9973eaf",
-      "bytes": 65640
+      "sha256": "9f79b007ac1914d11a18a35fb78afe2950859fb197ed8620ea340f4b95379785",
+      "bytes": 65455
     }
   }
 }
