@@ -85,6 +85,8 @@ docs/
 
 设计：
 
+- [design/nasapunk-style-research.md](./design/nasapunk-style-research.md)：NASApunk 的出处、视觉语言、参考图与本站应用建议
+- [design/visual-materials-and-motion-research.md](./design/visual-materials-and-motion-research.md)：视觉素材、蒙版、时间表占用填充及小众动画库调研
 - [design/homepage-wireframe.md](./design/homepage-wireframe.md)
 - [design/apply-page-wireframe.md](./design/apply-page-wireframe.md)
 - [design/ui-redesign-handoff.md](./design/ui-redesign-handoff.md)
