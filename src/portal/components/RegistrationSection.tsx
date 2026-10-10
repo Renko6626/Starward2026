@@ -12,7 +12,7 @@ import { getApplicationWindowLabel } from "../../shared/windows";
 import { getBilibiliProfileUrl, normalizePortalProfileInput, portalContactChannels, portalProfilePlaceholders } from "../lib/profile-form";
 import { LoginPasswordDialog } from "./LoginPasswordDialog";
 import { parseRegistrationDraft, registrationDraftKey } from "../lib/registration-draft";
-import { isRegistrationSegmentSelectable, readScheduleIntent, saveScheduleIntent } from "../lib/schedule-selection";
+import { isRegistrationSegmentSelectable, readScheduleIntent, requiresRegistrationTimeConfirmation, saveScheduleIntent, type RegistrationTimeChange } from "../lib/schedule-selection";
 import { getRegistrationFieldErrors } from "../lib/registration-validation";
 
 export function RegistrationSection({ application, collaboration, onSaved, compact = false, onSelectionChange }: {
@@ -79,6 +79,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const formContainerRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [timeChangeConfirmation, setTimeChangeConfirmation] = useState<RegistrationTimeChange | null>(null);
+  const timeChangeDialog = useRef<HTMLDialogElement>(null);
   const [intake, setIntake] = useState<ApplicationIntakeResponse | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,6 +89,19 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const required = Boolean(intake?.turnstileEnabled);
   const editable = application.editable;
   const disabled = !editable || saving || savingProfile;
+  useEffect(() => {
+    const dialog = timeChangeDialog.current;
+    if (!timeChangeConfirmation || !dialog) return;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (dialog.open) dialog.close();
+      document.body.style.overflow = previousOverflow;
+      trigger?.focus({ preventScroll: true });
+    };
+  }, [timeChangeConfirmation]);
   useEffect(() => {
     let cancelled = false;
     void requestJson<ApplicationIntakeResponse>("/api/applications/intake").then(value => {
@@ -119,8 +134,10 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     });
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(event?: FormEvent<HTMLFormElement>, confirmedChange?: RegistrationTimeChange) {
+    event?.preventDefault();
+    if (saving || savingProfile) return;
+    setTimeChangeConfirmation(null);
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     if (!editable || !intake) { setError("报名设置尚未就绪或当前不能修改报名。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: application.user.email, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
@@ -130,6 +147,11 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     if (Object.keys(validationErrors).length) { showFieldErrors(validationErrors); return; }
     if (!parsed.success) { setError("报名资料格式不正确，请检查后重试。"); return; }
     if (required && (!siteKey || !token)) { setError("请先完成人机验证后再提交。"); return; }
+    const currentSegment = collaboration.segments.find(item => item.participantId === collaboration.participantId);
+    if (selectedSegment && requiresRegistrationTimeConfirmation(currentSegment, selectedSegment, confirmedChange)) {
+      setTimeChangeConfirmation({ from: currentSegment!, to: selectedSegment });
+      return;
+    }
     setSaving(true);
     try {
       const response = await requestJson<WorkspaceApplicationResponse>("/api/portal/application-with-segment", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
@@ -176,6 +198,22 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       setError(null);
     }
   }}><form hidden noValidate id="creator-registration-form" onSubmit={event => void submit(event)} />
+    <dialog ref={timeChangeDialog} className="registration-time-dialog" aria-labelledby="registration-time-dialog-title"
+      aria-describedby="registration-time-dialog-description"
+      onCancel={event => { event.preventDefault(); setTimeChangeConfirmation(null); }}>
+      {timeChangeConfirmation ? <>
+        <h2 id="registration-time-dialog-title">确认更改发布时间？</h2>
+        <dl className="registration-time-change">
+          <div><dt>原时间</dt><dd>{timeChangeConfirmation.from.scheduledAt ? formatScheduledTime(timeChangeConfirmation.from.scheduledAt) : timeChangeConfirmation.from.name}</dd></div>
+          <div><dt>新时间</dt><dd>{timeChangeConfirmation.to.scheduledAt ? formatScheduledTime(timeChangeConfirmation.to.scheduledAt) : timeChangeConfirmation.to.name}</dd></div>
+        </dl>
+        <p id="registration-time-dialog-description">以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。</p>
+        <div className="workspace-actions">
+          <Button variant="secondary" autoFocus onClick={() => setTimeChangeConfirmation(null)}>返回修改</Button>
+          <Button onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
+        </div>
+      </> : null}
+    </dialog>
     <section className={compact ? "creator-card creator-profile-card" : undefined} id={compact ? "profile" : undefined}>
       {compact ? <header className="creator-card-header"><h2 className="creator-card-title">署名与联系</h2><LoginPasswordDialog email={application.user.email} /></header> : null}
       <div className={compact ? "creator-card-body" : undefined}>

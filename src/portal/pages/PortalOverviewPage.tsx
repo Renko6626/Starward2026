@@ -1,3 +1,4 @@
+import { PortalAccount } from "../../app/layouts/WorkspaceLayout";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -84,7 +85,7 @@ export function PortalOverviewPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "撤回失败。"); }
     finally { setWithdrawing(false); }
   }
-  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace"><PageHeading title="作者页面" />{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
+  if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace"><PageHeading title="作者页面">{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
   const { dashboard, application, collaboration } = state;
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
@@ -99,7 +100,7 @@ export function PortalOverviewPage() {
     finally { setRefreshing(false); }
   }
   return <div className="page-content creator-workspace">
-    <PageHeading title="作者页面"><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
+    <PageHeading title="作者页面"><PortalAccount /><Button variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></PageHeading>
     {approved ? <RelayPublicationNotice key={dashboard.user.id} revision={revision} onSaved={refresh} /> : null}
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}

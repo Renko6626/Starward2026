@@ -14,7 +14,7 @@ export function Brand() {
   );
 }
 
-export function SiteLayout({ children }: PropsWithChildren) {
+export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -46,16 +46,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
   }, [menuOpen]);
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
-  const isWorkspace =
-    (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
-    pathname.startsWith("/admin");
-  if (isWorkspace) return <>{children}</>;
   return (
-    <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" || pathname === "/apply/" ? "public-site--guide" : pathname === "/portal/login" || pathname === "/portal/login/" ? "public-site--entry" : ""}`}>
-      <ScrollProgress key={pathname} />
-      <a className="skip-link" href="#main-content">
-        跳至正文
-      </a>
       <header className="public-header">
         <Brand />
         <button
@@ -81,29 +72,48 @@ export function SiteLayout({ children }: PropsWithChildren) {
           >
             活动首页
           </Link>
-          <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} onClick={() => setMenuOpen(false)}>作品展示</Link>
+          <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} onClick={() => setMenuOpen(false)}>时间表</Link>
           <Link to="/apply" onClick={() => setMenuOpen(false)}>
             参与指南
           </Link>
           <Link
             className="nav-entry"
-            to="/portal/login"
+            to={pathname.startsWith("/portal") && pathname !== "/portal/login" ? "/portal" : "/portal/login"}
             onClick={() => setMenuOpen(false)}
           >
             作者页面 <ArrowUpRight size={15} />
           </Link>
         </nav>
       </header>
+  );
+}
+
+export function SiteFooter() {
+  return (
+    <footer className="public-footer">
+      <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
+      <span>Starward Pilgrimage</span>
+      <Link to="/rules">活动规则</Link>
+    </footer>
+  );
+}
+
+export function SiteLayout({ children }: PropsWithChildren) {
+  const location = useLocation();
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const isWorkspace =
+    (pathname.startsWith("/portal") && pathname !== "/portal/login") ||
+    pathname.startsWith("/admin");
+  if (isWorkspace) return <>{children}</>;
+  return (
+    <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" ? "public-site--guide" : pathname === "/portal/login" ? "public-site--entry" : ""}`}>
+      <ScrollProgress key={pathname} />
+      <a className="skip-link" href="#main-content">跳至正文</a>
+      <SiteHeader />
       <main id="main-content" className="public-main">
-        <div className="route-stage" key={pathname}>
-          {children}
-        </div>
+        <div className="route-stage" key={pathname}>{children}</div>
       </main>
-      <footer className="public-footer">
-        <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
-        <span>Starward Pilgrimage</span>
-        <Link to="/rules">活动规则</Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -102,12 +102,13 @@ export function ScheduleBoard({ day, missionStart, selectedId, mineId, ownName, 
               return <li key={entry.id} id={`relay-${entry.id}`} style={start !== null && end !== null ? { minHeight: `${Math.max(84, (end - start) * 84)}px` } : undefined}>
                 {start !== null && end !== null && <ScheduleIntervalTicks day={day} missionStart={missionStart!} start={start} end={end} />}
                 <button type="button" className={`ops-task ops-task--${entry.status}${mine ? " is-mine" : ""}${inspected ? " is-selected" : ""}${entry.id === currentId ? " is-current" : ""}`}
-                  aria-pressed={inspected} aria-controls={`ops-detail-${day.key}`} onClick={() => onSelect(entry.id)}
+                  aria-pressed={inspected} aria-haspopup="dialog" aria-controls="ops-slot-dialog" onClick={() => onSelect(entry.id)}
                   aria-label={`${entry.kind === 'extra' ? entry.name : entry.scheduledAt ? `${missionTime(entry.scheduledAt, missionStart!)}，${timeFormat.format(new Date(entry.scheduledAt))} UTC+8` : `第 ${entry.code} 棒，时间待定`}，${author}，${scheduleStatusLabels[entry.status]}${mine ? "，我的时段" : ""}`}>
                   <span className="ops-task-clock">{entry.scheduledAt ? <><time dateTime={entry.scheduledAt}><MissionClock start={missionStart} value={entry.scheduledAt} /></time></> : <><strong>{entry.code}</strong><small>{entry.kind === 'extra' ? '追加坑位' : '时间待定'}</small></>}</span>
                   <span className={`ops-task-anchor ops-task-anchor--${entry.status}`} aria-hidden="true" />
                   <span className="ops-task-copy"><span className="ops-task-author">{author}{mine && <span className="ops-mine-label">我的</span>}{entry.id === currentId && <span className="ops-current-label">当前接力</span>}</span>
-                    {entry.preview?.previewTitle ? <span className="ops-task-work">{entry.preview.previewTitle}</span> : <span className="ops-task-work">{entry.status === "available" ? "选择此时点报名" : scheduleStatusLabels[entry.status]}</span>}
+                    {inspected && entry.status === "available" ? <span className="ops-task-work ops-task-quick-action"><span className="ops-quick-desktop">再次点击选择时间</span><span className="ops-quick-mobile">点击选择时间</span> <span aria-hidden="true">↗</span></span>
+                      : entry.preview?.previewTitle ? <span className="ops-task-work">{entry.preview.previewTitle}</span> : <span className="ops-task-work">{entry.status === "available" ? "选择时间" : scheduleStatusLabels[entry.status]}</span>}
                   </span>
                 </button>
               </li>;
