@@ -131,7 +131,7 @@ export async function listAvailableSegments(
       INNER JOIN schedule_versions
         ON schedule_versions.id = schedule_segments.schedule_version_id
        AND schedule_versions.status = 'active'
-      WHERE schedule_segments.kind <> 'special' AND schedule_segments.current_participant_id IS NULL
+      WHERE schedule_segments.is_visible = 1 AND schedule_segments.kind <> 'special' AND schedule_segments.current_participant_id IS NULL
         AND schedule_segments.status IN ('open', 'released')
       ORDER BY schedule_segments.sort_order ASC, schedule_segments.created_at ASC`,
     )
@@ -230,7 +230,7 @@ export async function claimParticipantSegment(
          WHERE id = ?3
            AND schedule_version_id = ?6
            AND current_participant_id IS NULL
-           AND status IN ('open', 'released') AND kind <> 'special'
+           AND status IN ('open', 'released') AND kind <> 'special' AND is_visible = 1
            AND NOT EXISTS (
              SELECT 1
              FROM schedule_segments
@@ -386,7 +386,7 @@ export async function changeParticipantSegment(
              WHERE id = ?3
                AND schedule_version_id = ?5
                AND current_participant_id IS NULL
-               AND status IN ('open', 'released') AND kind <> 'special'
+               AND status IN ('open', 'released') AND kind <> 'special' AND is_visible = 1
            )`,
       )
       .bind(currentSegment.id, input.participant.id, targetSegment.id, now, scheduleVersionId),
@@ -401,7 +401,7 @@ export async function changeParticipantSegment(
          WHERE id = ?3
            AND schedule_version_id = ?5
            AND current_participant_id IS NULL
-           AND status IN ('open', 'released') AND kind <> 'special'
+           AND status IN ('open', 'released') AND kind <> 'special' AND is_visible = 1
            AND EXISTS (
              SELECT 1
              FROM schedule_segments
@@ -661,6 +661,7 @@ async function getSegmentById(
         sort_order
       FROM schedule_segments
       WHERE id = ?
+        AND is_visible = 1
         AND schedule_version_id = ?
       LIMIT 1`,
     )

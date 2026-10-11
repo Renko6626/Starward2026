@@ -89,7 +89,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     LEFT JOIN portal_profiles p ON p.user_id = participant.user_id
     LEFT JOIN applications a ON a.user_id = participant.user_id AND a.status = 'approved'
     LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
-    WHERE s.kind <> 'special'
+    WHERE s.is_visible = 1 AND s.kind <> 'special'
     ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({
     ...entry,

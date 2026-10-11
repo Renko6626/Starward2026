@@ -18,7 +18,6 @@ import { RegistrationSection } from "../components/RegistrationSection";
 import { SwapRequests } from "../components/SwapRequests";
 import { authClient } from "../lib/auth-client";
 import { PortalHistoryPage } from "./PortalHistoryPage";
-import { PortalProjectPage } from "./PortalProjectPage";
 
 type WorkspaceState = { dashboard: PortalDashboardResponse; application: PortalApplicationResponse; collaboration: CollaborationResponse };
 export function PortalOverviewPage() {
@@ -109,7 +108,7 @@ export function PortalOverviewPage() {
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
-    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <><a href="#project"><span>03</span>作品资料</a><a href="#relay"><span>04</span>接力安排</a></> : null}</nav>
+    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}</nav>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
       <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
@@ -121,11 +120,8 @@ export function PortalOverviewPage() {
       {collaboration.requests.length ? <SwapRequests collaboration={collaboration} onSaved={refresh} /> : null}
     </section> : null}
     <RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} />
-    {approved ? <section id="project" className="portal-project-section" aria-labelledby="portal-project-title">
-      <div className="portal-project-heading"><h2 id="portal-project-title">作品资料</h2><p>提交作品预告和不公开的审查说明，供主催审核。</p></div>
-      <PortalProjectPage embedded compact revision={revision} onSaved={refresh} />
-    </section> : null}
-    {approved ? <ArchiveChapter id="relay" number="04" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "由主催安排"}>
+    {/* 作品预告与审查说明暂时关闭，编辑器保留在 PortalProjectPage 中供后续恢复。 */}
+    {approved ? <ArchiveChapter id="relay" number="03" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "由主催安排"}>
       <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "由主催安排"}</p>
       {current ? <ScheduleSection collaboration={collaboration} selectedSegmentId={current.id} revision={revision} onSaved={refresh} /> : null}
       <NeighborSlots revision={revision} collaboration={collaboration} onSaved={refresh} />

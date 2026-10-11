@@ -6,6 +6,8 @@ import {
   MetricCard,
   PageHeading,
   StateNotice,
+  Button,
+  StatusBadge,
 } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
@@ -66,6 +68,9 @@ export function AdminSchedulePage() {
   const [appendCount, setAppendCount] = useState('6');
   const [append, setAppend] = useState<BootstrapState>({ status: 'idle' });
   const [quickSaving, setQuickSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [visibilitySaving, setVisibilitySaving] = useState(false);
+  const [visibilityNotice, setVisibilityNotice] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
 
   const [newSeat, setNewSeat] = useState({ kind: "standard" as CreateSegmentInput["kind"], name: "", scheduledAt: "", description: "" });
   const [creating, setCreating] = useState(false);
@@ -257,6 +262,32 @@ export function AdminSchedulePage() {
   const segmentMetrics = state.status === "ready" ? summarizeSchedule(state.payload.segments) : null;
   const hasUnsavedDrafts = state.status === 'ready' && state.payload.segments.some(segment =>
     JSON.stringify(drafts[segment.id] ?? buildDraft(segment)) !== JSON.stringify(buildDraft(segment)));
+  const scheduleBusy = quickSaving || visibilitySaving || creating || append.status === 'submitting' || Object.values(saveStates).some(value => value.status === 'submitting');
+
+  async function setVisibility(ids: string[], isVisible: boolean) {
+    if (state.status !== 'ready' || scheduleBusy || hasUnsavedDrafts) return;
+    const pending = state.payload.segments.filter(item => ids.includes(item.id) && item.isVisible !== isVisible);
+    if (!pending.length) return;
+    setVisibilitySaving(true);
+    setVisibilityNotice(null);
+    const saved: AdminSegmentItem[] = [];
+    try {
+      for (const segment of pending) {
+        const payload = await requestJson<AdminSegmentMutationResponse>(`/api/admin/segments/${segment.id}`, {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ mode: 'set-visibility', isVisible }),
+        });
+        saved.push(payload.item);
+      }
+      setVisibilityNotice({ tone: 'success', message: `已${isVisible ? '恢复显示' : '隐藏'} ${saved.length} 个发布时点。` });
+    } catch (error) {
+      setVisibilityNotice({ tone: 'error', message: `已保存 ${saved.length}/${pending.length} 个。${error instanceof Error ? error.message : '保存失败，请重试。'}` });
+    } finally {
+      acceptQuickSchedule(saved);
+      setSelectedIds(current => current.filter(id => !saved.some(item => item.id === id)));
+      setVisibilitySaving(false);
+    }
+  }
 
   function acceptQuickSchedule(items: AdminSegmentItem[], replace = false) {
     const updates = new Map(items.map(item => [item.id, item]));
@@ -274,7 +305,7 @@ export function AdminSchedulePage() {
       >
         {segmentMetrics ? (
           <div className="text-sm font-mono text-on-surface-variant">
-            当前共 {segmentMetrics.total} 个发布时点
+            当前共 {segmentMetrics.total} 个发布时点，隐藏 {state.status === 'ready' ? state.payload.segments.filter(item => !item.isVisible).length : 0} 个
           </div>
         ) : null}
       </PageHeading>
@@ -304,7 +335,7 @@ export function AdminSchedulePage() {
           <FormField label="名称"><input className="field-input" required maxLength={80} value={newSeat.name} onChange={event => setNewSeat(current => ({ ...current, name: event.target.value }))} /></FormField>
           <FormField label="发布时间（北京时间）"><input className="field-input" type="datetime-local" required value={newSeat.scheduledAt} onChange={event => setNewSeat(current => ({ ...current, scheduledAt: event.target.value }))} /></FormField>
           <FormField label="说明（选填）"><input className="field-input" maxLength={240} value={newSeat.description} onChange={event => setNewSeat(current => ({ ...current, description: event.target.value }))} /></FormField>
-          <button className="button button--primary" disabled={creating} type="submit">{creating ? "新增中…" : "新增发布时间"}</button>
+          <button className="button button--primary" disabled={scheduleBusy} type="submit">{creating ? "新增中…" : "新增发布时间"}</button>
           {createMessage ? <p role="status">{createMessage}</p> : null}
         </form>
       </details> : null}
@@ -351,8 +382,8 @@ export function AdminSchedulePage() {
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
           <QuickSchedule segments={state.payload.segments} onSaved={acceptQuickSchedule} onSavingChange={setQuickSaving}
-            disabled={hasUnsavedDrafts || append.status === 'submitting' || Object.values(saveStates).some(value => value.status === 'submitting')} />
-          <fieldset disabled={quickSaving} className="space-y-4 min-w-0">
+            disabled={hasUnsavedDrafts || visibilitySaving || creating || append.status === 'submitting' || Object.values(saveStates).some(value => value.status === 'submitting')} />
+          <fieldset disabled={scheduleBusy} className="space-y-4 min-w-0">
           <details className="panel admin-disclosure">
             <summary>追加坑位</summary>
             <div className="pt-4">
@@ -370,6 +401,21 @@ export function AdminSchedulePage() {
             为创作者分配新的发布时点后，原发布时点会自动释放，作品资料会同步关联新的发布时点。
           </div>
 
+          <div className="panel space-y-3">
+            <h2 className="panel-title">显示范围</h2>
+            <p className="text-sm text-on-surface-variant">隐藏后，时间表和选时间页面将跳过这些槽位，上下棒也不再计入。已存的时间、认领人和作品关联会保留。</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={state.payload.segments.length > 0 && selectedIds.length === state.payload.segments.length}
+                onChange={event => setSelectedIds(event.target.checked ? state.payload.segments.map(item => item.id) : [])} />全选</label>
+              <span className="text-sm">已选 {selectedIds.length} 个</span>
+              <Button variant="secondary" disabled={hasUnsavedDrafts || !state.payload.segments.some(item => selectedIds.includes(item.id) && item.isVisible)} onClick={() => void setVisibility(selectedIds, false)}>隐藏所选</Button>
+              <Button variant="secondary" disabled={hasUnsavedDrafts || !state.payload.segments.some(item => selectedIds.includes(item.id) && !item.isVisible)} onClick={() => void setVisibility(selectedIds, true)}>恢复所选</Button>
+            </div>
+            {hasUnsavedDrafts ? <p className="text-sm text-on-surface-variant">请先保存槽位修改，再调整显示范围。</p> : null}
+            {visibilitySaving ? <p role="status">正在保存显示范围…</p> : null}
+            {visibilityNotice ? <StateNotice {...visibilityNotice} /> : null}
+          </div>
+
           <div className="space-y-3">
             {state.payload.segments.map((segment) => {
               const draft = drafts[segment.id] ?? buildDraft(segment);
@@ -378,9 +424,18 @@ export function AdminSchedulePage() {
               };
 
               return (
-                <details key={segment.id} className="panel admin-disclosure admin-segment-row">
+                <div key={segment.id} className="panel">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label={`选择 ${segment.code} ${segment.name}`} checked={selectedIds.includes(segment.id)}
+                      onChange={event => setSelectedIds(current => event.target.checked ? [...current, segment.id] : current.filter(id => id !== segment.id))} />选择此槽位</label>
+                    <div className="flex items-center gap-3">
+                      <StatusBadge tone={segment.isVisible ? 'success' : 'muted'}>{segment.isVisible ? '显示中' : '已隐藏'}</StatusBadge>
+                      <Button variant="secondary" disabled={hasUnsavedDrafts} onClick={() => void setVisibility([segment.id], !segment.isVisible)}>{segment.isVisible ? '隐藏' : '恢复显示'}</Button>
+                    </div>
+                  </div>
+                <details className="admin-disclosure admin-segment-row">
                   <summary>
-                    <span className="font-medium">{segment.code} {segment.name}{segment.kind === "special" ? " · 特别席位" : ""}</span>
+                    <span className="font-medium">{segment.code} {segment.name}{segment.kind === "special" ? "（特别席位）" : ""}</span>
                     <span>{formatScheduledTime(segment.scheduledAt)}</span>
                     <span>{segment.currentParticipantName ?? "未分配"}</span>
                     <SegmentStatusBadge status={segment.status} />
@@ -481,6 +536,7 @@ export function AdminSchedulePage() {
                   </div>
                   </form>
                 </details>
+                </div>
               );
             })}
           </div>

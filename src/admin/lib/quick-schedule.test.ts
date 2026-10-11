@@ -3,7 +3,7 @@ import { buildQuickSchedule } from './quick-schedule';
 import type { AdminSegmentItem } from '../../shared/admin';
 
 function segment(index: number, patch: Partial<AdminSegmentItem> = {}): AdminSegmentItem {
-  return { id: `s${index}`, code: String(index), name: `第 ${index} 段`, kind: 'standard', scheduledAt: null,
+  return { id: `s${index}`, code: String(index), name: `第 ${index} 段`, kind: 'standard', isVisible: true, scheduledAt: null,
     description: null, status: 'open', currentParticipantId: null, currentParticipantName: null,
     claimedAt: null, releasedAt: null, sortOrder: index, updatedAt: '', ...patch };
 }
@@ -24,6 +24,12 @@ describe('quick schedule', () => {
       ['s1', '2026-11-11T16:00:00.000Z', true], ['s2', '2026-11-12T07:30:00.000Z', false], ['s3', '2026-11-11T18:00:00.000Z', true],
     ]);
     expect(configured.currentParticipantId).toBe('creator');
+  });
+  it('skips hidden slots without leaving a time gap', () => {
+    const result = buildQuickSchedule([segment(1), segment(2, { isVisible: false }), segment(3)], '2026-11-12T10:00', 60);
+    expect(result.map(entry => [entry.segment.id, entry.scheduledAt])).toEqual([
+      ['s1', '2026-11-12T02:00:00.000Z'], ['s3', '2026-11-12T03:00:00.000Z'],
+    ]);
   });
   it('rejects invalid dates and nonpositive or fractional intervals', () => {
     expect(() => buildQuickSchedule([], '2026-02-30T00:00', 60)).toThrow();

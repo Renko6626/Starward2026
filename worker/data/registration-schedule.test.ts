@@ -7,7 +7,7 @@ import type { AppRouteConfig } from "../lib/types";
 import { workspaceApplicationInputSchema, type WorkspaceApplicationInput } from "../../src/shared/collaboration";
 import { saveWorkspaceApplication, getCollaboration, getPortalNeighbors, createSwap, respondSwap, withdrawApplication } from "./collaboration";
 import { reviewApplication } from "./applications";
-import { createActiveScheduleSegment, updateActiveScheduleSegment, updateParticipant } from "./admin";
+import { createActiveScheduleSegment, updateActiveScheduleSegment, updateParticipant, listSegments } from "./admin";
 import { listPublicSchedule, listPublicWorks } from "./works";
 import { getParticipantByUserId } from "./participants";
 import { listAvailableSegments, getPortalSegmentState, getCurrentSegmentForParticipant, claimParticipantSegment, changeParticipantSegment, releaseParticipantSegment } from "./segments";
@@ -75,6 +75,75 @@ describe("registration independent of capacity", () => {
 });
 
 describe("timed seats and private relay", () => {
+  it("hides and restores a slot through the protected API without changing its assignment or work", async () => {
+    const f = fixture();
+    await approve(f, "u1", "s1");
+    await approve(f, "u2", "s2");
+    const before = f.sqlite.prepare("SELECT * FROM schedule_segments WHERE id='s2'").get()!;
+    const drafts = f.sqlite.prepare("SELECT * FROM project_drafts ORDER BY id").all();
+    const admin = await adminTestSession(f.db);
+    const app = new Hono<AppRouteConfig>().route("/api/admin", adminApi);
+    const request = (body: unknown, authenticated = true) => app.request("http://localhost/api/admin/segments/s2", {
+      method: "PATCH", headers: { "content-type": "application/json", ...(authenticated ? admin.headers : {}) }, body: JSON.stringify(body),
+    }, admin.env);
+    expect((await request({ mode: "set-visibility", isVisible: false }, false)).status).toBe(401);
+    expect((await request({ mode: "set-visibility", isVisible: "false" })).status).toBe(422);
+    expect((await request({ mode: "set-visibility", isVisible: false })).status).toBe(200);
+    expect((await listSegments(f.db)).find(s => s.id === "s2")).toMatchObject({ isVisible: false });
+    expect((await listPublicSchedule(f.db, [])).map(s => s.id)).toEqual(["s1"]);
+    expect((await getCollaboration(f.db, "u2")).segments.map(s => s.id)).toEqual(["s1"]);
+    expect((await getPortalNeighbors(f.db, "u1")).next).toBeNull();
+    expect(await getPortalNeighbors(f.db, "u2")).toEqual({ currentSegmentId: null, previous: null, next: null });
+    expect(f.sqlite.prepare("SELECT * FROM schedule_segments WHERE id='s2'").get()).toEqual({ ...before, is_visible: 0, updated_at: expect.any(String) });
+    expect(f.sqlite.prepare("SELECT * FROM project_drafts ORDER BY id").all()).toEqual(drafts);
+    expect((await request({ mode: "set-visibility", isVisible: true })).status).toBe(200);
+    expect((await getPortalNeighbors(f.db, "u1")).next?.segmentId).toBe("s2");
+    expect((await listPublicSchedule(f.db, [])).map(s => s.id)).toEqual(["s1", "s2"]);
+  });
+
+  it("skips hidden middle slots and rejects stale registration, claim and change requests", async () => {
+    const f = fixture();
+    const one = await approve(f, "u1", "s1");
+    const two = await approve(f, "u2");
+    const created = await createActiveScheduleSegment(f.db, { kind: "standard", name: "中场", scheduledAt: "2026-11-12T10:30:00+08:00" });
+    if (!created.ok) throw new Error(created.message);
+    const middle = created.items.find(s => s.name === "中场")!;
+    expect(await updateActiveScheduleSegment(f.db, middle.id, { mode: "set-visibility", isVisible: false }, "admin")).toMatchObject({ ok: true });
+    expect((await getPortalNeighbors(f.db, "u1")).next?.segmentId).toBe("s2");
+    expect((await listAvailableSegments(f.db)).map(s => s.id)).toEqual(["s2"]);
+    await expect(saveWorkspaceApplication(f.db, "u3", null, input(middle.id))).rejects.toThrow();
+    const windows = await listEventWindows(f.db);
+    expect(await claimParticipantSegment(f.db, { participant: two, windows, segmentId: middle.id })).toMatchObject({ ok: false });
+    expect(await changeParticipantSegment(f.db, { participant: one, windows, segmentId: middle.id })).toMatchObject({ ok: false });
+    expect((await getCurrentSegmentForParticipant(f.db, one.id))?.id).toBe("s1");
+  });
+
+  it("rejects exchanges created or accepted after either slot is hidden", async () => {
+    const f = fixture();
+    const one = await approve(f, "u1", "s1"), two = await approve(f, "u2", "s2");
+    const request = await createSwap(f.db, one.id, "s2");
+    await updateActiveScheduleSegment(f.db, "s2", { mode: "set-visibility", isVisible: false }, "admin");
+    await expect(createSwap(f.db, one.id, "s2")).rejects.toThrow();
+    await expect(respondSwap(f.db, two.id, request.id, "accept")).rejects.toThrow();
+    expect((await getCurrentSegmentForParticipant(f.db, one.id))?.id).toBe("s1");
+    expect((await getCurrentSegmentForParticipant(f.db, two.id))?.id).toBe("s2");
+  });
+
+  it("preserves a hidden reservation when its pending author saves the application without a visible choice", async () => {
+    const f = fixture();
+    await saveWorkspaceApplication(f.db, "u1", null, input("s1"));
+    const participant = (await getParticipantByUserId(f.db, "u1"))!;
+    await updateActiveScheduleSegment(f.db, "s1", { mode: "set-visibility", isVisible: false }, "admin");
+    expect((await getCollaboration(f.db, "u1")).segments.map(s => s.id)).toEqual(["s2"]);
+    const edited = input(null);
+    edited.application.introText = "更新后的创作意向";
+    await saveWorkspaceApplication(f.db, "u1", null, edited);
+    expect((await getCurrentSegmentForParticipant(f.db, participant.id))?.id).toBe("s1");
+    expect(f.sqlite.prepare("SELECT intro_text FROM applications WHERE user_id='u1'").get()).toMatchObject({ intro_text: "更新后的创作意向" });
+    await saveWorkspaceApplication(f.db, "u1", null, input("s2"));
+    expect((await getCurrentSegmentForParticipant(f.db, participant.id))?.id).toBe("s2");
+  });
+
   it("creates timed seats through the protected API and orders insertion and time edits consistently", async () => {
     const f = fixture();
     await approve(f, "u1", "s1");
@@ -198,8 +267,15 @@ describe("preserved assignments and transaction safety", () => {
 
   it("migrates populated schedules with drafts and swaps, repairs missing links and preserves foreign keys", async () => {
     const f = fixture(true);
-    const one = await approve(f, "u1", "s1"), two = await approve(f, "u2", "s2");
-    const request = await createSwap(f.db, one.id, "s2");
+    // Seed the historical schema directly: current application code requires later migrations.
+    const one = { id: "p1" }, two = { id: "p2" }, request = { id: "swap_legacy" };
+    for (const n of [1, 2]) {
+      f.sqlite.prepare("INSERT INTO applications(id,user_id,interest_format,status,created_at,updated_at) VALUES(?,?,'novel','approved','2026-01-01','2026-01-01')").run(`a${n}`, `u${n}`);
+      f.sqlite.prepare("INSERT INTO participants(id,user_id,application_id,status,created_at,updated_at) VALUES(?,?,?,'approved','2026-01-01','2026-01-01')").run(`p${n}`, `u${n}`, `a${n}`);
+      f.sqlite.prepare("UPDATE schedule_segments SET status='held',current_participant_id=? WHERE id=?").run(`p${n}`, `s${n}`);
+      f.sqlite.prepare("INSERT INTO project_drafts(id,participant_id,segment_id,preview_status,review_status,created_at,updated_at) VALUES(?,?,?,'not_started','not_started','2026-01-01','2026-01-01')").run(`d${n}`, `p${n}`, `s${n}`);
+    }
+    f.sqlite.exec("INSERT INTO segment_swap_requests(id,requester_id,recipient_id,requester_segment_id,recipient_segment_id,status,created_at,updated_at) VALUES('swap_legacy','p1','p2','s1','s2','pending','2026-01-01','2026-01-01')");
     f.sqlite.prepare("UPDATE project_drafts SET segment_id=NULL WHERE participant_id=?").run(two.id);
     const seats = f.sqlite.prepare("SELECT * FROM schedule_segments ORDER BY id").all();
     const swaps = f.sqlite.prepare("SELECT * FROM segment_swap_requests").all();
@@ -211,6 +287,8 @@ describe("preserved assignments and transaction safety", () => {
     expect(f.sqlite.prepare("SELECT * FROM segment_swap_requests").all()).toEqual(swaps);
     expect(f.sqlite.prepare("SELECT segment_id AS segmentId FROM project_drafts WHERE participant_id=?").get(one.id)).toMatchObject({ segmentId: "s1" });
     expect(f.sqlite.prepare("SELECT segment_id AS segmentId FROM project_drafts WHERE participant_id=?").get(two.id)).toMatchObject({ segmentId: "s2" });
+    f.sqlite.exec(readFileSync("migrations/0023_schedule_slot_visibility.sql", "utf8"));
+    expect(f.sqlite.prepare("SELECT * FROM schedule_segments ORDER BY id").all()).toEqual(seats.map(seat => ({ ...seat, is_visible: 1 })));
     await updateActiveScheduleSegment(f.db, "s2", { status: "held", scheduledAt: "2026-11-12T11:30:00+08:00" }, "admin");
     expect(f.sqlite.prepare("SELECT status FROM segment_swap_requests WHERE id=?").get(request.id)).toMatchObject({ status: "expired" });
   });

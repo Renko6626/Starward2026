@@ -15,7 +15,7 @@ export function buildQuickSchedule(segments: AdminSegmentItem[], start: string, 
   if (!Number.isInteger(intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 10080) {
     throw new Error('间隔须为 1 到 10080 分钟之间的整数。');
   }
-  return segments.filter(segment => segment.kind === 'standard')
+  return segments.filter(segment => segment.kind === 'standard' && segment.isVisible)
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((segment, index) => ({
       segment,

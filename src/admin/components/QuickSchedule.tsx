@@ -41,7 +41,7 @@ export function QuickSchedule({ segments, disabled, onSaved, onSavingChange }: {
     const saved: AdminSegmentItem[] = [];
     try {
       const latest = await requestJson<AdminSegmentListResponse>('/api/admin/segments');
-      const standards = latest.items.filter(item => item.kind === 'standard').sort((a, b) => a.sortOrder - b.sortOrder);
+      const standards = latest.items.filter(item => item.kind === 'standard' && item.isVisible).sort((a, b) => a.sortOrder - b.sortOrder);
       if (standards.length !== preview.length || standards.some((item, index) => {
         const previous = preview[index];
         return !previous || item.id !== previous.segment.id || item.scheduledAt !== previous.segment.scheduledAt;
@@ -72,7 +72,7 @@ export function QuickSchedule({ segments, disabled, onSaved, onSavingChange }: {
 
   return <details className="panel admin-disclosure">
     <summary>快速排期</summary>
-    <p className="pt-4 text-sm text-on-surface-variant">按标准格顺序安排发布时间，只补填空白时间。已有时间仍占原来的序号，追加坑位不参与。</p>
+    <p className="pt-4 text-sm text-on-surface-variant">按标准格顺序安排发布时间，只补填空白时间。已有时间仍占原来的序号，隐藏格和追加坑位不参与。</p>
     {disabled && !saving ? <p className="mt-3 text-sm text-on-surface-variant">请先保存各格子的修改，等待其他操作完成后再生成排期。</p> : null}
     <form onSubmit={showPreview} className="pt-4">
       <fieldset disabled={disabled || saving} className="flex flex-wrap items-end gap-4">

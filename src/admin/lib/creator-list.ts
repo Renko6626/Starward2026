@@ -25,10 +25,10 @@ export function filterCreatorRows(rows: CreatorRow[], filter: CreatorFilter, que
   });
 }
 
-export function summarizeSchedule(items: (Pick<AdminSegmentItem, "status" | "currentParticipantId"> & Partial<Pick<AdminSegmentItem, "kind">>)[]) {
+export function summarizeSchedule(items: (Pick<AdminSegmentItem, "status" | "currentParticipantId"> & Partial<Pick<AdminSegmentItem, "kind" | "isVisible">>)[]) {
   return {
     total: items.length,
-    open: items.filter(item => item.kind !== "special" && ["open", "released"].includes(item.status) && !item.currentParticipantId).length,
+    open: items.filter(item => item.isVisible !== false && item.kind !== "special" && ["open", "released"].includes(item.status) && !item.currentParticipantId).length,
     held: items.filter(item => item.status === "held").length,
     completed: items.filter(item => item.status === "completed").length,
   };

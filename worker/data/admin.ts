@@ -39,6 +39,7 @@ type ParticipantRow = {
 };
 
 type SegmentRow = {
+  is_visible: number;
   kind: AdminSegmentItem['kind'];
   scheduled_at: string | null;
   id: string;
@@ -335,6 +336,7 @@ export async function listSegments(
         schedule_segments.description,
         schedule_segments.scheduled_at,
         schedule_segments.kind,
+        schedule_segments.is_visible,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -501,6 +503,20 @@ export async function updateActiveScheduleSegment(
     };
   }
 
+  if (input.mode === 'set-visibility') {
+    const now = new Date(Math.max(Date.now(), Date.parse(existingSegment.updated_at) + 1)).toISOString();
+    const result = await db.prepare(`UPDATE schedule_segments SET is_visible = ?, updated_at = ?
+      WHERE id = ? AND schedule_version_id = ? AND updated_at = ?
+        AND EXISTS (SELECT 1 FROM schedule_versions WHERE id = ? AND status = 'active')`)
+      .bind(Number(input.isVisible), now, segmentId, scheduleVersionId, existingSegment.updated_at, scheduleVersionId).run();
+    if (result.meta.changes !== 1) {
+      return { ok: false, status: 409, code: 'segment_changed', message: '发布时点已变化，请刷新后重试。' };
+    }
+    const item = await getAdminSegmentItem(db, segmentId);
+    if (!item) return { ok: false, status: 404, code: 'segment_not_found', message: '未找到对应发布时点。' };
+    return { ok: true, item, message: input.isVisible ? '已恢复显示。' : '已隐藏，不再计入上下棒。' };
+  }
+
   if ('mode' in input && input.mode === 'fill-empty-time') {
     if (existingSegment.kind !== 'standard') {
       return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
@@ -509,7 +525,7 @@ export async function updateActiveScheduleSegment(
     // may change any other column; this operation never writes those columns.
     const result = await db.prepare(`UPDATE schedule_segments
       SET scheduled_at = ?, updated_at = ?
-      WHERE id = ? AND schedule_version_id = ? AND kind = 'standard' AND scheduled_at IS NULL
+      WHERE id = ? AND schedule_version_id = ? AND kind = 'standard' AND is_visible = 1 AND scheduled_at IS NULL
         AND EXISTS (SELECT 1 FROM schedule_versions WHERE id = ? AND status = 'active')
     `).bind(new Date(input.scheduledAt).toISOString(), nowIso(), segmentId, scheduleVersionId, scheduleVersionId).run();
     if (result.meta.changes !== 1) {
@@ -890,6 +906,7 @@ async function getActiveSegmentDetail(db: D1Database, segmentId: string) {
         schedule_segments.description,
         schedule_segments.scheduled_at,
         schedule_segments.kind,
+        schedule_segments.is_visible,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         portal_profiles.credit_name AS current_participant_name,
@@ -960,6 +977,7 @@ function mapAdminParticipantDetail(
 
 function mapAdminSegmentItem(row: SegmentRow): AdminSegmentItem {
   return {
+    isVisible: row.is_visible === 1,
     kind: row.kind,
     scheduledAt: row.scheduled_at,
     id: row.id,

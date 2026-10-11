@@ -30,7 +30,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
   const frozen = current?.assignmentStatus === "locked" || current?.assignmentStatus === "completed";
   const timeStatus = current?.assignmentStatus === "locked" ? "已锁定，请联系主催调整" : current?.assignmentStatus === "completed" ? "已完成" : current ? current.status === "confirmed" ? "已确认" : current.status === "reserved" ? "已预留" : "请查看排期状态"
     : selected ? selected.status === "available" ? "尚未预留" : "已不可选，请重新选择" : "由主催安排";
-  const next = approved ? completed ? "可查看作品和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "报名已通过，发布时间由主催安排，可以继续创作并填写作品资料。"
+  const next = approved ? completed ? "可查看接力安排和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "报名已通过，发布时间由主催安排。请继续创作，并等待后续通知。"
     : pending ? application.editable ? "等待主催审核。" : "等待主催审核。"
     : application.editable ? withdrawn ? "检查资料后再次提交报名，发布时间可由主催安排。" : rejected ? "根据主催反馈修改资料后，重新提交报名。" : "填写署名与联系、创作意向后提交报名，发布时间可由主催安排。"
     : "当前不能提交或修改报名，请查看参与指南或联系主催。";
@@ -49,8 +49,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
     </div>
     <div className="registration-progress-actions">
       {completed ? <a className="button button--secondary" href="#history">查看操作记录</a>
-        : approved && current ? <Link className="button button--secondary" to="/portal" hash="relay">查看接力安排</Link>
-        : approved ? <Link className="button button--primary" to="/portal/project">填写作品资料</Link>
+        : approved ? <Link className="button button--secondary" to="/portal" hash="relay">查看接力安排</Link>
         : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? "查看或修改报名" : "查看报名资料"}</a>{!frozen ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>撤回报名</button> : null}</>
         : application.editable ? <a className="button button--primary" href="#plan">{withdrawn || rejected ? "修改资料并重新报名" : "填写报名资料"}</a>
         : <Link className="button button--secondary" to="/apply">查看参与指南</Link>}
