@@ -441,9 +441,6 @@ export function PortalLoginPage() {
             {mode === "otp" ? "返回密码登录" : "使用邮箱验证码登录"}
           </button>
         ) : null}
-        {mode !== 'assisted' && mode !== 'reset' && step !== 'password' ? <button className="auth-otp-toggle" type="button" disabled={isSending || isSigningIn} onClick={() => {
-          setMode('assisted'); setStep('otp'); setOtp(''); setPassword(''); setError(null); setMessage(null);
-        }}>使用管理员提供的验证码</button> : null}
         <div className="space-y-3 mt-6">
           {sessionQuery.isPending ? <Notice>正在检查登录状态。</Notice> : null}
           {isResolvingDestination ? (
