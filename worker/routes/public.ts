@@ -41,7 +41,6 @@ publicApi.get("/applications/intake", async (c) => {
 
   const response: ApplicationIntakeResponse = {
     isOpen: window?.isOpen ?? false,
-    turnstileEnabled: Boolean(getTurnstileSecret(c.env)),
     window,
     statistics,
     interestFormats: Object.entries(applicationInterestFormatLabels).map(([value, label]) => ({

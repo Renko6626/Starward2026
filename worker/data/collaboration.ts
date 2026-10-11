@@ -1,6 +1,7 @@
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   CollaborationResponse,
+  CollaborationSegment,
   PortalNeighbor,
   PortalNeighborsResponse,
   SwapRequest,
@@ -81,6 +82,7 @@ export async function saveWorkspaceApplication(
   const participantId = participant?.id ?? createPrefixedId("part");
   const applicationId = application?.id ?? createPrefixedId("app");
   const operationId = createPrefixedId("op");
+  const segmentId = input.segmentId ?? null;
   const p = input.profile;
   const a = input.application;
   const statements = [
@@ -100,10 +102,11 @@ export async function saveWorkspaceApplication(
         AND (? IS NULL OR EXISTS (SELECT 1
         FROM participants
         WHERE id=? AND user_id=? AND updated_at=? AND status=?))
-        AND EXISTS (SELECT 1
+        AND NOT EXISTS (SELECT 1 FROM schedule_segments s JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active' WHERE s.current_participant_id=? AND s.status IN ('locked','completed') AND s.id IS NOT ?)
+        AND (? IS NULL OR EXISTS (SELECT 1
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
-        WHERE s.id = ? AND ((s.current_participant_id IS NULL AND s.status IN ('open','released')) OR (s.current_participant_id = ? AND s.status = 'held')))`,
+        WHERE s.id = ? AND ((s.kind <> 'special' AND s.current_participant_id IS NULL AND s.status IN ('open','released')) OR (s.current_participant_id = ? AND s.status IN ('held','locked','completed')))))`,
       [
         now,
         now,
@@ -120,7 +123,10 @@ export async function saveWorkspaceApplication(
         userId,
         participant?.updated_at ?? null,
         participant?.status ?? null,
-        input.segmentId,
+        participantId,
+        segmentId,
+        segmentId,
+        segmentId,
         participantId,
       ],
     ),
@@ -204,9 +210,9 @@ export async function saveWorkspaceApplication(
         status='released',
         released_at=?,
         updated_at=?
-        WHERE current_participant_id=? AND id<>? AND status='held'`,
+        WHERE current_participant_id=? AND id IS NOT ? AND status='held'`,
       )
-      .bind(now, now, participantId, input.segmentId),
+      .bind(now, now, participantId, segmentId),
     db
       .prepare(
         `UPDATE schedule_segments SET current_participant_id=?,
@@ -214,19 +220,19 @@ export async function saveWorkspaceApplication(
         claimed_at=CASE WHEN current_participant_id=? THEN claimed_at ELSE ? END,
         released_at=NULL,
         updated_at=?
-        WHERE id=?`,
+        WHERE id=? AND status NOT IN ('locked','completed')`,
       )
-      .bind(participantId, participantId, now, now, input.segmentId),
+      .bind(participantId, participantId, now, now, segmentId),
     db
       .prepare(
         `UPDATE project_drafts SET segment_id=?,updated_at=? WHERE participant_id=?`,
       )
-      .bind(input.segmentId, now, participantId),
+      .bind(segmentId, now, participantId),
     event(
       db,
       participantId,
-      "application_segment_reserved",
-      input.segmentId,
+      segmentId ? "application_segment_reserved" : "application_submitted",
+      segmentId,
       now,
     ),
   ];
@@ -245,19 +251,19 @@ export async function getPortalNeighbors(
 ): Promise<PortalNeighborsResponse> {
   const rows = await db
     .prepare(
-      `SELECT s.id AS segmentId, s.code AS segmentCode, s.name AS segmentName,
+      `SELECT s.id AS segmentId, s.kind, s.status AS assignmentStatus, s.scheduled_at AS scheduledAt, s.code AS segmentCode, s.name AS segmentName,
         CASE
-          WHEN s.status IN ('held','completed') AND
+          WHEN s.status IN ('held','locked','completed') AND
             (p.status='approved' OR (p.status='completed' AND a.status='approved')) THEN 'confirmed'
-          WHEN s.status='held' THEN 'reserved'
+          WHEN s.status IN ('held','locked') AND p.id IS NOT NULL THEN 'reserved'
           WHEN s.current_participant_id IS NULL AND s.status IN ('open','released') THEN 'available'
           ELSE 'unavailable'
         END AS status,
         CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName,
-        CASE WHEN s.status IN ('held','completed') AND
+        CASE WHEN s.status IN ('held','locked','completed') AND
           (p.status='approved' OR (p.status='completed' AND a.status='approved'))
           THEN pp.bilibili_uid ELSE NULL END AS bilibiliUid,
-        CASE WHEN p.user_id=? AND p.status='approved' AND s.status='held' THEN 1 ELSE 0 END AS isCurrent
+        CASE WHEN p.user_id=? AND p.status IN ('approved','completed') AND s.status IN ('held','locked','completed') THEN 1 ELSE 0 END AS isCurrent
       FROM schedule_segments s
       JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
       LEFT JOIN participants p ON p.id=s.current_participant_id
@@ -266,10 +272,11 @@ export async function getPortalNeighbors(
       WHERE EXISTS (
         SELECT 1 FROM schedule_segments own
         JOIN participants owner ON owner.id=own.current_participant_id
-        WHERE own.schedule_version_id=v.id AND own.status='held'
-          AND owner.user_id=? AND owner.status='approved'
+        WHERE own.schedule_version_id=v.id AND own.status IN ('held','locked','completed')
+          AND owner.user_id=? AND owner.status IN ('approved','completed')
       )
-      ORDER BY s.sort_order, s.id`,
+      AND (s.kind <> 'special' OR (s.current_participant_id IS NOT NULL AND p.status IN ('approved','completed')))
+      ORDER BY s.kind='extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`,
     )
     .bind(userId, userId)
     .all<PortalNeighbor & { isCurrent: number }>();
@@ -279,6 +286,9 @@ export async function getPortalNeighbors(
     row
       ? {
           segmentId: row.segmentId,
+          kind: row.kind,
+          assignmentStatus: row.assignmentStatus,
+          scheduledAt: row.scheduledAt,
           segmentCode: row.segmentCode,
           segmentName: row.segmentName,
           status: row.status,
@@ -294,14 +304,16 @@ export async function getPortalNeighbors(
 }
 
 type SegmentRow = {
+  kind: CollaborationSegment["kind"];
   scheduledAt: string | null;
   id: string;
   code: string;
   name: string;
   description: string | null;
-  status: string;
+  status: CollaborationSegment["assignmentStatus"];
   participantId: string | null;
   participantStatus: string | null;
+  applicationStatus: string | null;
   publicName: string | null;
 };
 export async function getCollaboration(
@@ -315,17 +327,19 @@ export async function getCollaboration(
     .first<{ id: string; status: string }>();
   const segments = await db
     .prepare(
-      `SELECT s.id,s.code,s.name,s.description,s.status,s.scheduled_at AS scheduledAt,
+      `SELECT s.id,s.kind,s.code,s.name,s.description,s.status,s.scheduled_at AS scheduledAt,
         s.current_participant_id AS participantId,
-        p.status AS participantStatus,CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName
+        p.status AS participantStatus, a.status AS applicationStatus,CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
         LEFT
         JOIN participants p ON p.id=s.current_participant_id
+        LEFT JOIN applications a ON a.id=p.application_id
         LEFT
         JOIN portal_profiles pp ON pp.user_id=p.user_id
-        ORDER BY s.sort_order`,
-    )
+        WHERE s.kind <> 'special' OR s.current_participant_id = ?
+        ORDER BY s.kind='extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order`,
+    ).bind(participant?.id ?? "")
     .all<SegmentRow>();
   const requests = participant
     ? await db
@@ -362,6 +376,8 @@ export async function getCollaboration(
     participantId: participant?.id ?? "",
     segments: segments.results.map((s) => ({
       id: s.id,
+      kind: s.kind,
+      assignmentStatus: s.status,
       code: s.code,
       name: s.name,
       description: s.description,
@@ -369,11 +385,11 @@ export async function getCollaboration(
       participantId: s.participantId,
       publicName: s.publicName,
       status:
-        s.status === "held"
+        ["held", "locked", "completed"].includes(s.status) && s.participantId
           ? s.participantStatus === "approved" ||
-            s.participantStatus === "completed"
+            (s.participantStatus === "completed" && s.applicationStatus === "approved")
             ? "confirmed"
-            : "reserved"
+            : s.status === "completed" ? "unavailable" : "reserved"
           : s.participantId === null && ["open", "released"].includes(s.status)
             ? "available"
             : "unavailable",
@@ -398,16 +414,23 @@ export async function createSwap(
   const pair = await db
     .prepare(
       `SELECT own.id AS ownId,
-        target.current_participant_id AS recipientId
+        target.current_participant_id AS recipientId, target.kind AS targetKind, requester.user_id AS requesterUserId
         FROM schedule_segments own
         JOIN schedule_versions v ON v.id=own.schedule_version_id AND v.status='active'
         JOIN schedule_segments target ON target.schedule_version_id=v.id
+        JOIN participants requester ON requester.id=own.current_participant_id
         WHERE own.current_participant_id=? AND own.status='held' AND target.id=? AND target.status='held' AND target.current_participant_id<>?`,
     )
     .bind(participantId, segmentId, participantId)
-    .first<{ ownId: string; recipientId: string }>();
+    .first<{ ownId: string; recipientId: string; targetKind: string; requesterUserId: string }>();
   if (!pair)
     throw new CollaborationConflict("只能向持有时段的其他创作者发起交换。");
+  if (pair.targetKind === "special") {
+    const neighbors = await getPortalNeighbors(db, pair.requesterUserId);
+    if (![neighbors.previous?.segmentId, neighbors.next?.segmentId].includes(segmentId)) {
+      throw new CollaborationConflict("只能向相邻的特别席位请求交换。");
+    }
+  }
   const id = createPrefixedId("swap"),
     now = nowIso(),
     operationId = createPrefixedId("op");
@@ -576,7 +599,7 @@ function event(
   db: D1Database,
   participantId: string,
   eventType: string,
-  segmentId: string,
+  segmentId: string | null,
   now: string,
   actorId = participantId,
 ) {
@@ -605,8 +628,12 @@ export async function withdrawApplication(db: D1Database, userId: string) {
     guard(
       db,
       op,
-      "EXISTS (SELECT 1 FROM applications WHERE user_id=? AND status<>'withdrawn')",
-      [userId],
+      `EXISTS (SELECT 1 FROM applications WHERE user_id=? AND status<>'withdrawn')
+       AND NOT EXISTS (SELECT 1 FROM participants WHERE user_id=? AND status='completed')
+       AND NOT EXISTS (SELECT 1 FROM schedule_segments s JOIN participants p ON p.id=s.current_participant_id
+         JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
+         WHERE p.user_id=? AND s.status IN ('locked','completed'))`,
+      [userId, userId, userId],
     ),
     db
       .prepare(

@@ -85,7 +85,7 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
         <Button appearance="framed" className="button--accent" aria-busy={busy} disabled={busy || !permissionsReady || (schedule.currentSegment ? !schedule.actions.canChange : !schedule.actions.canClaim)}
           onClick={() => void mutate(segment.id, close)}>{schedule.currentSegment ? "确认调整到这个发布时点" : "确认认领这个发布时点"}</Button>
       </> : action === "release" ? <>
-        <p>这是你当前持有的发布时点。释放后会重新开放给其他创作者。</p>
+        <p>这是你当前持有的发布时点。{segment.kind === "special" ? "释放后由主催重新分配。" : "释放后会重新开放给其他创作者。"}</p>
         <Button appearance="industrial" variant="danger" aria-busy={busy} disabled={busy || !permissionsReady || !schedule.actions.canRelease}
           onClick={() => void mutate(null, close)}>确认释放当前发布时点</Button>
         <p className="field-hint">{schedule.actions.releaseHint}</p>

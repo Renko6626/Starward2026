@@ -12,6 +12,7 @@ import { getWindowOrFallback } from "../lib/windows";
 import type { ParticipantAuthRow } from "./participants";
 
 type SegmentRow = {
+  kind: PortalSegmentSummary["kind"];
   scheduled_at: string | null;
   id: string;
   schedule_version_id: string;
@@ -60,7 +61,7 @@ export function buildParticipantSegmentReleaseStatements(
              released_at = ?,
              updated_at = ?
          WHERE current_participant_id = ?
-           AND status = 'held'`,
+           AND status IN ('held','locked','completed')`,
       )
       .bind(now, now, participantId),
     db
@@ -88,6 +89,7 @@ export async function getCurrentSegmentForParticipant(
         schedule_segments.name,
         schedule_segments.description,
         schedule_segments.scheduled_at,
+        schedule_segments.kind,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         schedule_segments.claimed_at,
@@ -98,7 +100,7 @@ export async function getCurrentSegmentForParticipant(
         ON schedule_versions.id = schedule_segments.schedule_version_id
        AND schedule_versions.status = 'active'
       WHERE schedule_segments.current_participant_id = ?
-        AND schedule_segments.status = 'held'
+        AND schedule_segments.status IN ('held','locked','completed')
       LIMIT 1`,
     )
     .bind(participantId)
@@ -119,6 +121,7 @@ export async function listAvailableSegments(
         schedule_segments.name,
         schedule_segments.description,
         schedule_segments.scheduled_at,
+        schedule_segments.kind,
         schedule_segments.status,
         schedule_segments.current_participant_id,
         schedule_segments.claimed_at,
@@ -128,7 +131,7 @@ export async function listAvailableSegments(
       INNER JOIN schedule_versions
         ON schedule_versions.id = schedule_segments.schedule_version_id
        AND schedule_versions.status = 'active'
-      WHERE schedule_segments.current_participant_id IS NULL
+      WHERE schedule_segments.kind <> 'special' AND schedule_segments.current_participant_id IS NULL
         AND schedule_segments.status IN ('open', 'released')
       ORDER BY schedule_segments.sort_order ASC, schedule_segments.created_at ASC`,
     )
@@ -153,6 +156,10 @@ export async function getPortalSegmentState(
     windows: input.windows,
   });
 
+  if (!canParticipantManageSegments(input.participant.status)) {
+    const hint = "当前参与资格不可调整席位，请联系主催。";
+    Object.assign(actions, { canClaim: false, canChange: false, canRelease: false, claimHint: hint, changeHint: hint, releaseHint: hint });
+  }
   return {
     currentSegment,
     actions,
@@ -223,13 +230,13 @@ export async function claimParticipantSegment(
          WHERE id = ?3
            AND schedule_version_id = ?6
            AND current_participant_id IS NULL
-           AND status IN ('open', 'released')
+           AND status IN ('open', 'released') AND kind <> 'special'
            AND NOT EXISTS (
              SELECT 1
              FROM schedule_segments
              WHERE schedule_version_id = ?6
                AND current_participant_id = ?1
-               AND status = 'held'
+               AND status IN ('held','locked','completed')
            )`,
       )
       .bind(input.participant.id, now, targetSegment.id, createPrefixedId("pevt"), "", scheduleVersionId),
@@ -337,6 +344,8 @@ export async function changeParticipantSegment(
     return segmentMutationError(409, "segment_missing_current", "你当前还没有持有发布时点，请先认领。");
   }
 
+  if (currentSegment.status !== "held") return segmentMutationError(403, "segment_frozen", "当前席位已锁定或完成，请联系主催调整。");
+
   if (currentSegment.id === input.segmentId) {
     return segmentMutationError(409, "segment_same_target", "你已经持有这个发布时点，不需要重复变更。");
   }
@@ -377,7 +386,7 @@ export async function changeParticipantSegment(
              WHERE id = ?3
                AND schedule_version_id = ?5
                AND current_participant_id IS NULL
-               AND status IN ('open', 'released')
+               AND status IN ('open', 'released') AND kind <> 'special'
            )`,
       )
       .bind(currentSegment.id, input.participant.id, targetSegment.id, now, scheduleVersionId),
@@ -392,7 +401,7 @@ export async function changeParticipantSegment(
          WHERE id = ?3
            AND schedule_version_id = ?5
            AND current_participant_id IS NULL
-           AND status IN ('open', 'released')
+           AND status IN ('open', 'released') AND kind <> 'special'
            AND EXISTS (
              SELECT 1
              FROM schedule_segments
@@ -506,6 +515,8 @@ export async function releaseParticipantSegment(
     return segmentMutationError(409, "segment_missing_current", "你当前没有可释放的发布时点。");
   }
 
+  if (currentSegment.status !== "held") return segmentMutationError(403, "segment_frozen", "当前席位已锁定或完成，请联系主催调整。");
+
   const now = nowIso();
   const mutation = await db.batch([
     db
@@ -592,13 +603,14 @@ function canParticipantManageSegments(status: ParticipantAuthRow["status"]) {
 
 function isSegmentAvailable(segment: SegmentRow) {
   return (
-    segment.current_participant_id === null &&
+    segment.kind !== "special" && segment.current_participant_id === null &&
     (segment.status === "open" || segment.status === "released")
   );
 }
 
 function mapPortalSegmentRow(row: SegmentRow): PortalSegmentSummary {
   return {
+    kind: row.kind,
     id: row.id,
     code: row.code,
     name: row.name,
@@ -641,6 +653,7 @@ async function getSegmentById(
         name,
         description,
         scheduled_at,
+        kind,
         status,
         current_participant_id,
         claimed_at,

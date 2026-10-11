@@ -10,8 +10,8 @@ import "../components/ui/buttons.css";
 
 const steps = [
   { title: "注册或登录", body: "阅读并同意活动规则后，用邮箱注册。已有账号直接登录。" },
-  { title: "拟定时间段", body: "在时间表选空闲时段。报名通过后，在开放期间可调整或申请换期。" },
-  { title: "填写资料和提交", body: "填写署名、联系方式种类与内容、创作意向，再点击“提交报名并预留发布时点”。审核通过即报名成功。" },
+  { title: "拟定时间段", body: "可选择空闲时段，也可由主催安排。已有时段满额仍可报名。" },
+  { title: "填写资料和提交", body: "填写基本信息和创作意向，再点击“提交报名”。审核通过即报名成功。" },
 ];
 
 export function ApplyPage() {
@@ -59,16 +59,15 @@ export function ApplyPage() {
               <div><h3>{step.title}</h3><p>{step.body}</p></div>
             </li>)}
           </ol>
-          <p className="participation-success-note">看到<strong>“待审核”</strong>，就表示报名已提交、时段已预留。请在作者页面查看审核结果。</p>
+          <p className="participation-success-note">看到<strong>“待审核”</strong>，就表示报名已提交；选择了时段的会同步预留。审核结果和排期安排请在作者页面查看。</p>
         </section>
         <section className="participation-section" aria-labelledby="participation-next-title">
           <div className="participation-section-heading"><h2 id="participation-next-title">后续事项</h2></div>
           <dl className="participation-followup">
-            <div><dt>安心创作</dt><dd>报名通过后，参与资格和时段正式确认。继续创作，请尽量提前完成，避免当DDL战神。</dd></div>
-            <div><dt>完成并提交</dt><dd><strong>11 月 11 日 23:00 前（北京时间）</strong>完成作品、补齐资料并提交。作品提交入口预计在接力活动开始前两周开放，届时提交作品内容并登记资料。</dd></div>
+            <div><dt>安心创作</dt><dd>报名通过后，参与资格正式确认，未安排的发布时间由主催后续分配。继续创作，请尽量提前完成，避免当DDL战神。</dd></div>
+            <div><dt>完成并提交</dt><dd><strong>11 月 11 日 23:00 前（北京时间）</strong>完成作品、补齐资料并提交。作品内容提交方式日后开放。</dd></div>
             <div><dt>发布和确认</dt><dd>按约定时刻在B站平台发布，发布成功后回作者页面填写作品链接，并点击“确认已发布”（我们会帮忙进行确认，有问题会通知，请尽量保持联系畅通）。</dd></div>
           </dl>
-          <p className="participation-success-note">希望多次投稿或需要补救安排，请在活动 QQ 群（1078039621）内联系组委会。纪念册出版将在正式投稿后另行讨论、单独确认授权。</p>
         </section>
         <div className="participation-closing">
           <Link to={session ? "/portal" : "/portal/login"}>{entryLabel}<ArrowUpRight size={16} /></Link>

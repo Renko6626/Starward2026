@@ -1,3 +1,4 @@
+import { reorderSchedule } from "../lib/schedule-order";
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   AdminParticipantDetail,
@@ -5,6 +6,7 @@ import type {
   AdminProjectDraftItem,
   AdminSegmentItem,
   AppendSegmentsInput,
+  CreateSegmentInput,
   BootstrapSegmentsInput,
   UpdateSegmentInput,
   UpdateParticipantInput,
@@ -27,7 +29,7 @@ type ParticipantRow = {
   is_anonymous: number;
   invite_email: string | null;
   contact_handle: string | null;
-  status: "approved" | "withdrawn" | "completed";
+  status: ParticipantPortalStatus;
   application_id: string | null;
   current_segment_code: string | null;
   current_segment_name: string | null;
@@ -117,7 +119,7 @@ export type UpdateActiveScheduleSegmentResult =
 type ParticipantAdminUpdateRow = {
   id: string;
   contact_handle: string | null;
-  status: "approved" | "withdrawn" | "completed";
+  status: ParticipantPortalStatus;
 };
 
 export async function listParticipants(
@@ -143,7 +145,7 @@ export async function listParticipants(
       LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
-       AND schedule_segments.status = 'held'
+       AND schedule_segments.status IN ('held','locked','completed')
        AND schedule_segments.schedule_version_id = (
          SELECT id
          FROM schedule_versions
@@ -181,7 +183,7 @@ export async function getParticipantDetail(
       LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
-       AND schedule_segments.status = 'held'
+       AND schedule_segments.status IN ('held','locked','completed')
        AND schedule_segments.schedule_version_id = (
          SELECT id
          FROM schedule_versions
@@ -272,10 +274,8 @@ export async function updateParticipant(
       ),
   ];
 
-  // A participant whose status is no longer 'approved' must not keep holding a
-  // schedule segment — they can no longer release it themselves. Release any
-  // held segment (and detach its project draft) in the same atomic batch.
-  if (nextStatus !== "approved") {
+  // Completion retains the author's place in the relay and linked work.
+  if (nextStatus === "withdrawn" || (nextStatus === "pending" && existing.status !== "pending")) {
     statements.push(
       ...buildParticipantSegmentReleaseStatements(db, participantId, now),
     );
@@ -431,6 +431,24 @@ export async function bootstrapActiveScheduleSegments(
   };
 }
 
+export async function createActiveScheduleSegment(db: D1Database, input: CreateSegmentInput): Promise<BootstrapActiveScheduleSegmentsResult> {
+  const versionId = await getActiveScheduleVersionId(db);
+  if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有生效排期。" };
+  const now = nowIso();
+  const prefix = input.kind === "special" ? "SPECIAL-" : "S-";
+  const results = await db.batch([
+    db.prepare(`INSERT INTO schedule_segments
+      (id,schedule_version_id,kind,code,name,description,scheduled_at,status,sort_order,created_at,updated_at)
+      SELECT ?, ?, ?, ? || printf('%02d', COALESCE(MAX(sort_order),0)+1), ?, ?, ?, 'open', COALESCE(MAX(sort_order),0)+1, ?, ?
+      FROM schedule_segments WHERE schedule_version_id=?
+      HAVING EXISTS (SELECT 1 FROM schedule_versions WHERE id=? AND status='active')`)
+      .bind(createPrefixedId("seg"),versionId,input.kind,prefix,input.name,normalizeOptionalText(input.description),new Date(input.scheduledAt).toISOString(),now,now,versionId,versionId),
+    ...reorderSchedule(db, versionId),
+  ]);
+  if (!results[0].meta.changes) return { ok: false, status: 409, code: "schedule_changed", message: "生效排期已变化，请刷新后重试。" };
+  return { ok: true, items: await listSegments(db), message: "已新增发布时间。" };
+}
+
 export async function appendActiveScheduleSegments(
   db: D1Database,
   input: AppendSegmentsInput,
@@ -506,11 +524,14 @@ export async function updateActiveScheduleSegment(
   if (existingSegment.kind === 'extra' && nextScheduledAt) {
     return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
   }
-  const nextDescription = normalizeOptionalText(input.description);
+  if (existingSegment.kind === "special" && !nextScheduledAt) {
+    return { ok: false, status: 422, code: "special_slot_requires_time", message: "特别席位需要明确的发布时间。" };
+  }
+  const nextDescription = input.description === undefined ? existingSegment.description : normalizeOptionalText(input.description);
   const nextRequestedParticipantId = normalizeOptionalText(
-    input.currentParticipantId,
+    input.currentParticipantId === undefined ? existingSegment.current_participant_id : input.currentParticipantId,
   );
-  const now = nowIso();
+  const now = new Date(Math.max(Date.now(), Date.parse(existingSegment.updated_at) + 1)).toISOString();
 
   let nextResolvedState;
 
@@ -548,7 +569,7 @@ export async function updateActiveScheduleSegment(
       };
     }
 
-    if (!canAssignParticipantToHeldSegment(participant.status)) {
+    if (!canAssignParticipantToHeldSegment(participant.status) && existingSegment.current_participant_id !== nextResolvedState.nextParticipantId) {
       return {
         ok: false,
         status: 409,
@@ -598,7 +619,7 @@ export async function updateActiveScheduleSegment(
   const prevParticipantId = existingSegment.current_participant_id;
   const nextParticipantId = nextResolvedState.nextParticipantId;
   const snapshotClause =
-    "EXISTS (SELECT 1 FROM schedule_segments WHERE id = ? AND schedule_version_id = ? AND updated_at = ?)";
+    "EXISTS (SELECT 1 FROM schedule_segments WHERE id = ? AND schedule_version_id = ? AND updated_at = ? AND EXISTS (SELECT 1 FROM schedule_versions WHERE id = schedule_segments.schedule_version_id AND status = 'active'))";
   const snapshotArgs = [
     targetId,
     scheduleVersionId,
@@ -631,7 +652,7 @@ export async function updateActiveScheduleSegment(
             updated_at = ?
         WHERE schedule_version_id = ?
           AND current_participant_id = ?
-          AND status = 'held'
+          AND status IN ('held','locked','completed')
           AND id != ?
           AND ${snapshotClause}`,
     )
@@ -737,7 +758,8 @@ export async function updateActiveScheduleSegment(
             updated_at = ?
         WHERE id = ?
           AND schedule_version_id = ?
-          AND updated_at = ?`,
+          AND updated_at = ?
+          AND EXISTS (SELECT 1 FROM schedule_versions WHERE id = schedule_segments.schedule_version_id AND status = 'active')`,
     )
     .bind(
       nextScheduledAt,
@@ -760,9 +782,10 @@ export async function updateActiveScheduleSegment(
       recordReleaseEvent,
       recordAssignEvent,
       updateTarget,
+      ...reorderSchedule(db, scheduleVersionId),
     ]);
 
-    const targetChanges = results[results.length - 1]?.meta?.changes ?? 0;
+    const targetChanges = results[5]?.meta?.changes ?? 0;
 
     if (targetChanges !== 1) {
       return {

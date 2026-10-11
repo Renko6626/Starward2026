@@ -38,7 +38,6 @@ pnpm-debug.log*
 # === Editor & IDE ===
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 .idea/
 *.swp
 *.swo
@@ -71,6 +70,11 @@ public/.station-assets-*/
 # Local trajectory generation
 .orbit-build-*/
 .venv-orbit/
+
+# Browser E2E diagnostics
+playwright-report/
+test-results/
+playwright-logs/
 
 # Isolated Cloudflare deployment snapshot
 .cloudflare-deploy/

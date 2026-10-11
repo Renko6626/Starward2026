@@ -88,23 +88,27 @@ export function PageHeading({
 
 export function Field({
   label,
+  requirement,
   hint,
   error,
   children,
-}: PropsWithChildren<{ label: string; hint?: string; error?: string }>) {
+}: PropsWithChildren<{ label: string; requirement?: "必填" | "必选" | "选填"; hint?: string; error?: string }>) {
   const errorId = useId();
+  const hintId = useId();
   return (
     <label className="form-field">
-      <span className="field-label">{label}</span>
-      {error ? Children.map(children, child => {
+      <span className={requirement ? "field-label field-label--with-requirement" : "field-label"}>
+        {label}{requirement ? <span className={`field-requirement${requirement === "选填" ? " field-requirement--optional" : ""}`}>{requirement}</span> : null}
+      </span>
+      {error || hint ? Children.map(children, child => {
         if (!isValidElement<{ "aria-describedby"?: string; "aria-invalid"?: boolean }>(child)
           || !["input", "select", "textarea"].includes(String(child.type))) return child;
         return cloneElement(child, {
-          "aria-invalid": true,
-          "aria-describedby": [child.props["aria-describedby"], errorId].filter(Boolean).join(" "),
+          "aria-invalid": error ? true : child.props["aria-invalid"],
+          "aria-describedby": [child.props["aria-describedby"], hint ? hintId : undefined, error ? errorId : undefined].filter(Boolean).join(" "),
         });
       }) : children}
-      {hint ? <span className="field-hint">{hint}</span> : null}
+      {hint ? <span id={hintId} className="field-hint">{hint}</span> : null}
       {error ? <span id={errorId} className="field-error" role="alert">{error}</span> : null}
     </label>
   );

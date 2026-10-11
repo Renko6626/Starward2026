@@ -119,6 +119,10 @@
 .author-archive .notice--warning::before, .author-archive .notice--error::before { content: ''; position: absolute; top: 17px; left: 0; width: 6px; height: 6px; background: #d69a65; }
 .author-archive .compact-feedback { padding-top: 14px; }
 .author-archive .compact-feedback h2 { font-size: var(--site-section-size); color: #aaa; }
+.author-archive .portal-project-section { border-bottom: 1px solid #555; }
+.author-archive .portal-project-heading { padding: 16px 0 4px; }
+.author-archive .portal-project-heading h2 { font-size: var(--site-section-size); font-weight: 500; }
+.author-archive .portal-project-heading p { margin-top: 4px; color: #aaa; font-size: var(--site-meta-size); }
 .author-archive .neighbor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .author-archive .neighbor-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 0; border: 0; border-bottom: 1px solid #333; border-radius: 0; background: #090909a8; }
 .author-archive .neighbor-card h4 { margin: 0; }

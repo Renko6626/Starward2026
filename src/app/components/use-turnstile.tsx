@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { getTurnstileSiteKey } from '../lib/apply-form';
-import { loadTurnstileApi } from '../lib/turnstile';
+import { getTurnstileSiteKey, loadTurnstileApi } from '../lib/turnstile';
 import { AUTH_CAPTCHA_HEADER } from '../../shared/turnstile';
 
 export type TurnstileVerificationState = {

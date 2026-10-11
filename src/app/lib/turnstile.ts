@@ -24,6 +24,11 @@ declare global {
 const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
+export function getTurnstileSiteKey(env: { VITE_TURNSTILE_SITE_KEY?: string | undefined }) {
+  const trimmed = env.VITE_TURNSTILE_SITE_KEY?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export async function loadTurnstileApi() {
   if (typeof window === "undefined" || typeof document === "undefined") {
     throw new Error("Turnstile can only load in the browser.");

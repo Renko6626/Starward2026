@@ -1,3 +1,5 @@
+import type { ScheduleSegmentKind } from "./works";
+import type { PortalSegmentStatus } from "./portal";
 import { z } from "zod";
 import { upsertPortalApplicationInputSchema } from "./applications";
 import { updatePortalProfileInputSchema, type PortalApplicationMutationResponse } from "./portal";
@@ -5,13 +7,14 @@ import { updatePortalProfileInputSchema, type PortalApplicationMutationResponse 
 export const workspaceApplicationInputSchema = z.object({
   profile: updatePortalProfileInputSchema,
   application: upsertPortalApplicationInputSchema,
-  segmentId: z.string().trim().min(1).max(64),
-  turnstileToken: z.string().trim().optional(),
+  segmentId: z.string().trim().min(1).max(64).nullish(),
 });
 export type WorkspaceApplicationInput = z.infer<typeof workspaceApplicationInputSchema>;
 export type WorkspaceApplicationResponse = PortalApplicationMutationResponse;
 
 export type CollaborationSegment = {
+  kind: ScheduleSegmentKind;
+  assignmentStatus: PortalSegmentStatus;
   scheduledAt: string | null;
   id: string;
   code: string;
@@ -49,6 +52,9 @@ export const respondSwapInputSchema = z.object({ action: z.enum(["accept", "reje
 export type CollaborationMutationResponse = { ok: true; message: string; notification?: "sent" | "failed" | "not_configured" };
 
 export type PortalNeighbor = {
+  scheduledAt: string | null;
+  kind: CollaborationSegment["kind"];
+  assignmentStatus: CollaborationSegment["assignmentStatus"];
   segmentId: string;
   segmentCode: string;
   segmentName: string;
