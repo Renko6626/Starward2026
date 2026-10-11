@@ -1,9 +1,12 @@
 import type { Context } from "hono";
 
-export type AppBindings = Env & {
+export type AppBindings = Partial<Omit<Env, 'QQ_OAUTH_ENABLED'>> & {
   DB?: D1Database;
+  ASSETS?: Fetcher;
   APPLICATION_SUBMIT_IP_RATE_LIMITER?: RateLimit;
   APPLICATION_SUBMIT_EMAIL_RATE_LIMITER?: RateLimit;
+  AUTH_OTP_IP_RATE_LIMITER?: RateLimit;
+  AUTH_OTP_EMAIL_RATE_LIMITER?: RateLimit;
   QQ_OAUTH_ENABLED?: string;
   QQ_APP_ID?: string;
   QQ_APP_KEY?: string;
@@ -23,6 +26,8 @@ export type AppBindings = Env & {
 
 export type AppVariables = {
   adminIdentity?: string;
+  adminUserId?: string;
+  adminRole?: 'owner' | 'admin';
 };
 
 export type AppRouteConfig = {

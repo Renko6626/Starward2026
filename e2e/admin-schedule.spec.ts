@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect, openPortal, rows, seed, openChapter } from "./fixtures";
 
 async function createSeat(page: Page, kind: "standard" | "special", name: string, time: string) {
-  await page.goto("/admin/schedule");
+  await page.goto("/portal/admin/schedule");
   await page.locator("summary").filter({ hasText: "新增发布时间" }).click();
   const form = page.locator("details").filter({ has: page.locator("summary", { hasText: "新增发布时间" }) });
   await form.getByLabel("席位类型").selectOption(kind);
@@ -15,7 +15,7 @@ async function createSeat(page: Page, kind: "standard" | "special", name: string
 }
 
 async function approvePending(page: Page) {
-  await page.goto("/admin/participants?view=pending");
+  await page.goto("/portal/admin/participants?view=pending");
   await page.getByRole("row").filter({ hasText: "宇佐见莲子" }).getByRole("link", { name: "查看详情" }).click();
   await page.getByRole("button", { name: "批准报名", exact: true }).click();
   await expect.poll(() => rows("SELECT status FROM applications WHERE id = 'app_seed_portal_pending'"))
@@ -36,7 +36,7 @@ test("批准未排期报名后从参与者详情分配席位", async ({ adminPag
 });
 
 test("修改开始时间并插入半小时时点，前后棒按实际时间排列", async ({ adminPage, approvedPage, page }) => {
-  await adminPage.goto("/admin/schedule");
+  await adminPage.goto("/portal/admin/schedule");
   const first = adminPage.locator(".admin-segment-row").filter({ has: adminPage.locator("summary", { hasText: "第 1 段" }) });
   await first.locator("summary").click();
   await first.getByLabel("发布时间（北京时间）").fill("2026-11-12T00:30");
@@ -98,7 +98,7 @@ test("排期页分配特别席位，公开及报名列表隐藏，相邻作者�
 
 for (const status of ["locked", "completed"] as const) {
   test(`${status} 席位保留归属并阻止作者释放和改期`, async ({ adminPage, approvedPage }) => {
-    await adminPage.goto("/admin/schedule");
+    await adminPage.goto("/portal/admin/schedule");
     const row = adminPage.locator(".admin-segment-row").filter({ has: adminPage.locator("summary", { hasText: "第 2 段" }) });
     await row.locator("summary").click();
     await row.getByLabel("状态").selectOption(status);

@@ -12,31 +12,33 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ApplyRouteRouteImport } from './routes/apply/route'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorksIndexRouteImport } from './routes/works/index'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as WorksWorkIdRouteImport } from './routes/works/$workId'
 import { Route as PortalLoginRouteImport } from './routes/portal_/login'
+import { Route as PortalAdminAccessRouteImport } from './routes/portal_/admin-access'
 import { Route as PortalScheduleRouteImport } from './routes/portal/schedule'
 import { Route as PortalProjectRouteImport } from './routes/portal/project'
 import { Route as PortalProfileRouteImport } from './routes/portal/profile'
 import { Route as PortalHistoryRouteImport } from './routes/portal/history'
 import { Route as PortalApplicationRouteImport } from './routes/portal/application'
 import { Route as ApplySuccessRouteImport } from './routes/apply/success'
-import { Route as AdminScheduleRouteImport } from './routes/admin/schedule'
-import { Route as AdminProjectDraftsRouteRouteImport } from './routes/admin/project-drafts/route'
-import { Route as AdminParticipantsRouteRouteImport } from './routes/admin/participants/route'
-import { Route as AdminApplicationsRouteRouteImport } from './routes/admin/applications/route'
-import { Route as AdminProjectDraftsIndexRouteImport } from './routes/admin/project-drafts/index'
-import { Route as AdminParticipantsIndexRouteImport } from './routes/admin/participants/index'
-import { Route as AdminApplicationsIndexRouteImport } from './routes/admin/applications/index'
-import { Route as AdminSettingsWindowsRouteImport } from './routes/admin/settings/windows'
-import { Route as AdminProjectDraftsDraftIdRouteImport } from './routes/admin/project-drafts/$draftId'
-import { Route as AdminParticipantsParticipantIdRouteImport } from './routes/admin/participants/$participantId'
-import { Route as AdminApplicationsApplicationIdRouteImport } from './routes/admin/applications/$applicationId'
+import { Route as PortalAdminRouteRouteImport } from './routes/portal_/admin/route'
+import { Route as PortalAdminIndexRouteImport } from './routes/portal_/admin/index'
+import { Route as PortalAdminScheduleRouteImport } from './routes/portal_/admin/schedule'
+import { Route as PortalAdminProjectDraftsRouteRouteImport } from './routes/portal_/admin/project-drafts/route'
+import { Route as PortalAdminParticipantsRouteRouteImport } from './routes/portal_/admin/participants/route'
+import { Route as PortalAdminApplicationsRouteRouteImport } from './routes/portal_/admin/applications/route'
+import { Route as PortalAdminProjectDraftsIndexRouteImport } from './routes/portal_/admin/project-drafts/index'
+import { Route as PortalAdminParticipantsIndexRouteImport } from './routes/portal_/admin/participants/index'
+import { Route as PortalAdminApplicationsIndexRouteImport } from './routes/portal_/admin/applications/index'
+import { Route as PortalAdminSettingsWindowsRouteImport } from './routes/portal_/admin/settings/windows'
+import { Route as PortalAdminSettingsAdminsRouteImport } from './routes/portal_/admin/settings/admins'
+import { Route as PortalAdminProjectDraftsDraftIdRouteImport } from './routes/portal_/admin/project-drafts/$draftId'
+import { Route as PortalAdminParticipantsParticipantIdRouteImport } from './routes/portal_/admin/participants/$participantId'
+import { Route as PortalAdminApplicationsApplicationIdRouteImport } from './routes/portal_/admin/applications/$applicationId'
 
 const RulesRoute = RulesRouteImport.update({
   id: '/rules',
@@ -51,11 +53,6 @@ const PortalRouteRoute = PortalRouteRouteImport.update({
 const ApplyRouteRoute = ApplyRouteRouteImport.update({
   id: '/apply',
   path: '/apply',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -78,11 +75,6 @@ const ApplyIndexRoute = ApplyIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ApplyRouteRoute,
 } as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const WorksWorkIdRoute = WorksWorkIdRouteImport.update({
   id: '/works/$workId',
   path: '/works/$workId',
@@ -91,6 +83,11 @@ const WorksWorkIdRoute = WorksWorkIdRouteImport.update({
 const PortalLoginRoute = PortalLoginRouteImport.update({
   id: '/portal_/login',
   path: '/portal/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalAdminAccessRoute = PortalAdminAccessRouteImport.update({
+  id: '/portal_/admin-access',
+  path: '/portal/admin-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalScheduleRoute = PortalScheduleRouteImport.update({
@@ -123,243 +120,279 @@ const ApplySuccessRoute = ApplySuccessRouteImport.update({
   path: '/success',
   getParentRoute: () => ApplyRouteRoute,
 } as any)
-const AdminScheduleRoute = AdminScheduleRouteImport.update({
+const PortalAdminRouteRoute = PortalAdminRouteRouteImport.update({
+  id: '/portal_/admin',
+  path: '/portal/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalAdminIndexRoute = PortalAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PortalAdminRouteRoute,
+} as any)
+const PortalAdminScheduleRoute = PortalAdminScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
-  getParentRoute: () => AdminRouteRoute,
+  getParentRoute: () => PortalAdminRouteRoute,
 } as any)
-const AdminProjectDraftsRouteRoute = AdminProjectDraftsRouteRouteImport.update({
-  id: '/project-drafts',
-  path: '/project-drafts',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminParticipantsRouteRoute = AdminParticipantsRouteRouteImport.update({
-  id: '/participants',
-  path: '/participants',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminApplicationsRouteRoute = AdminApplicationsRouteRouteImport.update({
-  id: '/applications',
-  path: '/applications',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminProjectDraftsIndexRoute = AdminProjectDraftsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminProjectDraftsRouteRoute,
-} as any)
-const AdminParticipantsIndexRoute = AdminParticipantsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminParticipantsRouteRoute,
-} as any)
-const AdminApplicationsIndexRoute = AdminApplicationsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminApplicationsRouteRoute,
-} as any)
-const AdminSettingsWindowsRoute = AdminSettingsWindowsRouteImport.update({
-  id: '/settings/windows',
-  path: '/settings/windows',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminProjectDraftsDraftIdRoute =
-  AdminProjectDraftsDraftIdRouteImport.update({
+const PortalAdminProjectDraftsRouteRoute =
+  PortalAdminProjectDraftsRouteRouteImport.update({
+    id: '/project-drafts',
+    path: '/project-drafts',
+    getParentRoute: () => PortalAdminRouteRoute,
+  } as any)
+const PortalAdminParticipantsRouteRoute =
+  PortalAdminParticipantsRouteRouteImport.update({
+    id: '/participants',
+    path: '/participants',
+    getParentRoute: () => PortalAdminRouteRoute,
+  } as any)
+const PortalAdminApplicationsRouteRoute =
+  PortalAdminApplicationsRouteRouteImport.update({
+    id: '/applications',
+    path: '/applications',
+    getParentRoute: () => PortalAdminRouteRoute,
+  } as any)
+const PortalAdminProjectDraftsIndexRoute =
+  PortalAdminProjectDraftsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PortalAdminProjectDraftsRouteRoute,
+  } as any)
+const PortalAdminParticipantsIndexRoute =
+  PortalAdminParticipantsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PortalAdminParticipantsRouteRoute,
+  } as any)
+const PortalAdminApplicationsIndexRoute =
+  PortalAdminApplicationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PortalAdminApplicationsRouteRoute,
+  } as any)
+const PortalAdminSettingsWindowsRoute =
+  PortalAdminSettingsWindowsRouteImport.update({
+    id: '/settings/windows',
+    path: '/settings/windows',
+    getParentRoute: () => PortalAdminRouteRoute,
+  } as any)
+const PortalAdminSettingsAdminsRoute =
+  PortalAdminSettingsAdminsRouteImport.update({
+    id: '/settings/admins',
+    path: '/settings/admins',
+    getParentRoute: () => PortalAdminRouteRoute,
+  } as any)
+const PortalAdminProjectDraftsDraftIdRoute =
+  PortalAdminProjectDraftsDraftIdRouteImport.update({
     id: '/$draftId',
     path: '/$draftId',
-    getParentRoute: () => AdminProjectDraftsRouteRoute,
+    getParentRoute: () => PortalAdminProjectDraftsRouteRoute,
   } as any)
-const AdminParticipantsParticipantIdRoute =
-  AdminParticipantsParticipantIdRouteImport.update({
+const PortalAdminParticipantsParticipantIdRoute =
+  PortalAdminParticipantsParticipantIdRouteImport.update({
     id: '/$participantId',
     path: '/$participantId',
-    getParentRoute: () => AdminParticipantsRouteRoute,
+    getParentRoute: () => PortalAdminParticipantsRouteRoute,
   } as any)
-const AdminApplicationsApplicationIdRoute =
-  AdminApplicationsApplicationIdRouteImport.update({
+const PortalAdminApplicationsApplicationIdRoute =
+  PortalAdminApplicationsApplicationIdRouteImport.update({
     id: '/$applicationId',
     path: '/$applicationId',
-    getParentRoute: () => AdminApplicationsRouteRoute,
+    getParentRoute: () => PortalAdminApplicationsRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/rules': typeof RulesRoute
-  '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
-  '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
-  '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
-  '/admin/schedule': typeof AdminScheduleRoute
+  '/portal/admin': typeof PortalAdminRouteRouteWithChildren
   '/apply/success': typeof ApplySuccessRoute
   '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
+  '/portal/admin-access': typeof PortalAdminAccessRoute
   '/portal/login': typeof PortalLoginRoute
   '/works/$workId': typeof WorksWorkIdRoute
-  '/admin/': typeof AdminIndexRoute
   '/apply/': typeof ApplyIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/works/': typeof WorksIndexRoute
-  '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
-  '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
-  '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
-  '/admin/settings/windows': typeof AdminSettingsWindowsRoute
-  '/admin/applications/': typeof AdminApplicationsIndexRoute
-  '/admin/participants/': typeof AdminParticipantsIndexRoute
-  '/admin/project-drafts/': typeof AdminProjectDraftsIndexRoute
+  '/portal/admin/applications': typeof PortalAdminApplicationsRouteRouteWithChildren
+  '/portal/admin/participants': typeof PortalAdminParticipantsRouteRouteWithChildren
+  '/portal/admin/project-drafts': typeof PortalAdminProjectDraftsRouteRouteWithChildren
+  '/portal/admin/schedule': typeof PortalAdminScheduleRoute
+  '/portal/admin/': typeof PortalAdminIndexRoute
+  '/portal/admin/applications/$applicationId': typeof PortalAdminApplicationsApplicationIdRoute
+  '/portal/admin/participants/$participantId': typeof PortalAdminParticipantsParticipantIdRoute
+  '/portal/admin/project-drafts/$draftId': typeof PortalAdminProjectDraftsDraftIdRoute
+  '/portal/admin/settings/admins': typeof PortalAdminSettingsAdminsRoute
+  '/portal/admin/settings/windows': typeof PortalAdminSettingsWindowsRoute
+  '/portal/admin/applications/': typeof PortalAdminApplicationsIndexRoute
+  '/portal/admin/participants/': typeof PortalAdminParticipantsIndexRoute
+  '/portal/admin/project-drafts/': typeof PortalAdminProjectDraftsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/rules': typeof RulesRoute
-  '/admin/schedule': typeof AdminScheduleRoute
   '/apply/success': typeof ApplySuccessRoute
   '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
+  '/portal/admin-access': typeof PortalAdminAccessRoute
   '/portal/login': typeof PortalLoginRoute
   '/works/$workId': typeof WorksWorkIdRoute
-  '/admin': typeof AdminIndexRoute
   '/apply': typeof ApplyIndexRoute
   '/portal': typeof PortalIndexRoute
   '/works': typeof WorksIndexRoute
-  '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
-  '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
-  '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
-  '/admin/settings/windows': typeof AdminSettingsWindowsRoute
-  '/admin/applications': typeof AdminApplicationsIndexRoute
-  '/admin/participants': typeof AdminParticipantsIndexRoute
-  '/admin/project-drafts': typeof AdminProjectDraftsIndexRoute
+  '/portal/admin/schedule': typeof PortalAdminScheduleRoute
+  '/portal/admin': typeof PortalAdminIndexRoute
+  '/portal/admin/applications/$applicationId': typeof PortalAdminApplicationsApplicationIdRoute
+  '/portal/admin/participants/$participantId': typeof PortalAdminParticipantsParticipantIdRoute
+  '/portal/admin/project-drafts/$draftId': typeof PortalAdminProjectDraftsDraftIdRoute
+  '/portal/admin/settings/admins': typeof PortalAdminSettingsAdminsRoute
+  '/portal/admin/settings/windows': typeof PortalAdminSettingsWindowsRoute
+  '/portal/admin/applications': typeof PortalAdminApplicationsIndexRoute
+  '/portal/admin/participants': typeof PortalAdminParticipantsIndexRoute
+  '/portal/admin/project-drafts': typeof PortalAdminProjectDraftsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRouteWithChildren
   '/apply': typeof ApplyRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/rules': typeof RulesRoute
-  '/admin/applications': typeof AdminApplicationsRouteRouteWithChildren
-  '/admin/participants': typeof AdminParticipantsRouteRouteWithChildren
-  '/admin/project-drafts': typeof AdminProjectDraftsRouteRouteWithChildren
-  '/admin/schedule': typeof AdminScheduleRoute
+  '/portal_/admin': typeof PortalAdminRouteRouteWithChildren
   '/apply/success': typeof ApplySuccessRoute
   '/portal/application': typeof PortalApplicationRoute
   '/portal/history': typeof PortalHistoryRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/project': typeof PortalProjectRoute
   '/portal/schedule': typeof PortalScheduleRoute
+  '/portal_/admin-access': typeof PortalAdminAccessRoute
   '/portal_/login': typeof PortalLoginRoute
   '/works/$workId': typeof WorksWorkIdRoute
-  '/admin/': typeof AdminIndexRoute
   '/apply/': typeof ApplyIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/works/': typeof WorksIndexRoute
-  '/admin/applications/$applicationId': typeof AdminApplicationsApplicationIdRoute
-  '/admin/participants/$participantId': typeof AdminParticipantsParticipantIdRoute
-  '/admin/project-drafts/$draftId': typeof AdminProjectDraftsDraftIdRoute
-  '/admin/settings/windows': typeof AdminSettingsWindowsRoute
-  '/admin/applications/': typeof AdminApplicationsIndexRoute
-  '/admin/participants/': typeof AdminParticipantsIndexRoute
-  '/admin/project-drafts/': typeof AdminProjectDraftsIndexRoute
+  '/portal_/admin/applications': typeof PortalAdminApplicationsRouteRouteWithChildren
+  '/portal_/admin/participants': typeof PortalAdminParticipantsRouteRouteWithChildren
+  '/portal_/admin/project-drafts': typeof PortalAdminProjectDraftsRouteRouteWithChildren
+  '/portal_/admin/schedule': typeof PortalAdminScheduleRoute
+  '/portal_/admin/': typeof PortalAdminIndexRoute
+  '/portal_/admin/applications/$applicationId': typeof PortalAdminApplicationsApplicationIdRoute
+  '/portal_/admin/participants/$participantId': typeof PortalAdminParticipantsParticipantIdRoute
+  '/portal_/admin/project-drafts/$draftId': typeof PortalAdminProjectDraftsDraftIdRoute
+  '/portal_/admin/settings/admins': typeof PortalAdminSettingsAdminsRoute
+  '/portal_/admin/settings/windows': typeof PortalAdminSettingsWindowsRoute
+  '/portal_/admin/applications/': typeof PortalAdminApplicationsIndexRoute
+  '/portal_/admin/participants/': typeof PortalAdminParticipantsIndexRoute
+  '/portal_/admin/project-drafts/': typeof PortalAdminProjectDraftsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/apply'
     | '/portal'
     | '/rules'
-    | '/admin/applications'
-    | '/admin/participants'
-    | '/admin/project-drafts'
-    | '/admin/schedule'
+    | '/portal/admin'
     | '/apply/success'
     | '/portal/application'
     | '/portal/history'
     | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
+    | '/portal/admin-access'
     | '/portal/login'
     | '/works/$workId'
-    | '/admin/'
     | '/apply/'
     | '/portal/'
     | '/works/'
-    | '/admin/applications/$applicationId'
-    | '/admin/participants/$participantId'
-    | '/admin/project-drafts/$draftId'
-    | '/admin/settings/windows'
-    | '/admin/applications/'
-    | '/admin/participants/'
-    | '/admin/project-drafts/'
+    | '/portal/admin/applications'
+    | '/portal/admin/participants'
+    | '/portal/admin/project-drafts'
+    | '/portal/admin/schedule'
+    | '/portal/admin/'
+    | '/portal/admin/applications/$applicationId'
+    | '/portal/admin/participants/$participantId'
+    | '/portal/admin/project-drafts/$draftId'
+    | '/portal/admin/settings/admins'
+    | '/portal/admin/settings/windows'
+    | '/portal/admin/applications/'
+    | '/portal/admin/participants/'
+    | '/portal/admin/project-drafts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/rules'
-    | '/admin/schedule'
     | '/apply/success'
     | '/portal/application'
     | '/portal/history'
     | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
+    | '/portal/admin-access'
     | '/portal/login'
     | '/works/$workId'
-    | '/admin'
     | '/apply'
     | '/portal'
     | '/works'
-    | '/admin/applications/$applicationId'
-    | '/admin/participants/$participantId'
-    | '/admin/project-drafts/$draftId'
-    | '/admin/settings/windows'
-    | '/admin/applications'
-    | '/admin/participants'
-    | '/admin/project-drafts'
+    | '/portal/admin/schedule'
+    | '/portal/admin'
+    | '/portal/admin/applications/$applicationId'
+    | '/portal/admin/participants/$participantId'
+    | '/portal/admin/project-drafts/$draftId'
+    | '/portal/admin/settings/admins'
+    | '/portal/admin/settings/windows'
+    | '/portal/admin/applications'
+    | '/portal/admin/participants'
+    | '/portal/admin/project-drafts'
   id:
     | '__root__'
     | '/'
-    | '/admin'
     | '/apply'
     | '/portal'
     | '/rules'
-    | '/admin/applications'
-    | '/admin/participants'
-    | '/admin/project-drafts'
-    | '/admin/schedule'
+    | '/portal_/admin'
     | '/apply/success'
     | '/portal/application'
     | '/portal/history'
     | '/portal/profile'
     | '/portal/project'
     | '/portal/schedule'
+    | '/portal_/admin-access'
     | '/portal_/login'
     | '/works/$workId'
-    | '/admin/'
     | '/apply/'
     | '/portal/'
     | '/works/'
-    | '/admin/applications/$applicationId'
-    | '/admin/participants/$participantId'
-    | '/admin/project-drafts/$draftId'
-    | '/admin/settings/windows'
-    | '/admin/applications/'
-    | '/admin/participants/'
-    | '/admin/project-drafts/'
+    | '/portal_/admin/applications'
+    | '/portal_/admin/participants'
+    | '/portal_/admin/project-drafts'
+    | '/portal_/admin/schedule'
+    | '/portal_/admin/'
+    | '/portal_/admin/applications/$applicationId'
+    | '/portal_/admin/participants/$participantId'
+    | '/portal_/admin/project-drafts/$draftId'
+    | '/portal_/admin/settings/admins'
+    | '/portal_/admin/settings/windows'
+    | '/portal_/admin/applications/'
+    | '/portal_/admin/participants/'
+    | '/portal_/admin/project-drafts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ApplyRouteRoute: typeof ApplyRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   RulesRoute: typeof RulesRoute
+  PortalAdminRouteRoute: typeof PortalAdminRouteRouteWithChildren
+  PortalAdminAccessRoute: typeof PortalAdminAccessRoute
   PortalLoginRoute: typeof PortalLoginRoute
   WorksWorkIdRoute: typeof WorksWorkIdRoute
   WorksIndexRoute: typeof WorksIndexRoute
@@ -386,13 +419,6 @@ declare module '@tanstack/react-router' {
       path: '/apply'
       fullPath: '/apply'
       preLoaderRoute: typeof ApplyRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -423,13 +449,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplyIndexRouteImport
       parentRoute: typeof ApplyRouteRoute
     }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/works/$workId': {
       id: '/works/$workId'
       path: '/works/$workId'
@@ -442,6 +461,13 @@ declare module '@tanstack/react-router' {
       path: '/portal/login'
       fullPath: '/portal/login'
       preLoaderRoute: typeof PortalLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal_/admin-access': {
+      id: '/portal_/admin-access'
+      path: '/portal/admin-access'
+      fullPath: '/portal/admin-access'
+      preLoaderRoute: typeof PortalAdminAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal/schedule': {
@@ -486,155 +512,106 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplySuccessRouteImport
       parentRoute: typeof ApplyRouteRoute
     }
-    '/admin/schedule': {
-      id: '/admin/schedule'
+    '/portal_/admin': {
+      id: '/portal_/admin'
+      path: '/portal/admin'
+      fullPath: '/portal/admin'
+      preLoaderRoute: typeof PortalAdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal_/admin/': {
+      id: '/portal_/admin/'
+      path: '/'
+      fullPath: '/portal/admin/'
+      preLoaderRoute: typeof PortalAdminIndexRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
+    }
+    '/portal_/admin/schedule': {
+      id: '/portal_/admin/schedule'
       path: '/schedule'
-      fullPath: '/admin/schedule'
-      preLoaderRoute: typeof AdminScheduleRouteImport
-      parentRoute: typeof AdminRouteRoute
+      fullPath: '/portal/admin/schedule'
+      preLoaderRoute: typeof PortalAdminScheduleRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
     }
-    '/admin/project-drafts': {
-      id: '/admin/project-drafts'
+    '/portal_/admin/project-drafts': {
+      id: '/portal_/admin/project-drafts'
       path: '/project-drafts'
-      fullPath: '/admin/project-drafts'
-      preLoaderRoute: typeof AdminProjectDraftsRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
+      fullPath: '/portal/admin/project-drafts'
+      preLoaderRoute: typeof PortalAdminProjectDraftsRouteRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
     }
-    '/admin/participants': {
-      id: '/admin/participants'
+    '/portal_/admin/participants': {
+      id: '/portal_/admin/participants'
       path: '/participants'
-      fullPath: '/admin/participants'
-      preLoaderRoute: typeof AdminParticipantsRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
+      fullPath: '/portal/admin/participants'
+      preLoaderRoute: typeof PortalAdminParticipantsRouteRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
     }
-    '/admin/applications': {
-      id: '/admin/applications'
+    '/portal_/admin/applications': {
+      id: '/portal_/admin/applications'
       path: '/applications'
-      fullPath: '/admin/applications'
-      preLoaderRoute: typeof AdminApplicationsRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
+      fullPath: '/portal/admin/applications'
+      preLoaderRoute: typeof PortalAdminApplicationsRouteRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
     }
-    '/admin/project-drafts/': {
-      id: '/admin/project-drafts/'
+    '/portal_/admin/project-drafts/': {
+      id: '/portal_/admin/project-drafts/'
       path: '/'
-      fullPath: '/admin/project-drafts/'
-      preLoaderRoute: typeof AdminProjectDraftsIndexRouteImport
-      parentRoute: typeof AdminProjectDraftsRouteRoute
+      fullPath: '/portal/admin/project-drafts/'
+      preLoaderRoute: typeof PortalAdminProjectDraftsIndexRouteImport
+      parentRoute: typeof PortalAdminProjectDraftsRouteRoute
     }
-    '/admin/participants/': {
-      id: '/admin/participants/'
+    '/portal_/admin/participants/': {
+      id: '/portal_/admin/participants/'
       path: '/'
-      fullPath: '/admin/participants/'
-      preLoaderRoute: typeof AdminParticipantsIndexRouteImport
-      parentRoute: typeof AdminParticipantsRouteRoute
+      fullPath: '/portal/admin/participants/'
+      preLoaderRoute: typeof PortalAdminParticipantsIndexRouteImport
+      parentRoute: typeof PortalAdminParticipantsRouteRoute
     }
-    '/admin/applications/': {
-      id: '/admin/applications/'
+    '/portal_/admin/applications/': {
+      id: '/portal_/admin/applications/'
       path: '/'
-      fullPath: '/admin/applications/'
-      preLoaderRoute: typeof AdminApplicationsIndexRouteImport
-      parentRoute: typeof AdminApplicationsRouteRoute
+      fullPath: '/portal/admin/applications/'
+      preLoaderRoute: typeof PortalAdminApplicationsIndexRouteImport
+      parentRoute: typeof PortalAdminApplicationsRouteRoute
     }
-    '/admin/settings/windows': {
-      id: '/admin/settings/windows'
+    '/portal_/admin/settings/windows': {
+      id: '/portal_/admin/settings/windows'
       path: '/settings/windows'
-      fullPath: '/admin/settings/windows'
-      preLoaderRoute: typeof AdminSettingsWindowsRouteImport
-      parentRoute: typeof AdminRouteRoute
+      fullPath: '/portal/admin/settings/windows'
+      preLoaderRoute: typeof PortalAdminSettingsWindowsRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
     }
-    '/admin/project-drafts/$draftId': {
-      id: '/admin/project-drafts/$draftId'
+    '/portal_/admin/settings/admins': {
+      id: '/portal_/admin/settings/admins'
+      path: '/settings/admins'
+      fullPath: '/portal/admin/settings/admins'
+      preLoaderRoute: typeof PortalAdminSettingsAdminsRouteImport
+      parentRoute: typeof PortalAdminRouteRoute
+    }
+    '/portal_/admin/project-drafts/$draftId': {
+      id: '/portal_/admin/project-drafts/$draftId'
       path: '/$draftId'
-      fullPath: '/admin/project-drafts/$draftId'
-      preLoaderRoute: typeof AdminProjectDraftsDraftIdRouteImport
-      parentRoute: typeof AdminProjectDraftsRouteRoute
+      fullPath: '/portal/admin/project-drafts/$draftId'
+      preLoaderRoute: typeof PortalAdminProjectDraftsDraftIdRouteImport
+      parentRoute: typeof PortalAdminProjectDraftsRouteRoute
     }
-    '/admin/participants/$participantId': {
-      id: '/admin/participants/$participantId'
+    '/portal_/admin/participants/$participantId': {
+      id: '/portal_/admin/participants/$participantId'
       path: '/$participantId'
-      fullPath: '/admin/participants/$participantId'
-      preLoaderRoute: typeof AdminParticipantsParticipantIdRouteImport
-      parentRoute: typeof AdminParticipantsRouteRoute
+      fullPath: '/portal/admin/participants/$participantId'
+      preLoaderRoute: typeof PortalAdminParticipantsParticipantIdRouteImport
+      parentRoute: typeof PortalAdminParticipantsRouteRoute
     }
-    '/admin/applications/$applicationId': {
-      id: '/admin/applications/$applicationId'
+    '/portal_/admin/applications/$applicationId': {
+      id: '/portal_/admin/applications/$applicationId'
       path: '/$applicationId'
-      fullPath: '/admin/applications/$applicationId'
-      preLoaderRoute: typeof AdminApplicationsApplicationIdRouteImport
-      parentRoute: typeof AdminApplicationsRouteRoute
+      fullPath: '/portal/admin/applications/$applicationId'
+      preLoaderRoute: typeof PortalAdminApplicationsApplicationIdRouteImport
+      parentRoute: typeof PortalAdminApplicationsRouteRoute
     }
   }
 }
-
-interface AdminApplicationsRouteRouteChildren {
-  AdminApplicationsApplicationIdRoute: typeof AdminApplicationsApplicationIdRoute
-  AdminApplicationsIndexRoute: typeof AdminApplicationsIndexRoute
-}
-
-const AdminApplicationsRouteRouteChildren: AdminApplicationsRouteRouteChildren =
-  {
-    AdminApplicationsApplicationIdRoute: AdminApplicationsApplicationIdRoute,
-    AdminApplicationsIndexRoute: AdminApplicationsIndexRoute,
-  }
-
-const AdminApplicationsRouteRouteWithChildren =
-  AdminApplicationsRouteRoute._addFileChildren(
-    AdminApplicationsRouteRouteChildren,
-  )
-
-interface AdminParticipantsRouteRouteChildren {
-  AdminParticipantsParticipantIdRoute: typeof AdminParticipantsParticipantIdRoute
-  AdminParticipantsIndexRoute: typeof AdminParticipantsIndexRoute
-}
-
-const AdminParticipantsRouteRouteChildren: AdminParticipantsRouteRouteChildren =
-  {
-    AdminParticipantsParticipantIdRoute: AdminParticipantsParticipantIdRoute,
-    AdminParticipantsIndexRoute: AdminParticipantsIndexRoute,
-  }
-
-const AdminParticipantsRouteRouteWithChildren =
-  AdminParticipantsRouteRoute._addFileChildren(
-    AdminParticipantsRouteRouteChildren,
-  )
-
-interface AdminProjectDraftsRouteRouteChildren {
-  AdminProjectDraftsDraftIdRoute: typeof AdminProjectDraftsDraftIdRoute
-  AdminProjectDraftsIndexRoute: typeof AdminProjectDraftsIndexRoute
-}
-
-const AdminProjectDraftsRouteRouteChildren: AdminProjectDraftsRouteRouteChildren =
-  {
-    AdminProjectDraftsDraftIdRoute: AdminProjectDraftsDraftIdRoute,
-    AdminProjectDraftsIndexRoute: AdminProjectDraftsIndexRoute,
-  }
-
-const AdminProjectDraftsRouteRouteWithChildren =
-  AdminProjectDraftsRouteRoute._addFileChildren(
-    AdminProjectDraftsRouteRouteChildren,
-  )
-
-interface AdminRouteRouteChildren {
-  AdminApplicationsRouteRoute: typeof AdminApplicationsRouteRouteWithChildren
-  AdminParticipantsRouteRoute: typeof AdminParticipantsRouteRouteWithChildren
-  AdminProjectDraftsRouteRoute: typeof AdminProjectDraftsRouteRouteWithChildren
-  AdminScheduleRoute: typeof AdminScheduleRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  AdminSettingsWindowsRoute: typeof AdminSettingsWindowsRoute
-}
-
-const AdminRouteRouteChildren: AdminRouteRouteChildren = {
-  AdminApplicationsRouteRoute: AdminApplicationsRouteRouteWithChildren,
-  AdminParticipantsRouteRoute: AdminParticipantsRouteRouteWithChildren,
-  AdminProjectDraftsRouteRoute: AdminProjectDraftsRouteRouteWithChildren,
-  AdminScheduleRoute: AdminScheduleRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  AdminSettingsWindowsRoute: AdminSettingsWindowsRoute,
-}
-
-const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
-  AdminRouteRouteChildren,
-)
 
 interface ApplyRouteRouteChildren {
   ApplySuccessRoute: typeof ApplySuccessRoute
@@ -672,12 +649,89 @@ const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
   PortalRouteRouteChildren,
 )
 
+interface PortalAdminApplicationsRouteRouteChildren {
+  PortalAdminApplicationsApplicationIdRoute: typeof PortalAdminApplicationsApplicationIdRoute
+  PortalAdminApplicationsIndexRoute: typeof PortalAdminApplicationsIndexRoute
+}
+
+const PortalAdminApplicationsRouteRouteChildren: PortalAdminApplicationsRouteRouteChildren =
+  {
+    PortalAdminApplicationsApplicationIdRoute:
+      PortalAdminApplicationsApplicationIdRoute,
+    PortalAdminApplicationsIndexRoute: PortalAdminApplicationsIndexRoute,
+  }
+
+const PortalAdminApplicationsRouteRouteWithChildren =
+  PortalAdminApplicationsRouteRoute._addFileChildren(
+    PortalAdminApplicationsRouteRouteChildren,
+  )
+
+interface PortalAdminParticipantsRouteRouteChildren {
+  PortalAdminParticipantsParticipantIdRoute: typeof PortalAdminParticipantsParticipantIdRoute
+  PortalAdminParticipantsIndexRoute: typeof PortalAdminParticipantsIndexRoute
+}
+
+const PortalAdminParticipantsRouteRouteChildren: PortalAdminParticipantsRouteRouteChildren =
+  {
+    PortalAdminParticipantsParticipantIdRoute:
+      PortalAdminParticipantsParticipantIdRoute,
+    PortalAdminParticipantsIndexRoute: PortalAdminParticipantsIndexRoute,
+  }
+
+const PortalAdminParticipantsRouteRouteWithChildren =
+  PortalAdminParticipantsRouteRoute._addFileChildren(
+    PortalAdminParticipantsRouteRouteChildren,
+  )
+
+interface PortalAdminProjectDraftsRouteRouteChildren {
+  PortalAdminProjectDraftsDraftIdRoute: typeof PortalAdminProjectDraftsDraftIdRoute
+  PortalAdminProjectDraftsIndexRoute: typeof PortalAdminProjectDraftsIndexRoute
+}
+
+const PortalAdminProjectDraftsRouteRouteChildren: PortalAdminProjectDraftsRouteRouteChildren =
+  {
+    PortalAdminProjectDraftsDraftIdRoute: PortalAdminProjectDraftsDraftIdRoute,
+    PortalAdminProjectDraftsIndexRoute: PortalAdminProjectDraftsIndexRoute,
+  }
+
+const PortalAdminProjectDraftsRouteRouteWithChildren =
+  PortalAdminProjectDraftsRouteRoute._addFileChildren(
+    PortalAdminProjectDraftsRouteRouteChildren,
+  )
+
+interface PortalAdminRouteRouteChildren {
+  PortalAdminApplicationsRouteRoute: typeof PortalAdminApplicationsRouteRouteWithChildren
+  PortalAdminParticipantsRouteRoute: typeof PortalAdminParticipantsRouteRouteWithChildren
+  PortalAdminProjectDraftsRouteRoute: typeof PortalAdminProjectDraftsRouteRouteWithChildren
+  PortalAdminScheduleRoute: typeof PortalAdminScheduleRoute
+  PortalAdminIndexRoute: typeof PortalAdminIndexRoute
+  PortalAdminSettingsAdminsRoute: typeof PortalAdminSettingsAdminsRoute
+  PortalAdminSettingsWindowsRoute: typeof PortalAdminSettingsWindowsRoute
+}
+
+const PortalAdminRouteRouteChildren: PortalAdminRouteRouteChildren = {
+  PortalAdminApplicationsRouteRoute:
+    PortalAdminApplicationsRouteRouteWithChildren,
+  PortalAdminParticipantsRouteRoute:
+    PortalAdminParticipantsRouteRouteWithChildren,
+  PortalAdminProjectDraftsRouteRoute:
+    PortalAdminProjectDraftsRouteRouteWithChildren,
+  PortalAdminScheduleRoute: PortalAdminScheduleRoute,
+  PortalAdminIndexRoute: PortalAdminIndexRoute,
+  PortalAdminSettingsAdminsRoute: PortalAdminSettingsAdminsRoute,
+  PortalAdminSettingsWindowsRoute: PortalAdminSettingsWindowsRoute,
+}
+
+const PortalAdminRouteRouteWithChildren =
+  PortalAdminRouteRoute._addFileChildren(PortalAdminRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRouteRoute: AdminRouteRouteWithChildren,
   ApplyRouteRoute: ApplyRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   RulesRoute: RulesRoute,
+  PortalAdminRouteRoute: PortalAdminRouteRouteWithChildren,
+  PortalAdminAccessRoute: PortalAdminAccessRoute,
   PortalLoginRoute: PortalLoginRoute,
   WorksWorkIdRoute: WorksWorkIdRoute,
   WorksIndexRoute: WorksIndexRoute,

@@ -24,7 +24,7 @@ npm run test:env -- local
 这个入口会依次完成：
 
 1. 如果没有 `.dev.vars`，生成一个只用于本机、且被 Git 忽略的 Better Auth 密钥，并打开
-   loopback 管理员 bypass 与本地 origin trust；已有 `.dev.vars` 不会覆盖。
+   本地 origin trust；已有 `.dev.vars` 不会覆盖。
 2. 删除并重建本地 D1，应用全部迁移并写入 seeded 门户、参与者、时间段和 session。
 3. 打印外部服务状态，然后启动 Vite + Cloudflare Worker 开发服务器。
 
@@ -33,18 +33,12 @@ npm run test:env -- local
 | 服务 | 未配置时的表现 | 本地是否仍可继续跑页面 |
 | --- | --- | --- |
 | Wrangler D1 local | 无 | 可以，核心 API 使用本地数据库 |
-| 本地管理员入口 | 需要 `.dev.vars` 中的 bypass | 可以；入口脚本会为新环境打开它 |
+| 本地管理员入口 | 需要已验证账号和 `admin_roles` 角色 | 可以；可用管理员 bootstrap 脚本创建 owner |
 | Resend 登录邮件 OTP | 登录发送验证码接口返回不可用 | 可以浏览 seeded 页面；用打印出的本地 session 做 smoke |
-| Turnstile | 未配置服务端密钥时，人机验证关闭 | 可以；报名页不做人机验证 |
+| Turnstile | 验证码校验关闭 | 可以；提交流程不要求外部验证码 |
 
 本地入口不会打印密钥值，也不会触发 Cloudflare、ACR 或 VPS 部署。停止服务器按 `Ctrl-C`；
 再次启动会重新 reset seeded 数据。
-
-### Turnstile 验证范围
-
-Turnstile 用于邮箱密码注册、密码登录和登录验证码的发送/重发。输入邮件验证码完成登录不再验证；已登录的报名提交与更新只保留会话、权限检查和账号/IP 限流。
-
-启用时，在 `.env.local` 设置 `VITE_TURNSTILE_SITE_KEY`，在 `.dev.vars` 设置 `TURNSTILE_SECRET_KEY`，然后重启开发服务。`/api/auth/config` 返回 `turnstileEnabled`；报名 intake 接口不再提供验证配置。生产环境的 Site Key 需在前端构建时注入，Secret Key 仅放在 Worker secrets 中。
 
 ### 2.2 手动本地 D1 命令
 
@@ -52,6 +46,11 @@ Turnstile 用于邮箱密码注册、密码登录和登录验证码的发送/重
 `remoteBindings: false`。终端出现 `Proxy environment variables detected` 仅表示检测到代理变量，
 启动失败需查看具体错误。本地 `.dev.vars` 中的 `BETTER_AUTH_URL` 使用
 `http://localhost:20262`。
+
+若密码错误时出现 Vite 的 `fetch failed` 报错层，旧版 Miniflare 的 Undici
+会把带请求体的 `401` 响应误判为网络错误，见 [上游问题](https://github.com/cloudflare/workers-sdk/issues/13578)。
+项目通过 `overrides.miniflare.undici` 固定为 `7.24.8`，使无效凭据正常返回 `401`。
+拉取修复后执行 `npm install` 并重启 `npm run dev`；不需要重置数据库或关闭报错层。
 
 `npm run dev` 不会自动应用数据库迁移。更新代码后，如果接口报
 `no such column` 或 `no such table`，先检查本地迁移状态：
@@ -129,7 +128,7 @@ npm run deploy:staging
 - 一个已建立入口账号、已补联系资料、但仍处于待审核状态的门户样本
 - 一个已审核通过、门户已激活、已持有时间段、已存在资料补录草稿的参与者样本
 - 一组开放窗口状态：报名、时间段认领/变更、预告及审查资料提交默认启用且不设时间限制，公开发布保持未启用；过期与预约状态由窗口测试验证
-- 24 个标准发布时点：2026 年 11 月 12 日北京时间 00:00–23:00，每小时一个；第 2 段由样本参与者持有，第 3 段锁定，其余默认开放
+- 一组本地样本时间段
 - 使用硬切后的 `credit_name` 与 `is_anonymous` 档案字段
 - 参与者事件历史
 - Better Auth 本地 session
@@ -178,18 +177,13 @@ npm run deploy:staging
 
 ## 6. Admin Smoke Note
 
-本地管理员 bypass 默认关闭，必须显式开启：
+本地管理页面与生产环境一样使用网站登录会话及 `admin_roles` 表。
 
-- 在仓库根目录 `.dev.vars` 中设置 `ALLOW_LOCAL_ADMIN_BYPASS="true"`（可参考 `.dev.vars.example`）
-- 修改开关后重启 `npm run dev`，直接打开 `http://localhost:20262/admin`，无需 Access 登录或手动添加请求头
-- 开启后，`/api/admin/*` 仅在 loopback host（localhost / 127.0.0.1 / [::1]）下自动使用 `local-admin@starward.local` 身份，操作记录使用该身份
-- 调试脚本仍可通过 `x-admin-email` 显式指定本地管理员身份
-- 该开关只应出现在本地 `.dev.vars`（已 gitignore），不得进入 staging / production 配置；缺少开关时 hostname 为 localhost 也不再放行
-
-因此：
-
-- 数据问题由本地 seed 解决
-- 身份问题由本地 admin bypass 解决（需先开启 `ALLOW_LOCAL_ADMIN_BYPASS`）
+- 先应用迁移，再为已验证的测试账号添加 `admin` 或 `owner` 角色。
+- `/portal/admin` 及所有子页面在身份验证通过后才提供页面内容；API 另行检查每次请求。
+- `ALLOW_LOCAL_ADMIN_BYPASS`、`x-admin-email` 和 Cloudflare Access 身份头均不再授予管理权限。
+- 只有 `owner` 可以授予或撤销其他账号的 `admin` 权限；系统只允许一个 owner。
+- 自动化权限测试使用真实 SQLite 迁移和签名会话，不依赖开发绕过开关。
 
 ## 7. Operational Notes
 
@@ -211,6 +205,19 @@ npm run deploy:staging
 ## QQ OAuth 与可空联系邮箱
 
 QQ 默认关闭；配置与验证范围见 [QQ OAuth 接入说明](qq-oauth.md)。新增迁移 0020 允许联系邮箱为空并保留历史数据。现有库升级需要先备份再应用迁移，不用 reset 代替升级；本轮验证使用独立 persist-to 路径，未改动日常开发数据。
+
+
+### 邮箱验证注册（2026-10-11）
+
+入口现为邮箱、验证码、密码三步。发码需要 Resend；无法投递时可继续使用本地 seed 会话浏览页面，但不能用无邮件验证的密码注册代替。历史未验证邮箱的会话不能访问作者业务接口，seed 会话应保持邮箱已验证。Wrangler 本地配置提供独立的认证 IP/邮箱限流绑定，注册、登录与密码重置共用每邮箱 60 秒一次的发码限制。
+
+### 管理端快速排期
+
+管理端“接力排期”页面的“快速排期”支持输入北京时间起点与分钟间隔，先预览再一次保存。例如 24 个标准格以 60 分钟间隔安排，只需填写一次起始时间。已有发布时间保持不变且仍占标准格序号，追加坑位不参与；有未保存的单格修改时需先保存。
+
+客户端使用 `PATCH /api/admin/segments/:id` 的 `{ mode: "fill-empty-time", scheduledAt }` 模式。服务端只更新空白标准格的时间，不写说明、状态、认领人或认领／释放记录；原子检查空白时间与当前生效排期。出现并发填时间或保存失败时停止，已成功保存的结果保留，页面提示数量；重新生成预览即可继续。此功能随应用部署生效，不需要数据库迁移，也不会自动向 staging 写入数据。
+
+邮件密码重置入口为 `/portal/login?reset=password`。本地也需要 Resend 配置；真实投递尚需人工验证。重置成功会撤销该账号所有会话，之后用新密码登录，不会删除报名或作品。
 
 ## Registration and schedule allocation
 

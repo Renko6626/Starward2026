@@ -1,17 +1,11 @@
-export function getTurnstileSiteKey(env: {
-  VITE_TURNSTILE_SITE_KEY?: string | undefined;
-}) {
-  const trimmed = env.VITE_TURNSTILE_SITE_KEY?.trim();
-  return trimmed ? trimmed : null;
-}
-
 export type TurnstileRenderOptions = {
   sitekey: string;
-  theme?: "light" | "dark" | "auto";
-  size?: "normal" | "flexible" | "compact";
+  theme?: 'dark' | 'light' | 'auto';
+  size?: 'normal' | 'compact' | 'flexible';
   callback?: (token: string) => void;
   "expired-callback"?: () => void;
   "error-callback"?: () => void;
+  "timeout-callback"?: () => void;
 };
 
 export type TurnstileApi = {
@@ -30,6 +24,11 @@ declare global {
 const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
+export function getTurnstileSiteKey(env: { VITE_TURNSTILE_SITE_KEY?: string | undefined }) {
+  const trimmed = env.VITE_TURNSTILE_SITE_KEY?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export async function loadTurnstileApi() {
   if (typeof window === "undefined" || typeof document === "undefined") {
     throw new Error("Turnstile can only load in the browser.");
@@ -40,7 +39,9 @@ export async function loadTurnstileApi() {
   }
 
   if (!window.__starwardTurnstileLoader__) {
+    let timeout: number | undefined;
     window.__starwardTurnstileLoader__ = new Promise<TurnstileApi>((resolve, reject) => {
+      timeout = window.setTimeout(() => reject(new Error('Turnstile script loading timed out.')), 15000);
       const existingScript = document.querySelector<HTMLScriptElement>(
         `script[src="${TURNSTILE_SCRIPT_SRC}"]`,
       );
@@ -75,7 +76,11 @@ export async function loadTurnstileApi() {
         { once: true },
       );
       document.head.append(script);
-    });
+    }).catch(error => {
+      window.__starwardTurnstileLoader__ = undefined;
+      document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SCRIPT_SRC}"]`)?.remove();
+      throw error;
+    }).finally(() => { if (timeout !== undefined) window.clearTimeout(timeout); });
   }
 
   return window.__starwardTurnstileLoader__;

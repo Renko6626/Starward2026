@@ -8,7 +8,9 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-04-10",
   "assets": {
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
   },
   "observability": {
     "enabled": true
@@ -32,6 +34,16 @@
         "limit": 2,
         "period": 60
       }
+    },
+    {
+      "name": "AUTH_OTP_IP_RATE_LIMITER",
+      "namespace_id": "2026101101",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "AUTH_OTP_EMAIL_RATE_LIMITER",
+      "namespace_id": "2026101102",
+      "simple": { "limit": 1, "period": 60 }
     }
   ],
   /**
@@ -39,7 +51,7 @@
    * - D1 database binding
    * - Better Auth secret
    * - Better Auth base URL
-   * - Cloudflare Access team domain and policy aud for /api/admin verification
+   * - Bootstrap the admin owner after applying the admin_roles migration
    * - Resend API key and sender
    * - Turnstile secret
    * - Replace the rate limit namespace ids if they collide with existing account-level values
@@ -69,6 +81,16 @@
             "limit": 2,
             "period": 60
           }
+        },
+        {
+          "name": "AUTH_OTP_IP_RATE_LIMITER",
+          "namespace_id": "2026101101",
+          "simple": { "limit": 10, "period": 60 }
+        },
+        {
+          "name": "AUTH_OTP_EMAIL_RATE_LIMITER",
+          "namespace_id": "2026101102",
+          "simple": { "limit": 1, "period": 60 }
         }
       ],
       "routes": [
@@ -91,18 +113,13 @@
     },
     "production": {
       "name": "starward2026-production",
-      // These namespace IDs must also be unused by other apps in this account.
+      // Production uses separate namespaces from local/staging.
       "ratelimits": [
-        {
-          "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
-          "namespace_id": "2026041103",
-          "simple": { "limit": 6, "period": 60 }
-        },
-        {
-          "name": "APPLICATION_SUBMIT_EMAIL_RATE_LIMITER",
-          "namespace_id": "2026041104",
-          "simple": { "limit": 2, "period": 60 }
-        }
+        { "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER", "namespace_id": "2026041103", "simple": { "limit": 6, "period": 60 } },
+        { "name": "APPLICATION_SUBMIT_EMAIL_RATE_LIMITER", "namespace_id": "2026041104", "simple": { "limit": 2, "period": 60 } },
+        { "name": "AUTH_OTP_IP_RATE_LIMITER", "namespace_id": "2026101103", "simple": { "limit": 10, "period": 60 } },
+        { "name": "AUTH_OTP_EMAIL_RATE_LIMITER", "namespace_id": "2026101104", "simple": { "limit": 1, "period": 60 } }
+
       ],
       // Named environments do NOT inherit the top-level bindings, so the
       // production D1 binding must be declared explicitly here or every
@@ -112,12 +129,14 @@
         {
           "binding": "DB",
           "database_name": "starward2026-prod",
-          "database_id": "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
+          "database_id": "800d3172-7b0c-4676-9eee-ea94decb6f81"
         }
       ],
       "routes": [{ "pattern": "hifuu.moe", "custom_domain": true }],
       "vars": {
         "BETTER_AUTH_URL": "https://hifuu.moe",
+        "RESEND_FROM_EMAIL": "noreply@hifuu.moe",
+        "RESEND_FROM_NAME": "逐星巡礼",
         "QQ_OAUTH_ENABLED": "false"
       }
       // The production tag workflow validates these settings before deployment.
@@ -126,8 +145,6 @@
   // "vars": {
   //   "BETTER_AUTH_SECRET": "replace-with-32-plus-char-secret",
   //   "BETTER_AUTH_URL": "https://your-app.example.com",
-  //   "CLOUDFLARE_ACCESS_TEAM_DOMAIN": "https://your-team.cloudflareaccess.com",
-  //   "CLOUDFLARE_ACCESS_POLICY_AUD": "replace-with-your-access-application-aud",
   //   "RESEND_API_KEY": "re_xxxxxxxxx",
   //   "RESEND_FROM_EMAIL": "noreply@example.com",
   //   "RESEND_FROM_NAME": "Starward2026",

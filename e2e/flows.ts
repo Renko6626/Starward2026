@@ -1,13 +1,21 @@
 import type { Page } from "@playwright/test";
 import { expect, openChapter, openPortal, rows, seed } from "./fixtures";
+import { ACTIVITY_RULES_VERSION } from "../src/shared/activity-rules";
 
 export async function registerAndApply(page: Page) {
   await page.goto("/portal/login");
-  await page.getByLabel("邮箱", { exact: true }).fill("e2e-new@example.com");
-  await page.getByLabel("密码", { exact: true }).fill("e2e-password-2026");
-  await expect(page.getByRole("button", { name: "注册并进入", exact: true })).toBeDisabled();
+  await page.getByLabel("登录邮箱", { exact: true }).fill("e2e-new@example.com");
   await page.getByLabel(/我已阅读并同意/).check();
-  await page.getByRole("button", { name: "注册并进入", exact: true }).click();
+  await seed(`INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt)
+    VALUES ('e2e-new-otp', 'sign-in-otp-e2e-new@example.com', '123456:0', '2099-01-01T00:00:00.000Z', '2026-04-12T00:00:00.000Z', '2026-04-12T00:00:00.000Z');`);
+  const verified = await page.request.post("/api/auth/sign-in/email-otp", {
+    data: { email: "e2e-new@example.com", otp: "123456" },
+    headers: { origin: "http://127.0.0.1:21262", "x-starward-rules-version": ACTIVITY_RULES_VERSION },
+  });
+  expect(verified.ok(), await verified.text()).toBe(true);
+  const password = await page.request.post("/api/auth/set-password", { data: { newPassword: "e2e-password-2026" }, headers: { origin: "http://127.0.0.1:21262" } });
+  expect(password.ok(), await password.text()).toBe(true);
+  await page.goto("/portal");
   await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();
   await page.getByRole("button", { name: "提交报名", exact: true }).click();
   await expect(page.locator('[name="profile.creditName"]')).toHaveAttribute("aria-invalid", "true");
@@ -28,7 +36,7 @@ export async function registerAndApply(page: Page) {
   await page.getByRole("button", { name: "退出登录" }).click();
   await page.goto("/portal/login");
   await page.getByRole("button", { name: "密码登录", exact: true }).click();
-  await page.getByLabel("邮箱", { exact: true }).fill("e2e-new@example.com");
+  await page.getByLabel("登录邮箱", { exact: true }).fill("e2e-new@example.com");
   await page.getByLabel("密码", { exact: true }).fill("e2e-password-2026");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();

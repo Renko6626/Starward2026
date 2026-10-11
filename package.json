@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "overrides": {
+    "miniflare": {
+      "undici": "7.24.8"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -13,6 +18,7 @@
     "db:local:reset": "node ./scripts/local-dev-bootstrap.mjs bootstrap",
     "db:local:seed": "node ./scripts/local-dev-bootstrap.mjs seed",
     "db:local:print-portals": "node ./scripts/local-dev-bootstrap.mjs print",
+    "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "test:env": "node ./scripts/test-env.mjs",
     "test:e2e": "node scripts/e2e.mjs",
     "test:e2e:headed": "node scripts/e2e.mjs --headed",

@@ -22,6 +22,7 @@ import {
 } from "../../shared/admin";
 
 import { summarizeSchedule } from "../lib/creator-list";
+import { QuickSchedule } from "../components/QuickSchedule";
 
 type SchedulePayload = {
   participants: AdminParticipantListResponse["items"];
@@ -64,6 +65,7 @@ export function AdminSchedulePage() {
   });
   const [appendCount, setAppendCount] = useState('6');
   const [append, setAppend] = useState<BootstrapState>({ status: 'idle' });
+  const [quickSaving, setQuickSaving] = useState(false);
 
   const [newSeat, setNewSeat] = useState({ kind: "standard" as CreateSegmentInput["kind"], name: "", scheduledAt: "", description: "" });
   const [creating, setCreating] = useState(false);
@@ -253,6 +255,17 @@ export function AdminSchedulePage() {
   }
 
   const segmentMetrics = state.status === "ready" ? summarizeSchedule(state.payload.segments) : null;
+  const hasUnsavedDrafts = state.status === 'ready' && state.payload.segments.some(segment =>
+    JSON.stringify(drafts[segment.id] ?? buildDraft(segment)) !== JSON.stringify(buildDraft(segment)));
+
+  function acceptQuickSchedule(items: AdminSegmentItem[], replace = false) {
+    const updates = new Map(items.map(item => [item.id, item]));
+    setState(current => current.status === 'ready' ? { status: 'ready', payload: {
+      ...current.payload, segments: replace ? items : current.payload.segments.map(item => updates.get(item.id) ?? item),
+    } } : current);
+    setDrafts(current => replace ? buildDraftMap(items) : { ...current, ...buildDraftMap(items) });
+    setSaveStates({});
+  }
 
   return (
     <div className="page-content">
@@ -337,6 +350,9 @@ export function AdminSchedulePage() {
 
       {state.status === "ready" && state.payload.segments.length > 0 ? (
         <section className="space-y-4">
+          <QuickSchedule segments={state.payload.segments} onSaved={acceptQuickSchedule} onSavingChange={setQuickSaving}
+            disabled={hasUnsavedDrafts || append.status === 'submitting' || Object.values(saveStates).some(value => value.status === 'submitting')} />
+          <fieldset disabled={quickSaving} className="space-y-4 min-w-0">
           <details className="panel admin-disclosure">
             <summary>追加坑位</summary>
             <div className="pt-4">
@@ -468,6 +484,7 @@ export function AdminSchedulePage() {
               );
             })}
           </div>
+          </fieldset>
         </section>
       ) : null}
     </div>

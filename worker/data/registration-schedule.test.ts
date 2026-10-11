@@ -14,6 +14,7 @@ import { listAvailableSegments, getPortalSegmentState, getCurrentSegmentForParti
 import { listEventWindows } from "./event-windows";
 import { updatePortalProjectPreview } from "./project-drafts";
 import { confirmPortalProjectRelease } from "./relay-publication";
+import { adminTestSession } from "../test/admin-session";
 
 const fixtures: SqliteD1Fixture[] = [];
 afterEach(() => { fixtures.splice(0).forEach(f => f.sqlite.close()); vi.useRealTimers(); });
@@ -78,12 +79,13 @@ describe("timed seats and private relay", () => {
     const f = fixture();
     await approve(f, "u1", "s1");
     await approve(f, "u2", "s2");
+    const admin = await adminTestSession(f.db);
     const app = new Hono<AppRouteConfig>().route("/api/admin", adminApi);
     const request = (body: unknown, authenticated = true) => app.request("http://localhost/api/admin/segments", {
-      method: "POST", headers: { "content-type": "application/json", ...(authenticated ? { "x-admin-email": "admin@example.com" } : {}) }, body: JSON.stringify(body),
-    }, authenticated ? { DB: f.db, ALLOW_LOCAL_ADMIN_BYPASS: "true" } : { DB: f.db, CLOUDFLARE_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com", CLOUDFLARE_ACCESS_POLICY_AUD: "test" });
+      method: "POST", headers: { "content-type": "application/json", ...(authenticated ? admin.headers : {}) }, body: JSON.stringify(body),
+    }, admin.env);
     const data = { kind: "standard", name: "半点加场", scheduledAt: "2026-11-12T10:30:00+08:00" };
-    expect((await request(data, false)).status).toBe(403);
+    expect((await request(data, false)).status).toBe(401);
     expect((await request({ ...data, scheduledAt: null })).status).toBe(422);
     expect((await request(data)).status).toBe(201);
     const inserted = (await listPublicSchedule(f.db, [])).find(s => s.name === data.name)!;

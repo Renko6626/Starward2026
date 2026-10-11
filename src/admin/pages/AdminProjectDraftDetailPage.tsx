@@ -28,7 +28,7 @@ import {
   type UpdateProjectDraftInput,
 } from "../../shared/admin";
 
-const draftRouteApi = getRouteApi("/admin/project-drafts/$draftId");
+const draftRouteApi = getRouteApi("/portal_/admin/project-drafts/$draftId");
 
 const initialForm: UpdateProjectDraftInput = {
   previewStatus: "not_started",
@@ -143,7 +143,7 @@ export function AdminProjectDraftDetailPage() {
       <div className="mb-4">
         <Link
           className="text-base font-mono text-on-surface-variant hover:text-primary transition-colors flex min-h-11 items-center gap-2 mb-4"
-          to="/admin/project-drafts"
+          to="/portal/admin/project-drafts"
         >
           <ArrowRight className="w-4 h-4 rotate-180" /> 返回草案库
         </Link>
@@ -195,7 +195,7 @@ export function AdminProjectDraftDetailPage() {
             <Link
               className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-surface-variant border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium"
               params={{ participantId: draft.participantId }}
-              to="/admin/participants/$participantId"
+              to="/portal/admin/participants/$participantId"
             >
               查看参与者详情
             </Link>

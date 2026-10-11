@@ -76,7 +76,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
     });
   }
   return <div className="page-content">
-    <Link className="text-link" to="/admin/participants" search={{ view: "pending" }}>返回参与者管理</Link>
+    <Link className="text-link" to="/portal/admin/participants" search={{ view: "pending" }}>返回参与者管理</Link>
     <PageHeading title={name} description="参与者详情">
       <StatusBadge>{application ? applicationStatusLabels[application.status] : "未提交报名"}</StatusBadge>
     </PageHeading>
@@ -92,7 +92,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
             {profile?.backupContact ? <DetailItem label="备用联系" value={profile.backupContact} /> : null}
           </div>
         </section>
-        <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">当前发布时点</h2><Link className="text-link" to="/admin/schedule">管理排期</Link></div>
+        <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">当前发布时点</h2><Link className="text-link" to="/portal/admin/schedule">管理排期</Link></div>
           <p className="text-lg">{segment ? `${segment.code} ${segment.name}` : "待主催安排"}</p>
           {segment ? <p>{formatScheduledTime(segment.scheduledAt)}<span className="ml-3 text-on-surface-variant">{application?.status === "pending" ? "待审核预留" : participant && ["approved", "completed"].includes(participant.status) ? "已确认" : "请核对参与资格"}</span></p> : null}
           {participant?.status === "approved" ? <div className="space-y-3">
@@ -112,7 +112,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
             {application.messageToHosts ? <DetailBlock title="给主催的话" value={application.messageToHosts} /> : null}
           </> : <p className="text-on-surface-variant">该账号尚未提交报名。</p>}
         </section>
-        {draft ? <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">作品资料</h2><Link className="text-link" to="/admin/project-drafts/$draftId" params={{ draftId: draft.id }}>查看作品审核</Link></div><p>{draft.previewTitle ?? "尚未填写标题"}</p><p className="text-on-surface-variant">预告：{adminProjectDraftStatusLabels[draft.previewStatus]}；正式审查：{adminProjectDraftStatusLabels[draft.reviewStatus]}</p></section> : null}
+        {draft ? <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">作品资料</h2><Link className="text-link" to="/portal/admin/project-drafts/$draftId" params={{ draftId: draft.id }}>查看作品审核</Link></div><p>{draft.previewTitle ?? "尚未填写标题"}</p><p className="text-on-surface-variant">预告：{adminProjectDraftStatusLabels[draft.previewStatus]}；正式审查：{adminProjectDraftStatusLabels[draft.reviewStatus]}</p></section> : null}
         <details className="panel admin-disclosure"><summary>账号与审核记录</summary><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <DetailItem label="报名 ID" value={application?.id ?? "未提交"} />
           <DetailItem label="参与者 ID" value={participant?.id ?? "未关联"} />

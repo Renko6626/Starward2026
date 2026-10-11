@@ -48,9 +48,17 @@ export const test = base.extend<{
       DELETE FROM schedule_segments;
       DELETE FROM participants;
       DELETE FROM applications;
+      DELETE FROM admin_role_events;
+      DELETE FROM admin_roles;
+      DELETE FROM session;
       DELETE FROM "user";
       DELETE FROM verification;
-      ${buildLocalSeedSql()}`);
+      ${buildLocalSeedSql()}
+      INSERT INTO "user" (id,name,email,emailVerified,createdAt,updatedAt)
+        VALUES ('usr_seed_admin','E2E Admin','e2e-admin@seed.starward.local',1,'2026-04-12T00:00:00.000Z','2026-04-12T00:00:00.000Z');
+      INSERT INTO admin_roles (user_id,role) VALUES ('usr_seed_admin','owner');
+      INSERT INTO session (id,expiresAt,token,createdAt,updatedAt,ipAddress,userAgent,userId)
+        VALUES ('sess_seed_admin','2099-01-01T00:00:00.000Z','starward-local-admin-session','2026-04-12T00:00:00.000Z','2026-04-12T00:00:00.000Z','127.0.0.1','Playwright E2E','usr_seed_admin');`);
     await use();
   }, { auto: true }],
   authorContextOptions: async ({ contextOptions, baseURL, viewport, deviceScaleFactor, isMobile, hasTouch, userAgent, reducedMotion }, use) => {
@@ -68,8 +76,9 @@ export const test = base.extend<{
     await use(await context.newPage());
     await context.close();
   },
-  adminPage: async ({ browser, authorContextOptions }, use) => {
-    const context = await browser.newContext({ ...authorContextOptions, extraHTTPHeaders: { "x-admin-email": "e2e-admin@starward.local" } });
+  adminPage: async ({ browser, authorContextOptions, baseURL }, use) => {
+    const context = await browser.newContext(authorContextOptions);
+    await context.addCookies([{ name: "better-auth.session_token", value: sessionCookie("starward-local-admin-session"), url: baseURL! }]);
     await use(await context.newPage());
     await context.close();
   },

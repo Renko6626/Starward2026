@@ -81,10 +81,17 @@ jobs:
       - name: Run station asset tests
         run: npm run test:station
 
+      - name: Apply optional Turnstile site-key override
+        if: vars.VITE_TURNSTILE_SITE_KEY != ''
+        env:
+          TURNSTILE_SITE_KEY_OVERRIDE: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+        run: echo "VITE_TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY_OVERRIDE" >> "$GITHUB_ENV"
+
       - name: Build frontend and Worker for production
         run: npm run build
         env:
           CLOUDFLARE_ENV: production
+          # The public key defaults to .env.production. Secrets stay on the Worker.
 
       - name: Check Cloudflare credentials
         env:
@@ -116,6 +123,11 @@ jobs:
           curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 --max-time 20 "$PRODUCTION_URL/" --output /dev/null
           curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 --max-time 20 "$PRODUCTION_URL/api/health" --output health.json
           node --input-type=module -e 'import { readFileSync } from "node:fs"; const health = JSON.parse(readFileSync("health.json", "utf8")); if (health.status !== "ok" || health.service !== "starward2026-worker") throw new Error("Production API health check failed");'
+
+      - name: Verify admin authentication boundary
+        env:
+          PRODUCTION_URL: ${{ steps.config.outputs.production_url }}
+        run: node scripts/check-admin-deployment.mjs
 
       - name: Write deployment summary
         env:

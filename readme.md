@@ -19,7 +19,7 @@ Starward2026 的目标范围包含以下三类能力：
 | 数据库 | Cloudflare D1 |
 | 参与者认证 | Better Auth + QQ / 邮箱密码 / Email OTP + Cookie Session |
 | 反滥用 | Cloudflare Turnstile + Workers Rate Limiting |
-| 管理后台保护 | Cloudflare Access |
+| 管理后台保护 | 网站登录 + 数据库管理员角色（owner 授权） |
 | 文件存储 | Cloudflare R2（仅在需要上传文件时启用） |
 
 ## 当前里程碑

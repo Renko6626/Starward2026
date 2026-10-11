@@ -1,225 +1,353 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAuth } from "./auth";
+import { SqliteD1Fixture } from "../test/sqlite-d1";
+import { ACTIVITY_RULES_VERSION } from "../../src/shared/activity-rules";
+import { getPasswordAuthErrorMessage } from "../../src/portal/lib/password-auth-error";
+import type { AppBindings } from "./types";
+import app from "../app";
 
-// Exercise Better Auth's D1 adapter against the repository's real migrations.
-class Statement {
-  constructor(private db: DatabaseSync, private sql: string, private params: SQLInputValue[] = []) {}
-  bind(...params: SQLInputValue[]) { return new Statement(this.db, this.sql, params); }
-  async all() {
-    const results = this.db.prepare(this.sql).all(...this.params);
-    const meta = this.db.prepare("SELECT changes() AS changes, last_insert_rowid() AS last_row_id").get();
-    return { success: true, results, meta };
-  }
-  async first<T>() { return (this.db.prepare(this.sql).get(...this.params) as T | undefined) ?? null; }
-  async run() { return this.all(); }
+const fixtures: SqliteD1Fixture[] = [];
+afterEach(() => { vi.unstubAllGlobals(); fixtures.splice(0).forEach(f => f.sqlite.close()); });
+const credentials = { email: "creator@example.com", password: "a-test-password-123" };
+function limiter(max: number) {
+  const counters = new Map<string, number>();
+  return { limit: async ({ key }: { key: string }) => {
+    const count = (counters.get(key) ?? 0) + 1;
+    counters.set(key, count);
+    return { success: count <= max };
+  } } as RateLimit;
 }
-class TestD1 {
-  sqlite = new DatabaseSync(":memory:");
-  prepare(sql: string) { return new Statement(this.sqlite, sql); }
-  async exec(sql: string) { this.sqlite.exec(sql); }
-  async batch(statements: Statement[]) {
-    this.sqlite.exec("BEGIN");
-    try {
-      const results = [];
-      for (const statement of statements) results.push(await statement.all());
-      this.sqlite.exec("COMMIT");
-      return results;
-    } catch (error) {
-      this.sqlite.exec("ROLLBACK");
-      throw error;
-    }
-  }
-}
-const databases: TestD1[] = [];
-afterEach(() => { for (const db of databases.splice(0)) db.sqlite.close(); });
-
-function setup() {
-  const db = new TestD1();
-  databases.push(db);
-  for (const file of readdirSync("migrations").filter((name) => name.endsWith(".sql")).sort()) {
-    db.sqlite.exec(readFileSync(`migrations/${file}`, "utf8"));
-  }
-  db.sqlite.exec("PRAGMA foreign_keys = ON");
-  const auth = createAuth({
-    DB: db as unknown as D1Database,
-    BETTER_AUTH_SECRET: "test-only-password-auth-secret-at-least-32-characters",
-    BETTER_AUTH_URL: "http://localhost:20262",
-  });
-  async function request(path: string, body?: object, cookie?: string, origin = "http://localhost:20262", rulesVersion: string | null = path === "/sign-up/email" ? "2026-10-11-v10" : null) {
-    // Better Auth disables origin checks in test mode; exercise production behavior.
+function setup(overrides: Partial<AppBindings> = {}) {
+  const db = new SqliteD1Fixture(); fixtures.push(db);
+  const env: AppBindings = {
+    DB: db.db, BETTER_AUTH_SECRET: "test-only-password-auth-secret-at-least-32-characters",
+    BETTER_AUTH_URL: "http://localhost:20262", ALLOW_LOCAL_DEV_ORIGINS: "true",
+    RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "test@example.com",
+    AUTH_OTP_IP_RATE_LIMITER: limiter(10), AUTH_OTP_EMAIL_RATE_LIMITER: limiter(1),
+    ...overrides,
+  };
+  const sent = vi.fn().mockImplementation(async () => Response.json({ id: "mail" })); vi.stubGlobal("fetch", sent);
+  const auth = createAuth(env);
+  async function request(path: string, body?: object, cookie = "", consent: string | null = null, origin = env.BETTER_AUTH_URL!, captchaToken?: string) {
     (await auth.$context).skipOriginCheck = false;
-    return auth.handler(new Request(`http://localhost:20262/api/auth${path}`, {
-      method: body ? "POST" : "GET",
-      headers: { "content-type": "application/json", origin, ...(cookie ? { cookie } : {}), ...(rulesVersion ? { "x-starward-rules-version": rulesVersion } : {}) },
+    return auth.handler(new Request(`${env.BETTER_AUTH_URL}/api/auth${path}`, {
+      method: body ? "POST" : "GET", headers: { "content-type": "application/json", origin, cookie,
+        "cf-connecting-ip": "203.0.113.10", ...(consent ? { "x-starward-rules-version": consent } : {}), ...(captchaToken ? { 'x-captcha-response': captchaToken } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     }));
   }
-  return { db, auth, request };
-}
-function sessionCookie(response: Response) {
-  return response.headers.getSetCookie().map((cookie) => cookie.split(";")[0]).join("; ");
-}
-const credentials = { email: "creator@example.com", password: "a-test-password-123", name: "Creator" };
-
-describe("portal password authentication", () => {
-  it("registers without mail or email verification, stores a hash and creates one pending workspace", async () => {
-    const { db, request } = setup();
-    const response = await request("/sign-up/email", { ...credentials, email: " Creator@Example.com " });
+  async function issueOtp(email = credentials.email, expired = false) {
+    await (await auth.$context).internalAdapter.createVerificationValue({
+      identifier: `sign-in-otp-${email}`, value: "123456:0", expiresAt: new Date(Date.now() + (expired ? -1000 : 600000)),
+    });
+  }
+  async function register() {
+    await issueOtp();
+    const response = await request("/sign-in/email-otp", { email: credentials.email, otp: "123456" }, "", ACTIVITY_RULES_VERSION);
     expect(response.status).toBe(200);
-    const payload = await response.json() as { user: { id: string; email: string; emailVerified: boolean } };
-    expect(payload.user.email).toBe(credentials.email);
-    expect(payload.user.emailVerified).toBe(false);
-    expect(sessionCookie(response)).toContain("session_token");
-    const account = db.sqlite.prepare('SELECT password, providerId FROM account').get();
-    expect(account?.providerId).toBe("credential");
-    expect(account?.password).toBeTruthy();
-    expect(account?.password).not.toBe(credentials.password);
-    expect(db.sqlite.prepare("SELECT user_id, status FROM participants").get()).toMatchObject({ user_id: payload.user.id, status: "pending" });
-    const login = await request("/sign-in/email", { email: "CREATOR@example.com", password: credentials.password });
-    expect(login.status).toBe(200);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM participants").get()?.count).toBe(1);
-    const session = await request("/get-session", undefined, sessionCookie(login));
-    expect((await session.json() as { user: { id: string } }).user.id).toBe(payload.user.id);
-  });
+    return response;
+  }
+  async function withPassword() {
+    const response = await register();
+    expect((await request("/set-password", { newPassword: credentials.password }, cookies(response))).status).toBe(200);
+    return response;
+  }
+  return { db, env, auth, request, issueOtp, register, withPassword, sent };
+}
+function cookies(response: Response) { return response.headers.getSetCookie().map(value => value.split(";")[0]).join("; "); }
 
-  it("rejects non-login OTP requests before storing or sending a code", async () => {
-    const { db, request } = setup();
-    for (const type of ["email-verification", "forget-password", "change-email"]) {
-      const response = await request("/email-otp/send-verification-otp", { email: credentials.email, type });
-      expect(response.status).toBe(403);
-      expect(await response.json()).toMatchObject({ code: "email_purpose_disabled" });
-    }
-    for (const path of ["/email-otp/request-password-reset", "/forget-password/email-otp"]) {
-      const response = await request(path, { email: credentials.email });
-      expect(response.status).toBe(403);
-      expect(await response.json()).toMatchObject({ code: "email_purpose_disabled" });
-    }
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM verification").get()?.count).toBe(0);
+describe('Turnstile protected authentication', () => {
+  function protect() {
+    const t = setup({ TURNSTILE_SECRET_KEY: 'test-turnstile-secret' });
+    const used = new Set<string>();
+    t.sent.mockImplementation(async (url: string, init: RequestInit) => {
+      if (String(url).includes('challenges.cloudflare.com')) {
+        const body = JSON.parse(String(init.body));
+        const success = body.response.startsWith('valid-') && !used.has(body.response);
+        used.add(body.response);
+        return Response.json({ success, 'error-codes': success ? [] : ['timeout-or-duplicate'] });
+      }
+      return Response.json({ id: 'mail' });
+    });
+    const mailCalls = () => t.sent.mock.calls.filter(([url]) => String(url).includes('api.resend.com'));
+    return { ...t, mailCalls };
+  }
+  it('rejects missing, invalid and replayed tokens before issuing OTPs or sending mail', async () => {
+    const t = protect();
+    const body = { email: credentials.email, type: 'sign-in' };
+    const send = (token?: string) => t.request('/email-otp/send-verification-otp', body, '', ACTIVITY_RULES_VERSION, t.env.BETTER_AUTH_URL!, token);
+    expect((await send()).status).toBe(400);
+    expect((await send('invalid')).status).toBe(403);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+    expect(t.mailCalls()).toHaveLength(0);
+    expect((await send('valid-send')).status).toBe(200);
+    const code = t.db.sqlite.prepare('SELECT value FROM verification').get();
+    expect((await send('valid-send')).status).toBe(403);
+    expect(t.mailCalls()).toHaveLength(1);
+    expect(t.db.sqlite.prepare('SELECT value FROM verification').get()).toEqual(code);
+    expect((await send('valid-second')).status).toBe(429);
   });
-
-  it("rejects wrong passwords, short signup passwords, duplicate signup and foreign origins", async () => {
-    const { request } = setup();
-    expect((await request("/sign-up/email", { ...credentials, password: "short" })).status).toBe(400);
-    expect((await request("/sign-up/email", credentials)).status).toBe(200);
-    expect((await request("/sign-in/email", { email: credentials.email, password: "wrong-password" })).status).toBe(401);
-    expect((await request("/sign-up/email", credentials)).ok).toBe(false);
-    expect((await request("/sign-in/email", credentials, "existing=1", "https://evil.example.com")).status).toBe(403);
+  it('protects password login and reset sends, while OTP proof and password setup need no second challenge', async () => {
+    const t = protect(); await t.withPassword();
+    const before = t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n;
+    expect((await t.request('/sign-in/email', credentials)).status).toBe(400);
+    expect((await t.request('/sign-in/email/', credentials)).ok).toBe(false);
+    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'invalid')).status).toBe(403);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n).toBe(before);
+    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'valid-login')).status).toBe(200);
+    const body = { email: credentials.email };
+    expect((await t.request('/email-otp/request-password-reset', body)).status).toBe(400);
+    expect((await t.request('/email-otp/request-password-reset', body, '', null, t.env.BETTER_AUTH_URL!, 'valid-reset')).status).toBe(200);
+    const otp = String(t.db.sqlite.prepare("SELECT value FROM verification WHERE identifier=?").get(`forget-password-otp-${credentials.email}`)?.value).split(':')[0];
+    expect((await t.request('/email-otp/reset-password', { email: credentials.email, otp, password: 'new-password-123' })).status).toBe(200);
+    expect(t.mailCalls()).toHaveLength(1);
   });
-
-  it("lets a signed-in OTP account set a password without creating a second user or workspace", async () => {
-    const { db, request } = setup();
-    const initial = await request("/sign-up/email", credentials);
-    const cookie = sessionCookie(initial);
-    // An existing OTP user has a user/session and participant, but no credential account.
-    db.sqlite.exec("DELETE FROM account WHERE providerId = 'credential'");
-    expect((await request("/set-password", { newPassword: "new-password-123" })).status).toBe(401);
-    expect((await request("/set-password", { newPassword: "short" }, cookie)).status).toBe(400);
-    expect((await request("/set-password", { newPassword: "new-password-123" }, cookie, "https://evil.example.com")).status).toBe(403);
-    expect((await request("/set-password", { newPassword: "new-password-123" }, cookie)).status).toBe(200);
-    expect((await request("/set-password", { newPassword: "overwrite-password" }, cookie)).ok).toBe(false);
-    expect((await request("/sign-in/email", { email: credentials.email, password: "new-password-123" })).status).toBe(200);
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(1);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM participants").get()?.count).toBe(1);
-  });
-
-  it("requires the current password to change credentials and invalidates other sessions", async () => {
-    const { request } = setup();
-    const initial = await request("/sign-up/email", credentials);
-    const second = await request("/sign-in/email", credentials);
-    const cookie = sessionCookie(initial);
-    expect((await request("/change-password", { currentPassword: "wrong", newPassword: "changed-password-123" }, cookie)).ok).toBe(false);
-    expect((await request("/change-password", { currentPassword: credentials.password, newPassword: "changed-password-123", revokeOtherSessions: true }, cookie)).status).toBe(200);
-    expect(await (await request("/get-session", undefined, sessionCookie(second))).json()).toBeNull();
-    expect((await request("/sign-in/email", credentials)).status).toBe(401);
-    expect((await request("/sign-in/email", { email: credentials.email, password: "changed-password-123" })).status).toBe(200);
-  });
-
-  it("does not claim an unlinked invitation merely by registering its email", async () => {
-    const { db, request } = setup();
-    await request("/sign-up/email", credentials);
-    db.sqlite.exec('UPDATE participants SET user_id = NULL; DELETE FROM session; DELETE FROM account; DELETE FROM "user";');
-    const response = await request("/sign-up/email", credentials);
-    expect(response.status).toBe(409);
-    expect(db.sqlite.prepare("SELECT user_id FROM participants").get()?.user_id).toBeNull();
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
+  it('fails closed when the verification service is unavailable and exposes only the enabled flag', async () => {
+    const t = protect();
+    t.sent.mockImplementation(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+    const response = await t.request('/email-otp/send-verification-otp', { email: credentials.email, type: 'sign-in' }, '', ACTIVITY_RULES_VERSION, t.env.BETTER_AUTH_URL!, 'valid-send');
+    expect(response.ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+    expect(t.mailCalls()).toHaveLength(0);
+    const config = await app.request('/api/auth/providers', {}, t.env);
+    expect(await config.json()).toEqual({ qq: { enabled: false }, turnstile: { enabled: true } });
   });
 });
 
-describe("activity rules acceptance during account creation", () => {
-  async function issueOtp(auth: ReturnType<typeof createAuth>, email = credentials.email) {
-    await (await auth.$context).internalAdapter.createVerificationValue({
-      identifier: `sign-in-otp-${email}`, value: "123456:0", expiresAt: new Date(Date.now() + 600000),
-    });
-  }
-
-  it("rejects password registration without consent or with an outdated rules version", async () => {
-    const { db, request } = setup();
-    const missing = await request("/sign-up/email", credentials, undefined, undefined, null);
-    expect(missing.status).toBe(403);
-    expect(await missing.json()).toMatchObject({ code: "ACTIVITY_RULES_REQUIRED" });
-    const outdated = await request("/sign-up/email", credentials, undefined, undefined, "2026-10-10-v7");
-    expect(outdated.status).toBe(409);
-    expect(await outdated.json()).toMatchObject({ code: "ACTIVITY_RULES_CHANGED" });
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
+describe("verified email registration", () => {
+  it("blocks direct password registration without creating any account or workspace", async () => {
+    const t = setup();
+    const response = await t.request("/sign-up/email", { ...credentials, name: "Creator" }, "", ACTIVITY_RULES_VERSION);
+    expect(response.ok).toBe(false);
+    for (const table of ['user', 'account', 'session', 'participants']) {
+      expect(t.db.sqlite.prepare(`SELECT COUNT(*) AS n FROM "${table}"`).get()?.n).toBe(0);
+    }
   });
-
-  it("records the accepted version and server time once, without rewriting it on login", async () => {
-    const { db, request } = setup();
-    const before = Date.now();
-    const response = await request("/sign-up/email", credentials);
-    expect(response.status).toBe(200);
-    const payload = await response.json() as { user: { id: string } };
-    const acceptance = db.sqlite.prepare("SELECT user_id, rules_version, accepted_at FROM activity_rule_acceptances").get();
-    expect(acceptance).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-11-v10" });
-    expect(Date.parse(String(acceptance?.accepted_at))).toBeGreaterThanOrEqual(before);
-    expect(Date.parse(String(acceptance?.accepted_at))).toBeLessThanOrEqual(Date.now());
-    expect((await request("/sign-in/email", credentials)).status).toBe(200);
-    expect(db.sqlite.prepare("SELECT user_id, rules_version, accepted_at FROM activity_rule_acceptances").all()).toEqual([acceptance]);
-  });
-
-  it("guards OTP account creation before consuming the code, then records consent on success", async () => {
-    const { db, auth, request } = setup();
-    await issueOtp(auth);
-    const body = { email: credentials.email, otp: "123456" };
-    expect((await request("/sign-in/email-otp", body)).status).toBe(403);
-    expect((await request("/sign-in/email-otp", { ...body, type: "email-verification" })).status).toBe(403);
-    expect((await request("/sign-in/email-otp", body, undefined, undefined, "old-version")).status).toBe(409);
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
-    const response = await request("/sign-in/email-otp", body, undefined, undefined, "2026-10-11-v10");
+  it("only creates a verified account after a valid OTP, then sets a hashed password on that same user", async () => {
+    const t = setup(); await t.issueOtp();
+    expect((await t.request("/sign-in/email-otp", { email: credentials.email, otp: "000000" }, "", ACTIVITY_RULES_VERSION)).ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM "user"').get()?.n).toBe(0);
+    const response = await t.request("/sign-in/email-otp", { email: " Creator@Example.com ", otp: "123456" }, "", ACTIVITY_RULES_VERSION);
     expect(response.status).toBe(200);
     expect(response.headers.get("x-starward-account-created")).toBe("true");
-    const payload = await response.json() as { user: { id: string } };
-    expect(db.sqlite.prepare("SELECT user_id, rules_version FROM activity_rule_acceptances").get()).toMatchObject({ user_id: payload.user.id, rules_version: "2026-10-11-v10" });
+    expect(response.headers.get("x-starward-password-setup-required")).toBe("true");
+    const payload = await response.json() as { user: { id: string; email: string; emailVerified: boolean } };
+    expect(payload.user).toMatchObject({ email: credentials.email, emailVerified: true });
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM account').get()?.n).toBe(0);
+    expect((await t.request("/set-password", { newPassword: credentials.password }, cookies(response))).status).toBe(200);
+    const account = t.db.sqlite.prepare('SELECT password,providerId FROM account').get();
+    expect(account?.providerId).toBe("credential"); expect(account?.password).toBeTruthy(); expect(account?.password).not.toBe(credentials.password);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM "user"').get()?.n).toBe(1);
+    expect(t.db.sqlite.prepare('SELECT user_id,status FROM participants').get()).toMatchObject({ user_id: payload.user.id, status: "pending" });
+    expect((await t.request("/sign-in/email", credentials)).status).toBe(200);
+    expect((await t.request("/sign-in/email-otp", { email: credentials.email, otp: "123456" })).ok).toBe(false);
   });
-
-  it("requires consent before sending a signup OTP for a new email", async () => {
-    const { db, request } = setup();
-    const response = await request("/email-otp/send-verification-otp", { email: credentials.email, type: "sign-in" });
-    expect(response.status).toBe(403);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM verification").get()?.count).toBe(0);
+  it("rejects expired codes and exhausts a code after three wrong attempts without creating a user", async () => {
+    const t = setup(); await t.issueOtp(credentials.email, true);
+    const verify = (otp: string) => t.request("/sign-in/email-otp", { email: credentials.email, otp }, "", ACTIVITY_RULES_VERSION);
+    expect((await verify("123456")).ok).toBe(false);
+    await t.issueOtp();
+    for (let i = 0; i < 3; i++) expect((await verify("000000")).ok).toBe(false);
+    expect((await verify("123456")).ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM "user"').get()?.n).toBe(0);
   });
-
-  it("keeps password and OTP login working for accounts with no historical consent record", async () => {
-    const { db, auth, request } = setup();
-    expect((await request("/sign-up/email", credentials)).status).toBe(200);
-    db.sqlite.exec("DELETE FROM activity_rule_acceptances");
-    expect((await request("/sign-in/email", credentials)).status).toBe(200);
-    await issueOtp(auth);
-    const login = await request("/sign-in/email-otp", { email: credentials.email, otp: "123456", __starwardNewAccount: true }, undefined, undefined, "2026-10-11-v10");
-    expect(login.status).toBe(200);
-    expect(login.headers.get("x-starward-account-created")).toBeNull();
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM activity_rule_acceptances").get()?.count).toBe(0);
+  it("requires valid rule consent before sending or consuming a new account OTP", async () => {
+    const t = setup(); await t.issueOtp();
+    const body = { email: credentials.email, otp: "123456" };
+    expect((await t.request("/sign-in/email-otp", body)).status).toBe(403);
+    expect((await t.request("/sign-in/email-otp", body, "", "old-version")).status).toBe(409);
+    expect((await t.request("/email-otp/send-verification-otp", { email: credentials.email, type: "sign-in" })).status).toBe(403);
+    const response = await t.request("/sign-in/email-otp", body, "", ACTIVITY_RULES_VERSION);
+    expect(response.status).toBe(200);
+    const acceptance = t.db.sqlite.prepare('SELECT rules_version,accepted_at FROM activity_rule_acceptances').get();
+    expect(acceptance?.rules_version).toBe(ACTIVITY_RULES_VERSION); expect(Date.parse(String(acceptance?.accepted_at))).not.toBeNaN();
+    await t.issueOtp(); expect((await t.request("/sign-in/email-otp", body)).status).toBe(200);
+    expect(t.db.sqlite.prepare('SELECT rules_version,accepted_at FROM activity_rule_acceptances').get()).toEqual(acceptance);
   });
+  it("cleans up a new user if consent storage fails", async () => {
+    const t = setup(); await t.issueOtp();
+    t.db.sqlite.exec("CREATE TRIGGER fail_rules BEFORE INSERT ON activity_rule_acceptances BEGIN SELECT RAISE(ABORT,'unavailable'); END");
+    expect((await t.request("/sign-in/email-otp", { email: credentials.email, otp: "123456" }, "", ACTIVITY_RULES_VERSION)).ok).toBe(false);
+    for (const table of ['user', 'account', 'session', 'participants']) expect(t.db.sqlite.prepare(`SELECT COUNT(*) AS n FROM "${table}"`).get()?.n).toBe(0);
+  });
+  it("links a pre-existing invitation only after proof of email ownership", async () => {
+    const t = setup(); await t.withPassword();
+    const part = t.db.sqlite.prepare('SELECT id FROM participants').get()!;
+    t.db.sqlite.exec('UPDATE participants SET user_id=NULL; DELETE FROM "user";');
+    await t.issueOtp();
+    expect((await t.request("/sign-in/email-otp", { email: credentials.email, otp: "000000" }, "", ACTIVITY_RULES_VERSION)).ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT user_id FROM participants').get()?.user_id).toBeNull();
+    const response = await t.request("/sign-in/email-otp", { email: credentials.email, otp: "123456" }, "", ACTIVITY_RULES_VERSION);
+    expect(response.status).toBe(200);
+    expect(t.db.sqlite.prepare('SELECT id FROM participants').all()).toEqual([part]);
+    expect(t.db.sqlite.prepare('SELECT user_id FROM participants').get()?.user_id).toBeTruthy();
+  });
+});
 
-  it("removes a newly created account if its acceptance record cannot be saved", async () => {
-    const { db, request } = setup();
-    db.sqlite.exec("CREATE TRIGGER fail_rules_acceptance BEFORE INSERT ON activity_rule_acceptances BEGIN SELECT RAISE(ABORT, 'acceptance unavailable'); END");
-    const response = await request("/sign-up/email", credentials);
-    expect(response.ok).toBe(false);
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS count FROM "user"').get()?.count).toBe(0);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM account").get()?.count).toBe(0);
-    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM session").get()?.count).toBe(0);
+describe("password and legacy email accounts", () => {
+  it("requires a verified session, enforces password length and prevents overwriting an existing credential", async () => {
+    const t = setup(); const response = await t.register(); const cookie = cookies(response);
+    expect((await t.request("/set-password", { newPassword: credentials.password })).status).toBe(401);
+    expect((await t.request("/set-password", { newPassword: "short" }, cookie)).status).toBe(400);
+    expect((await t.request("/set-password", { newPassword: credentials.password }, cookie, null, "https://evil.example.com")).status).toBe(403);
+    expect((await t.request("/set-password", { newPassword: credentials.password }, cookie)).status).toBe(200);
+    expect((await t.request("/set-password", { newPassword: "overwrite-password" }, cookie)).ok).toBe(false);
+    const wrong = await t.request("/sign-in/email", { ...credentials, password: "wrong-password" });
+    expect(wrong.status).toBe(401); expect(cookies(wrong)).toBe("");
+    expect(getPasswordAuthErrorMessage(await wrong.json())).toContain("邮箱或密码不正确");
+  });
+  it("requires the current password to change it and revokes other sessions", async () => {
+    const t = setup(); const first = await t.withPassword(); const second = await t.request("/sign-in/email", credentials);
+    expect((await t.request("/change-password", { currentPassword: "wrong", newPassword: "changed-password-123" }, cookies(first))).ok).toBe(false);
+    expect((await t.request("/change-password", { currentPassword: credentials.password, newPassword: "changed-password-123", revokeOtherSessions: true }, cookies(first))).status).toBe(200);
+    expect(await (await t.request("/get-session", undefined, cookies(second))).json()).toBeNull();
+    expect((await t.request("/sign-in/email", credentials)).status).toBe(401);
+    expect((await t.request("/sign-in/email", { ...credentials, password: "changed-password-123" })).status).toBe(200);
+  });
+  it("blocks an unverified legacy password/session, then replaces credentials only after a valid OTP while preserving the workspace", async () => {
+    const t = setup({ QQ_OAUTH_ENABLED: 'true', QQ_APP_ID: '123456', QQ_APP_KEY: 'test-qq-key' }); const old = await t.withPassword(); const cookie = cookies(old);
+    const participant = t.db.sqlite.prepare('SELECT id,user_id FROM participants').get();
+    const account = t.db.sqlite.prepare('SELECT password FROM account').get();
+    t.db.sqlite.exec(`INSERT INTO account(id,accountId,providerId,userId,createdAt,updatedAt)
+      SELECT 'unverified-link','old-qq-id','qq',id,'2026-01-01','2026-01-01' FROM "user"`);
+    t.db.sqlite.exec('UPDATE "user" SET emailVerified=0');
+    expect((await t.request("/sign-in/email", credentials)).status).toBe(403);
+    expect((await t.request("/set-password", { newPassword: "another-password-123" }, cookie)).status).toBe(403);
+    expect((await t.request('/oauth2/link', { providerId: 'qq', callbackURL: '/portal' }, cookie)).status).toBe(403);
+    expect((await app.request("/api/portal/me", { headers: { cookie } }, t.env)).status).toBe(401);
+    await t.issueOtp();
+    expect((await t.request("/sign-in/email-otp", { email: credentials.email, otp: "000000" })).ok).toBe(false);
+    expect(t.db.sqlite.prepare("SELECT password FROM account WHERE providerId='credential'").get()).toEqual(account);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM account').get()?.n).toBe(2);
+    expect((await t.request("/get-session", undefined, cookie)).status).toBe(200);
+    const verified = await t.request("/sign-in/email-otp", { email: credentials.email, otp: "123456" });
+    expect(verified.status).toBe(200); expect(verified.headers.get("x-starward-password-setup-required")).toBe("true");
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM account').get()?.n).toBe(0);
+    expect(await (await t.request("/get-session", undefined, cookie)).json()).toBeNull();
+    expect(t.db.sqlite.prepare('SELECT id,user_id FROM participants').get()).toEqual(participant);
+    expect((await t.request("/set-password", { newPassword: "owner-password-123" }, cookies(verified))).status).toBe(200);
+    expect((await t.request("/sign-in/email", credentials)).status).toBe(401);
+  });
+  it("keeps verified accounts' passwords and historical consent unchanged on OTP login", async () => {
+    const t = setup(); await t.withPassword();
+    const account = t.db.sqlite.prepare('SELECT password FROM account').get();
+    t.db.sqlite.exec('DELETE FROM activity_rule_acceptances'); await t.issueOtp();
+    const response = await t.request("/sign-in/email-otp", { email: credentials.email, otp: "123456", __starwardNewAccount: true });
+    expect(response.status).toBe(200); expect(response.headers.get("x-starward-account-created")).toBeNull();
+    expect(response.headers.get("x-starward-password-setup-required")).toBeNull();
+    expect(t.db.sqlite.prepare('SELECT password FROM account').get()).toEqual(account);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM activity_rule_acceptances').get()?.n).toBe(0);
+  });
+});
+
+describe("OTP sending limits", () => {
+  it("does not report success when the mail provider fails, or when send limits are missing", async () => {
+    const t = setup();
+    t.sent.mockImplementation(async () => Response.json({ message: 'sender unavailable' }, { status: 500 }));
+    const body = { email: credentials.email, type: 'sign-in' };
+    expect((await t.request('/email-otp/send-verification-otp', body, '', ACTIVITY_RULES_VERSION)).status).toBe(503);
+    const missing = createAuth({ ...t.env, AUTH_OTP_EMAIL_RATE_LIMITER: undefined });
+    expect((await missing.handler(new Request(`${t.env.BETTER_AUTH_URL}/api/auth/email-otp/send-verification-otp`, {
+      method: 'POST', headers: { 'content-type': 'application/json', origin: t.env.BETTER_AUTH_URL!, 'x-starward-rules-version': ACTIVITY_RULES_VERSION },
+      body: JSON.stringify({ ...body, email: 'other@example.com' }),
+    }))).status).toBe(503);
+    expect(t.sent).toHaveBeenCalledOnce();
+  });
+  it("shares a normalized email limit across registration and login, before sending or changing a code", async () => {
+    const t = setup(); const body = { email: credentials.email, type: "sign-in" };
+    expect((await t.request("/email-otp/send-verification-otp", body, "", ACTIVITY_RULES_VERSION)).status).toBe(200);
+    const code = t.db.sqlite.prepare('SELECT value FROM verification').get();
+    const mail = JSON.parse(t.sent.mock.calls[0][1].body);
+    expect(mail.html).toContain(String(code?.value).split(':')[0]);
+    expect(mail.html).toContain('http://localhost:20262/brand/moon-phase.png');
+    expect(mail.html).toContain('href="http://localhost:20262/portal/login"');
+    expect(mail.text).toContain('逐星巡礼');
+    const blocked = await t.request("/email-otp/send-verification-otp", { ...body, email: " Creator@Example.com " }, "", ACTIVITY_RULES_VERSION);
+    expect(blocked.status).toBe(429); expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(t.sent).toHaveBeenCalledOnce(); expect(t.db.sqlite.prepare('SELECT value FROM verification').get()).toEqual(code);
+  });
+  it("limits the IP even when the sender rotates email addresses", async () => {
+    const t = setup();
+    for (let i = 0; i < 10; i++) expect((await t.request("/email-otp/send-verification-otp", { email: `creator${i}@example.com`, type: "sign-in" }, "", ACTIVITY_RULES_VERSION)).status).toBe(200);
+    expect((await t.request("/email-otp/send-verification-otp", { email: "eleventh@example.com", type: "sign-in" }, "", ACTIVITY_RULES_VERSION)).status).toBe(429);
+    expect(t.sent).toHaveBeenCalledTimes(10);
+  });
+  it("rejects invalid emails and disabled OTP purposes without sending mail", async () => {
+    const t = setup();
+    expect((await t.request("/email-otp/send-verification-otp", { email: "not-an-email", type: "sign-in" }, "", ACTIVITY_RULES_VERSION)).status).toBe(400);
+    for (const type of ["email-verification", "change-email"]) expect((await t.request("/email-otp/send-verification-otp", { email: credentials.email, type }, "", ACTIVITY_RULES_VERSION)).status).toBe(403);
+    expect(t.sent).not.toHaveBeenCalled(); expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+  });
+});
+
+
+describe("email password reset", () => {
+  const newPassword = "reset-password-456";
+  async function seedResetOtp(t: ReturnType<typeof setup>, expired = false) {
+    await (await t.auth.$context).internalAdapter.createVerificationValue({
+      identifier: `forget-password-otp-${credentials.email}`, value: "654321:0",
+      expiresAt: new Date(Date.now() + (expired ? -1000 : 600000)),
+    });
+  }
+  it("resets with a mailed code without the old password, preserves the workspace and revokes all previous sessions", async () => {
+    const t=setup(); const first=await t.withPassword(); const second=await t.request('/sign-in/email',credentials);
+    const participant=t.db.sqlite.prepare('SELECT id,user_id FROM participants').get();
+    expect((await t.request('/email-otp/request-password-reset',{email:' Creator@Example.com '})).status).toBe(200);
+    expect(t.sent).toHaveBeenCalledOnce();
+    const otp=String(t.db.sqlite.prepare("SELECT value FROM verification WHERE identifier=?").get(`forget-password-otp-${credentials.email}`)?.value).split(':')[0];
+    const mail=JSON.parse(t.sent.mock.calls[0][1].body);
+    expect(mail.html).toContain(otp);
+    expect(mail.html).toContain('href="http://localhost:20262/portal/login?reset=password"');
+    expect(mail.text).toContain(otp);
+    const reset=(password:string)=>t.request('/email-otp/reset-password',{email:' Creator@Example.com ',otp,password});
+    expect((await reset('short')).status).toBe(400);
+    expect((await reset(newPassword)).status).toBe(200);
+    expect((await reset(newPassword)).ok).toBe(false);
+    expect((await t.request('/sign-in/email',credentials)).status).toBe(401);
+    expect((await t.request('/sign-in/email',{...credentials,password:newPassword})).status).toBe(200);
+    for(const response of [first,second]) expect(await (await t.request('/get-session',undefined,cookies(response))).json()).toBeNull();
+    expect(t.db.sqlite.prepare('SELECT id,user_id FROM participants').get()).toEqual(participant);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM "user"').get()?.n).toBe(1);
+  });
+  it("returns generic success for unknown mailboxes without sending or creating an account",async()=>{
+    const t=setup(); const response=await t.request('/email-otp/request-password-reset',{email:'unknown@example.com'});
+    expect(response.status).toBe(200); expect(await response.json()).toEqual({success:true});
+    expect(t.sent).not.toHaveBeenCalled();
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM "user"').get()?.n).toBe(0);
+    expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM verification').get()?.n).toBe(0);
+  });
+  it("shares send quotas with login and registration, and reports delivery failures",async()=>{
+    const t=setup(); await t.withPassword();
+    expect((await t.request('/email-otp/send-verification-otp',{email:credentials.email,type:'sign-in'})).status).toBe(200);
+    expect((await t.request('/email-otp/request-password-reset',{email:' Creator@Example.com '})).status).toBe(429);
+    expect(t.sent).toHaveBeenCalledOnce();
+    const failing=setup(); await failing.withPassword();
+    failing.sent.mockImplementation(async()=>Response.json({message:'mail unavailable'},{status:500}));
+    expect((await failing.request('/email-otp/request-password-reset',{email:credentials.email})).status).toBe(503);
+  });
+  it("rejects login codes, expired reset codes and exhausted reset attempts without changing a password",async()=>{
+    const t=setup(); await t.withPassword(); await t.issueOtp();
+    const account=t.db.sqlite.prepare('SELECT password FROM account').get();
+    const reset=(otp:string)=>t.request('/email-otp/reset-password',{email:credentials.email,otp,password:newPassword});
+    expect((await reset('123456')).ok).toBe(false);
+    await seedResetOtp(t,true); expect((await reset('654321')).ok).toBe(false);
+    await seedResetOtp(t); for(let i=0;i<3;i++) expect((await reset('000000')).ok).toBe(false);
+    expect((await reset('654321')).ok).toBe(false);
+    expect(t.db.sqlite.prepare('SELECT password FROM account').get()).toEqual(account);
+    expect((await t.request('/sign-in/email',credentials)).status).toBe(200);
+  });
+  it("recovers an unverified legacy account with the new credential while discarding old linked identities",async()=>{
+    const t=setup(); const old=await t.withPassword();
+    const participant=t.db.sqlite.prepare('SELECT id,user_id FROM participants').get();
+    t.db.sqlite.exec(`UPDATE "user" SET emailVerified=0;
+      INSERT INTO account(id,accountId,providerId,userId,createdAt,updatedAt)
+      SELECT 'old-reset-link','old-provider-id','qq',id,'2026-01-01','2026-01-01' FROM "user";`);
+    await seedResetOtp(t);
+    expect((await t.request('/email-otp/reset-password',{email:credentials.email,otp:'654321',password:newPassword})).status).toBe(200);
+    expect(t.db.sqlite.prepare('SELECT emailVerified FROM "user"').get()?.emailVerified).toBe(1);
+    expect(t.db.sqlite.prepare('SELECT providerId FROM account').all()).toEqual([{providerId:'credential'}]);
+    expect((await t.request('/sign-in/email',{...credentials,password:newPassword})).status).toBe(200);
+    expect(await (await t.request('/get-session',undefined,cookies(old))).json()).toBeNull();
+    expect(t.db.sqlite.prepare('SELECT id,user_id FROM participants').get()).toEqual(participant);
   });
 });

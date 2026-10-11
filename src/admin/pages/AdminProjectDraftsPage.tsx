@@ -121,7 +121,7 @@ export function AdminProjectDraftsPage() {
                       <Link
                         className="inline-flex min-h-10 items-center justify-center gap-2 px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-base hover:bg-surface-bright transition-colors"
                         params={{ draftId: item.id }}
-                        to="/admin/project-drafts/$draftId"
+                        to="/portal/admin/project-drafts/$draftId"
                       >
                         <FileText className="w-4 h-4" />
                         查看详情

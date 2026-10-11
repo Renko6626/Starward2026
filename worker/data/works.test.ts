@@ -1,3 +1,4 @@
+import { adminTestSession } from '../test/admin-session';
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -18,11 +19,12 @@ class Statement {
   constructor(private db: DatabaseSync, private sql: string, private args: SQLInputValue[] = []) {}
   bind(...args: SQLInputValue[]) { return new Statement(this.db, this.sql, args); }
   async first<T>() { return (this.db.prepare(this.sql).get(...this.args) as T | undefined) ?? null; }
-  async all() { return { results: this.db.prepare(this.sql).all(...this.args) }; }
+  async all() { return { results: this.db.prepare(this.sql).all(...this.args), success: true, meta: this.db.prepare('SELECT changes() AS changes, last_insert_rowid() AS last_row_id').get() }; }
   async run() { const result = this.db.prepare(this.sql).run(...this.args); return { success: true, meta: { changes: Number(result.changes) } }; }
 }
 class TestDatabase {
   sqlite = new DatabaseSync(":memory:");
+  async exec(sql: string) { this.sqlite.exec(sql); }
   prepare(sql: string) { return new Statement(this.sqlite, sql); }
   async batch(statements: Statement[]) {
     this.sqlite.exec("BEGIN");
@@ -135,12 +137,12 @@ describe("public work publication", () => {
     openWindow(); readyDraft();
     const app = new Hono<AppRouteConfig>().route("/api/admin", adminApi);
     const url = `http://localhost/api/admin/project-drafts/${draftId}`;
-    expect((await app.request(`${url}/publish`, { method: "POST" }, { DB: db, CLOUDFLARE_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com", CLOUDFLARE_ACCESS_POLICY_AUD: "test" })).status).toBe(403);
-    const env = { DB: db, ALLOW_LOCAL_ADMIN_BYPASS: "true" };
+    const { env, headers } = await adminTestSession(db);
+    expect((await app.request(`${url}/publish`, { method: "POST" }, env)).status).toBe(401);
     for (const action of ["publish", "unpublish"]) {
-      expect((await app.request(`${url}/${action}`, { method: "POST" }, env)).status).toBe(200);
+      expect((await app.request(`${url}/${action}`, { method: "POST", headers }, env)).status).toBe(200);
     }
-    const response = await app.request(url, {}, env);
+    const response = await app.request(url, { headers }, env);
     expect(await response.json()).toMatchObject({ publicationWindow: { isOpen: true }, draft: { publishedAt: null } });
   });
 });
@@ -272,12 +274,12 @@ describe('additional schedule slots', () => {
   it('appends through the protected API with stable codes and leaves all original slots unchanged', async () => {
     const original = database.sqlite.prepare('SELECT * FROM schedule_segments ORDER BY id').all();
     const app = new Hono<AppRouteConfig>().route('/api/admin', adminApi);
-    const env = { DB: db, ALLOW_LOCAL_ADMIN_BYPASS: 'true' };
+    const { env, headers } = await adminTestSession(db);
     const request = (count: number, authenticated = true) => app.request('http://localhost/api/admin/segments/append', {
-      method: 'POST', headers: { 'content-type': 'application/json', ...(authenticated ? { 'x-admin-email': actor } : {}) },
+      method: 'POST', headers: { 'content-type': 'application/json', ...(authenticated ? headers : {}) },
       body: JSON.stringify({ count }),
-    }, authenticated ? env : { DB: db, CLOUDFLARE_ACCESS_TEAM_DOMAIN: 'https://example.cloudflareaccess.com', CLOUDFLARE_ACCESS_POLICY_AUD: 'test' });
-    expect((await request(2, false)).status).toBe(403);
+    }, env);
+    expect((await request(2, false)).status).toBe(401);
     expect((await request(0)).status).toBe(422);
     expect((await request(121)).status).toBe(422);
     expect((await request(2)).status).toBe(201);

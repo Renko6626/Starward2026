@@ -104,12 +104,16 @@ export type AdminSegmentListResponse = {
   items: AdminSegmentItem[];
 };
 
-export const updateSegmentInputSchema = z.object({
+export const updateSegmentInputSchema = z.union([z.object({
+  mode: z.literal('fill-empty-time'),
+  scheduledAt: z.string().trim().datetime({ offset: true }),
+}).strict(), z.object({
+  mode: z.undefined().optional(),
   scheduledAt: z.string().trim().datetime({ offset: true }).nullable().optional(),
   description: z.string().trim().max(240).nullable().optional(),
   status: portalSegmentStatusSchema,
   currentParticipantId: z.string().trim().min(1).max(64).nullable().optional(),
-});
+})]);
 
 export type UpdateSegmentInput = z.infer<typeof updateSegmentInputSchema>;
 

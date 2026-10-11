@@ -1,156 +1,21 @@
 import { ArchiveBackground } from "../../portal/components/ArchiveBackground";
-import { useEffect, useRef, useState, type PropsWithChildren } from "react";
-import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  ArrowUpRight,
-  CalendarDays,
-  FilePenLine,
-  LogOut,
-  Menu,
-  Settings2,
-  ShieldCheck,
-  Users,
-  X,
-} from "lucide-react";
-import { Brand, SiteHeader, SiteFooter } from "./SiteLayout";
-import { ScrollProgress } from "../components/ScrollProgress";
+import { useState, type PropsWithChildren } from "react";
+import { useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
+import { LogOut } from "lucide-react";
+import { SiteHeader, SiteFooter } from "./SiteLayout";
 import { authClient } from "../../portal/lib/auth-client";
 
-const adminItems = [
-  { to: "/admin/participants", label: "参与者管理", icon: Users },
-  { to: "/admin/project-drafts", label: "作品审核", icon: FilePenLine },
-  { to: "/admin/schedule", label: "接力排期", icon: CalendarDays },
-  { to: "/admin/settings/windows", label: "活动设置", icon: Settings2 },
-] as const;
-
-export function WorkspaceLayout({
-  kind,
-  children,
-}: PropsWithChildren<{ kind: "portal" | "admin" }>) {
+export function WorkspaceLayout({ children }: PropsWithChildren<{ kind: "portal" }>) {
   const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
-  const [open, setOpen] = useState(false);
-  const menuTrigger = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        menuTrigger.current?.focus();
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
   const { pathname } = useLocation();
-  const items = adminItems;
-  const navPath = pathname.startsWith("/admin/applications") ? "/admin/participants" : pathname;
-  const current = [...items]
-    .reverse()
-    .find((item) => navPath === item.to || navPath.startsWith(`${item.to}/`));
-  if (kind === "portal") {
-    return <div className={`creator-shell${pathname === "/portal" || pathname === "/portal/" ? " author-archive-shell" : ""}`}>
-      {pathname === "/portal" || pathname === "/portal/" ? <ArchiveBackground /> : null}
-      <a className="skip-link" href="#main-content">跳至正文</a>
-      <SiteHeader />
-      <main id="main-content" className="creator-content" aria-busy={pending}>{children}</main>
-      <SiteFooter />
-    </div>;
-  }
-  return (
-    <div className={`workspace workspace--${kind}`}>
-
-      <ScrollProgress key={pathname} />
-      <a className="skip-link" href="#main-content">
-        跳至正文
-      </a>
-      <button
-        className={`sidebar-scrim ${open ? "is-open" : ""}`}
-        aria-label="关闭导航"
-        aria-hidden={!open}
-        disabled={!open}
-        tabIndex={-1}
-        type="button"
-        onClick={() => setOpen(false)}
-      />
-      <aside
-        className={`workspace-sidebar ${open ? "is-open" : ""}`}
-        id="workspace-navigation"
-      >
-        <div className="sidebar-brand">
-          <Brand />
-          <button
-            className="icon-button mobile-menu-button"
-            type="button"
-            aria-label="关闭导航"
-            onClick={() => setOpen(false)}
-          >
-            <X />
-          </button>
-        </div>
-        <div className="sidebar-caption">
-          {kind === "admin" ? "ORGANIZER / 活动管理" : "CREATOR / 作者页面"}
-        </div>
-        <nav aria-label={kind === "admin" ? "管理后台导航" : "创作者导航"}>
-          {items.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              activeOptions={{ exact: false }}
-              className="workspace-nav-item"
-              onClick={() => setOpen(false)}
-            >
-              <Icon size={18} strokeWidth={1.5} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <Link to="/" className="sidebar-site-link">
-            返回活动站点 <ArrowUpRight size={15} />
-          </Link>
-          <p>
-            STARWARD · 2026
-          </p>
-        </div>
-      </aside>
-      <div className="workspace-body">
-        <header className="workspace-topbar">
-          <div>
-            <button
-              className="icon-button mobile-menu-button"
-              type="button"
-              aria-label="打开导航"
-              aria-expanded={open}
-              ref={menuTrigger}
-              aria-controls="workspace-navigation"
-              onClick={() => setOpen(!open)}
-            >
-              <Menu />
-            </button>
-            <span>{kind === "admin" ? "主催控制台" : "作者页面"}</span>
-            <span className="breadcrumb-divider">/</span>
-            <strong>{current?.label}</strong>
-          </div>
-          {kind === "admin" ? (
-            <span className="workspace-identity">
-              <ShieldCheck size={15} />
-              主催管理
-            </span>
-          ) : (
-            <PortalAccount />
-          )}
-        </header>
-        <main id="main-content" className="workspace-content" aria-busy={pending}>
-          <div className="route-stage">
-            {children}
-          </div>
-        </main>
-        <footer className="workspace-footer">
-          STARWARD 2026 <span>秘封组同人创作接力</span>
-        </footer>
-      </div>
-    </div>
-  );
+  const archive = pathname === "/portal" || pathname === "/portal/";
+  return <div className={`creator-shell${archive ? " author-archive-shell" : ""}`}>
+    {archive ? <ArchiveBackground /> : null}
+    <a className="skip-link" href="#main-content">跳至正文</a>
+    <SiteHeader />
+    <main id="main-content" className="creator-content" aria-busy={pending}>{children}</main>
+    <SiteFooter />
+  </div>;
 }
 
 export function PortalAccount() {

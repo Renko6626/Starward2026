@@ -72,8 +72,24 @@ Configure the runtime separately for `starward2026-production`:
 - Add `BETTER_AUTH_SECRET` as a Worker secret using the Cloudflare dashboard or
   `npx wrangler secret put BETTER_AUTH_SECRET --env production --config wrangler.jsonc`.
   Use a stable, random secret of at least 32 characters; do not regenerate it on each release.
-- Configure Cloudflare Access for the admin paths, with
-  `CLOUDFLARE_ACCESS_TEAM_DOMAIN` and `CLOUDFLARE_ACCESS_POLICY_AUD` on the Worker.
+- Admin access uses the existing website login and the `admin_roles` table.
+  Apply migration `0022_admin_roles.sql` before deploying the new Worker.
+  Bootstrap the initial owner using `npm run admin:bootstrap -- --production`
+  with `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in the environment.
+  This creates `admin@hifuu.moe` with a cryptographically random password, stores
+  only its Better Auth hash in D1, and saves the password to ignored
+  `.admin-credentials/production-owner.json`. The command refuses to overwrite
+  an existing account and does not rotate an existing owner's password.
+  An explicitly authorized two-line credential file can instead be passed with
+  `--credentials <path>` (account ID and API token; never committed).
+- The owner manages access at `/portal/admin/settings/admins`: search registered users,
+  then confirm granting or revoking administrator access. Only verified real
+  email accounts qualify. Changes are recorded in `admin_role_events` and take
+  effect on the next API request. The owner's role cannot be changed in the UI.
+- Cloudflare Access is no longer the application authorization mechanism. If an
+  old Access application still covers the site at the edge, remove that external
+  challenge separately when switching to website login. Old Access headers and
+  local bypass flags cannot grant application admin access.
 - For QQ login, set `QQ_OAUTH_ENABLED=true` in the production Wrangler vars,
   configure `QQ_APP_ID` and the `QQ_APP_KEY` Worker secret, and register the
   production callback. See [qq-oauth.md](qq-oauth.md).
@@ -82,10 +98,22 @@ Configure the runtime separately for `starward2026-production`:
   not require Resend.
 - Keep `ALLOW_LOCAL_ADMIN_BYPASS` and `ALLOW_LOCAL_DEV_ORIGINS` out of the deployed runtime.
 
+### Turnstile
+
+Create a Managed Turnstile widget with `hifuu.moe` in its hostname allowlist. Add the staging hostname too if it uses the same widget, or configure a separate widget/key pair for staging.
+
+1. Set the public `VITE_TURNSTILE_SITE_KEY` in GitHub's **production environment Variables**. The tag workflow passes it into the Vite build; it is public, not a Worker secret.
+2. Deploy the frontend with that key first, then set the matching private `TURNSTILE_SECRET_KEY` on `starward2026-production` in Cloudflare. The secret enables server checks and the public providers/intake responses expose only the enabled flag. Do not put the secret in GitHub Variables, any `VITE_` variable, the repository or chat.
+3. With the secret enabled, email OTP sends, password reset OTP sends, password login and application submissions require verification. OTP proof, password setup, password reset submission keep their existing authentication steps; administrator password login uses the same verification as other website accounts. Rate limits remain enabled.
+
+If the secret is absent, Turnstile is disabled. If the secret is present but the public key is missing, the form shows that verification is unavailable and blocks protected requests; it does not bypass the server check. Tokens are refreshed after protected requests and after an explicit retry. Real browser verification, allowed hostnames and email delivery still need manual staging validation.
+
+For local development, put the public key in `.env.local` and the matching secret in `.dev.vars`. Use Cloudflare's [official testing keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for offline development; never use testing keys in production. Restart Vite after changing build-time variables. No database migration is required.
+
 GitHub's deployment token is for managing Cloudflare resources; it does not replace
-these application runtime secrets. The workflow does not provision Access or QQ
+these application runtime secrets. The workflow does not provision owner accounts or QQ
 applications and does not rotate runtime secrets. The smoke check confirms the
-site and API are reachable; it does not test real user login, Access or QQ OAuth.
+site and API are reachable and unauthenticated admin requests are denied; it does not test real user login or QQ OAuth.
 
 ## Cloudflare API token
 
@@ -153,3 +181,37 @@ already-applied schema.
 More references: [Vite production environment selection](https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/),
 [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/),
 [Wrangler deploy options](https://developers.cloudflare.com/workers/wrangler/commands/workers/).
+
+## Privacy policy and Google verification
+
+The public policy lives in `public/privacy.html`. Cloudflare serves this asset at
+`/privacy`; the Worker also returns the same HTML at `/privacy` and `/privacy/`
+for requests that reach application routing. Keep links to this page as ordinary
+HTML anchors so the client router does not try to resolve it as a React route.
+It must remain readable without JavaScript, authentication, or a database binding.
+`worker/privacy.test.ts` covers the direct HTTP response and content type.
+
+The Google disclosure describes basic sign-in only, as confirmed by the site
+owner: identity, email, and profile. This checkout configures email/password and
+optional QQ authentication, not a Google provider. Before releasing a version
+that changes Google authentication, reconcile the deployed provider and consent
+screen scopes with the policy; do not add broader permissions to fit policy text.
+
+After deploying, request `https://hifuu.moe/privacy` without cookies and confirm
+HTTP 200, `Content-Type: text/html`, and the complete policy in the response body.
+Also open it with JavaScript disabled and follow the homepage privacy link.
+The OAuth consent screen privacy URL remains `https://hifuu.moe/privacy`.
+Once the updated page is live, retry verification or respond to the existing
+Google verification email that the page at the same URL has been corrected.
+See [Google's privacy policy verification guidance](https://support.google.com/cloud/answer/13806988).
+
+## Configured production email and Turnstile
+
+- Production Worker: `starward2026-production` at `https://hifuu.moe`.
+- D1: `starward2026-prod`; the resolved production UUID is recorded in `wrangler.jsonc`.
+- Sender: `逐星巡礼 <noreply@hifuu.moe>`.
+- Runtime secrets: `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, and `TURNSTILE_SECRET_KEY` are managed on the Worker; never put their values in the repository.
+- The production Turnstile widget allows `hifuu.moe` and uses managed mode. The public site key is in `.env.production`. GitHub environment variable `VITE_TURNSTILE_SITE_KEY`, when nonempty, overrides it during a release build.
+- `.env.production` follows Vite's build mode, not the Wrangler environment. A staging production-mode build must override `VITE_TURNSTILE_SITE_KEY` with a widget key valid for its staging hostname if Turnstile is enabled there.
+- Resend sending uses the verified `resend._domainkey` TXT record and DNS-only `send` / `rsend` CNAME records. Receiving remains disabled.
+- Local credential files (`*.pem`, `cloudflare.env`) and `.cloudflare-deploy/` are ignored by Git.

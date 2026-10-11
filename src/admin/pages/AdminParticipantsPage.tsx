@@ -11,7 +11,7 @@ import { buildCreatorRows, filterCreatorRows } from "../lib/creator-list";
 type Payload = { participants: AdminParticipantListResponse["items"]; applications: AdminApplicationListResponse["items"]; segments: AdminSegmentListResponse["items"]; drafts: AdminProjectDraftListResponse["items"] };
 
 export function AdminParticipantsPage() {
-  const { view } = getRouteApi("/admin/participants/").useSearch();
+  const { view } = getRouteApi("/portal_/admin/participants/").useSearch();
   const [query, setQuery] = useState("");
   const [state, setState] = useState<{ status: "loading" } | { status: "error"; message: string } | { status: "ready"; payload: Payload }>({ status: "loading" });
   useEffect(() => {
@@ -36,11 +36,11 @@ export function AdminParticipantsPage() {
     </PageHeading>
     {state.status === "ready" ? <div className="admin-work-summary">
       <span>待审核报名 <strong>{pending}</strong></span>
-      <Link to="/admin/project-drafts">待审核作品 <strong>{reviewCount}</strong></Link>
-      <Link to="/admin/participants" search={{ view: "unassigned" }}>尚未分配时点的已通过创作者 <strong>{state.payload.participants.filter(item => item.status === "approved" && !item.currentSegmentCode).length}</strong></Link>
+      <Link to="/portal/admin/project-drafts">待审核作品 <strong>{reviewCount}</strong></Link>
+      <Link to="/portal/admin/participants" search={{ view: "unassigned" }}>尚未分配时点的已通过创作者 <strong>{state.payload.participants.filter(item => item.status === "approved" && !item.currentSegmentCode).length}</strong></Link>
     </div> : null}
     <nav className="flex flex-wrap gap-2" aria-label="参与者筛选">
-      {(["pending", "unassigned", "all"] as const).map(value => <Link key={value} to="/admin/participants" search={{ view: value }} aria-current={view === value ? "page" : undefined} className={cn("button button--secondary", view === value && "bg-primary/10 text-primary border-primary/30")}>{value === "unassigned" ? "已通过待安排" : value === "pending" ? `待审核 (${pending})` : `全部创作者 (${rows.length})`}</Link>)}
+      {["pending", "unassigned", "all"].map(value => <Link key={value} to="/portal/admin/participants" search={{ view: value as "pending" | "unassigned" | "all" }} aria-current={view === value ? "page" : undefined} className={cn("button button--secondary", view === value && "bg-primary/10 text-primary border-primary/30")}>{value === "unassigned" ? "已通过待安排" : value === "pending" ? `待审核 (${pending})` : `全部创作者 (${rows.length})`}</Link>)}
     </nav>
     {state.status === "loading" ? <StateNotice message="正在读取参与者列表。" /> : null}
     {state.status === "error" ? <ReadError message={state.message} /> : null}
@@ -53,7 +53,7 @@ export function AdminParticipantsPage() {
             <td><span className="mobile-field-label">参加形式</span>{application ? applicationInterestFormatLabels[application.interestFormat] : "尚未报名"}</td>
             <td><span className="mobile-field-label">发布时点</span>{segment ? <>{segment.code}<div className="text-sm text-on-surface-variant">{formatScheduledTime(segment.scheduledAt)}</div></> : participant?.currentSegmentCode ?? "待主催安排"}</td>
             <td><StatusBadge>{application ? applicationStatusLabels[application.status] : "未提交报名"}</StatusBadge>{participant && (participant.status === "completed" || (application?.status === "approved" && participant.status !== "approved")) ? <div className="text-sm text-on-surface-variant">参与资格：{adminParticipantStatusLabels[participant.status]}</div> : null}</td>
-            <td>{participant ? <Link className="button button--secondary" to="/admin/participants/$participantId" params={{ participantId: participant.id }}>查看详情</Link> : application ? <Link className="button button--secondary" to="/admin/applications/$applicationId" params={{ applicationId: application.id }}>查看详情</Link> : null}</td>
+            <td>{participant ? <Link className="button button--secondary" to="/portal/admin/participants/$participantId" params={{ participantId: participant.id }}>查看详情</Link> : application ? <Link className="button button--secondary" to="/portal/admin/applications/$applicationId" params={{ applicationId: application.id }}>查看详情</Link> : null}</td>
           </tr>;
         })}
       </tbody></table>
