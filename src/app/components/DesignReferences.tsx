@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 const references = [
   {
     author: 'Ren J, Wang Y, Li M, Zheng J.',
@@ -32,9 +33,10 @@ const references = [
 ];
 
 export function DesignReferences() {
+  const { t } = useSiteTranslation();
   return (
     <section className="design-references" aria-labelledby="design-references-title">
-      <h2 id="design-references-title">设计参考</h2>
+      <h2 id="design-references-title">{t("public.references.title")}</h2>
       <ol className="design-reference-list">
         {references.map((reference, index) => (
           <li key={reference.href}>

@@ -1,4 +1,5 @@
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
+import { getRequestLanguage } from '../../src/shared/i18n';
 import { Hono } from "hono";
 import { publicHttpsUrlSchema } from "../../src/shared/works";
 import { confirmPortalProjectRelease, getPortalReleaseState } from "../data/relay-publication";
@@ -148,6 +149,7 @@ portalApi.get("/dashboard", async (c) => {
       participant: access.participant,
       windows: await listEventWindows(access.db),
     },
+    getRequestLanguage(c.req.raw.headers),
   );
 
   return c.json(response);
@@ -273,13 +275,13 @@ portalApi.post("/application/withdraw", async (c) => {
 portalApi.get("/collaboration", async (c) => {
   const access = await getPortalSessionAccess(c);
   if ("response" in access) return access.response;
-  return c.json(await getCollaboration(access.db, access.session.user.id));
+  return c.json(await getCollaboration(access.db, access.session.user.id, getRequestLanguage(c.req.raw.headers)));
 });
 
 portalApi.get("/neighbors", async (c) => {
   const access = await getPortalSessionAccess(c);
   if ("response" in access) return access.response;
-  return c.json(await getPortalNeighbors(access.db, access.session.user.id));
+  return c.json(await getPortalNeighbors(access.db, access.session.user.id, getRequestLanguage(c.req.raw.headers)));
 });
 
 portalApi.post("/swaps", async (c) => {
@@ -909,7 +911,7 @@ portalApi.get("/history", async (c) => {
   const response: PortalHistoryResponse = await getPortalHistory(access.db, {
     user: mapPortalAuthUser(access.session.user),
     participant: access.participant,
-  });
+  }, getRequestLanguage(c.req.raw.headers));
 
   return c.json(response);
 });

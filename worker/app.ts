@@ -8,10 +8,32 @@ import { jsonError } from "./lib/http";
 import type { AppRouteConfig } from "./lib/types";
 import privacyHtml from "../public/privacy.html?raw";
 import tosHtml from "../public/tos.html?raw";
+import privacyEnHtml from '../public/privacy-en.html?raw';
+import tosEnHtml from '../public/tos-en.html?raw';
+import { setCookie } from 'hono/cookie';
 import { requireAdminAccess } from './lib/admin';
 import { isAdminPath, adminReturnTo } from '../src/shared/admin-access';
+import { getRequestLanguage, LANGUAGE_COOKIE } from '../src/shared/i18n';
+import type { AppContext } from './lib/types';
+import { localizeApiPayload } from './lib/i18n';
 
 const app = new Hono<AppRouteConfig>();
+
+app.use('/api/*', async (c, next) => {
+  await next();
+  const language = getRequestLanguage(c.req.raw.headers, c.req.path);
+  const response = c.res;
+  if (!response.headers.get('Content-Type')?.includes('application/json')) return;
+  const headers = new Headers(response.headers);
+  headers.set('Content-Language', language);
+  const vary = new Set((headers.get('Vary') ?? '').split(',').map(value => value.trim()).filter(Boolean));
+  vary.add('Accept-Language'); vary.add('Cookie');
+  headers.set('Vary', [...vary].join(', '));
+  if (language === 'zh-CN') { c.res = new Response(response.body, { status: response.status, headers }); return; }
+  const payload: unknown = await response.clone().json();
+  headers.delete('Content-Length');
+  c.res = new Response(JSON.stringify(localizeApiPayload(payload, c.req.path, language)), { status: response.status, headers });
+});
 
 app.use('*', async (c, next) => {
   const url = new URL(c.req.url);
@@ -33,10 +55,20 @@ app.use('*', async (c, next) => {
 
 // Keep the policy readable to direct HTTP clients as well as asset navigation.
 // The static asset and Worker fallback share the same complete HTML document.
-app.get("/privacy", (c) => c.html(privacyHtml));
-app.get("/privacy/", (c) => c.html(privacyHtml));
-app.get("/tos", (c) => c.html(tosHtml));
-app.get("/tos/", (c) => c.html(tosHtml));
+function policyResponse(c: AppContext, chinese: string, english: string) {
+  const requested = c.req.query('lang');
+  const explicit = requested === 'en' || requested === 'zh-CN' ? requested : undefined;
+  const language = explicit ?? getRequestLanguage(c.req.raw.headers);
+  if (explicit) setCookie(c, LANGUAGE_COOKIE, explicit, { path: '/', maxAge: 31536000, sameSite: 'Lax', secure: new URL(c.req.url).protocol === 'https:' });
+  c.header('Content-Language', language);
+  c.header('Vary', 'Accept-Language, Cookie');
+  c.header('Cache-Control', 'private, no-cache');
+  return c.html(language === 'en' ? english : chinese);
+}
+app.get("/privacy", (c) => policyResponse(c, privacyHtml, privacyEnHtml));
+app.get("/privacy/", (c) => policyResponse(c, privacyHtml, privacyEnHtml));
+app.get("/tos", (c) => policyResponse(c, tosHtml, tosEnHtml));
+app.get("/tos/", (c) => policyResponse(c, tosHtml, tosEnHtml));
 
 app.route("/api", publicApi);
 app.route("/api/admin", adminApi);

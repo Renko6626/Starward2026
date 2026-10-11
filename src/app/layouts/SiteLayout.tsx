@@ -1,22 +1,26 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { useEffect, useId, useRef, useState, type PropsWithChildren } from "react";
 import { Link, useLocation, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react";
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher";
 import { useAdminNavigation } from '../lib/use-admin-navigation';
 
 export function Brand() {
+  const { t, language } = useSiteTranslation();
   return (
-    <Link to="/" className="brand" aria-label="逐星巡礼首页">
+    <Link to="/" className="brand" aria-label={t("public.nav.brandHome")}>
       <img className="brand-emblem" src="/brand/moon-phase.png" alt="" width={44} height={38} />
       <span>
-        逐星巡礼<small>Starward Pilgrimage</small>
+        {t("public.brand")}{language === 'zh-CN' ? <small>Starward Pilgrimage</small> : null}
       </span>
     </Link>
   );
 }
 
 export function SiteHeader() {
+  const { t } = useSiteTranslation();
   const showAdmin = useAdminNavigation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(() => matchMedia('(max-width: 800px)').matches);
@@ -70,7 +74,7 @@ export function SiteHeader() {
         <button
           className="icon-button mobile-menu-button"
           type="button"
-          aria-label={menuOpen ? "关闭导航" : "打开导航"}
+          aria-label={menuOpen ? t("public.nav.close") : t("public.nav.open")}
           aria-expanded={menuOpen}
           ref={menuTrigger}
           aria-controls={!mobile || menuOpen ? "public-navigation" : undefined}
@@ -96,13 +100,13 @@ export function SiteHeader() {
             activeOptions={{ exact: true }}
             onClick={() => setMenuOpen(false)}
           >
-            {({ isActive }) => <>活动首页<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+            {({ isActive }) => <>{t("public.nav.home")}<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link>
           <Link to="/works" search={{ view: "gallery", type: "all", q: "" }} activeOptions={{ includeSearch: false }} onClick={() => setMenuOpen(false)}>
-            {({ isActive }) => <>时间表<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+            {({ isActive }) => <>{t("public.nav.schedule")}<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link>
           <Link to="/apply" onClick={() => setMenuOpen(false)}>
-            {({ isActive }) => <>参与指南<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+            {({ isActive }) => <>{t("public.nav.guide")}<NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link>
           <Link
             className="nav-entry"
@@ -110,11 +114,12 @@ export function SiteHeader() {
             activeOptions={{ exact: pathname === '/portal/admin' || pathname.startsWith('/portal/admin/') }}
             onClick={() => setMenuOpen(false)}
           >
-            {({ isActive }) => <>作者页面 <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+            {({ isActive }) => <>{t("public.nav.author")} <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link>
           {showAdmin ? <Link to="/portal/admin" onClick={() => setMenuOpen(false)}>
-            {({ isActive }) => <>管理面板 <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
+            {({ isActive }) => <>{t("public.nav.admin")} <ArrowUpRight size={15} /><NavigationIndicator active={isActive} mobile={mobile} reduced={!!reduced} /></>}
           </Link> : null}
+          {!pathname.startsWith("/portal/admin") && <LanguageSwitcher />}
         </NavigationPanel>}
         </AnimatePresence>
         </LayoutGroup>
@@ -123,8 +128,9 @@ export function SiteHeader() {
 }
 
 function NavigationPanel({ mobile, reduced, children }: PropsWithChildren<{ mobile: boolean; reduced: boolean }>) {
+  const { t } = useSiteTranslation();
   const present = useIsPresent();
-  return <motion.nav id="public-navigation" className="public-nav is-open" aria-label="站点导航"
+  return <motion.nav id="public-navigation" className="public-nav is-open" aria-label={t("public.nav.site")}
     inert={!present} aria-hidden={!present || undefined}
     initial={mobile ? { opacity: 0, y: reduced ? 0 : -6 } : false}
     animate={{ opacity: 1, y: 0, transition: { duration: reduced || !mobile ? 0 : .18, ease: 'easeOut' } }}
@@ -140,29 +146,31 @@ function NavigationIndicator({ active, mobile, reduced }: { active: boolean; mob
 }
 
 export function SiteFooter() {
+  const { t, language } = useSiteTranslation();
   return (
     <footer className="public-footer">
       <div className="footer-main">
         <div className="footer-identity">
-          <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />逐星巡礼</span>
-          <span>Starward Pilgrimage</span>
+          <span className="footer-brand"><img src="/brand/moon-phase.png" alt="" width={32} height={28} />{t("public.brand")}</span>
+          {language === 'zh-CN' ? <span>Starward Pilgrimage</span> : null}
         </div>
-        <nav className="footer-links" aria-label="页脚导航">
-          <Link to="/apply">参与指南</Link>
-          <Link to="/rules">活动规则</Link>
-          <a href="/tos">服务条款</a>
-          <a href="/privacy">隐私政策</a>
+        <nav className="footer-links" aria-label={t("public.nav.footer")}>
+          <Link to="/apply">{t("public.nav.guide")}</Link>
+          <Link to="/rules">{t("public.nav.rules")}</Link>
+          <a href="/tos">{t("public.nav.terms")}</a>
+          <a href="/privacy">{t("public.nav.privacy")}</a>
         </nav>
       </div>
       <div className="footer-contact">
-        <span>主办方：逐星巡礼组委会</span>
-        <span>活动 QQ 群：1078039621</span>
+        <span>{t("public.footer.organizer")}</span>
+        <span>{t("public.footer.group")}</span>
       </div>
     </footer>
   );
 }
 
 export function SiteLayout({ children }: PropsWithChildren) {
+  const { t } = useSiteTranslation();
   const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
   const activePath = useRouterState({ select: state => state.matches.at(-1)?.pathname ?? state.location.pathname });
   const pathname = activePath.replace(/\/+$/, "") || "/";
@@ -172,7 +180,7 @@ export function SiteLayout({ children }: PropsWithChildren) {
   return (
     <div className={`public-site ${pathname === "/" ? "public-site--home" : pathname === "/apply" ? "public-site--guide" : pathname === "/portal/login" ? "public-site--entry" : ""}`}>
       <ScrollProgress key={pathname} />
-      <a className="skip-link" href="#main-content">跳至正文</a>
+      <a className="skip-link" href="#main-content">{t("public.nav.skip")}</a>
       <SiteHeader />
       <main id="main-content" className="public-main" aria-busy={pending}>
         <div className="route-stage">{children}</div>

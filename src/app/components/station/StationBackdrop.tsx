@@ -1,9 +1,11 @@
+import { useSiteTranslation } from "../../../i18n/use-site-translation";
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Pause, Play } from 'lucide-react';
 import type { StationScene } from './scene';
 
 export function StationBackdrop({ paused, onTogglePaused, controlsContainer }: { paused: boolean; onTogglePaused: () => void; controlsContainer: RefObject<HTMLDivElement | null> }) {
+  const { t } = useSiteTranslation();
   const root = useRef<HTMLDivElement>(null);
   const scene = useRef<StationScene | null>(null);
   const [ready, setReady] = useState(false);
@@ -74,7 +76,7 @@ export function StationBackdrop({ paused, onTogglePaused, controlsContainer }: {
       {ready && !reduced && controlsContainer.current ? createPortal(
         <button className="station-motion" type="button" aria-pressed={paused} onClick={onTogglePaused}>
           {paused ? <Play size={13} /> : <Pause size={13} />}
-          {paused ? '继续运行' : '暂停运行'}
+          {paused ? t("public.scene.resume") : t("public.scene.pause")}
         </button>
       , controlsContainer.current) : null}
     </>

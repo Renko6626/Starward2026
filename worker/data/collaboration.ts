@@ -1,3 +1,4 @@
+import type { SiteLanguage } from '../../src/shared/i18n';
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   CollaborationResponse,
@@ -254,12 +255,17 @@ export async function saveWorkspaceApplication(
   return saved;
 }
 
-const publicName = `CASE WHEN pp.is_anonymous = 1 THEN '匿名创作者' ELSE COALESCE(pp.credit_name, '未填写署名') END`;
+function publicNameSql(alias: 'pp' | 'rp' | 'tp', language: SiteLanguage) {
+  const anonymous = language === 'en' ? 'Anonymous creator' : '匿名创作者';
+  const unnamed = language === 'en' ? 'Credit name not provided' : '未填写署名';
+  return `CASE WHEN ${alias}.is_anonymous = 1 THEN '${anonymous}' ELSE COALESCE(${alias}.credit_name, '${unnamed}') END`;
+}
 
 /** Read eligibility and adjacency in one snapshot; contact fields never enter this response. */
 export async function getPortalNeighbors(
   db: D1Database,
   userId: string,
+  language: SiteLanguage = 'zh-CN',
 ): Promise<PortalNeighborsResponse> {
   const rows = await db
     .prepare(
@@ -271,7 +277,7 @@ export async function getPortalNeighbors(
           WHEN s.current_participant_id IS NULL AND s.status IN ('open','released') THEN 'available'
           ELSE 'unavailable'
         END AS status,
-        CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName,
+        CASE WHEN p.id IS NULL THEN NULL ELSE ${publicNameSql('pp', language)} END AS publicName,
         CASE WHEN s.status IN ('held','locked','completed') AND
           (p.status='approved' OR (p.status='completed' AND a.status='approved'))
           THEN pp.bilibili_uid ELSE NULL END AS bilibiliUid,
@@ -332,6 +338,7 @@ type SegmentRow = {
 export async function getCollaboration(
   db: D1Database,
   userId: string,
+  language: SiteLanguage = 'zh-CN',
 ): Promise<CollaborationResponse> {
   await expirePastCutoffRequests(db);
   const participant = await db
@@ -342,7 +349,7 @@ export async function getCollaboration(
     .prepare(
       `SELECT s.id,s.kind,s.code,s.name,s.description,s.status,s.scheduled_at AS scheduledAt,
         s.current_participant_id AS participantId,
-        p.status AS participantStatus, a.status AS applicationStatus,CASE WHEN p.id IS NULL THEN NULL ELSE ${publicName} END AS publicName
+        p.status AS participantStatus, a.status AS applicationStatus,CASE WHEN p.id IS NULL THEN NULL ELSE ${publicNameSql('pp', language)} END AS publicName
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
         LEFT
@@ -359,7 +366,7 @@ export async function getCollaboration(
         .prepare(
           `SELECT r.id,
         r.requester_id AS requesterId,
-        r.recipient_id AS recipientId,CASE WHEN rp.is_anonymous=1 THEN '匿名创作者' ELSE COALESCE(rp.credit_name,'未填写署名') END AS requesterName,CASE WHEN tp.is_anonymous=1 THEN '匿名创作者' ELSE COALESCE(tp.credit_name,'未填写署名') END AS recipientName,
+        r.recipient_id AS recipientId,${publicNameSql('rp', language)} AS requesterName,${publicNameSql('tp', language)} AS recipientName,
         r.requester_segment_id AS requesterSegmentId,
         r.recipient_segment_id AS recipientSegmentId,
         rs.name AS requesterSegmentName,

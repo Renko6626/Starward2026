@@ -1,3 +1,5 @@
+import { getAuthErrorMessage } from "../lib/password-auth-error";
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from '@tanstack/react-router';
 import { requestJson } from "../../app/lib/api";
@@ -5,6 +7,7 @@ import { authClient } from "../lib/auth-client";
 import { Button, Field, Notice } from "../../app/components/ui";
 
 export function PasswordSettings() {
+  const { t, language, label } = useSiteTranslation();
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -19,7 +22,7 @@ export function PasswordSettings() {
       .then((response) => {
         if (cancelled) return;
         if (response.error) {
-          setError("无法读取密码设置，请刷新后重试。");
+          setError(t("auth.password.readFailed"));
           return;
         }
         setHasPassword(
@@ -27,7 +30,7 @@ export function PasswordSettings() {
         );
       })
       .catch(() => {
-        if (!cancelled) setError("无法读取密码设置，请刷新后重试。");
+        if (!cancelled) setError(t("auth.password.readFailed"));
       });
     return () => {
       cancelled = true;
@@ -47,7 +50,7 @@ export function PasswordSettings() {
           revokeOtherSessions: true,
         });
         if (response.error) {
-          setError(response.error.message || "密码修改失败。");
+          setError(getAuthErrorMessage(response.error, language, t("auth.password.changeFailed")));
           return;
         }
       } else {
@@ -60,9 +63,9 @@ export function PasswordSettings() {
       setHasPassword(true);
       setCurrentPassword("");
       setNewPassword("");
-      setMessage("密码已保存，下次可使用邮箱和密码登录。");
+      setMessage(t("auth.password.saved"));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "密码保存失败。");
+      setError(caught instanceof Error ? label(caught.message) : t("auth.password.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -70,16 +73,16 @@ export function PasswordSettings() {
 
   return (
     <form className="panel space-y-5" onSubmit={handleSubmit}>
-      <h2 className="panel-title">登录密码</h2>
+      <h2 className="panel-title">{t("auth.password.title")}</h2>
       {hasPassword !== null ? (
         <>
           {hasPassword ? (
-            <Field label="当前密码">
+            <Field label={t("auth.password.current")}>
               <input
                 className="field-input"
                 type="password"
                 autoComplete="current-password"
-                placeholder="输入当前登录密码"
+                placeholder={t("auth.password.placeholderCurrent")}
                 required
                 disabled={isSaving}
                 value={currentPassword}
@@ -87,12 +90,12 @@ export function PasswordSettings() {
               />
             </Field>
           ) : null}
-          <Field label="新密码">
+          <Field label={t("auth.password.new")}>
             <input
               className="field-input"
               type="password"
               autoComplete="new-password"
-              placeholder="设置 8–128 位密码"
+              placeholder={t("auth.password.placeholderNew")}
               required
               minLength={8}
               maxLength={128}
@@ -106,21 +109,21 @@ export function PasswordSettings() {
             disabled={isSaving}
             aria-busy={isSaving}
           >
-            {isSaving ? "保存中..." : hasPassword ? "修改密码" : "设置密码"}
+            {isSaving ? t("auth.actions.saving") : hasPassword ? t("auth.actions.changePassword") : t("auth.actions.setPassword")}
           </Button>
         </>
       ) : null}
       {message ? (
         <Notice tone="success">
-          {message}
+          {label(message)}
         </Notice>
       ) : null}
       {error ? (
         <Notice tone="error">
-          {error}
+          {label(error)}
         </Notice>
       ) : null}
-      {hasPassword ? <Link className="auth-note" to="/portal/login" search={{ reset: 'password' }}>忘记当前密码？通过邮箱重置</Link> : null}
+      {hasPassword ? <Link className="auth-note" to="/portal/login" search={{ reset: 'password' }}>{t("auth.actions.forgotCurrent")}</Link> : null}
     </form>
   );
 }

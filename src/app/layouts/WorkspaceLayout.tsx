@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { ArchiveBackground } from "../../portal/components/ArchiveBackground";
 import { useState, type PropsWithChildren } from "react";
 import { useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -6,12 +7,13 @@ import { SiteHeader, SiteFooter } from "./SiteLayout";
 import { authClient } from "../../portal/lib/auth-client";
 
 export function WorkspaceLayout({ children }: PropsWithChildren<{ kind: "portal" }>) {
+  const { t } = useSiteTranslation();
   const pending = useRouterState({ select: state => state.isLoading || state.isTransitioning });
   const { pathname } = useLocation();
   const archive = pathname === "/portal" || pathname === "/portal/";
   return <div className={`creator-shell${archive ? " author-archive-shell" : ""}`}>
     {archive ? <ArchiveBackground /> : null}
-    <a className="skip-link" href="#main-content">跳至正文</a>
+    <a className="skip-link" href="#main-content">{t("public.nav.skip")}</a>
     <SiteHeader />
     <main id="main-content" className="creator-content" aria-busy={pending}>{children}</main>
     <SiteFooter />
@@ -19,6 +21,7 @@ export function WorkspaceLayout({ children }: PropsWithChildren<{ kind: "portal"
 }
 
 export function PortalAccount() {
+  const { t } = useSiteTranslation();
   const { data } = authClient.useSession();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -42,11 +45,11 @@ export function PortalAccount() {
   return (
     <div className="workspace-account">
       <span title={data?.user.email}>{data?.user.email}</span>
-      {error ? <span role="alert">退出失败，请重试</span> : null}
+      {error ? <span role="alert">{t("public.account.signOutError")}</span> : null}
       <button
         className="icon-button"
         type="button"
-        aria-label="退出登录"
+        aria-label={t("public.account.signOut")}
         disabled={busy}
         onClick={() => void signOut()}
       >

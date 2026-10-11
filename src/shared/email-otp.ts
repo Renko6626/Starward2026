@@ -1,3 +1,4 @@
+import type { SiteLanguage } from './i18n';
 export const PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS = 60 * 10;
 export const PORTAL_EMAIL_OTP_LENGTH = 6;
 export const PORTAL_EMAIL_OTP_ALLOWED_ATTEMPTS = 3;
@@ -12,18 +13,20 @@ export function normalizePortalEmailOtpInput(value: string) {
   return value.replace(/\D/g, "").slice(0, PORTAL_EMAIL_OTP_LENGTH);
 }
 
-export function getPortalEmailOtpValidityLabel() {
-  return `${PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS / 60} 分钟`;
+export function getPortalEmailOtpValidityLabel(language: SiteLanguage = 'zh-CN') {
+  const minutes = PORTAL_EMAIL_OTP_EXPIRES_IN_SECONDS / 60;
+  return language === 'en' ? `${minutes} minutes` : `${minutes} 分钟`;
 }
 
-export function getPortalEmailOtpNoticeText() {
-  return `访问码已发送至您的邮箱，${getPortalEmailOtpValidityLabel()}内有效。`;
+export function getPortalEmailOtpNoticeText(language: SiteLanguage = 'zh-CN') {
+  return language === 'en' ? `A verification code has been sent to your email. It is valid for ${getPortalEmailOtpValidityLabel(language)}.`
+    : `访问码已发送至您的邮箱，${getPortalEmailOtpValidityLabel()}内有效。`;
 }
 
-export function getPortalEmailOtpResendSuccessMessage(email: string) {
-  return `已重新发送当前有效验证码到 ${email}。`;
+export function getPortalEmailOtpResendSuccessMessage(email: string, language: SiteLanguage = 'zh-CN') {
+  return language === 'en' ? `The current verification code has been sent again to ${email}.` : `已重新发送当前有效验证码到 ${email}。`;
 }
 
-export function getPortalEmailOtpResendCooldownText(secondsRemaining: number) {
-  return `${secondsRemaining}s 后可重新发送`;
+export function getPortalEmailOtpResendCooldownText(secondsRemaining: number, language: SiteLanguage = 'zh-CN') {
+  return language === 'en' ? `Resend in ${secondsRemaining}s` : `${secondsRemaining}s 后可重新发送`;
 }

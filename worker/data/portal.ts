@@ -1,4 +1,5 @@
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
+import type { SiteLanguage } from '../../src/shared/i18n';
 import type {
   PortalApplicationDetail,
   PortalApplicationSummary,
@@ -79,6 +80,7 @@ export async function getPortalDashboard(
     participant: ParticipantAuthRow | null;
     windows: EventWindowSummary[];
   },
+  language: SiteLanguage = 'zh-CN',
 ): Promise<PortalDashboardResponse> {
   const base = await getPortalMe(db, {
     user: input.user,
@@ -122,7 +124,7 @@ export async function getPortalDashboard(
         }
       : null,
     windows: input.windows,
-    recentEvents: mapPortalEvents(recentEvents.results ?? []),
+    recentEvents: mapPortalEvents(recentEvents.results ?? [], language),
   };
 }
 
@@ -132,6 +134,7 @@ export async function getPortalHistory(
     user: PortalAuthUserSummary;
     participant: ParticipantAuthRow;
   },
+  language: SiteLanguage = 'zh-CN',
 ): Promise<PortalHistoryResponse> {
   const base = await getPortalMe(db, input);
   const events = await db
@@ -142,7 +145,7 @@ export async function getPortalHistory(
   return {
     ...base,
     participant: mapPortalParticipant(input.participant),
-    items: mapPortalEvents(events.results ?? []),
+    items: mapPortalEvents(events.results ?? [], language),
   };
 }
 
@@ -167,17 +170,17 @@ const participantEventSelectSql = `SELECT
   created_at
 FROM participant_events`;
 
-function mapPortalEvents(rows: ParticipantEventRow[]): PortalEventItem[] {
+function mapPortalEvents(rows: ParticipantEventRow[], language: SiteLanguage): PortalEventItem[] {
   return rows.map((event) => ({
     id: event.id,
     eventType: event.event_type,
     actorType: event.actor_type,
-    actorLabel: buildPortalEventActorLabel(event.actor_type),
+    actorLabel: buildPortalEventActorLabel(event.actor_type, language),
     label: buildPortalEventLabel({
       eventType: event.event_type,
       actorType: event.actor_type,
       payloadJson: event.payload_json,
-    }),
+    }, language),
     createdAt: event.created_at,
   }));
 }

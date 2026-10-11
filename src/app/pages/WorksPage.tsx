@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { Link } from "@tanstack/react-router";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ApiError, requestJson } from "../lib/api";
@@ -17,8 +18,6 @@ import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdr
 import { useDialogMotion } from "../components/use-dialog-motion";
 import { PageSkeleton } from '../components/NavigationFeedback';
 
-const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
-const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 type OwnSchedule = { userId: string; revision: number; segmentId: string | null; author: string | null; status: string | undefined; collaboration: CollaborationResponse };
 
 // Keep only public data between visits; each mount still refreshes it. Account
@@ -26,6 +25,9 @@ type OwnSchedule = { userId: string; revision: number; segmentId: string | null;
 let cachedPublicWorks: PublicWorksResponse | null = null;
 
 export function WorksPage() {
+  const { t, language } = useSiteTranslation();
+  const dateFormat = new Intl.DateTimeFormat(language, { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
+  const timeFormat = new Intl.DateTimeFormat(language, { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const { data: session } = authClient.useSession();
   const userId = session?.user.id;
   const [data, setData] = useState<PublicWorksResponse | null>(() => cachedPublicWorks);
@@ -52,14 +54,14 @@ export function WorksPage() {
             setData(response); setError(null); setNow(Date.now());
           }
         })
-        .catch(caught => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : "暂时无法读取接力时间表。"); });
+        .catch(caught => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : t("public.schedule.readError")); });
       if (userId) void Promise.all([
         requestJson<PortalDashboardResponse>("/api/portal/dashboard", { signal: controller.signal }),
         requestJson<CollaborationResponse>("/api/portal/collaboration", { signal: controller.signal }),
       ]).then(([response, collaboration]) => {
           if (!controller.signal.aborted) {
             setOwn({ userId, revision, segmentId: response.currentSegment?.id ?? null, status: response.participant?.status, collaboration, author: response.profile
-              ? response.profile.isAnonymous ? "匿名" : response.profile.creditName : null });
+              ? response.profile.isAnonymous ? t("public.schedule.anonymous") : response.profile.creditName : null });
             setOwnWarning(null);
           }
         })
@@ -67,7 +69,7 @@ export function WorksPage() {
           if (!controller.signal.aborted) {
             setOwn(null);
             setOwnWarning(caught instanceof ApiError && (caught.status === 401 || caught.status === 403)
-              ? "暂时无法读取你的登录信息，可以重新进入作者页面。" : "暂时无法定位你的时段，公开排程仍可查看。");
+              ? t("public.schedule.sessionError") : t("public.schedule.ownError"));
           }
         });
     };
@@ -75,7 +77,7 @@ export function WorksPage() {
     const refreshTimer = window.setInterval(refresh, 60000);
     const clockTimer = window.setInterval(() => setNow(Date.now()), 15000);
     return () => { controller.abort(); window.clearInterval(refreshTimer); window.clearInterval(clockTimer); };
-  }, [userId, revision]);
+  }, [userId, revision, language]);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 640px)");
@@ -138,40 +140,40 @@ export function WorksPage() {
       detailTrigger.current?.focus({ preventScroll: true });
     });
   }
-  const actions = selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
+  const actions = selected && userId ? !identity ? <p>{t("public.schedule.permissions")}{ownWarning}</p>
     : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
-    : identity.status === "completed" ? <Link to="/portal">查看我的参与记录</Link>
+    : identity.status === "completed" ? <Link to="/portal">{t("public.schedule.record")}</Link>
     : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash={selected.id === mineId ? "plan" : "profile"}
-      onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
+      onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? t("public.schedule.manage") : t("public.schedule.selectApply")}</Link> : null : undefined;
   const detail = selected ? <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null}
     signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={actions} /> : null;
 
   return <div className="works-page works-page--schedule">
     <ObservatoryBackdrop />
     <header className="ops-page-heading">
-      <div><h1>接力时间表</h1><ActivityIdentity /></div>
-      <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
+      <div><h1>{t("public.schedule.title")}</h1><ActivityIdentity /></div>
+      <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : t("public.schedule.pending")}</p><span>UTC+8</span></div>
     </header>
-    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。</Notice> : null}
+    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>{t("public.schedule.pickNotice")}</Notice> : null}
     {error && <ReadError message={error} />}
-    {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
-    {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
-      <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
-      <p className="ops-interaction-hint">{mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
+    {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">{t("public.schedule.requests")}</Link></Notice> : null}
+    {!data ? !error && <PageSkeleton label={t("public.schedule.loading")} schedule /> : schedule.length === 0 ?
+      <section className="works-empty"><ObservationMark /><h2>{t("public.schedule.preparing")}</h2><p>{t("public.schedule.preparingNote")}</p></section> : <>
+      <p className="ops-interaction-hint">{mobile ? t("public.schedule.mobileHint") : t("public.schedule.desktopHint")}</p>
       {days.map(day => <Fragment key={day.key}>
         <ScheduleBoard missionStart={missionStart} day={day} selectedId={selected?.id ?? null} mineId={mineId} ownName={identity?.author ?? null} currentId={currentId} now={now} active={phase === "active"} onSelect={select} />
-        {selectedKey === day.key && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label="时段详情与操作"
+        {selectedKey === day.key && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label={t("public.schedule.dialog")}
           onCancel={event => { event.preventDefault(); closeDetail(); }} onClose={event => { if (!event.currentTarget.open) setDetailOpen(false); }}>
           {detail}
         </dialog>}
       </Fragment>)}
-      <div className="ops-summary" role="status"><strong>{phase === "ended" ? "标准排程已结束" : phase === "active" ? "接力进行中" : "排程已公布"}</strong>
+      <div className="ops-summary" role="status"><strong>{phase === "ended" ? t("public.schedule.ended") : phase === "active" ? t("public.schedule.active") : t("public.schedule.published")}</strong>
         <span><b>{count("confirmed")}</b><ScheduleStatus status="confirmed" /></span><span><b>{count("reserved")}</b><ScheduleStatus status="reserved" /></span><span><b>{count("available")}</b><ScheduleStatus status="available" /></span>
         {count("unavailable") > 0 && <span><b>{count("unavailable")}</b><ScheduleStatus status="unavailable" /></span>}
-        {mine && <span className="ops-legend-mine">我的时段</span>}
+        {mine && <span className="ops-legend-mine">{t("public.schedule.mine")}</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>不选时间，直接报名</Link><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
+      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>{t("public.schedule.noTime")}</Link><p>{missionStart !== null && <>{t("public.schedule.missionStart", { date: dateFormat.format(new Date(missionStart)), time: timeFormat.format(new Date(missionStart)) })}</>}{t("public.schedule.footnote", { count: schedule.length })}</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>{t("public.schedule.workspace")}</Link></div>
     </>}
   </div>;
 }

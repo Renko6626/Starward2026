@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { ArchiveChapter, revealArchiveTarget } from "../components/ArchiveChapter";
 import { ArchiveResult } from "../components/ArchiveResult";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -26,6 +27,7 @@ const defaultFormState: UpdatePortalProfileInput = {
 };
 
 export function PortalProfilePage({ embedded = false, compact = false, onSaved }: { embedded?: boolean; compact?: boolean; onSaved?: () => Promise<void> } = {}) {
+  const { t, language, label: systemLabel } = useSiteTranslation();
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const initialized = useRef(false);
@@ -75,7 +77,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         }
 
         setError(
-          caught instanceof Error ? caught.message : "无法读取署名和联系方式。",
+          caught instanceof Error ? caught.message : t("portal.profile.loadError"),
         );
         setIsLoading(false);
       });
@@ -83,7 +85,7 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
     return () => {
       cancelled = true;
     };
-  }, [navigate, sessionQuery.data, sessionQuery.isPending]);
+  }, [navigate, sessionQuery.data, sessionQuery.isPending, language]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,8 +99,8 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
     const parsed = updatePortalProfileInputSchema.safeParse(normalized);
 
     if (!parsed.success) {
-      setFieldErrors(getRegistrationFieldErrors(parsed.error.issues, "profile"));
-      setError("请修正标出的字段后重试。");
+      setFieldErrors(getRegistrationFieldErrors(parsed.error.issues, "profile", language));
+      setError(t("portal.validation.correctFields"));
       requestAnimationFrame(() => {
         const input = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
         if (input) revealArchiveTarget(input);
@@ -131,9 +133,9 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
         current ? { ...current, profile: response.profile } : current,
       );
       setMessage(response.message);
-      await onSaved?.().catch(() => setRefreshWarning("资料已保存，页面暂未更新，请稍后刷新。"));
+      await onSaved?.().catch(() => setRefreshWarning(t("portal.profile.savedRefresh")));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "资料保存失败。");
+      setError(caught instanceof Error ? caught.message : t("portal.profile.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -142,8 +144,8 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
   if (sessionQuery.isPending || isLoading) {
     return (
       <PageHeading
-        title={<>署名与联系</>}
-        description={<>正在读取署名和联系方式。</>}
+        title={<>{t("portal.profile.title")}</>}
+        description={<>{t("portal.profile.loading")}</>}
       ></PageHeading>
     );
   }
@@ -151,18 +153,18 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
   if (!profileState) {
     return (
       <div className={embedded ? "space-y-6" : "page-content"}>
-        <PageHeading title="署名与联系" />
-        <ReadError message={error || "暂时无法读取署名与联系。"} />
+        <PageHeading title={t("portal.profile.title")} />
+        <ReadError message={systemLabel(error || t("portal.profile.unavailable"))} />
       </div>
     );
   }
 
   const continueToApplication = !embedded && !profileState.profile && !profileState.application;
 
-  const profileField = (key: "creditName" | "bilibiliUid" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
-  return <ArchiveChapter enabled={compact} id="profile" number="01" title="署名与联系" state={profileState.profile?.creditName} defaultOpen={!profileState.profile}>
+  const profileField = (key: "creditName" | "bilibiliUid" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => <Field label={label} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} className="field-input" type={type} required={key !== "backupContact"} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={systemLabel(portalProfilePlaceholders[key])} value={form[key] ?? ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.bilibiliUid)} target="_blank" rel="noreferrer">{t("portal.profile.visitBilibili")}</a> : null}</Field>;
+  return <ArchiveChapter enabled={compact} id="profile" number="01" title={t("portal.profile.title")} state={profileState.profile?.creditName} defaultOpen={!profileState.profile}>
     <div className={embedded ? "space-y-6" : "page-content"}>
-    {!embedded ? <PageHeading title="署名与联系" /> : null}
+    {!embedded ? <PageHeading title={t("portal.profile.title")} /> : null}
     <div className={compact ? "creator-card-body" : undefined}>
       <form ref={formRef} noValidate className={compact ? "space-y-4" : "panel space-y-6"} onSubmit={handleSubmit} onChangeCapture={event => {
         const target = event.target;
@@ -173,19 +175,19 @@ export function PortalProfilePage({ embedded = false, compact = false, onSaved }
           setError(null);
         }
       }}>
-        {profileField("creditName", "署名")}
-        <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />匿名展示<span className="field-hint">仅隐藏公开署名，主催仍可见</span></label>
-        {profileField("bilibiliUid", "B站主页链接或 UID")}
-        <Field label="联系方式种类" error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" className="field-input" value={form.primaryContactChannel} onChange={event => setForm(current => ({ ...current, primaryContactChannel: event.target.value }))}>{!portalContactChannels.includes(form.primaryContactChannel) ? <option value={form.primaryContactChannel}>{form.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? "邮箱" : channel}</option>)}</select></Field>
-        {profileField("primaryContactHandle", "联系方式内容")}
-        {profileField("backupContact", "备用联系方式（选填）")}
-        <p className="field-hint">请填写组委会能联系到你的方式，选择“其他”时请注明平台或渠道。联系方式需自行填写，与登录账号分开。</p>
+        {profileField("creditName", t("portal.profile.creditName"))}
+        <label className="checkbox-field"><input type="checkbox" checked={form.isAnonymous} onChange={event => setForm(current => ({ ...current, isAnonymous: event.target.checked }))} />{t("portal.profile.anonymous")}<span className="field-hint">{t("portal.profile.anonymousHint")}</span></label>
+        {profileField("bilibiliUid", t("portal.profile.bilibili"))}
+        <Field label={t("portal.profile.contactType")} error={fieldErrors["profile.primaryContactChannel"]}><select name="profile.primaryContactChannel" className="field-input" value={form.primaryContactChannel} onChange={event => setForm(current => ({ ...current, primaryContactChannel: event.target.value }))}>{!portalContactChannels.includes(form.primaryContactChannel) ? <option value={form.primaryContactChannel}>{form.primaryContactChannel}</option> : null}{portalContactChannels.map(channel => <option key={channel} value={channel}>{channel === "Email" ? t("portal.profile.email") : systemLabel(channel)}</option>)}</select></Field>
+        {profileField("primaryContactHandle", t("portal.profile.contactValue"))}
+        {profileField("backupContact", t("portal.profile.backupOptional"))}
+        <p className="field-hint">{t("portal.profile.contactHint")}</p>
         {refreshWarning ? <ArchiveResult compact={compact} tone="warning" message={refreshWarning} /> : null}
         {message ? <ArchiveResult compact={compact} message={message} /> : null}
         {error ? <ArchiveResult compact={compact} tone="error" message={error} /> : null}
         <div className="form-actions">
-          {!embedded ? <Link className="button button--secondary" to="/portal">返回作者页面</Link> : null}
-          <Button appearance={compact ? "industrial" : "default"} disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? "保存中…" : continueToApplication ? "保存并继续报名" : "保存个人信息"}</Button>
+          {!embedded ? <Link className="button button--secondary" to="/portal">{t("portal.workspace.return")}</Link> : null}
+          <Button appearance={compact ? "industrial" : "default"} disabled={isSaving} aria-busy={isSaving} type="submit">{isSaving ? t("portal.common.saving") : continueToApplication ? t("portal.profile.saveContinue") : t("portal.profile.save")}</Button>
         </div>
       </form>
       <LoginPasswordDialog email={profileState.user.email} />

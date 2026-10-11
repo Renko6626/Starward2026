@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import type { ApplicationStatus } from "../../shared/applications";
@@ -23,6 +24,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
   withdrawalConfirmation?: ReactNode;
   focusAfterSubmit?: boolean;
 }) {
+  const { t, language, label: systemLabel } = useSiteTranslation();
   const region = useRef<HTMLElement>(null);
   const focusedAfterSubmit = useRef(false);
   useEffect(() => {
@@ -39,31 +41,31 @@ export function RegistrationProgress({ application, participantStatus, current, 
   const completed = participantStatus === "completed";
   const time = current;
   const frozen = current?.assignmentStatus === "locked" || current?.assignmentStatus === "completed";
-  const timeStatus = current?.assignmentStatus === "locked" ? "已锁定，请联系主催调整" : current?.assignmentStatus === "completed" ? "已完成" : current ? current.status === "confirmed" ? "已确认" : current.status === "reserved" ? "已预留" : "请查看排期状态"
-    : "由主催安排";
-  const next = approved ? completed ? "可查看接力安排和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "报名已通过，发布时间由主催安排。请继续创作，并等待后续通知。"
-    : pending ? "报名已提交，等待主催审核。"
-    : application.editable ? withdrawn ? "检查资料后再次提交报名，发布时间可由主催安排。" : rejected ? "根据主催反馈修改资料后，重新提交报名。" : "填写署名与联系、创作意向后提交报名，发布时间可由主催安排。"
-    : "当前不能提交或修改报名，请查看参与指南或联系主催。";
+  const timeStatus = current?.assignmentStatus === "locked" ? t("portal.schedule.lockedHint") : current?.assignmentStatus === "completed" ? t("portal.schedule.completed") : current ? current.status === "confirmed" ? t("portal.schedule.confirmed") : current.status === "reserved" ? t("portal.schedule.reserved") : t("portal.schedule.checkStatus")
+    : t("portal.schedule.hostArranged");
+  const next = approved ? completed ? t("portal.registration.completedNext") : current ? t("portal.registration.approvedNext") : t("portal.registration.approvedUnassigned")
+    : pending ? t("portal.registration.pendingNext")
+    : application.editable ? withdrawn ? t("portal.registration.withdrawnNext") : rejected ? t("portal.registration.rejectedNext") : t("portal.registration.newNext")
+    : t("portal.registration.closedNext");
 
-  return <section ref={region} tabIndex={-1} className="registration-progress" aria-label="报名进度">
+  return <section ref={region} tabIndex={-1} className="registration-progress" aria-label={t("portal.registration.progress")}>
     <dl className="archive-register">
-      <div><dt>作者</dt><dd>{application.profile?.creditName || application.user.name || "尚未填写署名"}</dd></div>
-      <div><dt>发布时间 / 北京时间</dt><dd>{time ? formatScheduledTime(time.scheduledAt) : "由主催安排"}<small>{time ? timeStatus : null}</small></dd></div>
-      <div><dt>席位类型</dt><dd>{current?.kind === "special" ? "特别席位" : current?.kind === "extra" ? "追加坑位" : current ? "普通席位" : "待安排"}</dd></div>
-      <div><dt>席位编号</dt><dd>{time?.code || "—"}</dd></div>
-      <div><dt>报名</dt><dd>{label}</dd></div>
+      <div><dt>{t("portal.profile.author")}</dt><dd>{application.profile?.creditName || application.user.name || t("portal.profile.creditMissing")}</dd></div>
+      <div><dt>{t("portal.schedule.releaseBeijing")}</dt><dd>{time ? formatScheduledTime(time.scheduledAt, language) : t("portal.schedule.hostArranged")}<small>{time ? timeStatus : null}</small></dd></div>
+      <div><dt>{t("portal.schedule.kind")}</dt><dd>{current?.kind === "special" ? t("portal.schedule.special") : current?.kind === "extra" ? t("portal.schedule.extra") : current ? t("portal.schedule.regular") : t("portal.schedule.unassigned")}</dd></div>
+      <div><dt>{t("portal.schedule.code")}</dt><dd>{time?.code || "—"}</dd></div>
+      <div><dt>{t("portal.registration.label")}</dt><dd>{systemLabel(label)}</dd></div>
     </dl>
     <div className="registration-progress-body">
-      <div className="registration-progress-copy"><h2>{label}</h2><p>{next}</p></div>
-      <div className="registration-progress-time"><h3>发布时间（北京时间）</h3><p>{time ? formatScheduledTime(time.scheduledAt) : "由主催安排"}</p>{time ? <span>{timeStatus}</span> : null}</div>
+      <div className="registration-progress-copy"><h2>{systemLabel(label)}</h2><p>{next}</p></div>
+      <div className="registration-progress-time"><h3>{t("portal.schedule.releaseTime")}</h3><p>{time ? formatScheduledTime(time.scheduledAt, language) : t("portal.schedule.hostArranged")}</p>{time ? <span>{timeStatus}</span> : null}</div>
     </div>
     <div className="registration-progress-actions">
-      {completed ? <a className="button button--secondary" href="#history">查看操作记录</a>
-        : approved ? <Link className="button button--secondary" to="/portal" hash="relay">查看接力安排</Link>
-        : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? "查看或修改报名" : "查看报名资料"}</a>{!frozen ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>撤回报名</button> : null}</>
-        : application.editable ? <a className="button button--primary" href={withdrawn || rejected ? "#plan" : "#profile"}>{withdrawn || rejected ? "修改资料并重新报名" : "填写报名资料"}</a>
-        : <Link className="button button--secondary" to="/apply">查看参与指南</Link>}
+      {completed ? <a className="button button--secondary" href="#history">{t("portal.history.view")}</a>
+        : approved ? <Link className="button button--secondary" to="/portal" hash="relay">{t("portal.schedule.viewRelay")}</Link>
+        : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? t("portal.registration.viewEdit") : t("portal.registration.view")}</a>{!frozen ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>{t("portal.registration.withdraw")}</button> : null}</>
+        : application.editable ? <a className="button button--primary" href={withdrawn || rejected ? "#plan" : "#profile"}>{withdrawn || rejected ? t("portal.registration.editResubmit") : t("portal.registration.fill")}</a>
+        : <Link className="button button--secondary" to="/apply">{t("portal.registration.guide")}</Link>}
     </div>
     {pending ? withdrawalConfirmation : null}
   </section>;

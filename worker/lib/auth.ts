@@ -1,3 +1,4 @@
+import { getRequestLanguage, type SiteLanguage } from '../../src/shared/i18n';
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { buildQqProvider } from "./qq-oauth";
 import { getRealAuthEmail, isReservedAuthEmail } from "../../src/shared/auth-identity";
@@ -306,6 +307,7 @@ async function sendPortalOtpEmail(
     type: "sign-in" | "email-verification" | "forget-password" | "change-email";
   },
   siteUrl: string,
+  language: SiteLanguage = 'zh-CN',
 ) {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
     throw new HTTPException(503, {
@@ -314,11 +316,12 @@ async function sendPortalOtpEmail(
   }
   const resend = new Resend(env.RESEND_API_KEY);
   const resendFromEmail = env.RESEND_FROM_EMAIL;
-  const resendFromName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
+  const configuredName = env.RESEND_FROM_NAME?.trim() || "Starward2026";
+  const resendFromName = language === 'en' && configuredName === '逐星巡礼' ? 'Starward Pilgrimage' : configuredName;
   if (payload.type !== "sign-in" && payload.type !== "forget-password") {
     throw new APIError("FORBIDDEN", { code: "email_purpose_disabled", message: "邮件仅用于注册、登录和密码重置验证码。" });
   }
-  const content = buildPortalOtpEmail({ otp: payload.otp, type: payload.type, siteUrl });
+  const content = buildPortalOtpEmail({ otp: payload.otp, type: payload.type, siteUrl, language });
 
   const response = await resend.emails.send({
     from: `${resendFromName} <${resendFromEmail}>`,
@@ -357,7 +360,7 @@ export function buildPortalEmailOtpOptions(env: AppBindings, failedMailRequests?
       try {
         const siteUrl = normalizeBaseUrl(env.BETTER_AUTH_URL) ?? (context?.request && new URL(context.request.url).origin);
         if (!siteUrl) throw new Error("The email website URL is not configured.");
-        await sendPortalOtpEmail(env, payload, siteUrl);
+        await sendPortalOtpEmail(env, payload, siteUrl, context?.request ? getRequestLanguage(context.request.headers) : 'zh-CN');
       } catch (error) {
         // 1.6.2 swallows mail errors as background failures; preserve the request result.
         if (context?.request && failedMailRequests) failedMailRequests.set(context.request, true);

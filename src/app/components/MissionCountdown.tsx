@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { useEffect, useState } from 'react';
 
 import { RELAY_START } from "../lib/mission-time";
@@ -15,13 +16,14 @@ export function countdownAt(now: number, targetTime = startTime) {
   };
 }
 
-const units = ['天 / DAYS', '时 / HOURS', '分 / MINUTES', '秒 / SECONDS'];
+const units = ["public.countdown.days", "public.countdown.hours", "public.countdown.minutes", "public.countdown.seconds"];
 
 export function MissionCountdown({ target = 'relay' }: { target?: 'relay' | 'submission' }) {
+  const { t, language } = useSiteTranslation();
   const submission = target === 'submission';
   const targetDate = submission ? WORK_SUBMISSION_DEADLINE : RELAY_START;
-  const label = submission ? '作品完成截止' : '接力开始';
-  const ended = submission ? '作品完成截止时间已到' : '接力已开始';
+  const label = submission ? t("public.countdown.submission") : t("public.countdown.relay");
+  const ended = submission ? t("public.countdown.submissionEnded") : t("public.countdown.started");
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -36,25 +38,25 @@ export function MissionCountdown({ target = 'relay' }: { target?: 'relay' | 'sub
   return (
     <section className="mission-countdown" aria-labelledby="countdown-title">
       <div className="mission-countdown-heading">
-        <h2 id="countdown-title">{countdown.started ? submission ? ended : '接力进行中' : `距${label}`}</h2>
+        <h2 id="countdown-title">{countdown.started ? submission ? ended : t("public.schedule.active") : t("public.countdown.until", { event: label })}</h2>
         <span>PROJECT STARWARD</span>
       </div>
       <div className="mission-countdown-body">
-        <div className="mission-clock" role="timer" aria-live="off" aria-label={countdown.started ? ended : `距离${label} ${countdown.values[0]} 天 ${countdown.values[1]} 时 ${countdown.values[2]} 分 ${countdown.values[3]} 秒`}>
+        <div className="mission-clock" role="timer" aria-live="off" aria-label={countdown.started ? ended : t("public.countdown.announcement", { event: label, days: countdown.values[0], hours: countdown.values[1], minutes: countdown.values[2], seconds: countdown.values[3] })}>
           {countdown.started ? <span className="mission-clock-started">{ended}</span> : <>
           <span className="mission-clock-prefix" aria-hidden="true">T−</span>
           {countdown.values.map((value, index) => (
             <div className="mission-clock-unit" key={units[index]} aria-hidden="true">
               <span className="mission-clock-value">{String(value).padStart(index === 0 ? 3 : 2, '0')}</span>
-              <span className="mission-clock-label">{units[index]}</span>
+              <span className="mission-clock-label">{t(units[index]!)}</span>
             </div>
           ))}
           </>}
         </div>
         <div className="mission-start">
           <span>{label}</span>
-          <time dateTime={targetDate}>{submission ? '2026.11.11' : '2026.11.12'}</time>
-          <span>{submission ? '23:00' : '00:00'} 北京时间 / UTC+08:00</span>
+          <time dateTime={targetDate}>{new Intl.DateTimeFormat(language, { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(targetDate))}</time>
+          <span>{submission ? '23:00' : '00:00'} {t("public.countdown.beijing")}</span>
         </div>
       </div>
     </section>

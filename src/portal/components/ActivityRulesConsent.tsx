@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ACTIVITY_RULES_CONSENT_TEXT, ACTIVITY_RULES_CONSENT_NOTICE } from "../../shared/activity-rules";
+import { getActivityRulesContent } from "../../shared/activity-rules";
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 
 export function ActivityRulesConsent({ accepted, onChange, disabled = false, otp = false }: {
   accepted: boolean;
@@ -7,12 +8,15 @@ export function ActivityRulesConsent({ accepted, onChange, disabled = false, otp
   disabled?: boolean;
   otp?: boolean;
 }) {
+  const { t, language } = useSiteTranslation();
+  const rules = getActivityRulesContent(language);
+  const [consentBeforeTitle, consentAfterTitle] = rules.consentText.split(rules.title);
   return <div className="activity-rules-consent">
-    {otp ? <p className="auth-note">首次使用此邮箱会建立账号，需要同意活动规则；已有账号可直接登录。</p> : null}
-    <label className="checkbox-field"><input type="checkbox" aria-label={ACTIVITY_RULES_CONSENT_TEXT} checked={accepted} disabled={disabled}
+    {otp ? <p className="auth-note">{t('auth.rules.newAccountNotice')}</p> : null}
+    <label className="checkbox-field"><input type="checkbox" aria-label={rules.consentText} checked={accepted} disabled={disabled}
       onChange={event => onChange(event.target.checked)} />
-      <span>我已阅读并同意<Link to="/rules" target="_blank" rel="noopener noreferrer">《逐星巡礼活动规则》</Link>，{ACTIVITY_RULES_CONSENT_NOTICE}</span>
+      <span>{consentBeforeTitle}<Link to="/rules" target="_blank" rel="noopener noreferrer">{rules.title}</Link>{consentAfterTitle}</span>
     </label>
-    <p className="auth-note">账号与活动资料的处理方式见<a href="/privacy" target="_blank" rel="noopener noreferrer">《隐私政策》</a>。</p>
+    <p className="auth-note">{t('auth.rules.privacyPrefix')}<a href="/privacy" target="_blank" rel="noopener noreferrer">{t('auth.rules.privacyLink')}</a>{language === 'en' ? '.' : '。'}</p>
   </div>;
 }

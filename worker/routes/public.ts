@@ -11,6 +11,7 @@ import { getWindowOrFallback } from "../lib/windows";
 import { listEventWindows } from "../data/event-windows";
 import { getParticipationStatistics } from "../data/participation";
 import { getTurnstileSecret } from '../lib/turnstile';
+import { getRequestLanguage } from '../../src/shared/i18n';
 
 const publicApi = new Hono<AppRouteConfig>();
 
@@ -67,13 +68,14 @@ publicApi.post("/applications", async (c) => {
 publicApi.get("/works", async (c) => {
   c.header("Cache-Control", "no-store");
   const db = getRequiredDb(c);
-  const items = await listPublicWorks(db);
-  return c.json({ items, schedule: await listPublicSchedule(db, items) });
+  const language = getRequestLanguage(c.req.raw.headers);
+  const items = await listPublicWorks(db, language);
+  return c.json({ items, schedule: await listPublicSchedule(db, items, language) });
 });
 
 publicApi.get("/works/:workId", async (c) => {
   c.header("Cache-Control", "no-store");
-  const result = await getPublicWork(getRequiredDb(c), c.req.param("workId"));
+  const result = await getPublicWork(getRequiredDb(c), c.req.param("workId"), getRequestLanguage(c.req.raw.headers));
   if (!result) return jsonError(c, 404, "not_found", "这份观测尚未公开或已撤下。");
   return c.json(result);
 });

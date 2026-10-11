@@ -15,6 +15,7 @@ import { animate, press } from 'motion';
 import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 import { Power } from 'lucide-react';
 import './buttons.css';
+import { useSiteTranslation } from '../../../i18n/use-site-translation';
 
 type Tone = "muted" | "info" | "warning" | "warn" | "success" | "error";
 const toneClass = (tone: Tone) =>
@@ -93,12 +94,13 @@ export function Field({
   error,
   children,
 }: PropsWithChildren<{ label: string; requirement?: "必填" | "必选" | "选填"; hint?: string; error?: string }>) {
+  const { label: localizedLabel } = useSiteTranslation();
   const errorId = useId();
   const hintId = useId();
   return (
     <label className="form-field">
       <span className={requirement ? "field-label field-label--with-requirement" : "field-label"}>
-        {label}{requirement ? <span className={`field-requirement${requirement === "选填" ? " field-requirement--optional" : ""}`}>{requirement}</span> : null}
+        {label}{requirement ? <span className={`field-requirement${requirement === "选填" ? " field-requirement--optional" : ""}`}>{localizedLabel(requirement)}</span> : null}
       </span>
       {error || hint ? Children.map(children, child => {
         if (!isValidElement<{ "aria-describedby"?: string; "aria-invalid"?: boolean }>(child)
@@ -109,7 +111,7 @@ export function Field({
         });
       }) : children}
       {hint ? <span id={hintId} className="field-hint">{hint}</span> : null}
-      {error ? <span id={errorId} className="field-error" role="alert">{error}</span> : null}
+      {error ? <span id={errorId} className="field-error" role="alert">{localizedLabel(error)}</span> : null}
     </label>
   );
 }
@@ -139,11 +141,12 @@ export function StateNotice({
 }
 
 export function ReadError({ message }: { message: string }) {
+  const { t, label } = useSiteTranslation();
   return (
     <div className="space-y-4">
-      <Notice tone="error">{message}</Notice>
+      <Notice tone="error">{label(message)}</Notice>
       <button className="button button--secondary" type="button" onClick={() => window.location.reload()}>
-        重新加载
+        {t('common.reload')}
       </button>
     </div>
   );

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 describe("buildPortalEventLabel", () => {
+  it('preserves custom slot names containing message separators in English history', async () => {
+    const { buildPortalEventLabel } = await import('./portal-history');
+    expect(buildPortalEventLabel({
+      eventType: 'segment_changed', actorType: 'participant',
+      payloadJson: JSON.stringify({ fromSegmentCode: '01', fromSegmentName: '朝 调整为 暮', toSegmentCode: '02', toSegmentName: '夜' }),
+    }, 'en')).toBe('Release slot changed from 01 朝 调整为 暮 to 02 夜.');
+  });
   it("describes a claimed segment using payload metadata", async () => {
     const module = await import("./portal-history").catch(() => null);
 

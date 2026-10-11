@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button, Field, Notice } from "../../app/components/ui";
@@ -7,6 +8,7 @@ import type { PortalProjectMutationResponse, PortalProjectResponse } from "../..
 import { getRelayPublicationState } from "../../shared/relay-publication";
 
 export function RelayPublicationNotice({ revision, onSaved }: { revision: number; onSaved: () => Promise<void> }) {
+  const { t, language, label: systemLabel } = useSiteTranslation();
   const [project, setProject] = useState<PortalProjectResponse | null>(null);
   const [workUrl, setWorkUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,13 +27,13 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
         setProject(next);
         if (!dirty.current) setWorkUrl(next.draft.workUrl ?? "");
       } catch (caught) {
-        if (!cancelled && request === sequence.current) setError(caught instanceof Error ? caught.message : "暂时无法读取发布安排。");
+        if (!cancelled && request === sequence.current) setError(caught instanceof Error ? caught.message : t("portal.release.loadError"));
       }
     };
     void refresh();
     const timer = window.setInterval(() => void refresh(), 30000);
     return () => { cancelled = true; sequence.current += 1; window.clearInterval(timer); };
-  }, [revision]);
+  }, [revision, language]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -48,40 +50,40 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
       setProject(current => current ? { ...current, draft: response.draft,
         release: getRelayPublicationState(current.release.scheduledAt, response.draft.releaseConfirmedAt) } : current);
       setMessage(response.message);
-      await onSaved().catch(() => setError("链接已保存，页面暂未更新，请点击“刷新状态”。"));
+      await onSaved().catch(() => setError(t("portal.release.savedRefresh")));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "确认发布失败，请稍后重试。");
+      setError(caught instanceof Error ? caught.message : t("portal.release.confirmError"));
     } finally { setBusy(false); }
   }
 
-  if (!project) return error ? <Notice tone="warning">{error}</Notice> : null;
+  if (!project) return error ? <Notice tone="warning">{systemLabel(error)}</Notice> : null;
   const { release, draft } = project;
-  const title = release.phase === "confirmed" ? "你已确认发布"
-    : release.phase === "today" ? "今天轮到你发布"
-    : release.phase === "overdue" ? "你的发布时间已过，尚未确认发布"
-    : release.phase === "unconfigured" ? "你的发布时间尚未安排"
-    : `距你的发布还有 ${release.remainingDays} 天`;
-  if (release.phase === "upcoming" && !release.showReminder) return error ? <Notice tone="warning">{error}</Notice> : null;
+  const title = release.phase === "confirmed" ? t("portal.release.confirmedTitle")
+    : release.phase === "today" ? t("portal.release.todayTitle")
+    : release.phase === "overdue" ? t("portal.release.overdueTitle")
+    : release.phase === "unconfigured" ? t("portal.release.unassignedTitle")
+    : t("portal.release.daysRemaining", { days: release.remainingDays, count: release.remainingDays });
+  if (release.phase === "upcoming" && !release.showReminder) return error ? <Notice tone="warning">{systemLabel(error)}</Notice> : null;
   return <section className={`relay-publication-notice${release.showReminder ? " is-due" : ""}`} aria-labelledby="relay-publication-title">
     <div className="relay-publication-heading"><h2 id="relay-publication-title">{title}</h2>
-      {release.scheduledAt ? <p>约定发布时间：{formatScheduledTime(release.scheduledAt)}（北京时间）</p> : null}
+      {release.scheduledAt ? <p>{t("portal.schedule.agreedTime")}{formatScheduledTime(release.scheduledAt, language)}{t("portal.schedule.beijingSuffix")}</p> : null}
     </div>
-    {release.phase === "confirmed" ? <p>确认时间：{formatScheduledTime(release.confirmedAt)}。修改链接不会取消发布确认。</p>
-      : release.phase === "today" ? <p>请按约定时刻发布作品，再于今天填写公开链接，点击“确认已发布”。</p>
-      : release.phase === "overdue" ? <p>已错过当天确认，请联系主催协调。</p>
-      : release.phase === "unconfigured" ? <p>请联系主催安排发布时间。</p>
-      : <p>按截止时间完成并提交作品。发布当天再填写公开链接并确认。</p>}
+    {release.phase === "confirmed" ? <p>{t("portal.release.confirmationTime")}{formatScheduledTime(release.confirmedAt, language)}{t("portal.release.editKeepsConfirmation")}</p>
+      : release.phase === "today" ? <p>{t("portal.release.todayInstructions")}</p>
+      : release.phase === "overdue" ? <p>{t("portal.release.overdueInstructions")}</p>
+      : release.phase === "unconfigured" ? <p>{t("portal.release.unassignedInstructions")}</p>
+      : <p>{t("portal.release.upcomingInstructions")}</p>}
     {release.canEditLink ? <form className="relay-publication-form" onSubmit={event => void save(event)}>
-      <Field label="作品链接">
+      <Field label={t("portal.release.url")}>
         <input className="field-input" type="url" required maxLength={2048} value={workUrl} disabled={busy}
-          placeholder="公开可访问的 HTTPS 作品链接，确认后仍可修改" onChange={event => { dirty.current = true; setWorkUrl(event.target.value); }} />
+          placeholder={t("portal.release.urlPlaceholder")} onChange={event => { dirty.current = true; setWorkUrl(event.target.value); }} />
       </Field>
-      <div className="archive-control"><span className="archive-control-label" aria-hidden="true">RELEASE / {release.confirmedAt ? "SAVE" : "CONFIRM"}</span><Button appearance={release.confirmedAt ? "industrial" : "framed"} className={release.confirmedAt ? undefined : "button--accent"} type="submit" disabled={busy || !workUrl.trim()} aria-busy={busy}>{busy ? "提交中…" : release.confirmedAt ? "保存作品链接" : "确认已发布"}</Button></div>
+      <div className="archive-control"><span className="archive-control-label" aria-hidden="true">RELEASE / {release.confirmedAt ? "SAVE" : "CONFIRM"}</span><Button appearance={release.confirmedAt ? "industrial" : "framed"} className={release.confirmedAt ? undefined : "button--accent"} type="submit" disabled={busy || !workUrl.trim()} aria-busy={busy}>{busy ? t("portal.common.submitting") : release.confirmedAt ? t("portal.release.saveUrl") : t("portal.release.confirm")}</Button></div>
     </form> : null}
     {release.confirmedAt ? draft.publishedAt
-      ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>
-      : <p className="field-hint">已确认发布。作品预告和审查说明通过审核、公开资料齐全后，会在站内展示；如主催已撤下作品，请联系主催。</p> : null}
-    {message ? <Notice tone="success">{message}</Notice> : null}
-    {error ? <Notice tone="error">{error}</Notice> : null}
+      ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>{t("portal.project.viewPublic")}</Link>
+      : <p className="field-hint">{t("portal.release.siteDisplayHint")}</p> : null}
+    {message ? <Notice tone="success">{systemLabel(message)}</Notice> : null}
+    {error ? <Notice tone="error">{systemLabel(error)}</Notice> : null}
   </section>;
 }

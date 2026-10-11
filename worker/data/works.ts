@@ -5,14 +5,15 @@ import { listEventWindows } from "./event-windows";
 import { getWindowOrFallback } from "../lib/windows";
 import { nowIso } from "../lib/time";
 import { createPrefixedId } from "../lib/ids";
+import type { SiteLanguage } from '../../src/shared/i18n';
 
 type PublicWorkRow = Omit<PublicWork, "publicTags" | "observationNumber"> & { tagsJson: string | null };
 
 // Public reads deliberately select only display fields, never review or contact details.
-export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
+export async function listPublicWorks(db: D1Database, language: SiteLanguage = 'zh-CN'): Promise<PublicWork[]> {
   const { results } = await db.prepare(`SELECT
     d.id, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
-    CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
+    CASE WHEN p.is_anonymous = 1 THEN ? ELSE p.credit_name END AS publicAuthorName,
     d.work_type AS workType, d.format_label AS formatLabel, d.public_tags_json AS tagsJson,
     d.cover_url AS coverUrl, d.cover_alt AS coverAlt, d.work_url AS workUrl,
     d.published_at AS publishedAt, s.code AS segmentCode, s.name AS segmentName
@@ -21,14 +22,14 @@ export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
     INNER JOIN portal_profiles p ON p.user_id = participant.user_id
     LEFT JOIN schedule_segments s ON s.id = d.segment_id
     WHERE d.published_at IS NOT NULL
-    ORDER BY s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order IS NULL, s.sort_order, d.published_at, d.id`).all<PublicWorkRow>();
+    ORDER BY s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order IS NULL, s.sort_order, d.published_at, d.id`).bind(language === 'en' ? 'Anonymous' : '匿名').all<PublicWorkRow>();
   return results.map(({ tagsJson, ...work }, index) => ({
     ...work, publicTags: tagsJson ? JSON.parse(tagsJson) as string[] : [], observationNumber: index + 1,
   }));
 }
 
-export async function getPublicWork(db: D1Database, id: string): Promise<PublicWorkDetailResponse | null> {
-  const works = await listPublicWorks(db);
+export async function getPublicWork(db: D1Database, id: string, language: SiteLanguage = 'zh-CN'): Promise<PublicWorkDetailResponse | null> {
+  const works = await listPublicWorks(db, language);
   const index = works.findIndex((work) => work.id === id);
   if (index === -1) return null;
   return { work: works[index], previous: works[index - 1] ?? null, next: works[index + 1] ?? null };
@@ -66,7 +67,7 @@ export async function setWorkPublication(
 }
 
 // Public previews contain approved display fields only, never formal work URLs.
-export async function listPublicSchedule(db: D1Database, works: PublicWork[]): Promise<PublicScheduleEntry[]> {
+export async function listPublicSchedule(db: D1Database, works: PublicWork[], language: SiteLanguage = 'zh-CN'): Promise<PublicScheduleEntry[]> {
   type Row = Omit<PublicScheduleEntry, "preview" | "workId"> & {
     draftId: string | null; previewTitle: string | null; previewSummary: string | null;
     workType: PublicWork["workType"]; coverUrl: string | null; coverAlt: string | null;
@@ -78,7 +79,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
       WHEN s.current_participant_id IS NULL AND s.status IN ('open', 'released') THEN 'available'
       ELSE 'unavailable'
     END AS status,
-    CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
+    CASE WHEN p.is_anonymous = 1 THEN ? ELSE p.credit_name END AS publicAuthorName,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.intro_text ELSE NULL END AS introText,
     d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
@@ -90,7 +91,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     LEFT JOIN applications a ON a.user_id = participant.user_id AND a.status = 'approved'
     LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
     WHERE s.is_visible = 1 AND s.kind <> 'special'
-    ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
+    ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).bind(language === 'en' ? 'Anonymous' : '匿名').all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({
     ...entry,
     preview: draftId ? { previewTitle, previewSummary, workType, coverUrl, coverAlt } : null,

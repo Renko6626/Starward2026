@@ -1,6 +1,8 @@
+import type { SiteLanguage } from '../../shared/i18n';
 export type TurnstileRenderOptions = {
   sitekey: string;
   theme?: 'dark' | 'light' | 'auto';
+  language?: 'en' | 'zh-cn';
   size?: 'normal' | 'compact' | 'flexible';
   callback?: (token: string) => void;
   retry?: 'auto' | 'never';
@@ -32,18 +34,21 @@ export function getTurnstileSiteKey(env: { VITE_TURNSTILE_SITE_KEY?: string | un
   return trimmed ? trimmed : null;
 }
 
-export function getTurnstileClientErrorMessage(code: string) {
-  let message = '人机验证未完成，请重试。若仍失败，请换个网络或浏览器。';
+export function getTurnstileClientErrorMessage(code: string, language: SiteLanguage = 'zh-CN') {
+  const english = language === 'en';
+  let message = english
+    ? 'Human verification was not completed. Try again, or use another network or browser if it keeps failing.'
+    : '人机验证未完成，请重试。若仍失败，请换个网络或浏览器。';
   if (['110100', '110110', '110200', '400020', '400021', '400070'].includes(code)) {
-    message = '网站的验证设置有误，请联系主催。';
+    message = english ? 'The site verification settings are incorrect. Please contact the organizer.' : '网站的验证设置有误，请联系主催。';
   } else if (code === '200500') {
-    message = '验证服务连接失败。请换个网络，或关闭广告拦截后重试。';
+    message = english ? 'Could not connect to the verification service. Try another network, or disable your ad blocker and try again.' : '验证服务连接失败。请换个网络，或关闭广告拦截后重试。';
   } else if (code === '200100') {
-    message = '请检查设备的日期和时间，再刷新页面重试。';
+    message = english ? 'Check your device date and time, then refresh the page and try again.' : '请检查设备的日期和时间，再刷新页面重试。';
   } else if (code === '110600' || code === '110620') {
-    message = '验证超时，请重新验证。';
+    message = english ? 'Verification timed out. Please verify again.' : '验证超时，请重新验证。';
   }
-  return /^\d{6}$/.test(code) ? `${message}（错误码 ${code}）` : message;
+  return /^\d{6}$/.test(code) ? english ? `${message} (Error code ${code})` : `${message}（错误码 ${code}）` : message;
 }
 
 export async function loadTurnstileApi() {

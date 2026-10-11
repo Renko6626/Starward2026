@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { ArchiveChapter } from "../components/ArchiveChapter";
 import { workTypeLabels, type WorkType } from "../../shared/works";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -23,6 +24,7 @@ import type {
 import { projectDraftStatusLabels } from "../../shared/portal";
 import { buildWindowFlagMap, getWindowLabel } from "../../shared/windows";
 import { authClient } from "../lib/auth-client";
+import { localizeSegmentName } from "../../shared/i18n";
 
 type ProjectPageState =
   | { status: "loading" }
@@ -57,6 +59,7 @@ const inputClassName = "field-input";
 const textareaClassName = "field-input min-h-32 resize-y";
 
 export function PortalProjectPage({ embedded = false, compact = false, onSaved, revision = 0 }: { embedded?: boolean; compact?: boolean; onSaved?: () => Promise<void>; revision?: number } = {}) {
+  const { t, language, label: systemLabel } = useSiteTranslation();
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const initialized = useRef(false);
@@ -84,7 +87,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     const sequence = ++loadSequence.current;
     void loadProjectPage(sequence);
     return () => { if (loadSequence.current === sequence) loadSequence.current += 1; };
-  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision]);
+  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision, language]);
 
   async function loadProjectPage(sequence: number) {
     if (!initialized.current) setState({ status: "loading" });
@@ -104,14 +107,14 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
       }
 
       if (initialized.current) {
-        setRefreshWarning("作品资料仍保留在页面上，但最新状态暂时无法读取，请稍后刷新。");
+        setRefreshWarning(t("portal.project.refreshWarning"));
         return;
       }
       setState({
         status: "error",
         forbidden: caught instanceof ApiError && caught.status === 403,
         message:
-          caught instanceof Error ? caught.message : "无法读取作品资料。",
+          caught instanceof Error ? caught.message : t("portal.project.loadError"),
       });
     }
   }
@@ -195,7 +198,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
   async function refreshSummary() {
     try { await onSaved?.(); }
-    catch { setRefreshWarning("操作已完成，页面暂未更新，请稍后刷新。"); }
+    catch { setRefreshWarning(t("portal.common.completedRefresh")); }
   }
 
   async function handlePreviewSave() {
@@ -210,7 +213,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     } catch (caught) {
       setNoticeError(true);
       setNotice(
-        caught instanceof Error ? caught.message : "保存预告信息失败。",
+        caught instanceof Error ? caught.message : t("portal.project.previewSaveError"),
       );
     } finally {
       setPendingAction(null);
@@ -239,7 +242,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     } catch (caught) {
       setNoticeError(true);
       setNotice(
-        caught instanceof Error ? caught.message : "提交预告资料失败。",
+        caught instanceof Error ? caught.message : t("portal.project.previewSubmitError"),
       );
     } finally {
       setPendingAction(null);
@@ -258,7 +261,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     } catch (caught) {
       setNoticeError(true);
       setNotice(
-        caught instanceof Error ? caught.message : "保存审查说明失败。",
+        caught instanceof Error ? caught.message : t("portal.project.reviewSaveError"),
       );
     } finally {
       setPendingAction(null);
@@ -287,28 +290,27 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
     } catch (caught) {
       setNoticeError(true);
       setNotice(
-        caught instanceof Error ? caught.message : "提交审查说明失败。",
+        caught instanceof Error ? caught.message : t("portal.project.reviewSubmitError"),
       );
     } finally {
       setPendingAction(null);
     }
   }
 
-  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取作品资料。</p>;
+  if (sessionQuery.isPending || state.status === "loading") return <p>{t("portal.project.loading")}</p>;
 
   if (state.status === "error") {
     return (
       <div className={embedded ? "space-y-6" : "page-content"}>
-        <PageHeading title="作品资料" />
+        <PageHeading title={t("portal.project.title")} />
         {state.forbidden ? (
           <>
-            <Notice>{state.message}</Notice>
+            <Notice>{systemLabel(state.message)}</Notice>
             <Link className="text-link" to="/portal/application">
-              查看报名进度
-            </Link>
+              {t("portal.registration.viewProgress")}</Link>
           </>
         ) : (
-          <ReadError message={state.message} />
+          <ReadError message={systemLabel(state.message)} />
         )}
       </div>
     );
@@ -319,46 +321,46 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
   return (
     <div className={embedded ? "space-y-6" : "page-content"}>
       {!embedded ? <PageHeading
-        title={<>作品资料</>}
+        title={<>{t("portal.project.title")}</>}
       >
         <div className="flex flex-wrap gap-2">
           <StatusBadge tone={getStatusTone(state.project.draft.previewStatus)}>
-            作品预告：{projectDraftStatusLabels[state.project.draft.previewStatus]}
+            {t("portal.project.previewStatus")}{systemLabel(projectDraftStatusLabels[state.project.draft.previewStatus])}
           </StatusBadge>
           <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
-            审查说明：{projectDraftStatusLabels[state.project.draft.reviewStatus]}
+            {t("portal.project.reviewStatus")}{systemLabel(projectDraftStatusLabels[state.project.draft.reviewStatus])}
           </StatusBadge>
         </div>
       </PageHeading> : null}
 
       {!compact ? <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
-          label="当前发布时点"
+          label={t("portal.schedule.current")}
           value={
             state.project.participant.currentSegmentCode
-              ? `${state.project.participant.currentSegmentCode} ${state.project.participant.currentSegmentName ?? "未命名"}`
-              : "尚未选择"
+              ? `${state.project.participant.currentSegmentCode} ${localizeSegmentName(state.project.participant.currentSegmentCode, state.project.participant.currentSegmentName, language) || t("portal.common.unnamed")}`
+              : t("portal.schedule.notSelected")
           }
         />
         <SummaryCard
-          label="预告提交时间"
-          value={getWindowLabel(state.project.windows, "preview_submit_open")}
+          label={t("portal.project.previewWindow")}
+          value={getWindowLabel(state.project.windows, "preview_submit_open", language)}
         />
         <SummaryCard
-          label="说明提交时间"
-          value={getWindowLabel(state.project.windows, "review_submit_open")}
+          label={t("portal.project.reviewWindow")}
+          value={getWindowLabel(state.project.windows, "review_submit_open", language)}
         />
         <SummaryCard
-          label="最近更新"
-          value={formatDateTime(state.project.draft.updatedAt)}
+          label={t("portal.common.lastUpdated")}
+          value={formatDateTime(state.project.draft.updatedAt, language)}
         />
       </div> : null}
       {state.project.draft.adminFeedback ? (
         <Notice tone="warning">
-          <div className="font-medium">主催反馈</div>
+          <div className="font-medium">{t("portal.project.hostFeedback")}</div>
           <div className="mt-2">{state.project.draft.adminFeedback}</div>
           <div className="mt-2 text-sm">
-            最近审核时间：{formatDateTime(state.project.draft.reviewedAt)}
+            {t("portal.project.lastReviewed")}{formatDateTime(state.project.draft.reviewedAt, language)}
           </div>
         </Notice>
       ) : null}
@@ -366,22 +368,22 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
 
       <div className={compact ? "space-y-6" : "grid grid-cols-1 xl:grid-cols-2 gap-6"}>
-        <ArchiveChapter className="panel space-y-6" enabled={compact} id="preview" number="02" title="作品预告" defaultOpen state={<span className={state.project.draft.previewStatus === "changes_requested" ? "attention" : undefined}>{projectDraftStatusLabels[state.project.draft.previewStatus]}</span>}>
+        <ArchiveChapter className="panel space-y-6" enabled={compact} id="preview" number="02" title={t("portal.project.preview")} defaultOpen state={<span className={state.project.draft.previewStatus === "changes_requested" ? "attention" : undefined}>{systemLabel(projectDraftStatusLabels[state.project.draft.previewStatus])}</span>}>
           <div className={compact ? "archive-editor-heading" : "flex items-start justify-between gap-4"}>
             <div>
-              <h2 className="text-lg font-medium text-on-surface">作品预告（公开）</h2>
+              <h2 className="text-lg font-medium text-on-surface">{t("portal.project.previewPublic")}</h2>
             </div>
             <StatusBadge
               tone={getStatusTone(state.project.draft.previewStatus)}
             >
-              {projectDraftStatusLabels[state.project.draft.previewStatus]}
+              {systemLabel(projectDraftStatusLabels[state.project.draft.previewStatus])}
             </StatusBadge>
           </div>
 
-      {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">查看作品</a> : null}
-      <Notice>{state.project.draft.publishedAt ? <><span>作品已公开。 </span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>查看公开作品</Link></> : "正式作品内容提交方式另行通知。"}</Notice>
+      {state.project.draft.workUrl ? <a className="text-link" href={state.project.draft.workUrl} target="_blank" rel="noreferrer">{t("portal.project.view")}</a> : null}
+      <Notice>{state.project.draft.publishedAt ? <><span>{t("portal.project.published")}</span><Link className="text-link" to="/works/$workId" params={{ workId: state.project.draft.id }}>{t("portal.project.viewPublic")}</Link></> : t("portal.project.contentSubmissionNotice")}</Notice>
           <div className="space-y-4">
-            <Field label="作品标题">
+            <Field label={t("portal.project.name")}>
               <input
                 className={inputClassName}
                 disabled={pendingAction !== null}
@@ -391,7 +393,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     previewTitle: event.target.value,
                   }))
                 }
-                placeholder="填写作品标题"
+                placeholder={t("portal.project.namePlaceholder")}
                 type="text"
                 value={previewForm.previewTitle}
               />
@@ -399,12 +401,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
 
             <div className="space-y-2">
               <p>
-                公开署名：{state.project.draft.publicAuthorName ?? "未填写"}
+                {t("portal.profile.publicCredit")}{state.project.profile?.isAnonymous ? systemLabel('匿名') : state.project.draft.publicAuthorName ?? t("portal.common.notProvided")}
               </p>
-              {embedded ? <a className="text-link" href="#profile">修改署名设置</a> : <Link className="text-link" to="/portal/profile">修改署名设置</Link>}
+              {embedded ? <a className="text-link" href="#profile">{t("portal.profile.editCredit")}</a> : <Link className="text-link" to="/portal/profile">{t("portal.profile.editCredit")}</Link>}
             </div>
 
-            <Field label="作品简介">
+            <Field label={t("portal.project.summary")}>
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -415,20 +417,20 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={compact ? 3 : 7}
-                placeholder="填写供读者查看的作品简介，审核通过后可公开展示；请勿填写私人联系方式。"
+                placeholder={t("portal.project.summaryPlaceholder")}
                 value={previewForm.previewSummary}
               />
             </Field>
 
             <div className={compact ? "archive-field-pair" : "space-y-4"}>
-            <Field label="作品类型">
+            <Field label={t("portal.project.type")}>
               <select className={inputClassName} disabled={pendingAction !== null}
                 value={previewForm.workType} onChange={event => setPreviewForm(current => ({ ...current, workType: event.target.value as WorkType | "" }))}>
-                <option value="">请选择作品类型</option>
-                {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{t("portal.project.selectType")}</option>
+                {Object.entries(workTypeLabels).map(([value, label]) => <option key={value} value={value}>{systemLabel(label)}</option>)}
               </select>
             </Field>
-            <Field label="作品形式">
+            <Field label={t("portal.project.format")}>
               <input
                 className={inputClassName}
                 disabled={pendingAction !== null}
@@ -438,24 +440,24 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     formatLabel: event.target.value,
                   }))
                 }
-                placeholder="例如：短篇小说、组图、手书视频"
+                placeholder={t("portal.project.formatPlaceholder")}
                 type="text"
                 value={previewForm.formatLabel}
               />
             </Field>
             </div>
-            <Field label="封面地址（选填）">
+            <Field label={t("portal.project.coverUrl")}>
               <input className={inputClassName} type="url" maxLength={2048} disabled={pendingAction !== null}
-                value={previewForm.coverUrl} placeholder="公开可访问的 HTTPS 图片地址，可不填" onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
+                value={previewForm.coverUrl} placeholder={t("portal.project.coverUrlPlaceholder")} onChange={event => setPreviewForm(current => ({ ...current, coverUrl: event.target.value }))} />
             </Field>
-            <Field label="封面描述（选填）">
-              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null} placeholder="简要描述封面画面，可不填"
+            <Field label={t("portal.project.coverAlt")}>
+              <input className={inputClassName} maxLength={240} disabled={pendingAction !== null} placeholder={t("portal.project.coverAltPlaceholder")}
                 value={previewForm.coverAlt} onChange={event => setPreviewForm(current => ({ ...current, coverAlt: event.target.value }))} />
             </Field>
 
 
 
-            <Field label="作品标签（选填）">
+            <Field label={t("portal.project.tags")}>
               <input
                 className={inputClassName}
                 disabled={pendingAction !== null}
@@ -465,7 +467,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                     publicTagsText: event.target.value,
                   }))
                 }
-                placeholder="用逗号、顿号或换行分隔，可不填"
+                placeholder={t("portal.project.tagsPlaceholder")}
                 type="text"
                 value={previewForm.publicTagsText}
               />
@@ -482,7 +484,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               onClick={() => void handlePreviewSave()}
               type="button"
             >
-              {pendingAction === "preview-save" ? "保存中…" : "保存作品预告"}
+              {pendingAction === "preview-save" ? t("portal.common.saving") : t("portal.project.savePreview")}
             </Button>
             {state.project.draft.previewStatus !== "approved" ? <Button appearance={compact ? "industrial" : "default"}
               disabled={pendingAction !== null || !flags.previewSubmitOpen}
@@ -491,26 +493,26 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               type="button"
             >
               {pendingAction === "preview-submit"
-                ? "提交中…"
-                : "提交预告审核"}
+                ? t("portal.common.submitting")
+                : t("portal.project.submitPreview")}
             </Button> : null}
           </div>
 
-          {state.project.draft.previewStatus !== "approved" && !flags.previewSubmitOpen ? <p className="field-hint">提交尚未开放</p> : null}
+          {state.project.draft.previewStatus !== "approved" && !flags.previewSubmitOpen ? <p className="field-hint">{t("portal.project.submissionClosed")}</p> : null}
         </ArchiveChapter>
 
-        <ArchiveChapter className="panel space-y-6" enabled={compact} id="review" number="03" title="审查说明" state={<span className={state.project.draft.reviewStatus === "changes_requested" ? "attention" : undefined}>{projectDraftStatusLabels[state.project.draft.reviewStatus]} / 不公开</span>}>
+        <ArchiveChapter className="panel space-y-6" enabled={compact} id="review" number="03" title={t("portal.project.review")} state={<span className={state.project.draft.reviewStatus === "changes_requested" ? "attention" : undefined}>{systemLabel(projectDraftStatusLabels[state.project.draft.reviewStatus])} {t("portal.project.privateSuffix")}</span>}>
           <div className={compact ? "archive-editor-heading" : "flex items-start justify-between gap-4"}>
             <div>
-              <h2 className="text-lg font-medium text-on-surface">审查说明（不公开）</h2>
+              <h2 className="text-lg font-medium text-on-surface">{t("portal.project.reviewPrivate")}</h2>
             </div>
             <StatusBadge tone={getStatusTone(state.project.draft.reviewStatus)}>
-              {projectDraftStatusLabels[state.project.draft.reviewStatus]}
+              {systemLabel(projectDraftStatusLabels[state.project.draft.reviewStatus])}
             </StatusBadge>
           </div>
 
           <div className="space-y-4">
-            <Field label="内容概述">
+            <Field label={t("portal.project.contentSummary")}>
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -521,12 +523,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={compact ? 3 : 6}
-                placeholder="作品完成后，简要说明内容供主催核对。"
+                placeholder={t("portal.project.contentSummaryPlaceholder")}
                 value={reviewForm.contentNote}
               />
             </Field>
 
-            <Field label="内容提醒">
+            <Field label={t("portal.project.warnings")}>
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -537,12 +539,12 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={compact ? 2 : 4}
-                placeholder="写明需要提前提醒的情节；没有则填“无”。"
+                placeholder={t("portal.project.warningsPlaceholder")}
                 value={reviewForm.contentWarnings}
               />
             </Field>
 
-            <Field label="给主催的补充说明（选填）">
+            <Field label={t("portal.project.hostNotes")}>
               <textarea
                 className={textareaClassName}
                 disabled={pendingAction !== null}
@@ -553,7 +555,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
                   }))
                 }
                 rows={compact ? 2 : 5}
-                placeholder="其他需要告知主催的事项，可不填"
+                placeholder={t("portal.project.hostNotesPlaceholder")}
                 value={reviewForm.reviewNote}
               />
             </Field>
@@ -567,7 +569,7 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               onClick={() => void handleReviewSave()}
               type="button"
             >
-              {pendingAction === "review-save" ? "保存中…" : "保存审查说明"}
+              {pendingAction === "review-save" ? t("portal.common.saving") : t("portal.project.saveReview")}
             </Button>
             {state.project.draft.reviewStatus !== "approved" ? <Button appearance={compact ? "industrial" : "default"}
               disabled={pendingAction !== null || !flags.reviewSubmitOpen}
@@ -575,17 +577,17 @@ export function PortalProjectPage({ embedded = false, compact = false, onSaved, 
               onClick={() => void handleReviewSubmit()}
               type="button"
             >
-              {pendingAction === "review-submit" ? "提交中…" : "提交说明审核"}
+              {pendingAction === "review-submit" ? t("portal.common.submitting") : t("portal.project.submitReview")}
             </Button> : null}
           </div>
 
-          {state.project.draft.reviewStatus !== "approved" && !flags.reviewSubmitOpen ? <p className="field-hint">提交尚未开放</p> : null}
+          {state.project.draft.reviewStatus !== "approved" && !flags.reviewSubmitOpen ? <p className="field-hint">{t("portal.project.submissionClosed")}</p> : null}
         </ArchiveChapter>
       </div>
 
 
-      {refreshWarning ? <Notice tone="warning">{refreshWarning}</Notice> : null}
-      {notice ? <Notice tone={noticeError ? "error" : "success"}>{notice}</Notice> : null}
+      {refreshWarning ? <Notice tone="warning">{systemLabel(refreshWarning)}</Notice> : null}
+      {notice ? <Notice tone={noticeError ? "error" : "success"}>{systemLabel(notice)}</Notice> : null}
     </div>
   );
 }

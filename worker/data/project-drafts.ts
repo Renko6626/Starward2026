@@ -276,7 +276,7 @@ export async function updatePortalProjectPreview(
     return {
       ok: true,
       draft: (await getPortalProjectDraftDetail(db, input.participant.id))!,
-      message: "作品预告没有变更。",
+      message: "作品资料没有变更。",
     };
   }
 
@@ -334,7 +334,7 @@ export async function updatePortalProjectPreview(
   return {
     ok: true,
     draft,
-    message: "已保存作品预告。",
+    message: "已保存作品资料。",
   };
 }
 
@@ -351,7 +351,7 @@ export async function submitPortalProjectPreview(
     return projectDraftMutationError(
       403,
       "preview_submit_closed",
-      "作品预告提交尚未开放，可先保存填写内容。",
+      "作品资料提交尚未开放，可先保存填写内容。",
     );
   }
 
@@ -369,7 +369,7 @@ export async function submitPortalProjectPreview(
     return projectDraftMutationError(
       409,
       "preview_already_approved",
-      "作品预告已通过审核，修改后保存即可。",
+      "作品资料已通过审核，修改后保存即可。",
     );
   }
 
@@ -384,7 +384,7 @@ export async function submitPortalProjectPreview(
     return projectDraftMutationError(
       409,
       "preview_incomplete",
-      `提交预告前请先补全：${missingFields.join("、")}。`,
+      `提交作品资料前请先补全：${missingFields.join("、")}。`,
     );
   }
 
@@ -395,7 +395,7 @@ export async function submitPortalProjectPreview(
     return {
       ok: true,
       draft: mapPortalProjectDraftDetail(existing),
-      message: "预告资料已经提交，无需重复提交。",
+      message: "作品资料已经提交，无需重复提交。",
     };
   }
 
@@ -436,7 +436,7 @@ export async function submitPortalProjectPreview(
   return {
     ok: true,
     draft,
-    message: "已将预告资料提交给主催。",
+    message: "已将作品资料提交给主催。",
   };
 }
 

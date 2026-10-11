@@ -1,0 +1,8 @@
+.language-switcher { display: inline-flex; align-items: center; gap: 8px; }
+.language-switcher > button { min-height: 44px; padding-inline: 4px; cursor: pointer; }
+.language-switcher > button:hover { color: var(--color-primary); }
+.language-switcher > button:focus-visible { outline: 1px solid currentColor; outline-offset: 4px; }
+.language-switcher > button:disabled { cursor: wait; opacity: .6; }
+@media (max-width: 800px) {
+  .language-switcher > button { width: 100%; text-align: left; padding: 15px 10px; }
+}

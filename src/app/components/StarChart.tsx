@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { motion, useInView, useSpring } from "motion/react";
 import { Pause, Play } from "lucide-react";
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
@@ -19,6 +20,7 @@ export function StarChart({
   className?: string;
   variant?: "hero" | "compact";
 }) {
+  const { t } = useSiteTranslation();
   const id = useId().replace(/:/g, "");
   const rootRef = useRef<HTMLDivElement>(null);
   const inView = useInView(rootRef, { amount: 0.1 });
@@ -71,7 +73,7 @@ export function StarChart({
       <div
         className="star-chart-scene"
         role="img"
-        aria-label="秘封观测星盘：银白星轨围绕金色的莲子星与淡紫色的梅莉星，一束光连接两颗星。"
+        aria-label={t("public.chart.description")}
         onPointerMove={followPointer}
         onPointerLeave={() => { x.set(0); y.set(0); setActiveStar(null); }}
       >
@@ -190,7 +192,7 @@ export function StarChart({
       {!reducedMotion && <button
         type="button"
         className="star-chart-pause"
-        aria-label={paused ? "播放星图动画" : "暂停星图动画"}
+        aria-label={paused ? t("public.chart.play") : t("public.chart.pause")}
         onClick={() => setPaused((current) => !current)}
       >
         {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}

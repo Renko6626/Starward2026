@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ApplicationIntakeResponse } from "../../shared/applications";
 import { requestJson } from "./api";
+import { useSiteTranslation } from '../../i18n/use-site-translation';
 
 type IntakeState =
   | { status: "loading" }
@@ -8,6 +9,7 @@ type IntakeState =
   | { status: "error"; message: string };
 
 export function useApplicationIntake(refreshInterval = 0) {
+  const { language } = useSiteTranslation();
   const [state, setState] = useState<IntakeState>({ status: "loading" });
   useEffect(() => {
     const controller = new AbortController();
@@ -23,7 +25,7 @@ export function useApplicationIntake(refreshInterval = 0) {
       } catch (error: unknown) {
         if (!controller.signal.aborted) setState({
           status: "error",
-          message: error instanceof Error ? error.message : "无法读取报名状态。",
+          message: error instanceof Error ? error.message : language === 'en' ? 'Unable to load registration status.' : "无法读取报名状态。",
         });
       } finally {
         inFlight = false;
@@ -38,6 +40,6 @@ export function useApplicationIntake(refreshInterval = 0) {
       if (timer !== null) window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refreshVisible);
     };
-  }, [refreshInterval]);
+  }, [refreshInterval, language]);
   return state;
 }

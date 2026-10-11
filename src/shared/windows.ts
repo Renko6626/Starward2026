@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { localizeSystemLabel, type SiteLanguage } from './i18n';
 
 export const eventWindowKeys = [
   "application_open",
@@ -22,14 +23,14 @@ export const eventWindowStateLabels: Record<EventWindowState, string> = {
   ended: "已结束",
 };
 
-export function getApplicationWindowLabel(window: EventWindowSummary | null | undefined) {
-  if (!window || window.state === "disabled") return "报名未开放";
-  return `报名${eventWindowStateLabels[window.state]}`;
+export function getApplicationWindowLabel(window: EventWindowSummary | null | undefined, language: SiteLanguage = 'zh-CN') {
+  if (!window || window.state === "disabled") return localizeSystemLabel("报名未开放", language);
+  return localizeSystemLabel(`报名${eventWindowStateLabels[window.state]}`, language);
 }
 
-export function getWindowLabel(items: EventWindowSummary[], key: EventWindowKey) {
+export function getWindowLabel(items: EventWindowSummary[], key: EventWindowKey, language: SiteLanguage = 'zh-CN') {
   const window = items.find((item) => item.key === key);
-  return eventWindowStateLabels[window?.state ?? "disabled"];
+  return localizeSystemLabel(eventWindowStateLabels[window?.state ?? "disabled"], language);
 }
 
 export type EventWindowSummary = {

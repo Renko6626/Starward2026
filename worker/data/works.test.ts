@@ -56,6 +56,15 @@ beforeEach(() => {
 afterEach(() => database.sqlite.close());
 
 describe("public work publication", () => {
+  it('localizes anonymous credit without translating an authored name that matches the Chinese label', async () => {
+    openWindow(); readyDraft();
+    await setWorkPublication(db, draftId, true, actor);
+    database.sqlite.exec("UPDATE portal_profiles SET credit_name = '匿名', is_anonymous = 0 WHERE user_id = 'usr_seed_active'");
+    expect((await listPublicWorks(db, 'en'))[0]?.publicAuthorName).toBe('匿名');
+    database.sqlite.exec("UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active'");
+    expect((await listPublicWorks(db, 'en'))[0]?.publicAuthorName).toBe('Anonymous');
+    expect((await listPublicWorks(db))[0]?.publicAuthorName).toBe('匿名');
+  });
   it("preserves existing drafts and requires an open release window, approvals and public metadata", async () => {
     expect(await listPublicWorks(db)).toEqual([]);
     expect(await getPublicWork(db, draftId)).toBeNull();

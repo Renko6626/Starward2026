@@ -1,5 +1,7 @@
-export const ACTIVITY_RULES_VERSION = "2026-10-11-v12";
-export const ACTIVITY_RULES_UPDATED_AT = "2026-10-11";
+import type { SiteLanguage } from './i18n';
+import { activityRulesSectionsEn } from './activity-rules-en';
+export const ACTIVITY_RULES_VERSION = "2026-10-12-v13";
+export const ACTIVITY_RULES_UPDATED_AT = "2026-10-12";
 export const ACTIVITY_RULES_ACCEPTANCE_HEADER = "x-starward-rules-version";
 export const NEW_ACCOUNT_RESPONSE_HEADER = "x-starward-account-created";
 export const ACTIVITY_RULES_TITLE = "逐星巡礼活动规则";
@@ -53,7 +55,7 @@ export const activityRulesSections = [
   {
     id: "deadline", title: "六、作品完成、提交与补救安排",
     paragraphs: [
-      "参与流程为报名、作品提交和资料登记。报名时填写基本信息与创作意向，并预留接力时点；作品完成后，须正式提交作品内容并登记作品资料，供组委会进行内容审核和最终确认。报名资料不代替正式作品提交，活动不另设作品预告阶段。",
+      "参与流程为报名、作品提交和资料登记。报名时填写基本信息与创作意向，可选择意向发布时间并预留接力时点，也可由组委会安排发布时间；作品完成后，须正式提交作品内容并登记作品资料，供组委会进行内容审核和最终确认。报名资料不代替正式作品提交，活动不另设作品预告阶段。",
       "作品须在 2026 年 11 月 11 日 23:00（北京时间）前完成并提交。原则上应在截止前补齐全部作品信息。",
       "作品提交入口预计在接力活动开始前两周开放。入口开放后，完成的作品可提前提交；具体提交方式和审核安排将在作者页面及活动 QQ 群内通知。",
       "若截止时作品已接近完成，仍需在 2026 年 11 月 12 日继续创作，且能在本人接力发布时间前至少 3 小时完成并提交，可在活动 QQ 群内联系组委会申请补救。较早发布时段的作者可能无法同时满足这两个条件，具体安排须经组委会确认。",
@@ -70,7 +72,7 @@ export const activityRulesSections = [
   {
     id: "privacy", title: "八、用户信息与隐私",
     paragraphs: [
-      "通过网站当前开放的登录方式建立账号。报名需提供署名、B 站主页或 UID、联系方式种类与内容、参加形式、创作意向及发布时间，用于活动联系、排期和作品审核。联系方式由参与者自行填写，可选择 QQ、微信、邮箱等渠道，与登录账号分开；备用联系方式为选填。创作意向需简要描述准备创作什么。",
+      "通过网站当前开放的登录方式建立账号。报名需提供署名、B 站主页或 UID、联系方式种类与内容、参加形式及创作意向，用于活动联系、排期和作品审核。发布时间可自行选择，也可由组委会安排。联系方式由参与者自行填写，可选择 QQ、微信、邮箱等渠道，与登录账号分开；备用联系方式为选填。创作意向需简要描述准备创作什么。",
       "公开署名、排期及经审核的正式作品资料会按活动安排展示。邮箱、主联系方式、备用联系方式、历史报名链接、留言及内部审查说明不公开。匿名仅影响本站公开署名，组委会仍可查看资料，外部作品链接也可能显示作者身份。",
       "B 站主页或 UID 可提供给已确认排期的相邻作者，仅供接力联系使用，不得擅自转发或用于骚扰；该入口不提供邮箱及其他联系方式。",
       "组委会承诺不出售个人信息、不用于无关营销、不擅自向无关人员提供。非公开资料仅供必要工作人员按工作需要使用；托管、安全验证和邮件服务商会处理提供服务所需的信息。",
@@ -78,3 +80,15 @@ export const activityRulesSections = [
     ],
   },
 ] as const;
+
+export function getActivityRulesContent(language: SiteLanguage = 'zh-CN') {
+  return language === 'en' ? {
+    title: 'Starward Pilgrimage event rules',
+    sections: activityRulesSectionsEn,
+    consentNotice: 'Publication of the commemorative book and permission to use works will be discussed and confirmed separately after formal submission.',
+    consentText: 'I have read and agree to the Starward Pilgrimage event rules. I understand that publication of the commemorative book and permission to use works will be discussed and confirmed separately after formal submission.',
+  } : {
+    title: ACTIVITY_RULES_TITLE, sections: activityRulesSections,
+    consentNotice: ACTIVITY_RULES_CONSENT_NOTICE, consentText: ACTIVITY_RULES_CONSENT_TEXT,
+  };
+}

@@ -1,4 +1,7 @@
 import type { PortalEventItem } from "../../src/shared/portal";
+import { localizeSegmentName, type SiteLanguage } from '../../src/shared/i18n';
+import { localizeServerMessage } from '../../src/shared/server-message';
+import { serverMessages } from '../../src/shared/locales/server';
 
 type PortalEventPayload = Record<string, unknown>;
 
@@ -10,7 +13,9 @@ type BuildPortalEventLabelInput = {
 
 export function buildPortalEventActorLabel(
   actorType: PortalEventItem["actorType"],
+  language: SiteLanguage = 'zh-CN',
 ) {
+  if (language === 'en') return { participant: 'You', admin: 'Organizers', system: 'System' }[actorType];
   switch (actorType) {
     case "participant":
       return "你";
@@ -21,8 +26,23 @@ export function buildPortalEventActorLabel(
   }
 }
 
-export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
+export function buildPortalEventLabel(input: BuildPortalEventLabelInput, language: SiteLanguage = 'zh-CN'): string {
   const payload = parsePortalEventPayload(input.payloadJson);
+
+  if (language === 'en') {
+    // Use the structured event values, rather than guessing boundaries inside custom names.
+    const segment = (code: unknown, name: unknown) => formatSegment(code, name, language);
+    const message = (key: keyof typeof serverMessages, ...values: string[]) => serverMessages[key].en
+      .replace(/\{\{v(\d+)\}\}/g, (_, index: string) => values[Number(index)] ?? '');
+    switch (input.eventType) {
+      case 'segment_claimed': return message('server.historySlotClaimed', segment(payload.segmentCode, payload.segmentName));
+      case 'segment_changed': return message('server.historySlotChanged', segment(payload.fromSegmentCode, payload.fromSegmentName), segment(payload.toSegmentCode, payload.toSegmentName));
+      case 'segment_released': return message('server.historySlotReleased', segment(payload.segmentCode, payload.segmentName));
+      case 'segment_admin_assigned': return message('server.historySlotAssigned', segment(payload.segmentCode, payload.segmentName));
+      case 'segment_admin_released': return message('server.historySlotReleasedByOrganizer', segment(payload.segmentCode, payload.segmentName));
+      default: return localizeServerMessage(buildPortalEventLabel(input, 'zh-CN'), language);
+    }
+  }
 
   switch (input.eventType) {
     case "application_submitted":
@@ -53,9 +73,9 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
     case "segment_admin_released":
       return `主催释放了你当前的时间段 ${formatSegment(payload.segmentCode, payload.segmentName)}。`;
     case "preview_saved":
-      return "已保存作品预告。";
+      return "已保存作品资料。";
     case "preview_submitted":
-      return "已提交作品预告，等待主催审核。";
+      return "已提交作品资料，等待主催审核。";
     case "review_saved":
       return "已保存审查说明。";
     case "review_submitted":
@@ -67,7 +87,7 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
     case "work_link_updated":
       return "你更新了作品链接，首次发布确认时间保留。";
     case "project_preview_saved":
-      return "已保存作品预告。";
+      return "已保存作品资料。";
     case "project_review_saved":
       return "已保存审查说明。";
     case "work_published":
@@ -101,12 +121,12 @@ function parsePortalEventPayload(
   }
 }
 
-function formatSegment(code: unknown, name: unknown) {
+function formatSegment(code: unknown, name: unknown, language: SiteLanguage = 'zh-CN') {
   const normalizedCode = normalizeOptionalText(code);
   const normalizedName = normalizeOptionalText(name);
 
   if (normalizedCode && normalizedName) {
-    return `${normalizedCode} ${normalizedName}`;
+    return `${normalizedCode} ${localizeSegmentName(normalizedCode, normalizedName, language)}`;
   }
 
   if (normalizedCode) {
@@ -117,7 +137,7 @@ function formatSegment(code: unknown, name: unknown) {
     return normalizedName;
   }
 
-  return "未命名时间段";
+  return language === 'en' ? 'Unnamed release slot' : "未命名时间段";
 }
 
 function normalizeOptionalText(value: unknown) {

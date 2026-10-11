@@ -1,5 +1,6 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Notice, PageHeading } from "../../app/components/ui";
 import { ApiError, requestJson } from "../../app/lib/api";
 import { formatDateTime } from "../../app/lib/format";
@@ -12,9 +13,11 @@ type HistoryPageState =
   | { status: "error"; message: string };
 
 export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded?: boolean; revision?: number } = {}) {
+  const { t, language, label: systemLabel } = useSiteTranslation();
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
   const [state, setState] = useState<HistoryPageState>({ status: "loading" });
+  const loadSequence = useRef(0);
 
   useEffect(() => {
     if (!sessionQuery.isPending && !sessionQuery.data) {
@@ -26,18 +29,22 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
       return;
     }
 
-    void loadHistoryPage();
-  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision]);
+    const sequence = ++loadSequence.current;
+    void loadHistoryPage(sequence);
+    return () => { if (loadSequence.current === sequence) loadSequence.current += 1; };
+  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision, language]);
 
-  async function loadHistoryPage() {
+  async function loadHistoryPage(sequence: number) {
     setState({ status: "loading" });
 
     try {
       const history = await requestJson<PortalHistoryResponse>(
         "/api/portal/history",
       );
+      if (sequence !== loadSequence.current) return;
       setState({ status: "ready", history });
     } catch (caught) {
+      if (sequence !== loadSequence.current) return;
       if (caught instanceof ApiError && caught.status === 401) {
         void navigate({ to: "/portal/login" });
         return;
@@ -46,22 +53,21 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
       setState({
         status: "error",
         message:
-          caught instanceof Error ? caught.message : "无法读取操作记录，请稍后重试。",
+          caught instanceof Error ? caught.message : t("portal.history.loadError"),
       });
     }
   }
 
-  if (sessionQuery.isPending || state.status === "loading") return <p>正在读取操作记录。</p>;
-  if (state.status === "error") return <Notice tone="error">{state.message}</Notice>;
+  if (sessionQuery.isPending || state.status === "loading") return <p>{t("portal.history.loading")}</p>;
+  if (state.status === "error") return <Notice tone="error">{systemLabel(state.message)}</Notice>;
 
   return (
     <div className={embedded ? "space-y-4" : "page-content"}>
       {!embedded ? <PageHeading
-        title={<>操作记录</>}
+        title={<>{t("portal.history.title")}</>}
       >
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant border border-outline-variant text-sm font-mono font-medium">
-          {state.history.items.length} 条记录
-        </span>
+          {t("portal.history.records", { count: state.history.items.length })}</span>
       </PageHeading> : null}
 
       <section className="panel">
@@ -70,7 +76,7 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
             {state.history.items.map((item) => (
               <article key={item.id}>
                 <time className="text-sm font-mono text-on-surface-variant block mb-0.5">
-                  {formatDateTime(item.createdAt)}
+                  {formatDateTime(item.createdAt, language)}
                 </time>
                 <p className="text-base text-on-surface">{item.label}</p>
                 <p className="text-sm text-on-surface-variant">
@@ -80,14 +86,13 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
             ))}
           </div>
         ) : (
-          <Notice>暂无操作记录。</Notice>
+          <Notice>{t("portal.history.empty")}</Notice>
         )}
       </section>
 
       {!embedded ? <div className="flex flex-wrap gap-3">
         <Link className="button button--secondary" to="/portal">
-          返回作者页面
-        </Link>
+          {t("portal.workspace.return")}</Link>
       </div> : null}
     </div>
   );

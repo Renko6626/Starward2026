@@ -1,3 +1,4 @@
+import { useSiteTranslation } from "../../i18n/use-site-translation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -17,6 +18,7 @@ export function revealArchiveTarget(target: HTMLElement) {
 export function ArchiveChapter({ id, number, title, state, defaultOpen = false, enabled = true, className, children }: {
   id?: string; number: string; title: string; state?: ReactNode; defaultOpen?: boolean; enabled?: boolean; className?: string; children: ReactNode;
 }) {
+  const { t } = useSiteTranslation();
   const navigate = useNavigate();
   const details = useRef<HTMLDetailsElement>(null);
   const content = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export function ArchiveChapter({ id, number, title, state, defaultOpen = false, 
     <summary onClick={event => {
       event.preventDefault();
       setExpanded(!desiredOpen.current);
-    }}><span className="chapter-number">{number}</span><h2>{title}</h2><span className="chapter-state">{state}</span><span className="chapter-toggle">{open ? "收起 −" : "展开 +"}</span></summary>
+    }}><span className="chapter-number">{number}</span><h2>{title}</h2><span className="chapter-state">{state}</span><span className="chapter-toggle">{open ? t("portal.archive.collapse") : t("portal.archive.expand")}</span></summary>
     <div ref={content} className="chapter-content" inert={!open}><div className="chapter-sheet">{children}</div></div>
   </details>;
 }
