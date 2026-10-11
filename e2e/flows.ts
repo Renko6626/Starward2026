@@ -61,6 +61,59 @@ export async function fillAllSeats() {
     UPDATE schedule_segments SET status = 'held', current_participant_id = 'full_' || id WHERE current_participant_id IS NULL;`);
 }
 
+export async function verifyScheduleIntent(page: Page) {
+  await openPortal(page);
+  await openChapter(page, "plan");
+  await page.locator('[name="application.introText"]').fill("选时流程验收，保留已填写的创作意向。");
+  await page.locator('[name="segmentId"]').selectOption("seg_seed_101");
+  const progress = page.getByRole("region", { name: "报名进度" });
+  await expect(progress.getByRole("definition").filter({ hasText: /^由主催安排$/ })).toBeVisible();
+  await expect(progress).not.toContainText("00:00");
+
+  await page.goto("/works");
+  await expect(page.getByText("可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。", { exact: true })).toBeVisible();
+  const slot = page.getByRole("button", { name: /^T\+03:00/ });
+  await slot.click();
+  if (page.viewportSize()!.width > 640) await slot.click();
+  await expect(page.getByRole("dialog", { name: "时段详情与操作" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "前往作者页面", exact: true }).click();
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("seg_seed_101");
+
+  await page.goto("/works");
+  await page.getByRole("link", { name: "不选时间，直接报名", exact: true }).click();
+  await openChapter(page, "plan");
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("");
+  await expect(page).toHaveURL(/\/portal$/);
+  await page.reload();
+  await openChapter(page, "plan");
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("");
+  await expect(page.locator('[name="application.introText"]')).toHaveValue("选时流程验收，保留已填写的创作意向。");
+
+  await page.goto("/works");
+  await expect(page.getByText("可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^T\+03:00/ }).click();
+  await page.getByRole("link", { name: "选择这个时点并填写报名", exact: true }).click();
+  await expect(page).toHaveURL(/\/portal#profile$/);
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("seg_seed_104");
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveCSS("overflow", "hidden");
+  await expect(progress).not.toContainText("03:00");
+  await page.reload();
+  await openChapter(page, "plan");
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("seg_seed_104");
+  expect(await rows("SELECT current_participant_id FROM schedule_segments WHERE id = 'seg_seed_104'"))
+    .toEqual([{ current_participant_id: null }]);
+  await page.getByRole("button", { name: "更新报名", exact: true }).click();
+  await expect(progress).toContainText("03:00");
+  await expect(progress).toContainText("已预留");
+  expect(await rows("SELECT current_participant_id FROM schedule_segments WHERE id = 'seg_seed_104'"))
+    .toEqual([{ current_participant_id: "part_seed_pending" }]);
+  await page.locator('[name="segmentId"]').selectOption("seg_seed_105");
+  await expect(progress).toContainText("03:00");
+  await expect(progress).not.toContainText("04:00");
+}
+
 export async function swapAuthors(approvedPage: Page, pendingPage: Page) {
   await approvedPage.goto("/works");
   await approvedPage.locator('button.ops-task').filter({ has: approvedPage.locator('time[datetime="2026-11-11T16:00:00.000Z"]') }).click();

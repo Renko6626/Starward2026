@@ -17,12 +17,11 @@ import { parseRegistrationDraft, registrationDraftKey } from "../lib/registratio
 import { isRegistrationSegmentSelectable, readScheduleIntent, requiresRegistrationTimeConfirmation, saveScheduleIntent, type RegistrationTimeChange } from "../lib/schedule-selection";
 import { getRegistrationFieldErrors } from "../lib/registration-validation";
 
-export function RegistrationSection({ application, collaboration, onSaved, compact = false, onSelectionChange }: {
+export function RegistrationSection({ application, collaboration, onSaved, compact = false }: {
   compact?: boolean;
   application: PortalApplicationResponse;
   collaboration: CollaborationResponse;
   onSaved: () => Promise<void>;
-  onSelectionChange?: (segmentId: string) => void;
 }) {
   const { segment } = getRouteApi("/portal/").useSearch();
   const navigate = useNavigate();
@@ -48,7 +47,6 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   }));
   const [draftReady, setDraftReady] = useState(false);
   const draftLoaded = useRef(false);
-  useEffect(() => { onSelectionChange?.(form.segmentId); }, [form.segmentId, onSelectionChange]);
   useEffect(() => {
     if (!draftLoaded.current) {
       let draft: ReturnType<typeof parseRegistrationDraft> = null;
@@ -58,7 +56,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       draftLoaded.current = true;
       setDraftReady(true);
     }
-    if (segment && application.editable) {
+    // An explicit empty choice means host arrangement and overrides the saved draft.
+    if (segment !== undefined && application.editable) {
       setForm(current => ({ ...current, segmentId: segment }));
       saveScheduleIntent(application.user.id, segment);
       // Consume the incoming choice so a later dropdown change survives refresh.

@@ -14,11 +14,10 @@ export function getRegistrationProgress(status: ApplicationStatus | undefined, p
   return { approved, pending, rejected, withdrawn, label, step: approved ? 2 : pending ? 1 : 0 };
 }
 
-export function RegistrationProgress({ application, participantStatus, current, selected, onWithdraw, withdrawing = false, withdrawalConfirmation, focusAfterSubmit = false }: {
+export function RegistrationProgress({ application, participantStatus, current, onWithdraw, withdrawing = false, withdrawalConfirmation, focusAfterSubmit = false }: {
   application: PortalApplicationResponse;
   participantStatus?: ParticipantPortalStatus;
   current?: CollaborationSegment;
-  selected?: CollaborationSegment;
   onWithdraw?: () => void;
   withdrawing?: boolean;
   withdrawalConfirmation?: ReactNode;
@@ -38,10 +37,10 @@ export function RegistrationProgress({ application, participantStatus, current, 
   const status = application.application?.status;
   const { approved, pending, withdrawn, rejected, label } = getRegistrationProgress(status, participantStatus);
   const completed = participantStatus === "completed";
-  const time = current ?? selected;
+  const time = current;
   const frozen = current?.assignmentStatus === "locked" || current?.assignmentStatus === "completed";
   const timeStatus = current?.assignmentStatus === "locked" ? "已锁定，请联系主催调整" : current?.assignmentStatus === "completed" ? "已完成" : current ? current.status === "confirmed" ? "已确认" : current.status === "reserved" ? "已预留" : "请查看排期状态"
-    : selected ? selected.status === "available" ? "尚未预留" : "已不可选，请重新选择" : "由主催安排";
+    : "由主催安排";
   const next = approved ? completed ? "可查看接力安排和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "报名已通过，发布时间由主催安排。请继续创作，并等待后续通知。"
     : pending ? "报名已提交，等待主催审核。"
     : application.editable ? withdrawn ? "检查资料后再次提交报名，发布时间可由主催安排。" : rejected ? "根据主催反馈修改资料后，重新提交报名。" : "填写署名与联系、创作意向后提交报名，发布时间可由主催安排。"

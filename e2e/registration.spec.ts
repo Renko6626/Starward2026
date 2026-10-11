@@ -1,5 +1,32 @@
 import { test, expect, openPortal, openChapter, rows } from "./fixtures";
-import { fillAllSeats, registerAndApply } from "./flows";
+import { fillAllSeats, registerAndApply, verifyScheduleIntent } from "./flows";
+
+test("浏览时段不改意向，直接报名清空时间，明确选择提交后才预留", async ({ pendingPage }) => {
+  await verifyScheduleIntent(pendingPage);
+});
+
+test("时间表选择通过密码登录带入报名，提交前不预留", async ({ pendingPage }) => {
+  await openPortal(pendingPage);
+  const { user } = await (await pendingPage.request.get("/api/portal/application")).json();
+  const password = await pendingPage.request.post("/api/auth/set-password", {
+    data: { newPassword: "e2e-password-2026" }, headers: { origin: "http://127.0.0.1:21262" },
+  });
+  expect(password.ok(), await password.text()).toBe(true);
+  await pendingPage.getByRole("button", { name: "退出登录" }).click();
+  await pendingPage.goto("/works");
+  await pendingPage.getByRole("button", { name: /^T\+03:00/ }).click();
+  await pendingPage.getByRole("link", { name: "选择这个时点并报名", exact: true }).click();
+  await expect(pendingPage.getByText("已选择一个发布时间，验证后会带入报名表；提交报名前不会预留。", { exact: true })).toBeVisible();
+  await pendingPage.getByRole("button", { name: "密码登录", exact: true }).click();
+  await pendingPage.getByLabel("登录邮箱", { exact: true }).fill(user.email);
+  await pendingPage.getByLabel("密码", { exact: true }).fill("e2e-password-2026");
+  await pendingPage.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(pendingPage).toHaveURL(/\/portal#profile$/);
+  await expect(pendingPage.locator('[name="segmentId"]')).toHaveValue("seg_seed_104");
+  await expect(pendingPage.getByRole("region", { name: "报名进度" })).not.toContainText("03:00");
+  expect(await rows("SELECT current_participant_id FROM schedule_segments WHERE id = 'seg_seed_104'"))
+    .toEqual([{ current_participant_id: null }]);
+});
 
 test("新作者注册、必填校验、满额报名、退出和密码登录", async ({ page }) => {
   await fillAllSeats();
