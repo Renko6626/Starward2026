@@ -38,8 +38,10 @@ export function HomePage() {
         <OrbitalArtwork paused={motionPaused} />
         <div className="orbital-copy">
           <div className="orbital-title">
-            <h1 id="home-title">{t("public.brand")}</h1>
-            <p className="orbital-edition"><HomeWordmark /></p>
+            {language === 'en' ? <h1 id="home-title" className="orbital-heading--wordmark"><HomeWordmark stacked /></h1> : <>
+              <h1 id="home-title">{t("public.brand")}</h1>
+              <p className="orbital-edition"><HomeWordmark /></p>
+            </>}
           </div>
           <p className="orbital-subtitle">{t("public.home.subtitle")}</p>
           <div className="orbital-actions">

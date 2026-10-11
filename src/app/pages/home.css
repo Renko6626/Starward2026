@@ -34,6 +34,8 @@
 .orbital-edition { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); mask-image: linear-gradient(to right, rgb(0 0 0 / 60%), #000); }
 .orbital-copy h1 { margin: 0; font: 500 clamp(45px, 5.25vw, 84px)/1.2 var(--font-brand-cn); letter-spacing: .035em; color: #fff; transform: skewX(-8deg); transform-origin: left bottom; }
 .orbital-copy h1 { width: fit-content; max-width: 100%; -webkit-mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); mask-image: linear-gradient(to right, #000, rgb(0 0 0 / 60%)); }
+.orbital-copy h1.orbital-heading--wordmark { width: clamp(300px, 37vw, 520px); line-height: 0; transform: none; animation: none; }
+.orbital-heading--wordmark .home-wordmark > img { display: block; width: 100%; height: auto; }
 .orbital-subtitle { margin: 0; border-top: 1px solid #ffffff66; padding-top: 10px; font: 500 var(--site-body-size)/1.6 var(--font-brand-cn); letter-spacing: .01em; color: #bdbdbd; }
 .orbital-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; }
 .orbital-event-date, .orbital-group { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; margin: 0; font-size: var(--site-meta-size); line-height: 1.6; color: #a0a0a0; }
@@ -124,6 +126,7 @@
   .orbital-hero { height: 100svh; min-height: 840px; max-height: 1100px; }
   .orbital-copy { left: var(--site-content-offset); right: var(--site-content-offset); bottom: calc(15% + 40px); max-width: none; }
   .orbital-copy h1 { font-size: clamp(37px, 11.5vw, 66px); letter-spacing: .02em; }
+  .orbital-copy h1.orbital-heading--wordmark { width: 100%; }
   .orbital-edition { font-size: clamp(16px, 4.5vw, 24px); }
   .orbital-subtitle { font-size: var(--site-body-size); letter-spacing: 0; }
   .orbital-actions { margin-top: 22px; gap: 22px; }

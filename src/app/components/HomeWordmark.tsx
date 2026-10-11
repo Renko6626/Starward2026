@@ -2,11 +2,22 @@ import { useId, useLayoutEffect, useRef } from 'react';
 import { animate, motionValue } from 'motion';
 import Vivus from 'vivus';
 import wordmarkSvg from '../../../public/brand/starward-pilgrimage.svg?raw';
+import stackedWordmarkSvg from '../../../public/brand/starward-pilgrimage-stacked.svg?raw';
 
 // Keep the animated outline and the finished wordmark on the same artwork.
-const paths = [...wordmarkSvg.matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map(match => match[1]!);
+function wordmarkPaths(svg: string) {
+  return [...svg.matchAll(/<path\b[^>]*>/g)].map(([tag]) => ({
+    d: /\bd="([^"]+)"/.exec(tag)![1]!,
+    transform: /\btransform="([^"]+)"/.exec(tag)?.[1],
+  }));
+}
+const wordmarks = {
+  inline: { paths: wordmarkPaths(wordmarkSvg), source: '/brand/starward-pilgrimage.svg', width: 13181, height: 1200 },
+  stacked: { paths: wordmarkPaths(stackedWordmarkSvg), source: '/brand/starward-pilgrimage-stacked.svg', width: 6584, height: 1598 },
+};
 
-export function HomeWordmark() {
+export function HomeWordmark({ stacked = false }: { stacked?: boolean }) {
+  const artwork = wordmarks[stacked ? 'stacked' : 'inline'];
   const id = `home-wordmark-${useId().replaceAll(':', '')}`;
   const root = useRef<HTMLSpanElement>(null);
   const fill = useRef<HTMLImageElement>(null);
@@ -52,12 +63,12 @@ export function HomeWordmark() {
       playback.stop();
       finish();
     };
-  }, [id]);
+  }, [id, stacked]);
 
   return <span ref={root} className="home-wordmark">
-    <img ref={fill} src="/brand/starward-pilgrimage.svg" width={13181} height={1200} alt="Starward Pilgrimage" />
-    <svg ref={outline} id={id} className="home-wordmark-outline" viewBox="0 0 13181 1200" aria-hidden="true" focusable="false">
-      {paths.map((d, index) => <path key={index} d={d} fill="none" stroke="currentColor" strokeWidth="20" strokeLinejoin="round" />)}
+    <img ref={fill} src={artwork.source} width={artwork.width} height={artwork.height} alt="Starward Pilgrimage" />
+    <svg ref={outline} id={id} className="home-wordmark-outline" viewBox={`0 0 ${artwork.width} ${artwork.height}`} aria-hidden="true" focusable="false">
+      {artwork.paths.map(({ d, transform }, index) => <path key={index} d={d} transform={transform} fill="none" stroke="currentColor" strokeWidth="20" strokeLinejoin="round" />)}
     </svg>
   </span>;
 }
