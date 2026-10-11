@@ -2,6 +2,7 @@ import { test, expect, approveSecondAuthor } from "./fixtures";
 import { registerAndApply, swapAuthors } from "./flows";
 
 test("手机完成注册报名及再次登录", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await registerAndApply(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

@@ -31,12 +31,17 @@ export async function registerAndApply(page: Page) {
   await expect(page.locator('[name="segmentId"]')).toHaveValue("");
   await page.getByRole("button", { name: "提交报名", exact: true }).click();
   await expect(page.getByRole("region", { name: "报名进度" }).getByRole("definition").filter({ hasText: /^报名待审核$/ })).toBeVisible();
+  const progress = page.getByRole("region", { name: "报名进度" });
+  await expect(progress).toBeFocused();
+  await expect(progress.getByRole("definition").filter({ hasText: /^报名待审核$/ })).toBeInViewport({ ratio: 1 });
+  await expect(progress.getByText("报名已提交，等待主催审核。", { exact: true })).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();
   await expect(page.getByRole("region", { name: "报名说明" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "档案目录" })).toBeVisible();
   await expect(page.locator("#history")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "报名进度" }).getByRole("definition").filter({ hasText: /^报名待审核$/ })).toBeVisible();
+  await expect(progress).not.toBeFocused();
   await openChapter(page, "plan");
   await expect(page.locator('[name="application.introText"]')).toHaveValue("准备创作一篇关于秘封旅行的小说。");
   expect(await rows("SELECT segment_id FROM project_drafts JOIN participants ON participants.id = project_drafts.participant_id JOIN user ON user.id = participants.user_id WHERE user.email = 'e2e-new@example.com'"))

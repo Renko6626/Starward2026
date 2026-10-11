@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { ApplicationStatus } from "../../shared/applications";
 import { formatScheduledTime } from "../../app/lib/format";
 import type { CollaborationSegment } from "../../shared/collaboration";
@@ -14,7 +14,7 @@ export function getRegistrationProgress(status: ApplicationStatus | undefined, p
   return { approved, pending, rejected, withdrawn, label, step: approved ? 2 : pending ? 1 : 0 };
 }
 
-export function RegistrationProgress({ application, participantStatus, current, selected, onWithdraw, withdrawing = false, withdrawalConfirmation }: {
+export function RegistrationProgress({ application, participantStatus, current, selected, onWithdraw, withdrawing = false, withdrawalConfirmation, focusAfterSubmit = false }: {
   application: PortalApplicationResponse;
   participantStatus?: ParticipantPortalStatus;
   current?: CollaborationSegment;
@@ -22,7 +22,19 @@ export function RegistrationProgress({ application, participantStatus, current, 
   onWithdraw?: () => void;
   withdrawing?: boolean;
   withdrawalConfirmation?: ReactNode;
+  focusAfterSubmit?: boolean;
 }) {
+  const region = useRef<HTMLElement>(null);
+  const focusedAfterSubmit = useRef(false);
+  useEffect(() => {
+    if (!focusAfterSubmit || focusedAfterSubmit.current) return;
+    focusedAfterSubmit.current = true;
+    region.current?.focus({ preventScroll: true });
+    region.current?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }, [focusAfterSubmit]);
   const status = application.application?.status;
   const { approved, pending, withdrawn, rejected, label } = getRegistrationProgress(status, participantStatus);
   const completed = participantStatus === "completed";
@@ -31,11 +43,11 @@ export function RegistrationProgress({ application, participantStatus, current, 
   const timeStatus = current?.assignmentStatus === "locked" ? "已锁定，请联系主催调整" : current?.assignmentStatus === "completed" ? "已完成" : current ? current.status === "confirmed" ? "已确认" : current.status === "reserved" ? "已预留" : "请查看排期状态"
     : selected ? selected.status === "available" ? "尚未预留" : "已不可选，请重新选择" : "由主催安排";
   const next = approved ? completed ? "可查看接力安排和操作记录。" : current ? "报名已通过，安心创作。作品提交方式及审核安排将另行通知。" : "报名已通过，发布时间由主催安排。请继续创作，并等待后续通知。"
-    : pending ? application.editable ? "等待主催审核。" : "等待主催审核。"
+    : pending ? "报名已提交，等待主催审核。"
     : application.editable ? withdrawn ? "检查资料后再次提交报名，发布时间可由主催安排。" : rejected ? "根据主催反馈修改资料后，重新提交报名。" : "填写署名与联系、创作意向后提交报名，发布时间可由主催安排。"
     : "当前不能提交或修改报名，请查看参与指南或联系主催。";
 
-  return <section className="registration-progress" aria-label="报名进度">
+  return <section ref={region} tabIndex={-1} className="registration-progress" aria-label="报名进度">
     <dl className="archive-register">
       <div><dt>作者</dt><dd>{application.profile?.creditName || application.user.name || "尚未填写署名"}</dd></div>
       <div><dt>发布时间 / 北京时间</dt><dd>{time ? formatScheduledTime(time.scheduledAt) : "由主催安排"}<small>{time ? timeStatus : null}</small></dd></div>
