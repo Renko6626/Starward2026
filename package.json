@@ -20,6 +20,8 @@
     "db:local:print-portals": "node ./scripts/local-dev-bootstrap.mjs print",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "test:env": "node ./scripts/test-env.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:e2e:headed": "node scripts/e2e.mjs --headed",
     "cf-typegen": "wrangler types",
     "check": "tsc -b --pretty false",
     "check:production": "node scripts/production-deploy.mjs",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.31.2",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/router-plugin": "^1.133.28",
     "@types/node": "^24.12.2",

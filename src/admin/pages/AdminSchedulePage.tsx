@@ -14,6 +14,7 @@ import {
   adminParticipantStatusLabels,
   adminSegmentStatusLabels,
   type AdminParticipantListResponse,
+  type CreateSegmentInput,
   type AdminSegmentBootstrapResponse,
   type AdminSegmentItem,
   type AdminSegmentListResponse,
@@ -65,6 +66,22 @@ export function AdminSchedulePage() {
   const [appendCount, setAppendCount] = useState('6');
   const [append, setAppend] = useState<BootstrapState>({ status: 'idle' });
   const [quickSaving, setQuickSaving] = useState(false);
+
+  const [newSeat, setNewSeat] = useState({ kind: "standard" as CreateSegmentInput["kind"], name: "", scheduledAt: "", description: "" });
+  const [creating, setCreating] = useState(false);
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
+  async function createSeat(event: FormEvent) {
+    event.preventDefault(); setCreating(true); setCreateMessage(null);
+    try {
+      const response = await requestJson<AdminSegmentBootstrapResponse>("/api/admin/segments", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...newSeat, scheduledAt: new Date(`${newSeat.scheduledAt}:00+08:00`).toISOString() }),
+      });
+      setNewSeat(current => ({ ...current, name: "", scheduledAt: "", description: "" }));
+      await loadSchedulePage(); setCreateMessage(response.message);
+    } catch (error) { setCreateMessage(error instanceof Error ? error.message : "新增失败。"); }
+    finally { setCreating(false); }
+  }
 
   useEffect(() => {
     void loadSchedulePage();
@@ -215,37 +232,17 @@ export function AdminSchedulePage() {
             description: draft.description,
             status: draft.status,
             currentParticipantId:
-              draft.status === "held"
+              ["held", "locked", "completed"].includes(draft.status)
                 ? draft.currentParticipantId || null
                 : null,
           }),
         },
       );
 
-      setDrafts((current) => ({
-        ...current,
-        [segmentId]: buildDraft(payload.item),
-      }));
-      setSaveStates((current) => ({
-        ...current,
-        [segmentId]: {
-          status: "success",
-          message: payload.message,
-        },
-      }));
-      setState((current) =>
-        current.status === "ready"
-          ? {
-              status: "ready",
-              payload: {
-                ...current.payload,
-                segments: current.payload.segments.map((segment) =>
-                  segment.id === payload.item.id ? payload.item : segment,
-                ),
-              },
-            }
-          : current,
-      );
+      const segments = await requestJson<AdminSegmentListResponse>("/api/admin/segments");
+      setDrafts(buildDraftMap(segments.items));
+      setState(current => current.status === "ready" ? { status: "ready", payload: { ...current.payload, segments: segments.items } } : current);
+      setSaveStates(current => ({ ...current, [segmentId]: { status: "success", message: payload.message } }));
     } catch (error) {
       setSaveStates((current) => ({
         ...current,
@@ -300,6 +297,17 @@ export function AdminSchedulePage() {
       {bootstrap.status === "success" ? (
         <StateNotice message={bootstrap.message} tone="success" />
       ) : null}
+
+      {state.status === "ready" ? <details className="panel admin-disclosure"><summary>新增发布时间</summary>
+        <form className="space-y-4 pt-4" onSubmit={event => void createSeat(event)}>
+          <FormField label="席位类型"><select className="field-input" value={newSeat.kind} onChange={event => setNewSeat(current => ({ ...current, kind: event.target.value as CreateSegmentInput["kind"] }))}><option value="standard">普通席位（公开）</option><option value="special">特别席位（仅管理员分配）</option></select></FormField>
+          <FormField label="名称"><input className="field-input" required maxLength={80} value={newSeat.name} onChange={event => setNewSeat(current => ({ ...current, name: event.target.value }))} /></FormField>
+          <FormField label="发布时间（北京时间）"><input className="field-input" type="datetime-local" required value={newSeat.scheduledAt} onChange={event => setNewSeat(current => ({ ...current, scheduledAt: event.target.value }))} /></FormField>
+          <FormField label="说明（选填）"><input className="field-input" maxLength={240} value={newSeat.description} onChange={event => setNewSeat(current => ({ ...current, description: event.target.value }))} /></FormField>
+          <button className="button button--primary" disabled={creating} type="submit">{creating ? "新增中…" : "新增发布时间"}</button>
+          {createMessage ? <p role="status">{createMessage}</p> : null}
+        </form>
+      </details> : null}
 
       {state.status === "ready" && state.payload.segments.length === 0 ? (
         <section className="panel space-y-6">
@@ -372,7 +380,7 @@ export function AdminSchedulePage() {
               return (
                 <details key={segment.id} className="panel admin-disclosure admin-segment-row">
                   <summary>
-                    <span className="font-medium">{segment.code} {segment.name}</span>
+                    <span className="font-medium">{segment.code} {segment.name}{segment.kind === "special" ? " · 特别席位" : ""}</span>
                     <span>{formatScheduledTime(segment.scheduledAt)}</span>
                     <span>{segment.currentParticipantName ?? "未分配"}</span>
                     <SegmentStatusBadge status={segment.status} />
@@ -381,7 +389,7 @@ export function AdminSchedulePage() {
                   <p className="text-sm text-on-surface-variant">最近更新 {formatDateTime(segment.updatedAt)}；认领时间 {formatDateTime(segment.claimedAt)}；释放时间 {formatDateTime(segment.releasedAt)}</p>
                   <div className="space-y-4">
                     {segment.kind === 'extra' ? <p className="text-sm text-on-surface-variant">追加坑位不设置计划发布时间。</p> : <FormField label="发布时间（北京时间）">
-                      <input className="field-input" type="datetime-local" value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
+                      <input className="field-input" type="datetime-local" required={segment.kind === "special"} value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
                     </FormField>}
                     <FormField label="发布时点说明">
                       <textarea
@@ -407,7 +415,7 @@ export function AdminSchedulePage() {
                               status: event.target
                                 .value as AdminSegmentItem["status"],
                               currentParticipantId:
-                                event.target.value === "held"
+                                ["held", "locked", "completed"].includes(event.target.value)
                                   ? draft.currentParticipantId
                                   : "",
                             })
@@ -428,7 +436,7 @@ export function AdminSchedulePage() {
                         <select
                           className="field-input"
                           disabled={
-                            draft.status !== "held" ||
+                            !["held", "locked", "completed"].includes(draft.status) ||
                             saveState.status === "submitting"
                           }
                           onChange={(event) =>

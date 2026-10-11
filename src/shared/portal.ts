@@ -1,7 +1,7 @@
 import { optionalContactEmailSchema } from "./auth-identity";
 import { z } from "zod";
 import type { RelayPublicationState } from "./relay-publication";
-import { workPublicationFieldsSchema, type WorkPublicationFields } from "./works";
+import { workPublicationFieldsSchema, type WorkPublicationFields, type ScheduleSegmentKind } from "./works";
 import type {
   ApplicationInterestFormat,
   ApplicationStatus,
@@ -104,6 +104,7 @@ export const portalSegmentStatusSchema = z.enum([
 export type PortalSegmentStatus = z.infer<typeof portalSegmentStatusSchema>;
 
 export type PortalSegmentSummary = {
+  kind: ScheduleSegmentKind;
   scheduledAt: string | null;
   id: string;
   code: string;

@@ -73,14 +73,14 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
   };
   const { results } = await db.prepare(`SELECT s.id, s.kind, s.code, s.name, s.scheduled_at AS scheduledAt,
     CASE
-      WHEN s.status IN ('held', 'completed') AND participant.id IS NOT NULL THEN 'confirmed'
-      WHEN s.status = 'held' THEN 'reserved'
+      WHEN s.status IN ('held', 'locked', 'completed') AND participant.id IS NOT NULL THEN 'confirmed'
+      WHEN s.status IN ('held','locked') AND s.current_participant_id IS NOT NULL THEN 'reserved'
       WHEN s.current_participant_id IS NULL AND s.status IN ('open', 'released') THEN 'available'
       ELSE 'unavailable'
     END AS status,
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
-    CASE WHEN s.status IN ('held', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
-    CASE WHEN s.status IN ('held', 'completed') THEN a.intro_text ELSE NULL END AS introText,
+    CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
+    CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.intro_text ELSE NULL END AS introText,
     d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
     d.work_type AS workType, d.cover_url AS coverUrl, d.cover_alt AS coverAlt
     FROM schedule_segments s
@@ -89,6 +89,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     LEFT JOIN portal_profiles p ON p.user_id = participant.user_id
     LEFT JOIN applications a ON a.user_id = participant.user_id AND a.status = 'approved'
     LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
+    WHERE s.kind <> 'special'
     ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({
     ...entry,

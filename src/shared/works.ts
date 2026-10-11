@@ -42,7 +42,7 @@ export type PublicWork = WorkPresentation & {
   segmentCode: string | null;
   segmentName: string | null;
 };
-export type ScheduleSegmentKind = 'standard' | 'extra';
+export type ScheduleSegmentKind = 'standard' | 'extra' | 'special';
 export type PublicScheduleEntry = {
   kind: ScheduleSegmentKind;
   id: string;

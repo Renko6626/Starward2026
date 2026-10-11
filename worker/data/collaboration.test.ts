@@ -476,11 +476,11 @@ describe("Bilibili profiles and private neighbors", () => {
     await reviewApplication(f.db, last.id, { status: "approved" }, "admin");
     expect(await getPortalNeighbors(f.db, "u1")).toEqual({
       currentSegmentId: "s1", previous: null,
-      next: { segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
+      next: { kind: "standard", scheduledAt: null, assignmentStatus: "open", segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
     });
     expect(await getPortalNeighbors(f.db, "u2")).toEqual({
       currentSegmentId: "s3", next: null,
-      previous: { segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
+      previous: { kind: "standard", scheduledAt: null, assignmentStatus: "open", segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "available", publicName: null, bilibiliUid: null },
     });
     f.sqlite.exec("UPDATE schedule_segments SET sort_order=4 WHERE id='s1'");
     expect((await getPortalNeighbors(f.db, "u1")).previous?.segmentId).toBe("s3");
@@ -495,21 +495,21 @@ describe("Bilibili profiles and private neighbors", () => {
     expect(await getPortalNeighbors(f.db, "u3")).toEqual(empty);
     await reviewApplication(f.db, a.id, { status: "approved" }, "admin");
     expect((await getPortalNeighbors(f.db, "u1")).next).toEqual({
-      segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "reserved", publicName: "匿名创作者", bilibiliUid: null,
+      kind: "standard", scheduledAt: null, assignmentStatus: "held", segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "reserved", publicName: "匿名创作者", bilibiliUid: null,
     });
     await reviewApplication(f.db, b.id, { status: "approved" }, "admin");
     const neighbors = await getPortalNeighbors(f.db, "u1");
     expect(neighbors.next).toEqual({
-      segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001",
+      kind: "standard", scheduledAt: null, assignmentStatus: "held", segmentId: "s2", segmentCode: "B", segmentName: "晚场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001",
     });
     expect(JSON.stringify(neighbors)).not.toContain("@example.com");
     expect((await getCollaboration(f.db, "u1")).segments[1]).not.toHaveProperty("bilibiliUid");
     f.sqlite.exec("UPDATE schedule_segments SET status='locked' WHERE id='s2'");
-    expect((await getPortalNeighbors(f.db, "u1")).next).toMatchObject({ status: "unavailable", bilibiliUid: null });
+    expect((await getPortalNeighbors(f.db, "u1")).next).toMatchObject({ status: "confirmed", assignmentStatus: "locked", bilibiliUid: "202600001" });
     f.sqlite.exec("UPDATE schedule_segments SET status='held' WHERE id='s2'; UPDATE portal_profiles SET bilibili_uid=NULL WHERE user_id='u2'");
     expect((await getPortalNeighbors(f.db, "u1")).next?.bilibiliUid).toBeNull();
     f.sqlite.exec("UPDATE participants SET status='completed' WHERE user_id='u1'");
-    expect(await getPortalNeighbors(f.db, "u1")).toEqual(empty);
+    expect((await getPortalNeighbors(f.db, "u1")).currentSegmentId).toBe("s1");
     f.sqlite.exec("UPDATE participants SET status='approved' WHERE user_id='u1'; UPDATE schedule_segments SET status='released',current_participant_id=NULL WHERE id='s1'");
     expect(await getPortalNeighbors(f.db, "u1")).toEqual(empty);
   });
@@ -533,8 +533,8 @@ describe("Bilibili profiles and private neighbors", () => {
     await respondSwap(f.db, two, request.id, "accept");
     expect(await getPortalNeighbors(f.db, "u1")).toEqual({
       currentSegmentId: "s2",
-      previous: { segmentId: "s1", segmentCode: "A", segmentName: "早场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001" },
-      next: { segmentId: "s3", segmentCode: "C", segmentName: "加场", status: "available", publicName: null, bilibiliUid: null },
+      previous: { kind: "standard", scheduledAt: null, assignmentStatus: "held", segmentId: "s1", segmentCode: "A", segmentName: "早场", status: "confirmed", publicName: "匿名创作者", bilibiliUid: "202600001" },
+      next: { kind: "standard", scheduledAt: null, assignmentStatus: "open", segmentId: "s3", segmentCode: "C", segmentName: "加场", status: "available", publicName: null, bilibiliUid: null },
     });
     expect((await getPortalNeighbors(f.db, "u2")).next).toMatchObject({ segmentId: "s2", publicName: "署名", bilibiliUid: "202600001" });
   });

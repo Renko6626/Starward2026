@@ -5,11 +5,24 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  envDir: process.env.E2E_ROOT,
   resolve: { dedupe: ["three"] },
-  plugins: [TanStackRouterVite({ autoCodeSplitting: true }), react(), tailwindcss(), cloudflare({ remoteBindings: false })],
+  plugins: [
+    TanStackRouterVite({ autoCodeSplitting: true }),
+    react(),
+    tailwindcss(),
+    cloudflare({
+      configPath: process.env.E2E_CONFIG_PATH,
+      remoteBindings: false,
+      persistState: process.env.E2E_STATE_PATH
+        ? { path: process.env.E2E_STATE_PATH }
+        : undefined,
+      inspectorPort: process.env.E2E_MODE === "true" ? false : undefined,
+    }),
+  ],
   server: {
     host: "0.0.0.0",
-    port: 20262,
+    port: Number(process.env.E2E_PORT ?? 20262),
     strictPort: true,
   },
 });

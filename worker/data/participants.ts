@@ -51,7 +51,7 @@ export async function getParticipantByInviteEmail(
       LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
-       AND schedule_segments.status = 'held'
+       AND schedule_segments.status IN ('held','locked','completed')
        AND schedule_segments.schedule_version_id = (
          SELECT id
          FROM schedule_versions
@@ -83,7 +83,7 @@ export async function getParticipantByUserId(db: D1Database, userId: string) {
       LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
       LEFT JOIN schedule_segments
         ON schedule_segments.current_participant_id = participants.id
-       AND schedule_segments.status = 'held'
+       AND schedule_segments.status IN ('held','locked','completed')
        AND schedule_segments.schedule_version_id = (
          SELECT id
          FROM schedule_versions

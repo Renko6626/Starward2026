@@ -26,3 +26,11 @@ it("keeps a successful time change from turning into a release action after refr
   expect(getScheduleAction(changed, "author-1", true)).toBeNull();
   expect(getScheduleAction(changed, "author-1")).toBe("release");
 });
+
+
+it("confirms releasing a reservation into host arrangement", () => {
+  expect(requiresRegistrationTimeConfirmation(undefined, null)).toBe(false);
+  expect(requiresRegistrationTimeConfirmation(original, null)).toBe(true);
+  expect(requiresRegistrationTimeConfirmation(original, null, { from: original, to: null })).toBe(false);
+  expect(requiresRegistrationTimeConfirmation(original, next, { from: original, to: null })).toBe(true);
+});

@@ -36,6 +36,7 @@ function buildWindows(
 
 function buildSegment(overrides: Partial<PortalSegmentSummary> = {}): PortalSegmentSummary {
   return {
+    kind: "standard",
     scheduledAt: null,
     id: "segment_03",
     code: "03",

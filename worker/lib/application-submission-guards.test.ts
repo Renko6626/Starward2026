@@ -35,7 +35,6 @@ describe("enforceApplicationSubmissionGuards", () => {
 
     const result = await enforceApplicationSubmissionGuards(ctx, {
       contactEmail: "alice@example.com",
-      turnstileToken: undefined,
     });
 
     expect(result.ok).toBe(false);
@@ -45,48 +44,23 @@ describe("enforceApplicationSubmissionGuards", () => {
     }
   });
 
-  it("rejects when Turnstile is configured but the token is invalid", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: false }),
-    });
+  it("keeps account limits even when Turnstile is configured", async () => {
+    const limiter = createLimiter(false);
+    const ctx = createContext({ TURNSTILE_SECRET_KEY: "secret", APPLICATION_SUBMIT_EMAIL_RATE_LIMITER: limiter });
+    const result = await enforceApplicationSubmissionGuards(ctx, { userId: "u1" });
+    expect(result).toMatchObject({ ok: false, status: 429 });
+    expect(limiter.limit).toHaveBeenCalledWith({ key: "apply:user:u1" });
+  });
+
+  it("does not challenge authenticated applications when Turnstile is configured", async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-
-    const ctx = createContext(
-      {
-        TURNSTILE_SECRET_KEY: "secret",
-      },
-      { "cf-connecting-ip": "203.0.113.10" },
-    );
-
-    const result = await enforceApplicationSubmissionGuards(ctx, {
-      contactEmail: "alice@example.com",
-      turnstileToken: "bad-token",
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBeGreaterThanOrEqual(400);
-      expect(result.status).toBeLessThan(500);
-    }
-    expect(fetchMock).toHaveBeenCalledOnce();
+    const result = await enforceApplicationSubmissionGuards(createContext({ TURNSTILE_SECRET_KEY: "secret" }), { userId: "u1" });
+    expect(result).toEqual({ ok: true });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("rejects when Turnstile is configured but the token is missing", async () => {
-    const ctx = createContext({ TURNSTILE_SECRET: "secret" });
-
-    const result = await enforceApplicationSubmissionGuards(ctx, {
-      contactEmail: "alice@example.com",
-      turnstileToken: undefined,
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(400);
-    }
-  });
-
-  it("passes through when neither anti-abuse mechanism is configured", async () => {
+  it("passes through when rate limiting is not configured", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -94,7 +68,6 @@ describe("enforceApplicationSubmissionGuards", () => {
 
     const result = await enforceApplicationSubmissionGuards(ctx, {
       contactEmail: "alice@example.com",
-      turnstileToken: undefined,
     });
 
     expect(result).toEqual({ ok: true });

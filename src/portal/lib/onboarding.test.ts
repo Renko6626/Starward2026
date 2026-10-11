@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 describe("resolvePortalEntryDestination", () => {
-  it("takes a new registration to the schedule, including when account details cannot be read", async () => {
+  it("takes a new registration to the registration workspace, including when account details cannot be read", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
-    expect(resolvePortalEntryDestination(null, { newRegistration: true })).toEqual("/works");
+    expect(resolvePortalEntryDestination(null, { newRegistration: true })).toEqual("/portal");
   });
 
   it("takes a registration with a chosen slot directly to the form", async () => {
@@ -19,7 +19,7 @@ describe("resolvePortalEntryDestination", () => {
     expect(resolvePortalEntryDestination(null)).toEqual("/portal");
   });
 
-  it("takes a new account without an application to the schedule", async () => {
+  it("takes a new account without an application to the registration workspace", async () => {
     const { resolvePortalEntryDestination } = await import("./onboarding");
 
     expect(
@@ -44,7 +44,7 @@ describe("resolvePortalEntryDestination", () => {
         profile: null,
         application: null,
       }, { newRegistration: true }),
-    ).toEqual("/works");
+    ).toEqual("/portal");
   });
 
   it("keeps profiled applicants in the single workspace", async () => {

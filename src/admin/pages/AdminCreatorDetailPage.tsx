@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, DetailBlock, DetailItem, Field, Notice, PageHeading, ReadError, StatusBadge } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
-import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminProjectDraftItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type UpdateParticipantInput } from "../../shared/admin";
+import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminProjectDraftItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type AdminSegmentMutationResponse, type UpdateParticipantInput } from "../../shared/admin";
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationDetailResponse, type ApplicationDetail, type UpdateApplicationReviewInput } from "../../shared/applications";
 import { getReviewNoteTemplates } from "../lib/review-note";
 import { listAvailableApplicationReviewStatuses } from "../lib/application-review";
@@ -16,6 +16,8 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
   const [state, setState] = useState<State>({ status: "loading" });
   const [adminNote, setAdminNote] = useState("");
   const [form, setForm] = useState<UpdateParticipantInput>({ status: "pending", contactHandle: "" });
+  const [seats, setSeats] = useState<AdminSegmentItem[]>([]);
+  const [assignment, setAssignment] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const readDetail = useCallback(async (): Promise<Detail> => {
@@ -34,6 +36,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
       requestJson<AdminSegmentListResponse>("/api/admin/segments"),
       requestJson<AdminProjectDraftListResponse>("/api/admin/project-drafts"),
     ]);
+    setSeats(segments.items);
     return { participant, application, segment: segments.items.find(item => item.currentParticipantId === participant.id) ?? null, draft: drafts.items.find(item => item.participantId === participant.id) ?? null };
   }, [participantId, applicationId]);
   function applyDetail(detail: Detail) {
@@ -90,8 +93,16 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
           </div>
         </section>
         <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">当前发布时点</h2><Link className="text-link" to="/portal/admin/schedule">管理排期</Link></div>
-          <p className="text-lg">{segment ? `${segment.code} ${segment.name}` : "尚未选择发布时点"}</p>
+          <p className="text-lg">{segment ? `${segment.code} ${segment.name}` : "待主催安排"}</p>
           {segment ? <p>{formatScheduledTime(segment.scheduledAt)}<span className="ml-3 text-on-surface-variant">{application?.status === "pending" ? "待审核预留" : participant && ["approved", "completed"].includes(participant.status) ? "已确认" : "请核对参与资格"}</span></p> : null}
+          {participant?.status === "approved" ? <div className="space-y-3">
+            <Field label="分配席位"><select className="field-input" value={assignment} onChange={event => setAssignment(event.target.value)} disabled={busy}><option value="">请选择席位</option>{seats.filter(item => (!item.currentParticipantId && ["open","released"].includes(item.status)) || item.currentParticipantId === participant.id).map(item => <option key={item.id} value={item.id}>{item.kind === "special" ? "特别席位 · " : ""}{item.code} {item.name} · {formatScheduledTime(item.scheduledAt)}</option>)}</select></Field>
+            <Button disabled={busy || !assignment} onClick={() => void mutate(async () => {
+              const selected = seats.find(item => item.id === assignment)!;
+              const response = await requestJson<AdminSegmentMutationResponse>(`/api/admin/segments/${selected.id}`, {method: "PATCH", headers: {"content-type":"application/json"}, body: JSON.stringify({status: "held", currentParticipantId: participant.id})});
+              setAssignment(""); return response.message;
+            })}>分配发布时间</Button>
+          </div> : null}
         </section>
         <section className="panel space-y-4"><h2 className="text-lg font-medium">报名计划</h2>
           {application ? <>

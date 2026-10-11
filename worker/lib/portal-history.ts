@@ -25,6 +25,8 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
   const payload = parsePortalEventPayload(input.payloadJson);
 
   switch (input.eventType) {
+    case "application_submitted":
+      return "已提交报名，等待主催审核并安排发布时间。";
     case "application_segment_reserved":
       return "已提交报名并预留时段，等待审核。";
     case "application_withdrawn":

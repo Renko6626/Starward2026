@@ -668,7 +668,7 @@ async function getOrCreateProjectDraftRow(
             ON schedule_versions.id = schedule_segments.schedule_version_id
            AND schedule_versions.status = 'active'
           WHERE schedule_segments.current_participant_id = ?
-            AND schedule_segments.status = 'held'
+            AND schedule_segments.status IN ('held','locked','completed')
           ORDER BY schedule_segments.updated_at DESC
           LIMIT 1
         ),

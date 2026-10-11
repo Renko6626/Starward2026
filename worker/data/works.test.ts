@@ -288,9 +288,9 @@ describe('additional schedule slots', () => {
     const body = await response.json() as any;
     expect(body.items.filter((item: any) => item.kind === 'extra').map((item: any) => ({ code: item.code, status: item.status, scheduledAt: item.scheduledAt, sortOrder: item.sortOrder })))
       .toEqual([
-        { code: 'EXTRA-01', status: 'open', scheduledAt: null, sortOrder: 104 },
-        { code: 'EXTRA-02', status: 'open', scheduledAt: null, sortOrder: 105 },
-        { code: 'EXTRA-03', status: 'open', scheduledAt: null, sortOrder: 106 },
+        { code: 'EXTRA-01', status: 'open', scheduledAt: null, sortOrder: 25 },
+        { code: 'EXTRA-02', status: 'open', scheduledAt: null, sortOrder: 26 },
+        { code: 'EXTRA-03', status: 'open', scheduledAt: null, sortOrder: 27 },
       ]);
     expect(database.sqlite.prepare("SELECT * FROM schedule_segments WHERE kind = 'standard' ORDER BY id").all()).toEqual(original);
   });
@@ -314,7 +314,7 @@ describe('additional schedule slots', () => {
 
   it('keeps approved published works accessible with unconfigured and extra slots present', async () => {
     openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
-    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00Z' WHERE code = 'SEED-101'");
+    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00Z' WHERE id = 'seg_seed_101'");
     await appendActiveScheduleSegments(db, { count: 2 });
     expect(await getPublicWork(db, draftId)).not.toBeNull();
     const app = new Hono<AppRouteConfig>().route('/api', publicApi);

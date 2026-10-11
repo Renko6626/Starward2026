@@ -205,3 +205,10 @@
 
 .creator-workspace .workspace-account { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--color-on-surface-variant); }
 .creator-workspace .page-heading-actions { flex-wrap: wrap; }
+
+.creator-workspace .registration-required-note {
+  margin: 0 0 16px;
+  color: var(--color-on-surface-variant);
+  font-size: var(--site-meta-size);
+  line-height: 1.7;
+}

@@ -10,15 +10,7 @@ export function normalizeApplicationInput(
     introText: form.introText.trim(),
     portfolioUrl: normalizeOptional(form.portfolioUrl),
     messageToHosts: normalizeOptional(form.messageToHosts),
-    turnstileToken: normalizeOptional(form.turnstileToken),
   };
-}
-
-export function getTurnstileSiteKey(env: {
-  VITE_TURNSTILE_SITE_KEY?: string | undefined;
-}) {
-  const trimmed = env.VITE_TURNSTILE_SITE_KEY?.trim();
-  return trimmed ? trimmed : null;
 }
 
 function normalizeOptional(value: string | undefined) {

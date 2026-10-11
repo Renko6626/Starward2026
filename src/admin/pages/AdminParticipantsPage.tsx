@@ -37,10 +37,10 @@ export function AdminParticipantsPage() {
     {state.status === "ready" ? <div className="admin-work-summary">
       <span>待审核报名 <strong>{pending}</strong></span>
       <Link to="/portal/admin/project-drafts">待审核作品 <strong>{reviewCount}</strong></Link>
-      <Link to="/portal/admin/schedule">尚未分配时点的已通过创作者 <strong>{state.payload.participants.filter(item => ["approved", "completed"].includes(item.status) && !item.currentSegmentCode).length}</strong></Link>
+      <Link to="/portal/admin/participants" search={{ view: "unassigned" }}>尚未分配时点的已通过创作者 <strong>{state.payload.participants.filter(item => item.status === "approved" && !item.currentSegmentCode).length}</strong></Link>
     </div> : null}
     <nav className="flex flex-wrap gap-2" aria-label="参与者筛选">
-      {(["pending", "all"] as const).map(value => <Link key={value} to="/portal/admin/participants" search={{ view: value }} aria-current={view === value ? "page" : undefined} className={cn("button button--secondary", view === value && "bg-primary/10 text-primary border-primary/30")}>{value === "pending" ? `待审核 (${pending})` : `全部创作者 (${rows.length})`}</Link>)}
+      {["pending", "unassigned", "all"].map(value => <Link key={value} to="/portal/admin/participants" search={{ view: value as "pending" | "unassigned" | "all" }} aria-current={view === value ? "page" : undefined} className={cn("button button--secondary", view === value && "bg-primary/10 text-primary border-primary/30")}>{value === "unassigned" ? "已通过待安排" : value === "pending" ? `待审核 (${pending})` : `全部创作者 (${rows.length})`}</Link>)}
     </nav>
     {state.status === "loading" ? <StateNotice message="正在读取参与者列表。" /> : null}
     {state.status === "error" ? <ReadError message={state.message} /> : null}
@@ -51,7 +51,7 @@ export function AdminParticipantsPage() {
           const segment = state.status === "ready" && participant ? state.payload.segments.find(item => item.currentParticipantId === participant.id) : undefined;
           return <tr key={key}><td><div className="font-medium">{participant?.displayName ?? application?.displayName}</div><div className="text-sm text-on-surface-variant">{participant?.inviteEmail ?? application?.contactEmail ?? "未设置登录邮箱"}</div><div className="text-sm text-on-surface-variant">{participant?.contactHandle ?? application?.contactHandle ?? "未填写联系方式"}</div></td>
             <td><span className="mobile-field-label">参加形式</span>{application ? applicationInterestFormatLabels[application.interestFormat] : "尚未报名"}</td>
-            <td><span className="mobile-field-label">发布时点</span>{segment ? <>{segment.code}<div className="text-sm text-on-surface-variant">{formatScheduledTime(segment.scheduledAt)}</div></> : participant?.currentSegmentCode ?? "未选择"}</td>
+            <td><span className="mobile-field-label">发布时点</span>{segment ? <>{segment.code}<div className="text-sm text-on-surface-variant">{formatScheduledTime(segment.scheduledAt)}</div></> : participant?.currentSegmentCode ?? "待主催安排"}</td>
             <td><StatusBadge>{application ? applicationStatusLabels[application.status] : "未提交报名"}</StatusBadge>{participant && (participant.status === "completed" || (application?.status === "approved" && participant.status !== "approved")) ? <div className="text-sm text-on-surface-variant">参与资格：{adminParticipantStatusLabels[participant.status]}</div> : null}</td>
             <td>{participant ? <Link className="button button--secondary" to="/portal/admin/participants/$participantId" params={{ participantId: participant.id }}>查看详情</Link> : application ? <Link className="button button--secondary" to="/portal/admin/applications/$applicationId" params={{ applicationId: application.id }}>查看详情</Link> : null}</td>
           </tr>;

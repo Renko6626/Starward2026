@@ -5,6 +5,7 @@ export const portalContactChannels = ["QQ", "微信", "Discord", "Telegram", "Em
 export const portalProfilePlaceholders = {
   creditName: "填写作品展示使用的署名",
   bilibiliUid: "数字 UID 或 B站主页链接，供相邻作者联系",
+  contactEmail: "用于主催联系，选填",
   primaryContactChannel: "选择联系方式",
   primaryContactHandle: "填写号码、邮箱地址或其他联系信息",
   backupContact: "例如：微信 xxx，选填",

@@ -22,7 +22,7 @@ describe("resolveAdminSegmentState", () => {
     ).toThrow(/认领人/);
   });
 
-  it("clears participant assignment when the next status is not held", async () => {
+  it("retains participant assignment when locked", async () => {
     const { resolveAdminSegmentState } = await import("./segment-admin");
 
     expect(
@@ -36,8 +36,8 @@ describe("resolveAdminSegmentState", () => {
       }),
     ).toMatchObject({
       nextStatus: "locked",
-      nextParticipantId: null,
-      claimedAt: null,
+      nextParticipantId: "part_01",
+      claimedAt: "2026-04-10T12:00:00.000Z",
       releasedAt: null,
     });
   });
