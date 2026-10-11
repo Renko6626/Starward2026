@@ -88,9 +88,6 @@ export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded
         <Link className="button button--secondary" to="/portal">
           返回作者页面
         </Link>
-        <Link className="button button--secondary" to="/portal/project">
-          前往作品资料
-        </Link>
       </div> : null}
     </div>
   );

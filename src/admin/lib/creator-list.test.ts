@@ -31,11 +31,12 @@ describe("creator management", () => {
     expect(filterCreatorRows(rows, "pending", "")).toEqual([]);
   });
 
-  it("counts released slots as available and excludes locked or occupied open slots", () => {
+  it("counts released slots as available and excludes hidden, locked or occupied open slots", () => {
     expect(summarizeSchedule([
       { status: "open", currentParticipantId: null }, { status: "released", currentParticipantId: null },
       { status: "locked", currentParticipantId: null }, { status: "open", currentParticipantId: "part_1" },
       { status: "held", currentParticipantId: "part_2" }, { status: "completed", currentParticipantId: "part_3" },
-    ])).toEqual({ total: 6, open: 2, held: 1, completed: 1 });
+      { status: "open", currentParticipantId: null, isVisible: false },
+    ])).toEqual({ total: 7, open: 2, held: 1, completed: 1 });
   });
 });

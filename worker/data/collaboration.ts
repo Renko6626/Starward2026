@@ -82,7 +82,14 @@ export async function saveWorkspaceApplication(
   const participantId = participant?.id ?? createPrefixedId("part");
   const applicationId = application?.id ?? createPrefixedId("app");
   const operationId = createPrefixedId("op");
-  const segmentId = input.segmentId ?? null;
+  // A hidden reservation is absent from the author's choices. Saving their
+  // application without a choice must not implicitly release that reservation.
+  const hiddenReservation = !input.segmentId && participant ? await db.prepare(`
+    SELECT s.id FROM schedule_segments s
+    JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
+    WHERE s.current_participant_id=? AND s.is_visible=0 AND s.status IN ('held','locked','completed')
+    LIMIT 1`).bind(participantId).first<{ id: string }>() : null;
+  const segmentId = input.segmentId ?? hiddenReservation?.id ?? null;
   const p = input.profile;
   const a = input.application;
   const statements = [
@@ -103,10 +110,13 @@ export async function saveWorkspaceApplication(
         FROM participants
         WHERE id=? AND user_id=? AND updated_at=? AND status=?))
         AND NOT EXISTS (SELECT 1 FROM schedule_segments s JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active' WHERE s.current_participant_id=? AND s.status IN ('locked','completed') AND s.id IS NOT ?)
+        AND (? IS NOT NULL OR NOT EXISTS (
+          SELECT 1 FROM schedule_segments s JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
+          WHERE s.current_participant_id=? AND s.is_visible=0 AND s.status IN ('held','locked','completed')))
         AND (? IS NULL OR EXISTS (SELECT 1
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
-        WHERE s.id = ? AND ((s.kind <> 'special' AND s.current_participant_id IS NULL AND s.status IN ('open','released')) OR (s.current_participant_id = ? AND s.status IN ('held','locked','completed')))))`,
+        WHERE s.id = ? AND ((s.is_visible = 1 AND s.kind <> 'special' AND s.current_participant_id IS NULL AND s.status IN ('open','released')) OR (s.current_participant_id = ? AND s.status IN ('held','locked','completed')))))`,
       [
         now,
         now,
@@ -125,6 +135,8 @@ export async function saveWorkspaceApplication(
         participant?.status ?? null,
         participantId,
         segmentId,
+        segmentId,
+        participantId,
         segmentId,
         segmentId,
         participantId,
@@ -275,6 +287,7 @@ export async function getPortalNeighbors(
         WHERE own.schedule_version_id=v.id AND own.status IN ('held','locked','completed')
           AND owner.user_id=? AND owner.status IN ('approved','completed')
       )
+      AND s.is_visible = 1
       AND (s.kind <> 'special' OR (s.current_participant_id IS NOT NULL AND p.status IN ('approved','completed')))
       ORDER BY s.kind='extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`,
     )
@@ -337,7 +350,7 @@ export async function getCollaboration(
         LEFT JOIN applications a ON a.id=p.application_id
         LEFT
         JOIN portal_profiles pp ON pp.user_id=p.user_id
-        WHERE s.kind <> 'special' OR s.current_participant_id = ?
+        WHERE s.is_visible = 1 AND (s.kind <> 'special' OR s.current_participant_id = ?)
         ORDER BY s.kind='extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order`,
     ).bind(participant?.id ?? "")
     .all<SegmentRow>();
@@ -419,7 +432,7 @@ export async function createSwap(
         JOIN schedule_versions v ON v.id=own.schedule_version_id AND v.status='active'
         JOIN schedule_segments target ON target.schedule_version_id=v.id
         JOIN participants requester ON requester.id=own.current_participant_id
-        WHERE own.current_participant_id=? AND own.status='held' AND target.id=? AND target.status='held' AND target.current_participant_id<>?`,
+        WHERE own.is_visible=1 AND target.is_visible=1 AND own.current_participant_id=? AND own.status='held' AND target.id=? AND target.status='held' AND target.current_participant_id<>?`,
     )
     .bind(participantId, segmentId, participantId)
     .first<{ ownId: string; recipientId: string; targetKind: string; requesterUserId: string }>();
@@ -477,11 +490,11 @@ const pairValid = `EXISTS (SELECT 1
         AND EXISTS (SELECT 1
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
-        WHERE s.id=? AND s.current_participant_id=? AND s.status='held')
+        WHERE s.id=? AND s.is_visible=1 AND s.current_participant_id=? AND s.status='held')
         AND EXISTS (SELECT 1
         FROM schedule_segments s
         JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active'
-        WHERE s.id=? AND s.current_participant_id=? AND s.status='held')`;
+        WHERE s.id=? AND s.is_visible=1 AND s.current_participant_id=? AND s.status='held')`;
 
 export async function respondSwap(
   db: D1Database,

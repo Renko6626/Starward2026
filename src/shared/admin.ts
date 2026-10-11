@@ -85,6 +85,7 @@ export const adminSegmentStatusLabels: Record<PortalSegmentStatus, string> = {
 };
 
 export type AdminSegmentItem = {
+  isVisible: boolean;
   kind: ScheduleSegmentKind;
   scheduledAt: string | null;
   id: string;
@@ -105,6 +106,9 @@ export type AdminSegmentListResponse = {
 };
 
 export const updateSegmentInputSchema = z.union([z.object({
+  mode: z.literal('set-visibility'),
+  isVisible: z.boolean(),
+}).strict(), z.object({
   mode: z.literal('fill-empty-time'),
   scheduledAt: z.string().trim().datetime({ offset: true }),
 }).strict(), z.object({

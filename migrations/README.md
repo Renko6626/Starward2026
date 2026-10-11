@@ -1,5 +1,12 @@
 # Migrations
 
+`0023_schedule_slot_visibility.sql` adds `schedule_segments.is_visible`, defaulting
+to 1 for existing and newly created slots. Apply it before deploying the matching
+worker. It preserves times, assignments and work associations; no reset is needed.
+Admins can hide or restore slots individually or in batches from the schedule page.
+Hidden slots are omitted from public/author timetables, selectable slots and relay
+neighbors; existing published works remain published.
+
 `0021_cosplay_work_types.sql` adds `cosplay` to application and work types and
 converts existing `mixed` intentions to `other`. It preserves application reviews,
 participant application links, drafts and schedule assignments. Apply this migration
