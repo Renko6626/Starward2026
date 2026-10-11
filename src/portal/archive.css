@@ -40,7 +40,7 @@
 .author-archive .archive-control-actions > .archive-control-label { flex-basis: 100%; }
 .author-archive .text-link { color: #c3c3bd; font-size: 12px; }
 .author-archive .registration-progress { display: flex; flex-wrap: wrap; gap: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
-.archive-register { display: grid; grid-template-columns: 1fr 1fr .7fr .7fr; width: 100%; margin: 0; border-bottom: 1px solid #7e7e75; background: #090909b8; }
+.archive-register { display: grid; grid-template-columns: 1fr 1.25fr .7fr .7fr .8fr; width: 100%; margin: 0; border-bottom: 1px solid #7e7e75; background: #090909b8; }
 .archive-register > div { padding: 18px 16px 17px; min-width: 0; }
 .archive-register > div:first-child { padding-left: 0; }
 .archive-register dt { color: #9c9c94; font-size: 12px; }
@@ -165,6 +165,7 @@
   .archive-register > div { padding: 12px 12px 13px; }
   .archive-register > div:nth-child(odd) { padding-left: 0; }
   .archive-register > div:nth-child(-n+2) { border-bottom: 1px solid #404238; }
+  .archive-register > div:last-child { grid-column: 1 / -1; border-top: 1px solid #404238; }
   .archive-register dt { font-size: 11px; }
   .archive-register dd { font-size: 15px; margin-top: 5px; }
   .author-archive .registration-progress-actions { padding-bottom: 14px; }
