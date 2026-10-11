@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { SqliteD1Fixture } from "../test/sqlite-d1";
-import { saveWorkspaceApplication, createSwap } from "./collaboration";
-import { reviewApplication } from "./applications";
 it("upgrades a populated database without losing account or participation data", async () => {
   const f = new SqliteD1Fixture({ throughMigration: "0019_activity_rule_acceptances.sql" });
   try {
@@ -12,12 +10,16 @@ it("upgrades a populated database without losing account or participation data",
       INSERT INTO session(id,token,userId,expiresAt,createdAt,updatedAt) VALUES('old-session','old-token','u1','2030-01-01','2026-01-01','2026-01-01');
       INSERT INTO activity_rule_acceptances VALUES('u1','rules-old','2026-01-01');
       INSERT INTO schedule_segments(id,schedule_version_id,code,name,status,sort_order,created_at,updated_at) VALUES('s1','schedule_default','A','First','open',1,'2026-01-01','2026-01-01'),('s2','schedule_default','B','Second','open',2,'2026-01-01','2026-01-01');`);
-    for (const [userId,segmentId,email] of [["u1","s1","one@example.com"],["u2","s2","two@example.com"]]) {
-      const a = await saveWorkspaceApplication(f.db,userId,email,{segmentId,profile:{creditName:"作者",bilibiliUid:"12345",contactEmail:email,primaryContactChannel:"QQ",primaryContactHandle:"123456789",isAnonymous:false},application:{contactEmail:email,interestFormat:"novel",introText:"创作意向"}});
-      await reviewApplication(f.db,a.id,{status:"approved"},"admin");
+    // Build historical rows directly; current application code requires newer columns.
+    for (const [userId, segmentId, email] of [["u1", "s1", "one@example.com"], ["u2", "s2", "two@example.com"]]) {
+      f.sqlite.prepare("INSERT INTO portal_profiles(user_id,credit_name,bilibili_uid,contact_email,primary_contact_channel,primary_contact_handle,is_anonymous,created_at,updated_at) VALUES(?,'作者','12345',?,'QQ','123456789',0,'2026-01-01','2026-01-01')").run(userId, email);
+      f.sqlite.prepare("INSERT INTO applications(id,user_id,contact_email,interest_format,intro_text,status,created_at,updated_at) VALUES(?,?,?,'novel','创作意向','approved','2026-01-01','2026-01-01')").run(`app_${userId}`, userId, email);
+      f.sqlite.prepare("INSERT INTO participants(id,user_id,application_id,invite_email,status,created_at,updated_at) VALUES(?,?,?,?,'approved','2026-01-01','2026-01-01')").run(`part_${userId}`, userId, `app_${userId}`, email);
+      f.sqlite.prepare("UPDATE schedule_segments SET current_participant_id=?,status='held' WHERE id=?").run(`part_${userId}`, segmentId);
+      f.sqlite.prepare("INSERT INTO project_drafts(id,participant_id,segment_id,preview_status,review_status,created_at,updated_at) VALUES(?,?,?,'draft','not_started','2026-01-01','2026-01-01')").run(`draft_${userId}`, `part_${userId}`, segmentId);
+      f.sqlite.prepare("INSERT INTO participant_events(id,participant_id,actor_type,event_type,target_type,target_id,created_at) VALUES(?,?,'admin','application_approved','application',?,'2026-01-01')").run(`event_${userId}`, `part_${userId}`, `app_${userId}`);
     }
-    const one = f.sqlite.prepare("SELECT id FROM participants WHERE user_id='u1'").get()!;
-    await createSwap(f.db,String(one.id),"s2");
+    f.sqlite.exec("INSERT INTO segment_swap_requests(id,requester_id,recipient_id,requester_segment_id,recipient_segment_id,status,created_at,updated_at) VALUES('swap_old','part_u1','part_u2','s1','s2','pending','2026-01-01','2026-01-01')");
     const tables = ["user","account","session","activity_rule_acceptances","portal_profiles","applications","participants","participant_events","project_drafts","segment_swap_requests","schedule_segments"];
     const rows = (table: string) => f.sqlite.prepare(`SELECT * FROM "${table}" ORDER BY rowid`).all();
     const before = Object.fromEntries(tables.map(t=>[t,rows(t)]));
