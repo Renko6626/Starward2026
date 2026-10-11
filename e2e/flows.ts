@@ -5,18 +5,27 @@ import { ACTIVITY_RULES_VERSION } from "../src/shared/activity-rules";
 export async function registerAndApply(page: Page) {
   await page.goto("/portal/login");
   await page.getByLabel("登录邮箱", { exact: true }).fill("e2e-new@example.com");
+  await expect(page.getByRole("button", { name: "发送注册验证码", exact: true })).toBeDisabled();
   await page.getByLabel(/我已阅读并同意/).check();
-  await seed(`INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt)
-    VALUES ('e2e-new-otp', 'sign-in-otp-e2e-new@example.com', '123456:0', '2099-01-01T00:00:00.000Z', '2026-04-12T00:00:00.000Z', '2026-04-12T00:00:00.000Z');`);
-  const verified = await page.request.post("/api/auth/sign-in/email-otp", {
-    data: { email: "e2e-new@example.com", otp: "123456" },
-    headers: { origin: "http://127.0.0.1:21262", "x-starward-rules-version": ACTIVITY_RULES_VERSION },
-  });
-  expect(verified.ok(), await verified.text()).toBe(true);
-  const password = await page.request.post("/api/auth/set-password", { data: { newPassword: "e2e-password-2026" }, headers: { origin: "http://127.0.0.1:21262" } });
-  expect(password.ok(), await password.text()).toBe(true);
-  await page.goto("/portal");
+  await page.getByRole("button", { name: "发送注册验证码", exact: true }).click();
+  await expect(page.getByText("验证码已发送至 e2e-new@example.com", { exact: true })).toBeVisible();
+  const mailResponse = await page.request.get("/__e2e/mailbox?email=e2e-new%40example.com");
+  expect(mailResponse.ok()).toBe(true);
+  const messages = await mailResponse.json() as { text: string }[];
+  expect(messages).toHaveLength(1);
+  const otp = messages[0].text.match(/验证码：(\d{6})/)?.[1];
+  expect(otp).toMatch(/^\d{6}$/);
+  await page.getByLabel("邮箱验证码", { exact: true }).fill(otp!);
+  await page.getByRole("button", { name: "验证邮箱", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "设置登录密码", exact: true })).toBeVisible();
+  await page.getByLabel("密码", { exact: true }).fill("e2e-password-2026");
+  await page.getByRole("button", { name: "保存密码并进入", exact: true }).click();
+  await expect(page).toHaveURL(/\/portal$/);
   await expect(page.getByRole("heading", { name: "开始报名" })).toBeVisible();
+  expect(await rows(`SELECT "user".emailVerified, activity_rule_acceptances.rules_version
+    FROM "user" JOIN activity_rule_acceptances ON activity_rule_acceptances.user_id = "user".id
+    WHERE "user".email = 'e2e-new@example.com'`))
+    .toEqual([{ emailVerified: 1, rules_version: ACTIVITY_RULES_VERSION }]);
   await expect(page.locator('[name="profile.creditName"]')).toBeInViewport();
   await expect(page.getByRole("region", { name: "报名进度" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "档案目录" })).toHaveCount(0);
@@ -44,6 +53,13 @@ export async function registerAndApply(page: Page) {
   await expect(progress).not.toBeFocused();
   await openChapter(page, "plan");
   await expect(page.locator('[name="application.introText"]')).toHaveValue("准备创作一篇关于秘封旅行的小说。");
+  await openChapter(page, "profile");
+  await expect(page.locator('[name="profile.creditName"]')).toHaveValue("E2E 新作者");
+  await expect(page.locator('[name="profile.bilibiliUid"]')).toHaveValue("202600088");
+  await expect(page.locator('[name="profile.primaryContactHandle"]')).toHaveValue("123456789");
+  expect(await rows(`SELECT applications.status, applications.contact_handle, applications.intro_text
+    FROM applications JOIN "user" ON "user".id = applications.user_id WHERE "user".email = 'e2e-new@example.com'`))
+    .toEqual([{ status: "pending", contact_handle: "QQ: 123456789", intro_text: "准备创作一篇关于秘封旅行的小说。" }]);
   expect(await rows("SELECT segment_id FROM project_drafts JOIN participants ON participants.id = project_drafts.participant_id JOIN user ON user.id = participants.user_id WHERE user.email = 'e2e-new@example.com'"))
     .toEqual([{ segment_id: null }]);
   await page.getByRole("button", { name: "退出登录" }).click();
@@ -53,6 +69,7 @@ export async function registerAndApply(page: Page) {
   await page.getByLabel("密码", { exact: true }).fill("e2e-password-2026");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "报名进度" })).toContainText("报名待审核");
 }
 
 export async function fillAllSeats() {
