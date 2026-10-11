@@ -211,7 +211,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         </div>
       </> : null}
     </dialog>
-    <ArchiveChapter enabled={compact} id="profile" number="01" title="基本信息" state={application.profile?.creditName} defaultOpen={!application.profile}>
+    <ArchiveChapter enabled={compact} id="profile" number="01" title="基本信息" state={application.profile?.creditName} defaultOpen={!application.profile || !application.application}>
       <LoginPasswordDialog email={application.user.email} />
       <div className={compact ? "creator-card-body" : undefined}>
     <p className="registration-required-note">标注“必填”的项目需要填写，“必选”的项目需要选择；“选填”的项目可以留空。</p>

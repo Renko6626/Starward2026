@@ -16,7 +16,11 @@ export async function registerAndApply(page: Page) {
   const password = await page.request.post("/api/auth/set-password", { data: { newPassword: "e2e-password-2026" }, headers: { origin: "http://127.0.0.1:21262" } });
   expect(password.ok(), await password.text()).toBe(true);
   await page.goto("/portal");
-  await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "开始报名" })).toBeVisible();
+  await expect(page.locator('[name="profile.creditName"]')).toBeInViewport();
+  await expect(page.getByRole("region", { name: "报名进度" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "档案目录" })).toHaveCount(0);
+  await expect(page.locator("#history")).toHaveCount(0);
   await page.getByRole("button", { name: "提交报名", exact: true }).click();
   await expect(page.locator('[name="profile.creditName"]')).toHaveAttribute("aria-invalid", "true");
   await page.locator('[name="profile.creditName"]').fill("E2E 新作者");
@@ -27,6 +31,10 @@ export async function registerAndApply(page: Page) {
   await expect(page.locator('[name="segmentId"]')).toHaveValue("");
   await page.getByRole("button", { name: "提交报名", exact: true }).click();
   await expect(page.getByRole("region", { name: "报名进度" }).getByRole("definition").filter({ hasText: /^报名待审核$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "作者档案" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "报名说明" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "档案目录" })).toBeVisible();
+  await expect(page.locator("#history")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "报名进度" }).getByRole("definition").filter({ hasText: /^报名待审核$/ })).toBeVisible();
   await openChapter(page, "plan");
