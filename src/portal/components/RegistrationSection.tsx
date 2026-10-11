@@ -90,6 +90,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const timeChangeDialog = useRef<HTMLDialogElement>(null);
   const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(timeChangeDialog);
   const editable = application.editable;
+  const canSaveProfileSeparately = compact && (!editable || Boolean(application.application));
   const approved = application.application?.status === "approved";
   const intentEditable = editable || approved;
   const intentDisabled = !intentEditable || saving || savingProfile;
@@ -215,7 +216,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <div className={compact ? "creator-card-body" : undefined}>
     <p className="registration-required-note">标注“必填”的项目需要填写，“必选”的项目需要选择；“选填”的项目可以留空。</p>
     <fieldset className="form-section" aria-label="署名与联系" disabled={compact ? saving || savingProfile : disabled} onKeyDown={event => {
-      if (compact && event.key === "Enter" && event.target instanceof HTMLInputElement && !event.nativeEvent.isComposing) {
+      if (canSaveProfileSeparately && event.key === "Enter" && event.target instanceof HTMLInputElement && !event.nativeEvent.isComposing) {
         event.preventDefault();
         if (!saving && !savingProfile) void saveProfile();
       }
@@ -228,7 +229,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <label className="checkbox-field"><input name="profile.isAnonymous" form="creator-registration-form" type="checkbox" checked={form.profile.isAnonymous} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, isAnonymous: event.target.checked } }))} />匿名展示</label>
       <p className="field-hint">匿名时公开页面不显示署名；主催仍可查看资料，已确认排期的相邻作者可查看你的 B站主页。</p>
     </fieldset>
-    {compact ? <><Button appearance="industrial" type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "保存署名与联系"}</Button></> : null}
+    {canSaveProfileSeparately ? <><Button appearance="industrial" type="button" variant="secondary" disabled={saving || savingProfile} aria-busy={savingProfile} onClick={() => void saveProfile()}>{savingProfile ? "保存中…" : "保存署名与联系"}</Button></> : null}
     {profileMessage ? <ArchiveResult compact={compact} message={profileMessage} /> : null}
       </div>
     </ArchiveChapter>
