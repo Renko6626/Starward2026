@@ -70,3 +70,8 @@ public/.station-assets-*/
 # Local trajectory generation
 .orbit-build-*/
 .venv-orbit/
+
+# Browser E2E diagnostics
+playwright-report/
+test-results/
+playwright-logs/
