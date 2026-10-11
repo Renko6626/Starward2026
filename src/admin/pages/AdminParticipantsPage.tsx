@@ -7,6 +7,7 @@ import { cn } from "../../app/lib/cn";
 import { adminParticipantStatusLabels, type AdminParticipantListResponse, type AdminProjectDraftListResponse, type AdminSegmentListResponse } from "../../shared/admin";
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationListResponse } from "../../shared/applications";
 import { buildCreatorRows, filterCreatorRows } from "../lib/creator-list";
+import { AdminAssistedAccessForm } from "../components/AdminAssistedAccessForm";
 
 type Payload = { participants: AdminParticipantListResponse["items"]; applications: AdminApplicationListResponse["items"]; segments: AdminSegmentListResponse["items"]; drafts: AdminProjectDraftListResponse["items"] };
 
@@ -34,6 +35,7 @@ export function AdminParticipantsPage() {
     <PageHeading title="参与者管理">
       <input className="field-input search-input" type="search" aria-label="搜索参与者" placeholder="搜索姓名、邮箱、联系方式或时点" value={query} onChange={event => setQuery(event.target.value)} />
     </PageHeading>
+    <AdminAssistedAccessForm />
     {state.status === "ready" ? <div className="admin-work-summary">
       <span>待审核报名 <strong>{pending}</strong></span>
       <Link to="/portal/admin/project-drafts">待审核作品 <strong>{reviewCount}</strong></Link>

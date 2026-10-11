@@ -87,14 +87,12 @@ describe('Turnstile protected authentication', () => {
     expect(t.db.sqlite.prepare('SELECT value FROM verification').get()).toEqual(code);
     expect((await send('valid-second')).status).toBe(429);
   });
-  it('protects password login and reset sends, while OTP proof and password setup need no second challenge', async () => {
+  it('allows password login without Turnstile while protecting reset sends', async () => {
     const t = protect(); await t.withPassword();
     const before = t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n;
-    expect((await t.request('/sign-in/email', credentials)).status).toBe(400);
-    expect((await t.request('/sign-in/email/', credentials)).ok).toBe(false);
-    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'invalid')).status).toBe(403);
+    expect((await t.request('/sign-in/email', { ...credentials, password: 'incorrect-password' })).status).toBe(401);
     expect(t.db.sqlite.prepare('SELECT COUNT(*) AS n FROM session').get()?.n).toBe(before);
-    expect((await t.request('/sign-in/email', credentials, '', null, t.env.BETTER_AUTH_URL!, 'valid-login')).status).toBe(200);
+    expect((await t.request('/sign-in/email', credentials)).status).toBe(200);
     const body = { email: credentials.email };
     expect((await t.request('/email-otp/request-password-reset', body)).status).toBe(400);
     expect((await t.request('/email-otp/request-password-reset', body, '', null, t.env.BETTER_AUTH_URL!, 'valid-reset')).status).toBe(200);

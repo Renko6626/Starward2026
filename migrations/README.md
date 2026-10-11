@@ -1,5 +1,11 @@
 # Migrations
 
+`0024_admin_assisted_access.sql` adds the administrator-assisted registration/login
+issuance log. Codes use the existing Better Auth verification table and expire
+after 10 minutes; the log stores the recipient email, issuing administrator and
+timestamps, without storing the code. Apply this migration before deploying the
+matching worker. Existing accounts and data are preserved.
+
 `0023_schedule_slot_visibility.sql` adds `schedule_segments.is_visible`, defaulting
 to 1 for existing and newly created slots. Apply it before deploying the matching
 worker. It preserves times, assignments and work associations; no reset is needed.

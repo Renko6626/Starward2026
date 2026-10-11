@@ -48,6 +48,8 @@ import { listEventWindows, updateEventWindow } from "../data/event-windows";
 import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
 import { getAdminIdentity, requireAdminAccess, requireAdminOwner } from "../lib/admin";
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
+import { adminAssistedAccessInputSchema } from "../../src/shared/admin-access";
+import { issueAdminAssistedAccess } from "../data/admin-assisted-access";
 import { getRequiredDb, jsonError } from "../lib/http";
 import type { AppRouteConfig } from "../lib/types";
 
@@ -59,6 +61,16 @@ adminApi.use("*", async (c, next) => {
 });
 
 adminApi.get('/session', c => c.json({ email: getAdminIdentity(c), role: c.get('adminRole') }));
+
+adminApi.post('/assisted-access', async c => {
+  const parsed = adminAssistedAccessInputSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return jsonError(c, 422, 'invalid_request', '请填写对方的真实登录邮箱。');
+  const db = getRequiredDb(c);
+  const managementAccount = await db.prepare('SELECT u.id FROM "user" u JOIN admin_roles r ON r.user_id = u.id WHERE lower(u.email) = ?')
+    .bind(parsed.data.email).first();
+  if (managementAccount) return jsonError(c, 403, 'management_account_protected', '管理员账号请使用正常登录方式。');
+  return c.json(await issueAdminAssistedAccess(db, parsed.data.email, c.get('adminUserId')!));
+});
 
 adminApi.get('/users', async c => {
   requireAdminOwner(c);

@@ -58,7 +58,7 @@ QQ 的 AppID + OpenID 保存在现有 account 表，同一个 QQ 应用身份只
 
 ### 邮件密码重置
 
-配置 `TURNSTILE_SECRET_KEY`（兼容 `TURNSTILE_SECRET`）后，Better Auth captcha 插件要求注册／登录发码、重置发码及密码登录请求携带 `x-captcha-response`；OTP 验证、密码设置与重置提交不重复消耗 token。前端读取 `/api/auth/providers` 的 `turnstile.enabled` 并使用构建时的 `VITE_TURNSTILE_SITE_KEY`。报名继续提交 body 中的 `turnstileToken`，共用前端验证组件。配置顺序见 [production-deployment.md](production-deployment.md#turnstile)。
+配置 `TURNSTILE_SECRET_KEY`（兼容 `TURNSTILE_SECRET`）后，Better Auth captcha 插件要求注册／登录发码、重置发码请求携带 `x-captcha-response`；邮箱密码登录暂时免除 Turnstile，以应对部分地区的验证服务故障。OTP 验证、密码设置与重置提交不重复消耗 token。前端读取 `/api/auth/providers` 的 `turnstile.enabled` 并使用构建时的 `VITE_TURNSTILE_SITE_KEY`。报名继续提交 body 中的 `turnstileToken`，共用前端验证组件。配置顺序见 [production-deployment.md](production-deployment.md#turnstile)。
 
 注册／登录与密码重置邮件共用 `worker/lib/auth-email.ts` 的 NASAPUNK HTML 模板，并保留纯文本版本。邮件包含逐星巡礼名称、现有月相 logo、验证码、有效期、账号操作按钮及网站链接。图片与链接使用 `BETTER_AUTH_URL` 的站点 origin；未配置时使用当前请求 origin。重置按钮进入 `/portal/login?reset=password`，链接不携带验证码。邮件客户端可能屏蔽远程图片，验证码和项目名称仍以文字显示。
 
