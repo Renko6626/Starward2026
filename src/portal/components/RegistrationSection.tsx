@@ -26,7 +26,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
 }) {
   const { segment } = getRouteApi("/portal/").useSearch();
   const navigate = useNavigate();
-  const [form, setForm] = useState<WorkspaceApplicationInput>(() => ({
+  const [form, setForm] = useState<Omit<WorkspaceApplicationInput, "segmentId"> & { segmentId: string }>(() => ({
     profile: {
       creditName: application.profile?.creditName ?? "",
       bilibiliUid: application.profile?.bilibiliUid ?? "",
@@ -70,6 +70,11 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     try { sessionStorage.setItem(registrationDraftKey(application.user.id), JSON.stringify(form)); } catch { /* Keep the live form usable. */ }
     saveScheduleIntent(application.user.id, form.segmentId);
   }, [form, draftReady, application.user.id, application.editable]);
+  const assignedSegment = collaboration.segments.find(item => item.participantId === collaboration.participantId);
+  const assignmentFrozen = assignedSegment?.assignmentStatus === "locked" || assignedSegment?.assignmentStatus === "completed";
+  useEffect(() => {
+    if (assignmentFrozen && assignedSegment) setForm(current => ({ ...current, segmentId: assignedSegment.id }));
+  }, [assignmentFrozen, assignedSegment?.id]);
   const selectedSegment = collaboration.segments.find(item => item.id === form.segmentId);
   const selectionUnavailable = application.editable && Boolean(form.segmentId && (!selectedSegment || !isRegistrationSegmentSelectable(selectedSegment, collaboration.participantId)));
   const selectableSegments = collaboration.segments.filter(item => isRegistrationSegmentSelectable(item, collaboration.participantId));
@@ -124,14 +129,14 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     setError(null); setMessage(null); setProfileMessage(null); setRefreshWarning(null); setFieldErrors({});
     if (!editable) { setError("当前不能修改报名。"); return; }
     const normalized = normalizeApplicationInput({ ...form.application, portfolioUrl: application.application?.portfolioUrl ?? undefined, messageToHosts: application.application?.messageToHosts ?? undefined, contactEmail: form.profile.contactEmail, contactHandle: `${form.profile.primaryContactChannel.trim()}: ${form.profile.primaryContactHandle.trim()}` });
-    const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized });
+    const parsed = workspaceApplicationInputSchema.safeParse({ ...form, profile: normalizePortalProfileInput(form.profile, application.user.email), application: normalized, segmentId: form.segmentId || null });
     const validationErrors: Record<string, string> = parsed.success ? {} : getRegistrationFieldErrors(parsed.error.issues);
-    if (!selectedSegment || selectionUnavailable) validationErrors.segmentId = "请选择一个可用的发布时间，已填写的信息会保留。";
+    if (selectionUnavailable) validationErrors.segmentId = "请选择一个可用的发布时间，已填写的信息会保留。";
     if (Object.keys(validationErrors).length) { showFieldErrors(validationErrors); return; }
     if (!parsed.success) { setError("报名资料格式不正确，请检查后重试。"); return; }
     const currentSegment = collaboration.segments.find(item => item.participantId === collaboration.participantId);
-    if (selectedSegment && requiresRegistrationTimeConfirmation(currentSegment, selectedSegment, confirmedChange)) {
-      setTimeChangeConfirmation({ from: currentSegment!, to: selectedSegment });
+    if (requiresRegistrationTimeConfirmation(currentSegment, selectedSegment ?? null, confirmedChange)) {
+      setTimeChangeConfirmation({ from: currentSegment!, to: selectedSegment ?? null });
       return;
     }
     setSaving(true);
@@ -154,7 +159,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       await requestJson<PortalProfileMutationResponse>("/api/portal/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
       setProfileMessage(application.application
         ? "署名与联系已保存。报名内容和发布时间以提交报名时为准。"
-        : "署名与联系已保存。填写创作意向并选择发布时间后，可提交报名。");
+        : "署名与联系已保存。填写创作意向后即可提交报名，发布时间可由主催安排。");
       await onSaved().catch(() => setRefreshWarning("署名与联系已保存，页面暂未更新，请点击“刷新状态”。"));
     } catch (caught) { setError(caught instanceof Error ? caught.message : "署名与联系保存失败。"); }
     finally { setSavingProfile(false); }
@@ -196,9 +201,9 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         <h2 id="registration-time-dialog-title">确认更改发布时间？</h2>
         <dl className="registration-time-change">
           <div><dt>原时间</dt><dd>{timeChangeConfirmation.from.scheduledAt ? formatScheduledTime(timeChangeConfirmation.from.scheduledAt) : timeChangeConfirmation.from.name}</dd></div>
-          <div><dt>新时间</dt><dd>{timeChangeConfirmation.to.scheduledAt ? formatScheduledTime(timeChangeConfirmation.to.scheduledAt) : timeChangeConfirmation.to.name}</dd></div>
+          <div><dt>新时间</dt><dd>{timeChangeConfirmation.to?.scheduledAt ? formatScheduledTime(timeChangeConfirmation.to.scheduledAt) : timeChangeConfirmation.to?.name ?? "由主催安排"}</dd></div>
         </dl>
-        <p id="registration-time-dialog-description">以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。</p>
+        <p id="registration-time-dialog-description">{timeChangeConfirmation.to ? "以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。" : "确认后将释放原时间，保留报名，等待主催重新安排。"}</p>
         <div className="workspace-actions">
           <Button appearance={compact ? "industrial" : "default"} variant="secondary" autoFocus onClick={() => exitDialog(() => setTimeChangeConfirmation(null))}>返回修改</Button>
           <Button appearance={compact ? "industrial" : "default"} disabled={saving} aria-busy={saving} onClick={() => void submit(undefined, timeChangeConfirmation)}>确认更改并提交</Button>
@@ -238,18 +243,18 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       <Field label="创作意向" requirement="必填" error={fieldErrors["application.introText"]}><textarea name="application.introText" form="creator-registration-form" className="field-input" rows={3} required maxLength={1600} placeholder="简要介绍计划创作的题材、内容和形式。报名时只需填写意向。" value={form.application.introText ?? ""} onChange={event => setForm(current => ({ ...current, application: { ...current.application, introText: event.target.value } }))} /></Field>
     </fieldset>
     {editable || selectionUnavailable ? <section className="registration-time-summary" aria-label="报名发布时间">
-      {editable ? <Field label="发布时间（北京时间）" requirement="必选" error={fieldErrors.segmentId}>
-        <select name="segmentId" form="creator-registration-form" className="field-input" required disabled={disabled}
+      {editable ? <Field label="发布时间（北京时间）" requirement="选填" error={fieldErrors.segmentId}>
+        <select name="segmentId" form="creator-registration-form" className="field-input" disabled={disabled || assignmentFrozen}
           value={form.segmentId} onChange={event => setForm(current => ({ ...current, segmentId: event.target.value }))}>
-          <option value="">请选择发布时间</option>
+          <option value="">由主催安排</option>
           {selectionUnavailable ? <option value={form.segmentId} disabled>{selectedSegment ? `${formatScheduledTime(selectedSegment.scheduledAt)}（已不可选）` : "原选时间已不可用"}</option> : null}
           {selectableSegments.map(item => <option key={item.id} value={item.id}>
             {item.scheduledAt ? formatScheduledTime(item.scheduledAt) : item.name}{item.status === "reserved" ? "（已为你预留）" : ""}
           </option>)}
         </select>
-        {selectableSegments.length === 0 ? <p className="field-hint">当前没有可选时间，请稍后查看时间表。</p> : null}
+        {selectableSegments.length === 0 ? <p className="field-hint">当前没有可选时间，仍可提交报名，由主催安排。</p> : null}
       </Field> : null}
-      {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择。</Notice> : null}
+      {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择或改为由主催安排。</Notice> : null}
     </section> : null}
     {intentEditable ? <div className={`registration-submit${approved ? " registration-submit--intent" : ""}`}>
       <div className="workspace-actions archive-control-actions">
@@ -257,7 +262,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
         {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
         <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
       </div>
-      <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，并预留所选发布时间。请按时完成作品并保持联系畅通。"}</p>
+      <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，有选定时间则预留，未选时间由主催安排。请按时完成作品并保持联系畅通。"}</p>
     </div> : null}
       </div>
     </ArchiveChapter>

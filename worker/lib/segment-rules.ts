@@ -20,6 +20,11 @@ export function buildPortalSegmentActions(input: {
     };
   }
 
+  if (input.currentSegment.status !== "held") {
+    const hint = "当前席位已锁定或完成，请联系主催调整。";
+    return { canClaim: false, canChange: false, canRelease: false, claimHint: hint, changeHint: hint, releaseHint: hint };
+  }
+
   const segmentLabel = `${input.currentSegment.code} · ${input.currentSegment.name}`;
   const changeHint = changeWindow.isOpen ? "当前可以变更或释放发布时点。" : "当前未开放发布时点变更或释放。";
 

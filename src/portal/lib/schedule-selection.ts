@@ -1,16 +1,16 @@
 import type { CollaborationSegment } from "../../shared/collaboration";
 
 type RegistrationTime = Pick<CollaborationSegment, "id" | "name" | "scheduledAt">;
-export type RegistrationTimeChange = { from: RegistrationTime; to: RegistrationTime };
+export type RegistrationTimeChange = { from: RegistrationTime; to: RegistrationTime | null };
 
 export function requiresRegistrationTimeConfirmation(
   current: RegistrationTime | undefined,
-  selected: RegistrationTime,
+  selected: RegistrationTime | null,
   confirmation?: RegistrationTimeChange,
 ) {
-  if (!current || current.id === selected.id) return false;
-  return !confirmation || confirmation.from.id !== current.id || confirmation.to.id !== selected.id
-    || confirmation.from.scheduledAt !== current.scheduledAt || confirmation.to.scheduledAt !== selected.scheduledAt;
+  if (!current || current.id === selected?.id) return false;
+  return !confirmation || confirmation.from.id !== current.id || confirmation.to?.id !== selected?.id
+    || confirmation.from.scheduledAt !== current.scheduledAt || confirmation.to?.scheduledAt !== selected?.scheduledAt;
 }
 
 /** Carry only a slot identifier through login; reservation happens on submission. */
@@ -19,19 +19,19 @@ export function scheduleSelectionSearch(search: Record<string, unknown>): { segm
 }
 
 export function isRegistrationSegmentSelectable(
-  segment: Pick<CollaborationSegment, "status" | "participantId">,
+  segment: Pick<CollaborationSegment, "status" | "participantId"> & Partial<Pick<CollaborationSegment, "kind" | "assignmentStatus">>,
   participantId: string,
 ) {
-  return segment.status === "available" || (segment.status === "reserved" && segment.participantId === participantId);
+  return (segment.status === "available" && segment.kind !== "special") || (segment.status === "reserved" && segment.participantId === participantId);
 }
 
 export function getScheduleAction(
-  segment: Pick<CollaborationSegment, "status" | "participantId">,
+  segment: Pick<CollaborationSegment, "status" | "participantId"> & Partial<Pick<CollaborationSegment, "kind" | "assignmentStatus">>,
   participantId: string,
   operationSucceeded = false,
 ) {
-  if (operationSucceeded) return null;
-  if (segment.status === "available") return "select";
+  if (operationSucceeded || segment.assignmentStatus === "locked" || segment.assignmentStatus === "completed") return null;
+  if (segment.status === "available" && segment.kind !== "special") return "select";
   if (participantId && segment.participantId === participantId) return "release";
   return segment.status === "confirmed" ? "swap" : null;
 }

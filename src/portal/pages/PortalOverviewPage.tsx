@@ -11,6 +11,7 @@ import { MissionCountdown } from "../../app/components/MissionCountdown";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
+import { ScheduleSection } from "../components/ScheduleSection";
 import { NeighborSlots } from "../components/NeighborSlots";
 import { RegistrationProgress } from "../components/RegistrationProgress";
 import { RegistrationSection } from "../components/RegistrationSection";
@@ -106,7 +107,7 @@ export function PortalOverviewPage() {
     <PageHeading title="作者档案" meta={<ActivityIdentity />}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
     <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
-      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新选择时间并提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
+      withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />
     <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <><a href="#project"><span>03</span>作品资料</a><a href="#relay"><span>04</span>接力安排</a></> : null}</nav>
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
@@ -124,9 +125,10 @@ export function PortalOverviewPage() {
       <div className="portal-project-heading"><h2 id="portal-project-title">作品资料</h2><p>提交作品预告和不公开的审查说明，供主催审核。</p></div>
       <PortalProjectPage embedded compact revision={revision} onSaved={refresh} />
     </section> : null}
-    {approved ? <ArchiveChapter id="relay" number="04" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "尚未选择"}>
-      <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "尚未选择"}</p>
-      <NeighborSlots revision={revision} />
+    {approved ? <ArchiveChapter id="relay" number="04" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "由主催安排"}>
+      <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "由主催安排"}</p>
+      {current ? <ScheduleSection collaboration={collaboration} selectedSegmentId={current.id} revision={revision} onSaved={refresh} /> : null}
+      <NeighborSlots revision={revision} collaboration={collaboration} onSaved={refresh} />
       <Link className="button button--primary button--industrial button--accent relay-schedule-action" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期 <ArrowUpRight size={18} aria-hidden="true" /></Link>
     </ArchiveChapter> : null}
     <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>

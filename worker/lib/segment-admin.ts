@@ -15,7 +15,7 @@ export function resolveAdminSegmentState(input: {
   nextParticipantId: string | null;
   now: string;
 }): ResolvedAdminSegmentState {
-  if (input.nextStatus !== "held") {
+  if (input.nextStatus === "open" || input.nextStatus === "released") {
     return {
       nextStatus: input.nextStatus,
       nextParticipantId: null,
@@ -24,17 +24,17 @@ export function resolveAdminSegmentState(input: {
     };
   }
 
-  if (!input.nextParticipantId) {
+  if (!input.nextParticipantId && input.nextStatus === "held") {
     throw new Error("held 状态必须指定认领人。");
   }
 
   const isSameHeldAssignment =
-    input.currentStatus === "held" && input.currentParticipantId === input.nextParticipantId;
+    input.currentParticipantId === input.nextParticipantId;
 
   return {
-    nextStatus: "held",
+    nextStatus: input.nextStatus,
     nextParticipantId: input.nextParticipantId,
-    claimedAt: isSameHeldAssignment ? input.currentClaimedAt ?? input.now : input.now,
+    claimedAt: input.nextParticipantId ? isSameHeldAssignment ? input.currentClaimedAt ?? input.now : input.now : null,
     releasedAt: null,
   };
 }

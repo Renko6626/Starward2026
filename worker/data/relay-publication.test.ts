@@ -25,7 +25,7 @@ describe("author release confirmation", () => {
   it("atomically saves the first link, confirms once and immediately exposes the approved work", async () => {
     expect(await confirm()).toMatchObject({ ok: true, draft: { workUrl: initialLink, releaseConfirmedAt: firstTime, publishedAt: firstTime } });
     // Another participant's future slot must not hide this released work.
-    f.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00Z' WHERE code = 'SEED-101'");
+    f.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00Z' WHERE id = 'seg_seed_101'");
     expect(await getPublicWork(f.db, draftId)).toMatchObject({ work: { workUrl: initialLink } });
     await confirm();
     expect(f.sqlite.prepare("SELECT COUNT(*) AS count FROM participant_events WHERE event_type = 'work_release_confirmed'").get())

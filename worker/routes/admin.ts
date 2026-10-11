@@ -20,6 +20,7 @@ import type {
 import { updateApplicationReviewInputSchema } from "../../src/shared/applications";
 import {
   bootstrapSegmentsInputSchema,
+  createSegmentInputSchema,
   appendSegmentsInputSchema,
   updateProjectDraftInputSchema,
   updateSegmentInputSchema,
@@ -28,6 +29,7 @@ import {
 import { eventWindowKeySchema, updateEventWindowInputSchema } from "../../src/shared/windows";
 import {
   bootstrapActiveScheduleSegments,
+  createActiveScheduleSegment,
   appendActiveScheduleSegments,
   getParticipantDetail,
   listProjectDrafts,
@@ -226,6 +228,14 @@ const bootstrapSegmentsHandler = async (c: any) => {
 
   return c.json(response, 201);
 };
+
+adminApi.post("/segments", async c => {
+  const parsed = createSegmentInputSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return jsonError(c, 422, "invalid_request", "请填写席位类型、名称和发布时间。", parsed.error.flatten());
+  const result = await createActiveScheduleSegment(getRequiredDb(c), parsed.data);
+  if (!result.ok) return jsonError(c, result.status, result.code, result.message);
+  return c.json(result, 201);
+});
 
 adminApi.post("/segments/bootstrap", bootstrapSegmentsHandler);
 

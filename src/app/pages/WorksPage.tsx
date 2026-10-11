@@ -156,7 +156,7 @@ export function WorksPage() {
       <div><h1>接力时间表</h1><ActivityIdentity /></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
-    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>选择空闲时间后填写报名资料，提交成功后为你预留。审核通过后可调整时间或申请换期。</Notice> : null}
+    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
@@ -175,7 +175,7 @@ export function WorksPage() {
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
+      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"}>不选时间，直接报名</Link><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
     </>}
   </div>;
 }

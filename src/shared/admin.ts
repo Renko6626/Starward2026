@@ -113,6 +113,14 @@ export const updateSegmentInputSchema = z.object({
 
 export type UpdateSegmentInput = z.infer<typeof updateSegmentInputSchema>;
 
+export const createSegmentInputSchema = z.object({
+  kind: z.enum(["standard", "special"]),
+  scheduledAt: z.string().trim().datetime({ offset: true }),
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(240).optional(),
+});
+export type CreateSegmentInput = z.infer<typeof createSegmentInputSchema>;
+
 export const bootstrapSegmentsInputSchema = z.object({
   count: z.number().int().min(1).max(120),
 });

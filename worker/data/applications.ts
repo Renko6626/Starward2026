@@ -515,15 +515,17 @@ export async function reviewApplication(
           `INSERT INTO project_drafts (
             id,
             participant_id,
+            segment_id,
             preview_status,
             review_status,
             created_at,
             updated_at
-          ) VALUES (?, ?, 'not_started', 'not_started', ?, ?)
-          ON CONFLICT(participant_id) DO NOTHING`,
+          ) VALUES (?, ?, (SELECT s.id FROM schedule_segments s JOIN schedule_versions v ON v.id=s.schedule_version_id AND v.status='active' WHERE s.current_participant_id=? AND s.status IN ('held','locked','completed')), 'not_started', 'not_started', ?, ?)
+          ON CONFLICT(participant_id) DO UPDATE SET segment_id=excluded.segment_id`,
         )
         .bind(
           createPrefixedId("draft"),
+          participantPlan.participantId,
           participantPlan.participantId,
           reviewedAt,
           reviewedAt,

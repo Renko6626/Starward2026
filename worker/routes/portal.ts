@@ -247,7 +247,7 @@ portalApi.post("/application-with-segment", async (c) => {
     );
     return c.json({
       ok: true,
-      message: "已提交报名并预留时段，等待主催审核。",
+      message: parsed.data.segmentId ? "已提交报名并预留时段，等待主催审核。" : "已提交报名，等待主催审核并安排发布时间。",
       application,
     } satisfies PortalApplicationMutationResponse);
   } catch (error) {
