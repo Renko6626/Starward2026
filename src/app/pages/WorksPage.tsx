@@ -130,10 +130,6 @@ export function WorksPage() {
   function select(id: string) {
     detailTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSelectedId(id);
-    if (userId && identity && identity.status !== "approved" && identity.status !== "completed"
-      && schedule.some(entry => entry.id === id && entry.status === "available")) {
-      saveScheduleIntent(userId, id);
-    }
     if (mobile || id === selected?.id) setDetailOpen(true);
   }
   function closeDetail() {
@@ -175,7 +171,7 @@ export function WorksPage() {
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"}>不选时间，直接报名</Link><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
+      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>不选时间，直接报名</Link><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
     </>}
   </div>;
 }

@@ -273,6 +273,7 @@ export function PortalLoginPage() {
       <section className="auth-panel" aria-label={returnTo ? '管理员账号' : '作者账号'}>
         <p className="station-entry-form-label">{returnTo ? 'ORGANIZER ACCESS' : 'CREATOR ACCESS'}</p>
         <h1>{mode === 'reset' ? '重置登录密码' : step === "password" ? "设置登录密码" : mode === 'assisted' ? '使用管理员验证码' : mode === "register" ? "注册作者账号" : mode === "otp" ? "邮箱验证码登录" : returnTo ? '登录管理账号' : "登录作者账号"}</h1>
+        {segment ? <p className="auth-note">已选择一个发布时间，验证后会带入报名表；提交报名前不会预留。</p> : null}
         <p className="auth-note">{mode === 'reset' ? '验证码会发送到登录邮箱。重置成功后，请用新密码重新登录。' : mode === 'assisted' ? '输入主催提供的邮箱和验证码，无需人机验证。首次使用请确认活动规则，再设置登录密码。' : returnTo ? '使用已获授权的网站账号登录。新注册账号需由初始管理员授予管理权限。' : '注册时先用验证码验证邮箱，再设置密码。报名联系方式可另行填写。'}</p>
         <div className="auth-tabs" role="group" aria-label="账号操作">
           {(

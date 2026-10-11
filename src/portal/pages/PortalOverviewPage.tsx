@@ -28,11 +28,7 @@ export function PortalOverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [selection, setSelection] = useState<{ userId: string; segmentId: string } | null>(null);
-  const userId = session.data?.user.id;
-  const onSelectionChange = useCallback((segmentId: string) => {
-    if (userId) setSelection(current => current?.userId === userId && current.segmentId === segmentId ? current : { userId, segmentId });
-  }, [userId]);
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   useEffect(() => {
     const reveal = () => {
@@ -91,8 +87,12 @@ export function PortalOverviewPage() {
   const { dashboard, application, collaboration } = state;
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
-  const selected = collaboration.segments.find(item => item.id === (selection?.userId === userId ? selection?.segmentId : segment));
   const registration = application.application;
+  const firstRegistration = !registration && !approved && application.editable;
+  async function registrationSaved() {
+    await refresh();
+    if (firstRegistration) setRegistrationSubmitted(true);
+  }
   const hasReviewResult = registration?.status === "rejected";
   const hasFeedback = hasReviewResult || Boolean(registration?.adminNote) || collaboration.requests.some(request => request.status === "pending");
   async function refreshStatus() {
@@ -103,12 +103,15 @@ export function PortalOverviewPage() {
   }
   return <div className="page-content creator-workspace author-archive">
     {dashboard.participant?.status === "approved" ? <MissionCountdown target="submission" /> : null}
-    <PageHeading title="作者档案" meta={<ActivityIdentity />}><PortalAccount /><div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div></PageHeading>
-    <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} selected={selected}
+    <PageHeading title={firstRegistration ? "开始报名" : "作者档案"} meta={<ActivityIdentity />}><PortalAccount />{!firstRegistration ? <div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div> : null}</PageHeading>
+    {firstRegistration ? <section className="registration-onboarding" aria-label="报名说明">
+      <p>填写基本信息和创作意向，提交后等待审核。发布时间可不选，由主催安排。</p>
+      <ol aria-label="报名步骤"><li>基本信息</li><li>创作意向</li><li>提交报名</li></ol>
+    </section> : <RegistrationProgress application={application} participantStatus={dashboard.participant?.status} current={current} focusAfterSubmit={registrationSubmitted}
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
-    />
-    <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}</nav>
+    />}
+    {!firstRegistration ? <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}</nav> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
       <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
@@ -119,7 +122,7 @@ export function PortalOverviewPage() {
       </Notice> : null}
       {collaboration.requests.length ? <SwapRequests collaboration={collaboration} onSaved={refresh} /> : null}
     </section> : null}
-    <RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={refresh} onSelectionChange={onSelectionChange} />
+    <RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={registrationSaved} />
     {/* 作品预告与审查说明暂时关闭，编辑器保留在 PortalProjectPage 中供后续恢复。 */}
     {approved ? <ArchiveChapter id="relay" number="03" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "由主催安排"}>
       <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "由主催安排"}</p>
@@ -127,9 +130,9 @@ export function PortalOverviewPage() {
       <NeighborSlots revision={revision} collaboration={collaboration} onSaved={refresh} />
       <Link className="button button--primary button--industrial button--accent relay-schedule-action" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期 <ArrowUpRight size={18} aria-hidden="true" /></Link>
     </ArchiveChapter> : null}
-    <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
+    {!firstRegistration ? <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>
       {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，可在这里查看报名及后续操作记录。</p> : null}
-    </details>
+    </details> : null}
   </div>;
 }
