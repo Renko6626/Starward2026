@@ -1,5 +1,18 @@
 import { test, expect, openPortal, openChapter, rows } from "./fixtures";
-import { fillAllSeats, registerAndApply, verifyScheduleIntent } from "./flows";
+import { fillAllSeats, registerAndApply, verifyScheduleIntent, updatePendingRegistration } from "./flows";
+
+test("待审核报名统一保存，收起章节后仍可更新", async ({ pendingPage }) => {
+  await updatePendingRegistration(pendingPage);
+});
+
+test("审核通过后保留独立保存入口", async ({ approvedPage }) => {
+  await openPortal(approvedPage);
+  await openChapter(approvedPage, "profile");
+  await openChapter(approvedPage, "plan");
+  await expect(approvedPage.getByRole("button", { name: "保存署名与联系", exact: true })).toBeVisible();
+  await expect(approvedPage.getByRole("button", { name: "保存创作意向", exact: true })).toBeVisible();
+  await expect(approvedPage.getByRole("button", { name: "更新报名", exact: true })).toHaveCount(0);
+});
 
 test("浏览时段不改意向，直接报名清空时间，明确选择提交后才预留", async ({ pendingPage }) => {
   await verifyScheduleIntent(pendingPage);

@@ -61,6 +61,7 @@
 .registration-onboarding ol { display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 12px 0 0; padding-left: 20px; color: #dfe0d7; font-size: 13px; list-style: decimal; }
 .registration-onboarding li { padding-left: 2px; }
 .author-archive .creator-board--registration { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 74px; align-items: start; }
+.author-archive .creator-board--registration > .registration-submit,
 .author-archive .creator-board--registration > .archive-result { grid-column: 1 / -1; }
 .archive-chapter { margin: 0; padding: 0; border: 0; scroll-margin-top: 20px; min-width: 0; }
 .archive-chapter > summary {

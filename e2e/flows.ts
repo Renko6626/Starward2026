@@ -61,6 +61,42 @@ export async function fillAllSeats() {
     UPDATE schedule_segments SET status = 'held', current_participant_id = 'full_' || id WHERE current_participant_id IS NULL;`);
 }
 
+export async function updatePendingRegistration(page: Page) {
+  await openPortal(page);
+  const update = page.getByRole("button", { name: "更新报名", exact: true });
+  await expect(update).toBeVisible();
+  await expect(page.getByRole("button", { name: "保存署名与联系", exact: true })).toHaveCount(0);
+  await openChapter(page, "profile");
+  await openChapter(page, "plan");
+  await page.locator('[name="profile.primaryContactChannel"]').selectOption("QQ");
+  await page.locator('[name="profile.primaryContactHandle"]').fill("987654321");
+  await page.locator('[name="application.introText"]').fill("待审核报名统一保存验收。");
+  await page.locator('[name="segmentId"]').selectOption("seg_seed_104");
+  await page.locator("#profile > summary").click();
+  await page.locator("#plan > summary").click();
+  await expect(page.locator("#profile")).not.toHaveAttribute("open");
+  await expect(page.locator("#plan")).not.toHaveAttribute("open");
+  await update.click();
+  await expect(page.getByRole("region", { name: "报名进度" })).toContainText("03:00");
+  const saved = await (await page.request.get("/api/portal/application")).json();
+  expect(saved.profile.primaryContactHandle).toBe("987654321");
+  expect(saved.application.contactHandle).toBe("QQ: 987654321");
+  expect(saved.application.introText).toBe("待审核报名统一保存验收。");
+  await page.reload();
+  await openChapter(page, "profile");
+  await openChapter(page, "plan");
+  await expect(page.locator('[name="profile.primaryContactHandle"]')).toHaveValue("987654321");
+  await expect(page.locator('[name="application.introText"]')).toHaveValue("待审核报名统一保存验收。");
+  await expect(page.locator('[name="segmentId"]')).toHaveValue("seg_seed_104");
+  // Enter in basic information must submit the same complete registration.
+  await page.locator('[name="application.introText"]').fill("回车统一保存报名验收。");
+  const response = page.waitForResponse(r => r.url().endsWith("/api/portal/application-with-segment") && r.request().method() === "POST");
+  await page.locator('[name="profile.primaryContactHandle"]').press("Enter");
+  expect((await response).ok()).toBe(true);
+  const entered = await (await page.request.get("/api/portal/application")).json();
+  expect(entered.application.introText).toBe("回车统一保存报名验收。");
+}
+
 export async function verifyScheduleIntent(page: Page) {
   await openPortal(page);
   await openChapter(page, "plan");

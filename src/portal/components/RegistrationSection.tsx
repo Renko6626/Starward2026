@@ -89,7 +89,8 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
   const timeChangeDialog = useRef<HTMLDialogElement>(null);
   const { enter: enterDialog, exit: exitDialog, stop: stopDialog } = useDialogMotion(timeChangeDialog);
   const editable = application.editable;
-  const canSaveProfileSeparately = compact && (!editable || Boolean(application.application));
+  const unifiedPendingSave = editable && application.application?.status === "pending";
+  const canSaveProfileSeparately = compact && !unifiedPendingSave && (!editable || Boolean(application.application));
   const approved = application.application?.status === "approved";
   const intentEditable = editable || approved;
   const intentDisabled = !intentEditable || saving || savingProfile;
@@ -180,6 +181,15 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
     finally { setSaving(false); }
   }
 
+  const submitControls = intentEditable ? <div className={`registration-submit${approved ? " registration-submit--intent" : ""}`}>
+      <div className="workspace-actions archive-control-actions">
+        {compact && !approved ? <span className="archive-control-label" aria-hidden="true">REG / SUBMIT</span> : null}
+        {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
+        <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
+      </div>
+      <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，有选定时间则预留，未选时间由主催安排。请按时完成作品并保持联系畅通。"}</p>
+    </div> : null;
+
   const profileField = (key: "creditName" | "bilibiliUid" | "contactEmail" | "primaryContactChannel" | "primaryContactHandle" | "backupContact", label: string, type = "text") => {
     const required = key !== "backupContact" && key !== "contactEmail";
     return <Field label={label} requirement={required ? "必填" : "选填"} hint={key === "bilibiliUid" ? "填写数字 UID 或主页链接，不能填写昵称。" : undefined} error={fieldErrors[`profile.${key}`]}><input name={`profile.${key}`} form="creator-registration-form" className="field-input" type={type} maxLength={key === "bilibiliUid" ? 512 : undefined} placeholder={portalProfilePlaceholders[key]} disabled={compact ? saving || savingProfile : disabled} value={form.profile[key] ?? ""} required={required} onChange={event => setForm(current => ({ ...current, profile: { ...current.profile, [key]: event.target.value } }))} />{key === "bilibiliUid" && getBilibiliProfileUrl(form.profile.bilibiliUid) ? <a className="text-link" href={getBilibiliProfileUrl(form.profile.bilibiliUid)} target="_blank" rel="noreferrer">访问我的 B站主页</a> : null}</Field>;
@@ -256,16 +266,10 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       </Field> : null}
       {selectionUnavailable ? <Notice tone="warning">所选时间已不可用，请重新选择或改为由主催安排。</Notice> : null}
     </section> : null}
-    {intentEditable ? <div className={`registration-submit${approved ? " registration-submit--intent" : ""}`}>
-      <div className="workspace-actions archive-control-actions">
-        {compact && !approved ? <span className="archive-control-label" aria-hidden="true">REG / SUBMIT</span> : null}
-        {editable ? <Link className={`button button--secondary${compact ? " button--industrial" : ""}`} to="/works" search={{ q: "", type: "all", view: "gallery" }}>查看完整时间表</Link> : null}
-        <Button appearance={compact ? approved ? "industrial" : "framed" : "default"} variant={approved ? "secondary" : "primary"} className={approved ? undefined : "button--accent"} form="creator-registration-form" type="submit" disabled={intentDisabled} aria-busy={saving}>{saving ? approved ? "保存中…" : "提交中…" : approved ? "保存创作意向" : application.application?.status === "pending" ? "更新报名" : application.application ? "重新提交报名" : "提交报名"}</Button>
-      </div>
-      <p className="registration-submit-note">{approved ? "保存只更新作品类型和创作意向，报名审核结果与发布时间保持不变。" : "提交时一并保存署名与联系、创作意向，有选定时间则预留，未选时间由主催安排。请按时完成作品并保持联系畅通。"}</p>
-    </div> : null}
+    {!unifiedPendingSave ? submitControls : null}
       </div>
     </ArchiveChapter>
+    {unifiedPendingSave ? submitControls : null}
     {message ? <ArchiveResult compact={compact} message={message} /> : null}
     {refreshWarning ? <ArchiveResult compact={compact} tone="warning" message={refreshWarning} /> : null}
     {error ? <ArchiveResult compact={compact} tone="error" message={error} /> : null}

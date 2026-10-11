@@ -1,5 +1,9 @@
 import { test, expect, approveSecondAuthor } from "./fixtures";
-import { registerAndApply, swapAuthors, verifyScheduleIntent } from "./flows";
+import { registerAndApply, swapAuthors, verifyScheduleIntent, updatePendingRegistration } from "./flows";
+
+test("手机待审核报名统一保存", async ({ pendingPage }) => {
+  await updatePendingRegistration(pendingPage);
+});
 
 test("手机浏览和选时报名保持明确意向", async ({ pendingPage }) => {
   await verifyScheduleIntent(pendingPage);
