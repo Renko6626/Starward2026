@@ -102,8 +102,13 @@ function ScheduleRuler({ day, missionStart, selected, currentId, mineId, now, ac
         })}
       </div>
       <div className="ops-occupancy" aria-hidden="true">
-        {day.entries.map(entry => <i key={entry.id} className={`ops-window ops-window--${entry.status} ops-work-type--${scheduleWorkType(entry) ?? "other"}${entry.id === selected?.id ? " is-selected" : ""}${entry.id === mineId ? " is-mine" : ""}${entry.id === currentId ? " is-current" : ""}`}
-          style={{ left: `${scheduleHour(entry.scheduledAt!) / 24 * 100}%`, width: `${Math.min(1, 24 - scheduleHour(entry.scheduledAt!)) / 24 * 100}%` }} />)}
+        {day.entries.map((entry, index) => {
+          const start = scheduleHour(entry.scheduledAt!);
+          const next = day.entries[index + 1];
+          const end = next?.scheduledAt ? scheduleHour(next.scheduledAt) : 24;
+          return <i key={entry.id} className={`ops-window ops-window--${entry.status} ops-work-type--${scheduleWorkType(entry) ?? "other"}${entry.id === selected?.id ? " is-selected" : ""}${entry.id === mineId ? " is-mine" : ""}${entry.id === currentId ? " is-current" : ""}`}
+            style={{ left: `${start / 24 * 100}%`, width: `${Math.max(0, Math.min(1, end - start)) / 24 * 100}%` }} />;
+        })}
       </div>
       {selected?.scheduledAt && <motion.div className={`ops-cursor ops-cursor--selected${scheduleHour(selected.scheduledAt) > 21 ? " is-near-end" : ""}`} aria-hidden="true"
         initial={false} animate={{ left: `${scheduleHour(selected.scheduledAt) / 24 * 100}%` }}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { getTurnstileSiteKey, loadTurnstileApi } from '../lib/turnstile';
+import { getTurnstileClientErrorMessage, getTurnstileSiteKey, loadTurnstileApi } from '../lib/turnstile';
 import { AUTH_CAPTCHA_HEADER } from '../../shared/turnstile';
 
 export type TurnstileVerificationState = {
@@ -28,13 +28,14 @@ export function useTurnstileVerification(required: boolean | undefined, active =
     void loadTurnstileApi().then(api => {
       if (cancelled || !container.current) return;
       widget = api.render(container.current, {
-        sitekey: siteKey, theme: 'dark', size: 'flexible',
+        sitekey: siteKey, theme: 'dark', size: 'flexible', retry: 'auto', 'retry-interval': 3000,
         callback: value => { if (!cancelled) { setVerified({ value, context: verificationContext }); setError(null); } },
         'expired-callback': () => { if (!cancelled) { setVerified(null); setError('验证已过期，请重新验证。'); } },
-        'error-callback': () => { if (!cancelled) { setVerified(null); setError('人机验证失败，请重试。'); } },
+        'error-callback': code => { if (!cancelled) { setVerified(null); setError(getTurnstileClientErrorMessage(code)); } },
+        'unsupported-callback': () => { if (!cancelled) { setVerified(null); setError('当前浏览器不支持人机验证，请使用最新版 Chrome、Edge 或 Safari 打开。'); } },
         'timeout-callback': () => { if (!cancelled) { setVerified(null); setError('验证超时，请重试。'); } },
       });
-    }).catch(() => { if (!cancelled) { setVerified(null); setError('人机验证加载失败，请重试。'); } });
+    }).catch(() => { if (!cancelled) { setVerified(null); setError('无法加载验证服务。请换个网络或浏览器，再点击重新验证。'); } });
     return () => { cancelled = true; if (widget !== undefined) window.turnstile?.remove?.(widget); };
   }, [required, active, siteKey, verificationContext]);
 
