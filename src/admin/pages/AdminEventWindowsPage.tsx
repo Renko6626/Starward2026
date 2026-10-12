@@ -7,7 +7,7 @@ import {
   PageHeading,
   StateNotice,
 } from "../../app/components/ui";
-import { requestJson } from "../../app/lib/api";
+import { ApiError, requestJson } from "../../app/lib/api";
 import { cn } from "../../app/lib/cn";
 import { formatDateTime } from "../../app/lib/format";
 import type {
@@ -31,6 +31,7 @@ type WindowDraft = {
 type WindowFeedback = {
   tone: "success" | "error";
   message: string;
+  closesAtError?: string;
 };
 
 export function AdminEventWindowsPage() {
@@ -46,6 +47,15 @@ export function AdminEventWindowsPage() {
   useEffect(() => {
     void loadWindows();
   }, []);
+
+  function updateDraft(key: EventWindowKey, currentDraft: WindowDraft, patch: Partial<WindowDraft>) {
+    setDrafts(current => ({ ...current, [key]: { ...(current[key] ?? currentDraft), ...patch } }));
+    setFeedback(current => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
 
   async function loadWindows() {
     setState({ status: "loading" });
@@ -120,12 +130,13 @@ export function AdminEventWindowsPage() {
         },
       }));
     } catch (error) {
+      const closesAtError = error instanceof ApiError ? getFieldError(error.details, "closesAt") : undefined;
       setFeedback((current) => ({
         ...current,
         [key]: {
           tone: "error",
-          message:
-            error instanceof Error ? error.message : "保存开放窗口失败。",
+          message: closesAtError ? "请修正结束时间后再保存。" : error instanceof Error ? error.message : "保存开放窗口失败。",
+          closesAtError,
         },
       }));
     } finally {
@@ -187,15 +198,7 @@ export function AdminEventWindowsPage() {
                     <select
                       className="field-input"
                       disabled={savingKey === item.key}
-                      onChange={(event) =>
-                        setDrafts((current) => ({
-                          ...current,
-                          [item.key]: {
-                            ...draft,
-                            isEnabled: event.target.value === "enabled",
-                          },
-                        }))
-                      }
+                      onChange={(event) => updateDraft(item.key, draft, { isEnabled: event.target.value === "enabled" })}
                       value={draft.isEnabled ? "enabled" : "disabled"}
                     >
                       <option value="enabled">启用</option>
@@ -208,15 +211,7 @@ export function AdminEventWindowsPage() {
                       <input
                         className="field-input"
                         disabled={savingKey === item.key}
-                        onChange={(event) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [item.key]: {
-                              ...draft,
-                              opensAt: event.target.value,
-                            },
-                          }))
-                        }
+                        onChange={(event) => updateDraft(item.key, draft, { opensAt: event.target.value })}
                         type="datetime-local"
                         value={draft.opensAt}
                       />
@@ -224,26 +219,21 @@ export function AdminEventWindowsPage() {
                     <FormField label="结束时间">
                       <input
                         className="field-input"
+                        aria-invalid={Boolean(itemFeedback?.closesAtError)}
+                        aria-describedby={itemFeedback?.closesAtError ? `${item.key}-closes-at-error` : undefined}
                         disabled={savingKey === item.key}
-                        onChange={(event) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [item.key]: {
-                              ...draft,
-                              closesAt: event.target.value,
-                            },
-                          }))
-                        }
+                        onChange={(event) => updateDraft(item.key, draft, { closesAt: event.target.value })}
                         type="datetime-local"
                         value={draft.closesAt}
                       />
+                      {itemFeedback?.closesAtError ? <span id={`${item.key}-closes-at-error`} className="field-error" role="alert">{itemFeedback.closesAtError}</span> : null}
                     </FormField>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-outline-variant space-y-3">
                   <StateNotice message="请按当前浏览器时区填写开始和结束时间。" />
-                  {itemFeedback ? (
+                  {itemFeedback && !itemFeedback.closesAtError ? (
                     <StateNotice
                       message={itemFeedback.message}
                       tone={itemFeedback.tone}
@@ -311,6 +301,14 @@ function toIsoDateTimeOrNull(value: string) {
   }
 
   return new Date(trimmed).toISOString();
+}
+
+function getFieldError(details: unknown, field: string) {
+  if (!details || typeof details !== "object") return undefined;
+  const fieldErrors = "fieldErrors" in details ? details.fieldErrors : undefined;
+  if (!fieldErrors || typeof fieldErrors !== "object") return undefined;
+  const errors = (fieldErrors as Record<string, unknown>)[field];
+  return Array.isArray(errors) && typeof errors[0] === "string" ? errors[0] : undefined;
 }
 
 function WindowStatusBadge({ state }: { state: EventWindowSummary["state"] }) {
