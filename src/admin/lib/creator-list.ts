@@ -4,6 +4,13 @@ import type { ApplicationListItem } from "../../shared/applications";
 export type CreatorRow = { key: string; participant: AdminParticipantItem | null; application: ApplicationListItem | null };
 export type CreatorFilter = "pending" | "all" | "unassigned";
 
+export function validateCreatorSearch(search: Record<string, unknown>): { view?: CreatorFilter; q?: string } {
+  return {
+    view: search.view === "all" || search.view === "unassigned" ? search.view : "pending",
+    q: typeof search.q === "string" ? search.q : undefined,
+  };
+}
+
 export function buildCreatorRows(participants: AdminParticipantItem[], applications: ApplicationListItem[]): CreatorRow[] {
   const byId = new Map(applications.map(item => [item.id, item]));
   const linked = new Set<string>();
