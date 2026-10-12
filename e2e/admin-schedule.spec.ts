@@ -57,6 +57,40 @@ test("修改开始时间并插入半小时时点，前后棒按实际时间排�
     .toEqual((await rows("SELECT scheduled_at FROM schedule_segments ORDER BY scheduled_at")).map(row => row.scheduled_at));
 });
 
+test("新增和追加时点以及保存单项时保留其他未保存的排期草稿", async ({ adminPage }) => {
+  await adminPage.goto("/portal/admin/schedule");
+  const first = adminPage.locator(".admin-segment-row").filter({ has: adminPage.locator("summary", { hasText: "第 1 段" }) });
+  await first.locator("summary").click();
+  const firstDescription = first.getByLabel("发布时点说明");
+  await firstDescription.fill("新增时点前的未保存说明");
+
+  const createPanel = adminPage.locator("details").filter({ hasText: "新增发布时间" });
+  await createPanel.locator("summary").click();
+  await createPanel.getByLabel("席位类型").selectOption("standard");
+  await createPanel.getByLabel("名称", { exact: true }).fill("E2E 草稿保留时点");
+  await createPanel.getByLabel("发布时间（北京时间）").fill("2026-11-13T00:00");
+  await createPanel.getByRole("button", { name: "新增发布时间", exact: true }).click();
+  await expect(adminPage.locator(".admin-segment-row").filter({ hasText: "E2E 草稿保留时点" })).toBeVisible();
+  await expect(firstDescription).toHaveValue("新增时点前的未保存说明");
+
+  const appendPanel = adminPage.locator("details").filter({ has: adminPage.getByLabel("追加数量") });
+  await appendPanel.locator("summary").click();
+  await appendPanel.getByLabel("追加数量").fill("1");
+  await appendPanel.getByRole("button", { name: "追加坑位", exact: true }).click();
+  await expect(adminPage.locator(".admin-segment-row").filter({ hasText: "追加坑位 1" })).toBeVisible();
+  await expect(firstDescription).toHaveValue("新增时点前的未保存说明");
+
+  const second = adminPage.locator(".admin-segment-row").filter({ has: adminPage.locator("summary", { hasText: "第 2 段" }) });
+  await second.locator("summary").click();
+  const secondDescription = second.getByLabel("发布时点说明");
+  await secondDescription.fill("另一段尚未保存的说明");
+  await firstDescription.fill("第一段已保存");
+  await first.getByRole("button", { name: "保存修正" }).click();
+  await expect.poll(() => rows("SELECT description FROM schedule_segments WHERE id = 'seg_seed_101'"))
+    .toEqual([{ description: "第一段已保存" }]);
+  await expect(secondDescription).toHaveValue("另一段尚未保存的说明");
+});
+
 test("排期页分配特别席位，公开及报名列表隐藏，相邻作者可申请换期", async ({ adminPage, pendingPage, approvedPage, page }) => {
   test.setTimeout(120_000);
   await approvePending(adminPage);
