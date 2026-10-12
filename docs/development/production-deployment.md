@@ -109,7 +109,14 @@ Create a Managed Turnstile widget with `hifuu.moe` in its hostname allowlist. Ad
 
 1. Set the public `VITE_TURNSTILE_SITE_KEY` in GitHub's **production environment Variables**. The tag workflow passes it into the Vite build; it is public, not a Worker secret.
 2. Deploy the frontend with that key first, then set the matching private `TURNSTILE_SECRET_KEY` on `starward2026-production` in Cloudflare. The secret enables server checks and the public providers/intake responses expose only the enabled flag. Do not put the secret in GitHub Variables, any `VITE_` variable, the repository or chat.
-3. With the secret enabled, email OTP sends, password reset OTP sends, password login and application submissions require verification. OTP proof, password setup, password reset submission keep their existing authentication steps; administrator password login uses the same verification as other website accounts. Rate limits remain enabled.
+3. With the secret enabled, email OTP sends, password reset OTP sends and application submissions require verification. Password login temporarily skips Turnstile for all website accounts, including administrators, while regional access is unreliable. OTP proof, password setup and password reset submission keep their existing authentication steps. Rate limits remain enabled.
+
+Administrators can issue a one-use, 10-minute code from participants management
+for a user unable to complete Turnstile. The user enters the code at
+`/portal/login?assisted=1`; new users confirm the activity rules and set their own
+password. Existing users retain their password. Management accounts cannot receive
+assisted codes. Apply `0024_admin_assisted_access.sql` before deploying this feature;
+the issuance log records the recipient and administrator without storing the code.
 
 If the secret is absent, Turnstile is disabled. If the secret is present but the public key is missing, the form shows that verification is unavailable and blocks protected requests; it does not bypass the server check. Tokens are refreshed after protected requests and after an explicit retry. Real browser verification, allowed hostnames and email delivery still need manual staging validation.
 

@@ -1,5 +1,12 @@
+import { z } from 'zod';
+import { isReservedAuthEmail } from './auth-identity';
+
 export type AdminSession = { email: string; role: 'owner' | 'admin' };
 export type AdminUser = { id: string; name: string; email: string; emailVerified: boolean; role: 'owner' | 'admin' | null };
+export type AdminAssistedAccessResponse = { email: string; otp: string; expiresAt: string };
+export const adminAssistedAccessInputSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(320).refine(email => !isReservedAuthEmail(email)),
+});
 
 export function isAdminPath(pathname: string) {
   try {

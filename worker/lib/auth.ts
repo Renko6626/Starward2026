@@ -379,7 +379,6 @@ function buildPortalCaptchaPlugin(secretKey: string) {
   return {
     ...plugin,
     onRequest: async (...args: Parameters<typeof plugin.onRequest>) => {
-      // 1.6 matches substrings: /sign-in/email also catches /sign-in/email-otp.
       // Keep the native verifier, but only run it on our exact protected paths.
       const path = new URL(args[0].url).pathname.replace(/\/+$/, '');
       if (!TURNSTILE_AUTH_ENDPOINTS.some(endpoint => path === `/api/auth${endpoint}`)) return;

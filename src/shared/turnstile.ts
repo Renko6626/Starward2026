@@ -7,7 +7,7 @@ export function getTurnstileErrorMessage(error: { code?: string; message?: strin
 export const TURNSTILE_AUTH_ENDPOINTS = [
   '/email-otp/send-verification-otp',
   '/email-otp/request-password-reset',
-  '/sign-in/email',
+  // Password sign-in temporarily skips Turnstile while regional access is unreliable.
 ];
 
 export type PublicAuthProvidersResponse = {
