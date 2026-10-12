@@ -61,7 +61,7 @@ export function AdminSchedulePage() {
   const [saveStates, setSaveStates] = useState<
     Record<string, SegmentSaveState>
   >({});
-  const [bootstrapCount, setBootstrapCount] = useState("12");
+  const [bootstrapCount, setBootstrapCount] = useState("24");
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
   });
@@ -83,7 +83,12 @@ export function AdminSchedulePage() {
         body: JSON.stringify({ ...newSeat, scheduledAt: new Date(`${newSeat.scheduledAt}:00+08:00`).toISOString() }),
       });
       setNewSeat(current => ({ ...current, name: "", scheduledAt: "", description: "" }));
-      await loadSchedulePage(); setCreateMessage(response.message);
+      setState(current => current.status === "ready" ? {
+        status: "ready",
+        payload: { ...current.payload, segments: response.items },
+      } : current);
+      setDrafts(current => ({ ...buildDraftMap(response.items), ...current }));
+      setCreateMessage(response.message);
     } catch (error) { setCreateMessage(error instanceof Error ? error.message : "新增失败。"); }
     finally { setCreating(false); }
   }
@@ -218,6 +223,7 @@ export function AdminSchedulePage() {
     if (!draft) {
       return;
     }
+    const previousSegments = state.status === "ready" ? state.payload.segments : [];
 
     setSaveStates((current) => ({
       ...current,
@@ -245,8 +251,11 @@ export function AdminSchedulePage() {
       );
 
       const segments = await requestJson<AdminSegmentListResponse>("/api/admin/segments");
-      setDrafts(buildDraftMap(segments.items));
-      setState(current => current.status === "ready" ? { status: "ready", payload: { ...current.payload, segments: segments.items } } : current);
+      setDrafts(current => mergeSegmentDrafts(segments.items, previousSegments, current, segmentId));
+      setState(current => current.status === "ready" ? {
+        status: "ready",
+        payload: { ...current.payload, segments: segments.items },
+      } : current);
       setSaveStates(current => ({ ...current, [segmentId]: { status: "success", message: payload.message } }));
     } catch (error) {
       setSaveStates((current) => ({
@@ -558,6 +567,24 @@ function buildDraft(item: AdminSegmentItem): SegmentDraft {
     status: item.status,
     currentParticipantId: item.currentParticipantId ?? "",
   };
+}
+
+function mergeSegmentDrafts(
+  items: AdminSegmentItem[],
+  previousItems: AdminSegmentItem[],
+  drafts: Record<string, SegmentDraft>,
+  savedId: string,
+) {
+  const previousById = new Map(previousItems.map(item => [item.id, item]));
+  return Object.fromEntries(items.map(item => {
+    const currentDraft = drafts[item.id];
+    const previousItem = previousById.get(item.id);
+    if (item.id === savedId || !currentDraft || !previousItem ||
+      JSON.stringify(currentDraft) === JSON.stringify(buildDraft(previousItem))) {
+      return [item.id, buildDraft(item)];
+    }
+    return [item.id, currentDraft];
+  }));
 }
 
 function resolveSegmentTone(

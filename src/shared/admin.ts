@@ -173,8 +173,13 @@ export type AdminProjectDraftItem = {
   updatedAt: string;
 };
 
+export type AdminProjectDraftListItem = AdminProjectDraftItem & {
+  workFileCount: number;
+  latestWorkFileAt: string | null;
+};
+
 export type AdminProjectDraftListResponse = {
-  items: AdminProjectDraftItem[];
+  items: AdminProjectDraftListItem[];
 };
 
 export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFields & {

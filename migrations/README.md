@@ -1,5 +1,10 @@
 # Migrations
 
+`0024_work_files.sql` adds private work-file metadata and multipart part receipts.
+File bytes are stored in the `WORK_FILES` R2 bucket; D1 stores ownership, object
+keys, names, sizes, content types and completion state. It also adds the disabled
+`work_upload_open` event window. Apply it before deploying the upload worker.
+
 `0024_admin_assisted_access.sql` adds the administrator-assisted registration/login
 issuance log. Codes use the existing Better Auth verification table and expire
 after 10 minutes; the log stores the recipient email, issuing administrator and

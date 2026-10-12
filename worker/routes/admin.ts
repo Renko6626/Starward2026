@@ -1,4 +1,5 @@
 import { setWorkPublication } from "../data/works";
+import { downloadWorkFile, getWorkFile, listWorkFiles } from "../data/work-files";
 import { getWindowOrFallback } from "../lib/windows";
 import { Hono } from "hono";
 import type {
@@ -61,6 +62,18 @@ adminApi.use("*", async (c, next) => {
 });
 
 adminApi.get('/session', c => c.json({ email: getAdminIdentity(c), role: c.get('adminRole') }));
+
+adminApi.get('/project-drafts/:draftId/files', async c => {
+  c.header('Cache-Control', 'private, no-store');
+  return c.json({ files: await listWorkFiles(getRequiredDb(c), c.req.param('draftId')) });
+});
+
+adminApi.get('/project-drafts/:draftId/files/:fileId/download', async c => {
+  const file = await getWorkFile(getRequiredDb(c), c.req.param('fileId'), c.req.param('draftId'));
+  if (!file?.completed_at) return jsonError(c, 404, 'file_missing', '未找到文件。');
+  if (!c.env.WORK_FILES) return jsonError(c, 503, 'storage_unavailable', '文件存储暂时不可用。');
+  return await downloadWorkFile(c.env.WORK_FILES, file) ?? jsonError(c, 404, 'file_missing', '未找到文件。');
+});
 
 adminApi.post('/assisted-access', async c => {
   const parsed = adminAssistedAccessInputSchema.safeParse(await c.req.json().catch(() => null));

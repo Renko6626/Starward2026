@@ -30,7 +30,7 @@ Last reviewed against official documentation: 2026-04-13
 - 参与者认证：Better Auth + QQ / 邮箱密码 / Email OTP + 30-day sliding Cookie Session
 - 反滥用：Email OTP 限流 + 服务端字段校验 + Workers Rate Limiting
 - 管理后台保护：Cloudflare Access
-- 文件存储：Cloudflare R2（仅在后续需要上传文件时启用）
+- 文件存储：Cloudflare R2（作品文件使用私有 bucket，D1 只保存对象键和文件元数据）
 
 ## 3. High-Level System Design
 
@@ -232,13 +232,17 @@ Durable Objects 不作为第一阶段默认依赖，仅作为后续并发升级�
 
 ## 12. Files and Uploads
 
-第一阶段默认不在 D1 中存储文件内容。
+文件内容不存入 D1。已接入的作品文件流程由 Worker 管理私有 R2 multipart upload，D1 保存作者、作品记录、对象键、文件名、大小、类型和完成状态。
 
-如后续需要文件上传：
+本地 `npm run dev` 使用本机持久化的 R2 模拟存储，不连接线上桶。
+线上只有 production 一套环境。production 的 `WORK_FILES` 绑定对应私有桶 `starward2026-works`，由实际部署方在部署账号中创建；部署流程不会创建桶。本地模拟桶仍使用 `starward2026-work-files-local`。
 
-1. 使用 Worker 生成 R2 上传凭据
-2. 浏览器直接上传到 R2
-3. D1 仅存储元数据与对象键
+作品文件上传规则：
+
+1. 仅审核通过的作者可以操作作品文件。
+2. 后台通过 `work_upload_open` 开放窗口控制上传和删除。
+3. 浏览器通过 Worker 分片上传到私有 R2；未完成上传不会出现在文件列表中。
+4. 作者本人和管理员通过受保护接口下载文件，D1 仅存储元数据与对象键。
 
 ## 13. Deployment Model
 

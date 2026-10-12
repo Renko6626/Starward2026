@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Button, DetailBlock, DetailItem, Field, Notice, PageHeading, ReadError, StatusBadge } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
@@ -7,12 +7,14 @@ import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type Admin
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationDetailResponse, type ApplicationDetail, type UpdateApplicationReviewInput } from "../../shared/applications";
 import { getReviewNoteTemplates } from "../lib/review-note";
 import { listAvailableApplicationReviewStatuses } from "../lib/application-review";
+import { validateCreatorSearch } from "../lib/creator-list";
 
 type Detail = { participant: AdminParticipantDetail | null; application: ApplicationDetail | null; segment: AdminSegmentItem | null; draft: AdminProjectDraftItem | null };
 type State = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; detail: Detail };
 const actionLabels = { approved: "批准报名", rejected: "拒绝报名", withdrawn: "标记撤回" } as const;
 
 export function AdminCreatorDetailPage({ participantId, applicationId }: { participantId?: string; applicationId?: string }) {
+  const listSearch = validateCreatorSearch(useSearch({ strict: false }));
   const [state, setState] = useState<State>({ status: "loading" });
   const [adminNote, setAdminNote] = useState("");
   const [form, setForm] = useState<UpdateParticipantInput>({ status: "pending", contactHandle: "" });
@@ -39,24 +41,42 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
     setSeats(segments.items);
     return { participant, application, segment: segments.items.find(item => item.currentParticipantId === participant.id) ?? null, draft: drafts.items.find(item => item.participantId === participant.id) ?? null };
   }, [participantId, applicationId]);
-  function applyDetail(detail: Detail) {
+  function applyDetail(detail: Detail, sync: { adminNote?: boolean; participantForm?: boolean } = {}) {
+    const previous = state.status === "ready" ? state.detail : null;
     setState({ status: "ready", detail });
-    setAdminNote(detail.application?.adminNote ?? "");
-    if (detail.participant) setForm({ status: detail.participant.status, contactHandle: detail.participant.contactHandle ?? "" });
+    setAdminNote(current => {
+      const previousValue = previous?.application?.adminNote ?? "";
+      if (sync.adminNote || !previous?.application || current === previousValue) {
+        return detail.application?.adminNote ?? "";
+      }
+      return current;
+    });
+    if (detail.participant) setForm(current => {
+      if (sync.participantForm || !previous?.participant) {
+        return { status: detail.participant!.status, contactHandle: detail.participant!.contactHandle ?? "" };
+      }
+      const previousParticipant = previous.participant;
+      return {
+        status: current.status === previousParticipant.status ? detail.participant!.status : current.status,
+        contactHandle: (current.contactHandle ?? "") === (previousParticipant.contactHandle ?? "")
+          ? detail.participant!.contactHandle ?? ""
+          : current.contactHandle,
+      };
+    });
   }
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading" }); setNotice(null);
-    void readDetail().then(detail => { if (!cancelled) applyDetail(detail); }).catch((error: Error) => {
+    void readDetail().then(detail => { if (!cancelled) applyDetail(detail, { adminNote: true, participantForm: true }); }).catch((error: Error) => {
       if (!cancelled) setState({ status: "error", message: error.message || "无法读取参与者详情。" });
     });
     return () => { cancelled = true; };
   }, [readDetail]);
-  async function mutate(action: () => Promise<string>) {
+  async function mutate(action: () => Promise<string>, sync: { adminNote?: boolean; participantForm?: boolean } = {}) {
     setBusy(true); setNotice(null);
     try {
       const message = await action();
-      try { applyDetail(await readDetail()); setNotice({ tone: "success", message }); }
+      try { applyDetail(await readDetail(), sync); setNotice({ tone: "success", message }); }
       catch { setNotice({ tone: "error", message: `${message} 页面更新失败，请刷新查看最新状态。` }); }
     } catch (error) { setNotice({ tone: "error", message: error instanceof Error ? error.message : "操作失败，请稍后重试。" }); }
     finally { setBusy(false); }
@@ -73,10 +93,10 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
       });
       // The review may be saved even when its automatic email fails.
       return `已更新为${applicationStatusLabels[response.application.status]}。`;
-    });
+    }, { adminNote: true });
   }
   return <div className="page-content">
-    <Link className="text-link" to="/portal/admin/participants" search={{ view: "pending" }}>返回参与者管理</Link>
+    <Link className="text-link" to="/portal/admin/participants" search={listSearch}>返回参与者管理</Link>
     <PageHeading title={name} description="参与者详情">
       <StatusBadge>{application ? applicationStatusLabels[application.status] : "未提交报名"}</StatusBadge>
     </PageHeading>
@@ -139,7 +159,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
             <Button disabled={busy} onClick={() => void mutate(async () => {
               const response = await requestJson<AdminParticipantDetailResponse>(`/api/admin/participants/${participant.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...form, contactHandle: form.contactHandle?.trim() || undefined }) });
               return `已保存参与资格：${adminParticipantStatusLabels[response.participant.status]}。`;
-            })}>保存参与者设置</Button>
+            }, { participantForm: true })}>保存参与者设置</Button>
           </div></details>
         </section> : null}
       </div>

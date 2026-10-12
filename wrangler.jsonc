@@ -18,6 +18,7 @@
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
   "vars": { "QQ_OAUTH_ENABLED": "false" },
+  "r2_buckets": [{ "binding": "WORK_FILES", "bucket_name": "starward2026-work-files-local" }],
   "ratelimits": [
     {
       "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER",
@@ -113,6 +114,7 @@
     },
     "production": {
       "name": "starward2026-production",
+      "r2_buckets": [{ "binding": "WORK_FILES", "bucket_name": "starward2026-works" }],
       // Production uses separate namespaces from local/staging.
       "ratelimits": [
         { "name": "APPLICATION_SUBMIT_IP_RATE_LIMITER", "namespace_id": "2026041103", "simple": { "limit": 6, "period": 60 } },

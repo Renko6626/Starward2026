@@ -26,5 +26,6 @@ describe("updateEventWindowInputSchema", () => {
     }
 
     expect(parsed.error.issues[0]?.message).toContain("结束时间");
+    expect(parsed.error.issues[0]?.path).toEqual(["closesAt"]);
   });
 });

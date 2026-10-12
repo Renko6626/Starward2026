@@ -1,4 +1,5 @@
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
+import { workFilesApi } from "./work-files";
 import { Hono } from "hono";
 import { publicHttpsUrlSchema } from "../../src/shared/works";
 import { confirmPortalProjectRelease, getPortalReleaseState } from "../data/relay-publication";
@@ -84,6 +85,7 @@ import type { AppContext, AppRouteConfig } from "../lib/types";
 import { getWindowOrFallback } from "../lib/windows";
 
 const portalApi = new Hono<AppRouteConfig>();
+portalApi.route("/project/files", workFilesApi);
 
 type PortalSessionState = NonNullable<
   Awaited<ReturnType<typeof requireParticipantSession>>

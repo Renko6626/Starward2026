@@ -47,6 +47,11 @@ is created. Update `env.production` in [wrangler.jsonc](../../wrangler.jsonc):
 - `d1_databases`: keep `REPLACE_WITH_PRODUCTION_D1_DATABASE_ID` to enable automatic
   lookup/creation using `database_name`, or provide an existing production UUID.
   Keep `binding: "DB"`. The guard rejects the database used by staging.
+- `r2_buckets`: the deployment operator must create the private bucket
+  `starward2026-works` in the account identified by the deployment environment's
+  `CLOUDFLARE_ACCOUNT_ID`. Production already maps `binding: "WORK_FILES"` to this
+  name. The workflow does not create R2 buckets. This is the only online R2 bucket
+  used by the application.
 - `vars.BETTER_AUTH_URL`: the real HTTPS origin, such as `https://event.your-domain.tld`,
   with no path, query or credentials.
 - `routes`: add a matching Workers Custom Domain:
@@ -121,6 +126,40 @@ GitHub's deployment token is for managing Cloudflare resources; it does not repl
 these application runtime secrets. The workflow does not provision owner accounts or QQ
 applications and does not rotate runtime secrets. The smoke check confirms the
 site and API are reachable and unauthenticated admin requests are denied; it does not test real user login or QQ OAuth.
+
+## Work-file upload rollout
+
+1. The deployment operator creates `starward2026-works` in the production Worker
+   account with public access disabled. Keep both the R2 public development URL
+   and bucket custom domains disabled; authors and admins download through the
+   website's authenticated Worker endpoints.
+2. Confirm the GitHub production deployment credentials target that account and
+   can deploy the Worker with its R2 binding. Runtime storage access uses
+   `WORK_FILES`; no S3 access key or bucket URL is required by this implementation.
+3. Include `0024_work_files.sql` and the upload implementation in the release.
+   The tag workflow applies pending D1 migrations before deploying. This migration
+   creates the file metadata tables and a disabled `work_upload_open` window.
+4. At rollout, enable the upload window in the admin page and verify with a test
+   author: submit an application, approve it in the admin page, upload a file,
+   download it as the author and admin, and delete it. Check that downloaded bytes
+   match and the deleted file is absent. This uses the sole production environment;
+   opening the window makes uploads available to all eligible authors.
+
+Manage this window at `/portal/admin/settings/windows`: open **活动设置**, find
+**作品文件上传开放** (`work_upload_open`), and click **保存窗口设置** after editing.
+Choose **启用** with both times empty to open immediately, or set **开始时间** and
+**结束时间** in the browser's local timezone for scheduled availability. Choose
+**关闭** and save to stop uploads and deletion of completed files. Existing files
+remain available for authenticated download; incomplete uploads can still be
+cancelled. Authors can refresh their page to see the updated controls.
+
+The release smoke checks cover site/API health and admin authentication, not R2
+uploads. Local E2E uses simulated R2 and cannot verify the production bucket or
+deployment credentials.
+
+References: [R2 bucket creation](https://developers.cloudflare.com/r2/buckets/create-buckets/),
+[Worker bindings](https://developers.cloudflare.com/r2/api/workers/workers-api-usage/),
+[Workers deployment permissions](https://developers.cloudflare.com/workers/authorization/).
 
 ## Cloudflare API token
 
