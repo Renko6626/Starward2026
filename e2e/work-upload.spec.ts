@@ -70,14 +70,26 @@ test("新作者注册报名，审核通过后上传、下载并删除作品文�
 });
 
 test("作者上传多个作品文件，刷新后可下载，主催能读取文件，关闭入口后保留下载", async ({ approvedPage, pendingPage, adminPage, page }) => {
+  await openPortal(approvedPage);
+  await expect(approvedPage.locator("#work-files")).toHaveCount(0);
+  await expect(approvedPage.getByRole("region", { name: "报名进度" })).toContainText("作品上传暂未开放。");
   const opened = await adminPage.request.patch("/api/admin/event-windows/work_upload_open", {
     data: { isEnabled: true, opensAt: null, closesAt: null },
     headers: { origin: "http://127.0.0.1:21262" },
   });
   expect(opened.ok(), await opened.text()).toBe(true);
-  await openPortal(approvedPage);
+  await approvedPage.getByRole("button", { name: "刷新状态", exact: true }).click();
+  const progress = approvedPage.getByRole("region", { name: "报名进度" });
+  await expect(progress).toContainText("作品上传已开放。");
+  await expect(progress).not.toContainText("另行通知");
+  await expect(progress.getByRole("link", { name: "上传作品", exact: true })).toBeVisible();
+  await approvedPage.locator("#work-files > summary").click();
+  await approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "04 作品文件" }).click();
+  await expect(approvedPage.getByRole("button", { name: "上传作品文件", exact: true })).toBeVisible();
   const bytes = Buffer.alloc(WORK_FILE_PART_SIZE + 17, 42);
-  await approvedPage.getByLabel("选择作品文件", { exact: true }).setInputFiles([
+  const choosing = approvedPage.waitForEvent("filechooser");
+  await approvedPage.getByRole("button", { name: "上传作品文件", exact: true }).click();
+  await (await choosing).setFiles([
     { name: "作品视频.mp4", mimeType: "video/mp4", buffer: bytes },
     { name: "小说.txt", mimeType: "text/plain", buffer: Buffer.from("一篇完整的小说。") },
   ]);
@@ -101,10 +113,15 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
   const fileRow = adminPage.getByRole("row").filter({ hasText: "结界观测者" });
   await expect(fileRow).toContainText("作品文件 2 个");
   await expect(fileRow).toContainText("最近上传");
-  await approvedPage.getByRole("button", { name: "删除 小说.txt", exact: true }).click();
+  const novel = files.find(file => file.filename === "小说.txt")!;
+  expect((await approvedPage.request.delete(`/api/portal/project/files/${novel.id}`)).ok()).toBe(true);
+  await approvedPage.getByRole("button", { name: "刷新状态", exact: true }).click();
   await expect(approvedPage.getByRole("link", { name: "小说.txt", exact: true })).toHaveCount(0);
   await adminPage.request.patch("/api/admin/event-windows/work_upload_open", { data: { isEnabled: false }, headers: { origin: "http://127.0.0.1:21262" } });
-  await approvedPage.reload();
+  await approvedPage.getByRole("button", { name: "刷新状态", exact: true }).click();
+  await expect(progress).toContainText("作品上传暂未开放。");
+  await expect(progress.getByRole("link", { name: "上传作品", exact: true })).toHaveCount(0);
+  await expect(approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "04 作品文件" })).toBeVisible();
   await expect(approvedPage.getByLabel("选择作品文件", { exact: true })).toHaveCount(0);
   await expect(approvedPage.getByRole("link", { name: "作品视频.mp4", exact: true })).toBeVisible();
 });

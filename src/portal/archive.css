@@ -58,8 +58,10 @@
 .archive-index a span { color: #e4e5d9; font-family: var(--font-body); }
 .work-files { display: grid; gap: 16px; padding: 20px 0; }
 .work-file-list { display: grid; gap: 12px; }
-.work-file-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.work-file-list a { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; text-decoration: underline; }
+.work-file-upload { justify-self: start; }
+.work-file-list li { display: grid; gap: 8px; min-width: 0; padding: 16px 0; border-bottom: 1px solid #404238; }
+.work-file-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.work-file-list a { min-width: 0; overflow-wrap: anywhere; text-decoration: underline; }
 .work-file-list span { color: #babbb2; font-size: 13px; }
 .work-file-progress { display: grid; gap: 12px; }
 .work-file-progress p { overflow-wrap: anywhere; }
