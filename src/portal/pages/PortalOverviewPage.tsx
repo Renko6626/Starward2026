@@ -1,4 +1,5 @@
 import { ArchiveChapter } from "../components/ArchiveChapter";
+import { WorkFilesSection } from "../components/WorkFilesSection";
 import { ArrowUpRight } from "lucide-react";
 import "../archive.css";
 import { PortalAccount } from "../../app/layouts/WorkspaceLayout";
@@ -130,6 +131,7 @@ export function PortalOverviewPage() {
       <NeighborSlots revision={revision} collaboration={collaboration} onSaved={refresh} />
       <Link className="button button--primary button--industrial button--accent relay-schedule-action" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期 <ArrowUpRight size={18} aria-hidden="true" /></Link>
     </ArchiveChapter> : null}
+    {approved ? <WorkFilesSection /> : null}
     {!firstRegistration ? <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>
       {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，可在这里查看报名及后续操作记录。</p> : null}

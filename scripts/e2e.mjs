@@ -53,6 +53,7 @@ export default {
   }
 };`);
 config.main = join(temp, "worker.ts");
+config.r2_buckets = [{ binding: "WORK_FILES", bucket_name: "starward2026-work-files-e2e" }];
 config.d1_databases = [{ binding: "DB", database_name: "starward2026-e2e", database_id: "00000000-0000-0000-0000-000000000026", migrations_dir: join(root, "migrations") }];
 config.vars = { QQ_OAUTH_ENABLED: "false", BETTER_AUTH_SECRET: "e2e-local-secret-with-at-least-32-characters", BETTER_AUTH_URL: "http://127.0.0.1:21262", ALLOW_LOCAL_ADMIN_BYPASS: "true", ALLOW_LOCAL_DEV_ORIGINS: "true", RESEND_API_KEY: "re_e2e_mail_capture", RESEND_FROM_EMAIL: "e2e@example.com" };
 writeFileSync(join(temp, "wrangler.json"), JSON.stringify(config));

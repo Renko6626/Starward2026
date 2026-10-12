@@ -43,7 +43,10 @@ export const test = base.extend<{
   resetDatabase: [async ({}, use) => {
     const mailboxReset = await fetch("http://127.0.0.1:21262/__e2e/mailbox", { method: "DELETE" });
     expect(mailboxReset.ok).toBe(true);
-    await seed(`DELETE FROM segment_swap_requests;
+    await seed(`DELETE FROM work_file_parts;
+      DELETE FROM work_files;
+      UPDATE event_windows SET is_enabled = 0, opens_at = NULL, closes_at = NULL WHERE key = 'work_upload_open';
+      DELETE FROM segment_swap_requests;
       DELETE FROM collaboration_guards;
       DELETE FROM participant_events;
       DELETE FROM project_drafts;

@@ -1,4 +1,5 @@
 import { WorkPresentation } from "../../app/components/WorkPresentation";
+import { AdminWorkFiles } from "../components/AdminWorkFiles";
 import { getWorkPublicationIssues } from "../../shared/works";
 import { eventWindowStateLabels } from "../../shared/windows";
 import { Link, getRouteApi } from "@tanstack/react-router";
@@ -161,6 +162,7 @@ export function AdminProjectDraftDetailPage() {
       {previewOpen && <section className="panel mb-6" id="public-work-preview" aria-label="公开作品预览"><p className="eyebrow">公开页面预览</p><div className="work-admin-preview"><WorkPresentation work={draft} /></div></section>}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
+          <AdminWorkFiles draftId={draftId} />
           <section className="panel space-y-6">
             <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
               参与者与关联信息

@@ -1,5 +1,10 @@
 # Migrations
 
+`0024_work_files.sql` adds private work-file metadata and multipart part receipts.
+File bytes are stored in the `WORK_FILES` R2 bucket; D1 stores ownership, object
+keys, names, sizes, content types and completion state. It also adds the disabled
+`work_upload_open` event window. Apply it before deploying the upload worker.
+
 `0023_schedule_slot_visibility.sql` adds `schedule_segments.is_visible`, defaulting
 to 1 for existing and newly created slots. Apply it before deploying the matching
 worker. It preserves times, assignments and work associations; no reset is needed.
