@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { updateActiveScheduleSegment, updateParticipant } from "./admin";
+import { listProjectDrafts, updateActiveScheduleSegment, updateParticipant } from "./admin";
 type BatchResult = {
   success: boolean;
   meta: {
@@ -98,10 +98,17 @@ class SqliteD1Database {
         id TEXT PRIMARY KEY,
         participant_id TEXT NOT NULL,
         segment_id TEXT,
+        preview_title TEXT,
         preview_status TEXT NOT NULL,
         review_status TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE work_files (
+        id TEXT PRIMARY KEY,
+        draft_id TEXT NOT NULL,
+        completed_at TEXT
       );
     `);
   }
@@ -308,6 +315,31 @@ describe("updateParticipant", () => {
     expect(readSegment(db, "seg_held")).toMatchObject({
       status: "released",
       current_participant_id: null,
+    });
+  });
+});
+
+describe("listProjectDrafts", () => {
+  it("summarizes completed work files and ignores unfinished uploads", async () => {
+    const db = new SqliteD1Database();
+    seedParticipant(db, "part_files");
+    db.sqlite.prepare(`INSERT INTO project_drafts
+      (id, participant_id, segment_id, preview_status, review_status, created_at, updated_at)
+      VALUES ('draft_files', 'part_files', NULL, 'approved', 'approved', ?, ?)`)
+      .run(TS, TS);
+    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, ?)")
+      .run("file_old", "draft_files", "2026-04-10T10:00:00.000Z");
+    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, ?)")
+      .run("file_new", "draft_files", "2026-04-11T10:00:00.000Z");
+    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, NULL)")
+      .run("file_pending", "draft_files");
+
+    const item = (await listProjectDrafts(db as unknown as D1Database))[0];
+
+    expect(item).toMatchObject({
+      id: "draft_files",
+      workFileCount: 2,
+      latestWorkFileAt: "2026-04-11T10:00:00.000Z",
     });
   });
 });

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { test, expect, openPortal, rows } from "./fixtures";
+import { test, expect, openPortal, rows, seed } from "./fixtures";
 import { registerAndApply } from "./flows";
 import { WORK_FILE_PART_SIZE } from "../src/shared/work-files";
 
@@ -94,6 +94,13 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
   await adminPage.goto("/portal/admin/project-drafts/draft_seed_active");
   await expect(adminPage.getByRole("region", { name: "作品文件" }).getByRole("link", { name: "作品视频.mp4" })).toBeVisible();
   expect(await (await adminPage.request.get(`/api/admin/project-drafts/draft_seed_active/files/${video.id}/download`)).body()).toEqual(bytes);
+  await seed("UPDATE project_drafts SET preview_status = 'approved', review_status = 'approved' WHERE id = 'draft_seed_active'");
+  await adminPage.goto("/portal/admin/project-drafts");
+  await expect(adminPage.getByRole("row").filter({ hasText: "结界观测者" })).toHaveCount(0);
+  await adminPage.getByLabel("作品范围").selectOption("has-files");
+  const fileRow = adminPage.getByRole("row").filter({ hasText: "结界观测者" });
+  await expect(fileRow).toContainText("作品文件 2 个");
+  await expect(fileRow).toContainText("最近上传");
   await approvedPage.getByRole("button", { name: "删除 小说.txt", exact: true }).click();
   await expect(approvedPage.getByRole("link", { name: "小说.txt", exact: true })).toHaveCount(0);
   await adminPage.request.patch("/api/admin/event-windows/work_upload_open", { data: { isEnabled: false }, headers: { origin: "http://127.0.0.1:21262" } });

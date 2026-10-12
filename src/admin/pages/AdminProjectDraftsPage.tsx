@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, getRouteApi } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Search,
@@ -9,6 +9,7 @@ import {
 } from "../../app/components/icons";
 import { ReadError, PageHeading, StateNotice } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
+import { formatDateTime } from "../../app/lib/format";
 import { summarizeProjectProgress } from "../lib/project-progress";
 import {
   adminProjectDraftStatusLabels,
@@ -16,8 +17,10 @@ import {
 } from "../../shared/admin";
 
 export function AdminProjectDraftsPage() {
-  const [query, setQuery] = useState("");
-  const [pendingOnly, setPendingOnly] = useState(true);
+  const route = getRouteApi("/portal_/admin/project-drafts/");
+  const { scope = "pending", q: query = "" } = route.useSearch();
+  const navigate = route.useNavigate();
+  const listSearch = { scope, q: query || undefined };
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ready"; payload: AdminProjectDraftListResponse }
@@ -40,7 +43,9 @@ export function AdminProjectDraftsPage() {
   );
 
   const items = state.status === "ready" ? state.payload.items.filter(item =>
-    (!pendingOnly || item.previewStatus === "submitted" || item.reviewStatus === "submitted") &&
+    (scope === "all" || (scope === "pending"
+      ? item.previewStatus === "submitted" || item.reviewStatus === "submitted"
+      : item.workFileCount > 0)) &&
     [item.participantName, item.previewTitle, item.segmentCode].join("\n").toLowerCase().includes(query.trim().toLowerCase()),
   ) : [];
 
@@ -57,10 +62,16 @@ export function AdminProjectDraftsPage() {
       </PageHeading>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="checkbox-field"><input type="checkbox" checked={pendingOnly} onChange={event => setPendingOnly(event.target.checked)} />仅显示待审核</label>
-        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" /><input className="field-input search-input" aria-label="搜索作品" placeholder="搜索创作者、标题或时点" type="search" value={query} onChange={event => setQuery(event.target.value)} /></div>
+        <label className="flex items-center gap-2 text-sm">作品范围
+          <select className="field-input" aria-label="作品范围" value={scope} onChange={event => void navigate({ search: { ...listSearch, scope: event.target.value as typeof scope }, replace: true, resetScroll: false })}>
+            <option value="pending">待审核</option>
+            <option value="all">全部作品</option>
+            <option value="has-files">有作品文件</option>
+          </select>
+        </label>
+        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" /><input className="field-input search-input" aria-label="搜索作品" placeholder="搜索创作者、标题或时点" type="search" value={query} onChange={event => void navigate({ search: { ...listSearch, q: event.target.value || undefined }, replace: true, resetScroll: false })} /></div>
       </div>
-      {state.status === "ready" && state.payload.items.length > 0 && !items.length ? <StateNotice message="当前筛选下没有作品。可取消仅显示待审核，或调整搜索词。" /> : null}
+      {state.status === "ready" && state.payload.items.length > 0 && !items.length ? <StateNotice message="当前筛选下没有作品。可调整作品范围或搜索词。" /> : null}
 
       {state.status === "loading" ? (
         <StateNotice message="正在读取资料列表。" />
@@ -115,13 +126,17 @@ export function AdminProjectDraftsPage() {
                       <DraftStatusBadge status={item.reviewStatus} />
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
-                      {item.previewTitle ?? "尚无标题"}
+                      <div>{item.previewTitle ?? "尚无标题"}</div>
+                      {item.workFileCount > 0 ? <div className="mt-1 text-sm text-primary">
+                        作品文件 {item.workFileCount} 个 · 最近上传 {formatDateTime(item.latestWorkFileAt)}
+                      </div> : <div className="mt-1 text-sm text-on-surface-variant">暂无作品文件</div>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         className="inline-flex min-h-10 items-center justify-center gap-2 px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-base hover:bg-surface-bright transition-colors"
                         params={{ draftId: item.id }}
                         to="/portal/admin/project-drafts/$draftId"
+                        search={listSearch}
                       >
                         <FileText className="w-4 h-4" />
                         查看详情

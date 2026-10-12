@@ -2,8 +2,9 @@ import { WorkPresentation } from "../../app/components/WorkPresentation";
 import { AdminWorkFiles } from "../components/AdminWorkFiles";
 import { getWorkPublicationIssues } from "../../shared/works";
 import { eventWindowStateLabels } from "../../shared/windows";
-import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Link, getRouteApi, useSearch } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -44,15 +45,36 @@ type DetailState =
 
 export function AdminProjectDraftDetailPage() {
   const { draftId } = draftRouteApi.useParams();
+  const listSearch = useSearch({ strict: false }) as { scope?: "pending" | "all" | "has-files"; q?: string };
   const [state, setState] = useState<DetailState>({ status: "loading" });
   const [form, setForm] = useState<UpdateProjectDraftInput>(initialForm);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const reducedMotion = useReducedMotion();
+  const previewTrigger = useRef<HTMLButtonElement>(null);
+  const previewPanel = useRef<HTMLElement>(null);
+  const previewWasOpen = useRef(false);
 
   useEffect(() => {
     void loadDetail();
   }, [draftId]);
+
+  useEffect(() => {
+    if (previewOpen) {
+      previewWasOpen.current = true;
+      previewPanel.current?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      previewPanel.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (previewWasOpen.current) {
+      previewWasOpen.current = false;
+      previewTrigger.current?.focus({ preventScroll: true });
+    }
+  }, [previewOpen, reducedMotion]);
 
   async function loadDetail() {
     setState({ status: "loading" });
@@ -145,6 +167,7 @@ export function AdminProjectDraftDetailPage() {
         <Link
           className="text-base font-mono text-on-surface-variant hover:text-primary transition-colors flex min-h-11 items-center gap-2 mb-4"
           to="/portal/admin/project-drafts"
+          search={listSearch}
         >
           <ArrowRight className="w-4 h-4 rotate-180" /> 返回草案库
         </Link>
@@ -159,7 +182,6 @@ export function AdminProjectDraftDetailPage() {
         </PageHeading>
       </div>
 
-      {previewOpen && <section className="panel mb-6" id="public-work-preview" aria-label="公开作品预览"><p className="eyebrow">公开页面预览</p><div className="work-admin-preview"><WorkPresentation work={draft} /></div></section>}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
           <AdminWorkFiles draftId={draftId} />
@@ -270,7 +292,8 @@ export function AdminProjectDraftDetailPage() {
             <p>{draft.publishedAt ? `已发布 · ${formatDateTime(draft.publishedAt)}` : "尚未发布"}</p>
             <p className="text-sm text-on-surface-variant">新增发布窗口：{eventWindowStateLabels[state.payload.publicationWindow.state]}</p>
             {!draft.publishedAt && publicationIssues.length > 0 && <ul className="publication-issues">{publicationIssues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
-            <button className="button button--secondary w-full" type="button" aria-expanded={previewOpen} aria-controls="public-work-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? "收起公开预览" : "预览公开效果"}</button>
+            <button ref={previewTrigger} className="button button--secondary w-full" type="button" aria-expanded={previewOpen} aria-controls="public-work-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? "收起公开预览" : "预览公开效果"}</button>
+            {previewOpen && <section ref={previewPanel} className="panel" id="public-work-preview" aria-label="公开作品预览" tabIndex={-1}><p className="eyebrow">公开页面预览</p><div className="work-admin-preview"><WorkPresentation work={draft} /></div></section>}
             <button className="button button--primary w-full" type="button" disabled={saving || (!draft.publishedAt && (publicationIssues.length > 0 || !state.payload.publicationWindow.isOpen))}
               onClick={() => void handlePublication(!draft.publishedAt)}>{saving ? "处理中…" : draft.publishedAt ? "撤下作品" : "发布到观测集"}</button>
             {draft.publishedAt && <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开页面</Link>}
@@ -346,14 +369,14 @@ export function AdminProjectDraftDetailPage() {
               {message ? (
                 <SidebarNotice>{message}</SidebarNotice>
               ) : null}
-              <button
+              {!draft.publishedAt && <button
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={saving}
                 onClick={() => void handleSave()}
                 type="button"
               >
                 {saving ? "保存中..." : "保存审核结果"}
-              </button>
+              </button>}
             </div>
           </section>
         </div>
