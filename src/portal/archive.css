@@ -230,12 +230,13 @@
 .submission-editor[open]>summary::before { content: '−'; }
 .submission-editor-body { padding-top: 6px; }
 .submission-editor-body>.field-hint { margin: 0 0 10px; }
-.submission-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px 20px; margin-top: 12px; }
+.submission-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin-top: 12px; }
+.submission-form-heading { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; width: 100%; max-width: 36rem; }
 .submission-form label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 13px; }
 .submission-form-wide { grid-column: 1 / -1; }
 .author-archive .submission-panel textarea.field-input { min-height: 0; padding: 8px 0; line-height: 1.6; }
 .author-archive .submission-panel .submission-summary-input { height: 88px; }
-.author-archive .submission-panel .submission-version-note-input { height: 62px; }
+.author-archive .submission-panel .submission-version-note-input { height: 88px; }
 .author-archive .submission-panel .field-hint { background: transparent; line-height: 1.5; }
 .submission-panel .work-files { display: grid; gap: 6px; }
 .submission-panel .work-file-list { gap: 0; }
@@ -249,6 +250,8 @@
 .submission-review-history>div { margin: 6px 0; padding: 6px 0; }
 @media(max-width:600px) {
   .submission-form { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .submission-form-heading { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .author-archive .submission-panel .submission-version-note-input { height: 62px; }
   .submission-panel { padding: 12px; margin-bottom: 18px; }
   .submission-heading h2 { font-size: 21px; }
   .submission-feedback-heading { gap: 3px; }

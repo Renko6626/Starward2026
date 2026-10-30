@@ -60,10 +60,12 @@ export function WorkSubmissionSection({ workspace, loadError, onRefresh, initial
         <WorkFilesSection data={{files,window:workspace.window}} loadError={null} onFilesChange={update => setFiles(update)} onBusyChange={setUploading} onUploadErrorChange={setUploadFailed} disabled={busy} />
         {uploadFailed ? <Notice tone="warning">本次仍有文件未上传完成，请重新上传未完成的文件后再提交完整作品。</Notice> : null}
         {workspace.window.isOpen ? <form onSubmit={event => void submit(event)} className="submission-form">
+          <div className="submission-form-heading submission-form-wide">
           <label>作品标题<input className="field-input" required maxLength={120} value={title} disabled={busy} onChange={e => setTitle(e.target.value)} /></label>
           <label>作品类型<select className="field-input" value={workType} disabled={busy} onChange={e => setWorkType(e.target.value as WorkType)}>{Object.entries(workTypeLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="submission-form-wide">作品简介<textarea className="field-input submission-summary-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
-          <label className="submission-form-wide">版本说明（选填，仅本人和主催可见）<textarea className="field-input submission-version-note-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
+          </div>
+          <label>作品简介<textarea className="field-input submission-summary-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
+          <label>版本说明（选填，仅本人和主催可见）<textarea className="field-input submission-version-note-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
           <div className="submission-form-wide submission-submit-row"><p className="field-hint">本次提交 {files.length} 个文件，提交后保留该版本。</p><Button appearance="framed" className="button--accent" type="submit" disabled={busy || uploading || uploadFailed || !files.length} aria-busy={busy}>{busy ? '提交中…' : workspace.latest ? '提交新版本' : '提交完整作品'}</Button></div>
         </form> : null}
         </div>
