@@ -80,7 +80,7 @@ export function WorkFilesSection({ data, loadError, onFilesChange, onBusyChange,
   return <section className="work-files" aria-label="作品文件">
     {data?.window.isOpen ? <>
       <Button className="work-file-upload" appearance="industrial" disabled={busy || disabled} aria-describedby="work-file-hint" onClick={() => input.current?.click()}>上传作品文件</Button>
-      <p id="work-file-hint" className="field-hint">支持多文件，单个文件不超过 500 MB。文件仅作者本人和主催可下载。</p>
+      <p id="work-file-hint" className="field-hint">支持多文件，单个文件不超过 500 MB。文件仅作者本人和策划组可下载。</p>
       <input ref={input} id="work-file-input" hidden aria-label="选择作品文件" type="file" multiple disabled={busy || disabled}
         aria-describedby="work-file-hint" onChange={event => void upload(Array.from(event.target.files ?? []))} />
     </> : data ? <p>{data.window.state === "ended" ? "作品投稿暂未开放。" : "作品投稿暂未开放。"}</p> : null}

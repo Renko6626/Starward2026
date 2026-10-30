@@ -71,8 +71,9 @@ export function SubmissionStatusNotice({ userId, workspace }: { userId: string; 
       </header>
       <div className="submission-status-dialog-body">
         <h2 id={`${id}-title`}>{active.notice.title}</h2>
+        <p className="submission-stage-message">DDL 临近，活动即将进入下一阶段。请留意后续安排，并在工作台查看交稿状态和审核意见。</p>
         <p id={`${id}-description`}>{active.notice.description}</p>
-        {active.notice.feedback ? <div className="submission-status-dialog-feedback"><h3>主催审稿意见</h3><p>{active.notice.feedback}</p></div> : null}
+        {active.notice.feedback ? <div className="submission-status-dialog-feedback"><h3>策划组审稿意见</h3><p>{active.notice.feedback}</p></div> : null}
         {active.notice.steps.length ? <ol>{active.notice.steps.map(step => <li key={step}>{step}</li>)}</ol> : null}
       </div>
       <footer className="submission-status-dialog-actions">

@@ -242,3 +242,9 @@ type CreateWorkSubmissionReviewInput = {
 用户确认：未交稿、未通过及首次通过的作者需要醒目流程说明；按账号在浏览器记忆已读，接受换设备再次提醒，不增加服务端通知数据。新增 `src/portal/lib/submission-notice.ts` 负责状态到说明及稳定通知标识的映射，`SubmissionStatusNotice.tsx` 复用原生 dialog、既有动效、关闭和工作区定位；作者工作区提供主动重看入口。
 
 核心行为由 `src/portal/lib/submission-notice.test.ts` 的 5 个精简用例覆盖：暂存与正式提交区别、新版本待审、负面决定及意见对应、首次通过后修订不重复、账号与作品隔离。实际运行 `npm test -- src/portal/lib/submission-notice.test.ts src/shared/work-submissions.test.ts`，7 项通过；`npm run check`、`npm run build` 通过。只读增量审阅未发现重要问题。桌面／手机分别截图查看未交稿、待审、需修改、首次通过及预置已读状态，只导航和读取，没有点击或填表测试。截图 `/tmp/sunyunbo/submission-and-review/notice-preview/`；未部署。
+
+### 后续文案调整：阶段提醒与审核主体
+
+按用户要求使用 `humanizer-zh` 审阅通知，所有状态共用“DDL 临近，活动即将进入下一阶段”的背景提醒，再说明个人进度和下一步操作。删减模板化、重复表达，保留完整投稿、修改重交、首次通过基准及按排期发布等条件。通知、作品区的审核意见、资料可见范围及作品审稿事件文案将审核负责方统一称为“策划组”；不扩大为全站其他职责的称谓替换。已读标识、权限、数据和截止规则不变，也不新增具体截止日期。
+
+本轮运行 `npm test -- src/portal/lib/submission-notice.test.ts src/shared/work-submissions.test.ts worker/lib/portal-history.test.ts`，11 项通过；`npm run check` 及差异空白检查通过。桌面／手机静态截图确认通用阶段提醒、策划组称谓和各状态说明完整可见；已读状态仍不自动重复弹窗。截图 `/tmp/sunyunbo/submission-and-review/notice-copy-preview/`，未执行浏览器交互或生产发布。

@@ -49,16 +49,16 @@ export function WorkSubmissionSection({ userId, workspace, loadError, onRefresh,
       <div className="submission-heading-actions">{review ? <strong className={`submission-status submission-status--${review.status}`}>{workReviewStatusLabels[review.status]}</strong> : null}
         {workspace ? <SubmissionStatusNotice userId={userId} workspace={workspace} /> : null}</div></div>
     {workspace ? <>
-      <p className="submission-meta">{workspace.latest ? `最新提交 V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '上传完整作品并提交后，主催即可审核。'}
+      <p className="submission-meta">{workspace.latest ? `最新提交 V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '上传完整作品并提交后，策划组即可审核。'}
         {review?.decisionVersionNumber ? `　审核结论依据 V${review.decisionVersionNumber}` : ''}</p>
       {review?.hasUpdatesAfterReview ? <Notice tone="warning">审核后有更新。当前通过结论依据 V{review.decisionVersionNumber}，最新稿尚未复审。</Notice> : null}
       {feedback ? <div className={`submission-feedback${review?.status === 'changes_requested' || review?.status === 'rejected' ? ' submission-feedback--attention' : ''}`}>
-        <div className="submission-feedback-heading"><h3>主催审稿意见</h3><span className="field-hint">V{feedback.versionNumber}，{formatDateTime(feedback.createdAt)}</span></div><p>{feedback.feedback}</p>
+        <div className="submission-feedback-heading"><h3>策划组审稿意见</h3><span className="field-hint">V{feedback.versionNumber}，{formatDateTime(feedback.createdAt)}</span></div><p>{feedback.feedback}</p>
       </div> : null}
       {workspace.latest ? <div className="submission-version"><div className="submission-version-heading"><h3>{workspace.latest.title}</h3><span className="field-hint">{workTypeLabels[workspace.latest.workType]}，V{workspace.latest.versionNumber}</span></div><VersionContents version={workspace.latest} compact /></div> : null}
       <details key={latestId ?? 'first-submission'} className="submission-editor" open={!workspace.latest}>
         <summary>{workspace.latest ? '提交修订版' : '提交完整作品'}{workspace.latest && files.length ? <span className="field-hint">已有 {files.length} 个暂存文件</span> : null}</summary>
-        <div className="submission-editor-body"><p className="field-hint">每次提交完整的一套文件，暂不设硬性截止；预计赶不上排期请联系主催。</p>
+        <div className="submission-editor-body"><p className="field-hint">每次提交完整的一套文件，暂不设硬性截止；预计赶不上排期请联系策划组。</p>
         <WorkFilesSection data={{files,window:workspace.window}} loadError={null} onFilesChange={update => setFiles(update)} onBusyChange={setUploading} onUploadErrorChange={setUploadFailed} disabled={busy} />
         {uploadFailed ? <Notice tone="warning">本次仍有文件未上传完成，请重新上传未完成的文件后再提交完整作品。</Notice> : null}
         {workspace.window.isOpen ? <form onSubmit={event => void submit(event)} className="submission-form">
@@ -67,7 +67,7 @@ export function WorkSubmissionSection({ userId, workspace, loadError, onRefresh,
           <label>作品类型<select className="field-input" value={workType} disabled={busy} onChange={e => setWorkType(e.target.value as WorkType)}>{Object.entries(workTypeLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div>
           <label>作品简介<textarea className="field-input submission-summary-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
-          <label>版本说明（选填，仅本人和主催可见）<textarea className="field-input submission-version-note-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
+          <label>版本说明（选填，仅本人和策划组可见）<textarea className="field-input submission-version-note-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
           <div className="submission-form-wide submission-submit-row"><p className="field-hint">本次提交 {files.length} 个文件，提交后保留该版本。</p><Button appearance="framed" className="button--accent" type="submit" disabled={busy || uploading || uploadFailed || !files.length} aria-busy={busy}>{busy ? '提交中…' : workspace.latest ? '提交新版本' : '提交完整作品'}</Button></div>
         </form> : null}
         </div>

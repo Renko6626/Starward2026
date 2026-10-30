@@ -172,7 +172,8 @@ function mapPortalEvents(rows: ParticipantEventRow[]): PortalEventItem[] {
     id: event.id,
     eventType: event.event_type,
     actorType: event.actor_type,
-    actorLabel: buildPortalEventActorLabel(event.actor_type),
+    actorLabel: event.actor_type === 'admin' && event.event_type === 'work_submission_reviewed'
+      ? '策划组' : buildPortalEventActorLabel(event.actor_type),
     label: buildPortalEventLabel({
       eventType: event.event_type,
       actorType: event.actor_type,
