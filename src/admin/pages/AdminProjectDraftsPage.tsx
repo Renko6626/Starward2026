@@ -7,18 +7,18 @@ import { workTypeLabels } from '../../shared/works';
 import { workReviewStatusLabels } from '../../shared/work-submissions';
 import { participantPortalStatusLabels } from '../../shared/portal';
 import type { AdminProjectDraftListItem, AdminProjectDraftListResponse } from '../../shared/admin';
-import { summarizeProjectProgress } from '../lib/project-progress';
+import { matchesProjectScope, summarizeProjectProgress } from '../lib/project-progress';
 
-export const submissionScopes = { all:'全部作品', 'not-submitted':'未提交', pending:'待审核', 'changes-requested':'需修改', approved:'已通过', rejected:'未通过', updated:'审核后更新' } as const;
+export const submissionScopes = { unapproved:'已交稿未通过', all:'全部作品', 'not-submitted':'未提交', pending:'待审核', 'changes-requested':'需修改', approved:'已通过', rejected:'未通过', updated:'审核后更新' } as const;
 export type SubmissionScope = keyof typeof submissionScopes;
 export function AdminProjectDraftsPage() {
   const route = getRouteApi('/portal_/admin/project-drafts/');
-  const { scope = 'all',q = '' } = route.useSearch();
+  const { scope = 'unapproved',q = '' } = route.useSearch();
   const navigate = route.useNavigate();
   const [data,setData] = useState<AdminProjectDraftListResponse | null>(null), [error,setError] = useState<string | null>(null);
   const [opening,setOpening] = useState<string | null>(null);
   useEffect(() => { let cancelled = false; void requestJson<AdminProjectDraftListResponse>('/api/admin/project-drafts').then(value => {if (!cancelled) setData(value);}).catch(err => {if (!cancelled) setError(err.message);}); return () => {cancelled=true;}; }, []);
-  const items = data?.items.filter(item => (scope === 'all' || (scope === 'updated' ? item.review.hasUpdatesAfterReview : item.review.status === scope.replaceAll('-','_'))) &&
+  const items = data?.items.filter(item => matchesProjectScope(item, scope) &&
     [item.participantName,item.latestSubmission?.title,item.segmentCode].join(' ').toLowerCase().includes(q.toLowerCase())) ?? [];
   const progress = summarizeProjectProgress(data?.items ?? []);
   async function open(item: AdminProjectDraftListItem) {
@@ -29,7 +29,7 @@ export function AdminProjectDraftsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : '无法打开作品。'); }
     finally { setOpening(null); }
   }
-  return <div className="page-content"><PageHeading title="作品审核" description="查看每位作者的交稿情况、最新完整版本及审核结论。">
+  return <div className="page-content"><PageHeading title="作品审核" description="优先查看已交稿、尚未通过的作品，可切换范围查看全部作者。">
     <p>已提交 {progress.submitted} 份，未提交 {progress.drafts} 位</p></PageHeading>
     <div className="flex flex-wrap gap-3 mb-6"><label>作品范围<select className="field-input" aria-label="作品范围" value={scope} onChange={e => void navigate({search:{scope:e.target.value as SubmissionScope,q},replace:true})}>{Object.entries(submissionScopes).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label>搜索作品<input className="field-input" type="search" aria-label="搜索作品" placeholder="作者、标题或时点" value={q} onChange={e => void navigate({search:{scope,q:e.target.value},replace:true})} /></label></div>

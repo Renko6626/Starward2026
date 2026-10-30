@@ -189,7 +189,7 @@ type CreateWorkSubmissionReviewInput = {
 
 **Files:** 修改 `src/admin/pages/AdminProjectDraftsPage.tsx`、`src/admin/pages/AdminProjectDraftDetailPage.tsx`、`src/admin/components/AdminWorkFiles.tsx`、`src/admin/lib/project-progress.ts` 及其已有测试、`src/routes/portal_/admin/project-drafts/route.tsx`、`src/admin/pages/AdminEventWindowsPage.tsx`、`src/shared/activity-rules.ts`、`src/app/components/MissionCountdown.tsx`、`src/app/components/MissionCountdown.test.ts`（仅删除失效 cutoff 专属覆盖、保留接力计时覆盖）、`scripts/lib/local-dev-bootstrap.mjs`、`e2e/project-submission.spec.ts`、`e2e/work-upload.spec.ts`、`e2e/admin-work-review.spec.ts`、`e2e/publication.spec.ts`、`docs/README.md`、`docs/delivery/todo.md`、`docs/delivery/work-submission-without-preview.md`、`docs/product/site/participation-rules-source.md`、`docs/development/production-deployment.md`。
 
-**Interfaces:** 管理端消费 Task 3 的统一摘要和意见 API；URL `scope` 明确为 `all | not-submitted | pending | changes-requested | approved | rejected | updated`，缺省 `all`。旧 `has-files` URL 归一化为 `all`；作者详情返回列表保留筛选和搜索。
+**Interfaces:** 管理端消费 Task 3 的统一摘要和意见 API；URL `scope` 明确为 `unapproved | all | not-submitted | pending | changes-requested | approved | rejected | updated`，缺省 `unapproved`。旧 `has-files` URL 归一化为 `all`；作者详情返回列表保留筛选和搜索。
 
 - [x] 列表显示全体作者交稿情况、统一审核状态、最新版本及时间、依据版本和更新标记；无容器行按 Task 3 入口取得 `draftId` 后进入旧详情 URL，不凭空构造 draft ID。
 - [x] 详情默认最新稿，文件组件改为明确接收该版 `files`；历史选择有独立版本标题。审稿表单显示「针对 Vn」，支持仅保存意见／通过／需修改／未通过，保存后更新意见区；保留原有公开预览和公开／撤下操作。
@@ -226,3 +226,7 @@ type CreateWorkSubmissionReviewInput = {
 - 本地截图：作者未提交／待审核／需修改／审核后更新四种状态，以及管理员列表／详情，分别检查 1440px 和 390px；页面无报错、无横向溢出。使用 `/tmp/sunyunbo/submission-and-review/preview` 的隔离测试库和测试账号，只导航、读取与截图，没有自动点击／填表。
 - 截图目录：`/tmp/sunyunbo/submission-and-review/screenshots/`。日志：同级 `final-tests.log`、`final-build.log`、`e2e-list.log`；临时图片和账号不加入 Git。
 - 未执行生产部署、远程迁移、真实生产 R2 验收、生产窗口开关或邮件发送。生产状态仍以既有发布记录为准。
+
+### 后续调整：管理员默认待处理范围
+
+用户要求优先查看所有已交稿但尚未审核通过的作品，默认范围改为 `unapproved`（已交稿未通过），包含待审核、需修改及未通过。未提交和已经通过（含通过后更新）的作品不进入此默认范围，全部作者仍可通过「全部作品」查看；显式筛选、搜索及返回列表的状态继续保留。验证命令为 `npm test -- src/admin/lib/project-progress.test.ts` 及 `npm run check`，不运行浏览器交互测试。
