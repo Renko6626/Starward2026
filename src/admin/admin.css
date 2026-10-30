@@ -72,3 +72,15 @@
   .admin-work-summary > * { flex-direction: row; align-items: center; justify-content: space-between; padding: 16px 18px; }
   .admin-work-summary > * + * { border-left: 0; border-top: 1px solid var(--color-outline-variant); }
 }
+
+/* Keep the review detail compact while preserving the two-column work area. */
+.admin-content .submission-admin-detail { gap: 16px; }
+.admin-content .submission-admin-detail .page-heading { padding-bottom: 16px; }
+.admin-content .submission-admin-detail .panel { padding: 16px; }
+.submission-admin-detail .submission-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.submission-admin-detail .submission-feedback { padding: 8px 0; border-top: 1px solid var(--color-outline-variant); }
+.submission-admin-detail .submission-feedback p+p { margin-top: 4px; }
+.submission-admin-detail .work-file-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 6px 0; }
+.submission-admin-detail .work-file-list a { overflow-wrap: anywhere; min-width: 0; }
+.submission-admin-detail .work-file-list span { margin-left: 0; color: var(--color-on-surface-variant); }
+.submission-admin-detail textarea.field-input { min-height: 112px; }

@@ -5,6 +5,7 @@ import { formatDateTime } from '../../app/lib/format';
 import { workTypeLabels, type WorkType } from '../../shared/works';
 import { workReviewStatusLabels, type WorkSubmissionDetail, type WorkSubmissionWorkspace, type WorkSubmissionMutationResult } from '../../shared/work-submissions';
 import { WorkFilesSection } from './WorkFilesSection';
+import { formatWorkFileSize } from '../../shared/work-files';
 
 const endpoint = '/api/portal/project/submissions';
 export function WorkSubmissionSection({ workspace, loadError, onRefresh, initialSummary = '' }: {
@@ -43,28 +44,30 @@ export function WorkSubmissionSection({ workspace, loadError, onRefresh, initial
   }
   const review = workspace?.review, feedback = workspace?.latestFeedback;
   return <section id="work-submission" className="submission-panel" aria-labelledby="submission-heading">
-    <div className="submission-heading"><div><p className="eyebrow">WORK / REVIEW</p><h2 id="submission-heading">作品提交与审核</h2></div>
+    <div className="submission-heading"><h2 id="submission-heading">作品提交与审核</h2>
       {review ? <strong className={`submission-status submission-status--${review.status}`}>{workReviewStatusLabels[review.status]}</strong> : null}</div>
     {workspace ? <>
-      <p className="submission-meta">{workspace.latest ? `最新提交 V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '尚未正式提交作品。上传文件后，还需点击提交按钮。'}
+      <p className="submission-meta">{workspace.latest ? `最新提交 V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '上传完整作品并提交后，主催即可审核。'}
         {review?.decisionVersionNumber ? `　审核结论依据 V${review.decisionVersionNumber}` : ''}</p>
       {review?.hasUpdatesAfterReview ? <Notice tone="warning">审核后有更新。当前通过结论依据 V{review.decisionVersionNumber}，最新稿尚未复审。</Notice> : null}
       {feedback ? <div className={`submission-feedback${review?.status === 'changes_requested' || review?.status === 'rejected' ? ' submission-feedback--attention' : ''}`}>
-        <h3>主催审稿意见</h3><p className="field-hint">针对 V{feedback.versionNumber}，{formatDateTime(feedback.createdAt)}</p><p>{feedback.feedback}</p>
-      </div> : <p className="field-hint">主催保存审稿意见后，会直接显示在这里。</p>}
-      {workspace.latest ? <div className="submission-version"><h3>最新完整作品 V{workspace.latest.versionNumber}：{workspace.latest.title}</h3><VersionContents version={workspace.latest} /></div> : null}
-      <div className="submission-editor"><h3>{workspace.latest ? '提交完整新版本' : '提交完整作品'}</h3>
-        <p>每次提交请上传完整的一套作品文件。暂不设置硬性截止，请按接力排期尽早交稿；预计来不及请联系主催。</p>
+        <div className="submission-feedback-heading"><h3>主催审稿意见</h3><span className="field-hint">V{feedback.versionNumber}，{formatDateTime(feedback.createdAt)}</span></div><p>{feedback.feedback}</p>
+      </div> : null}
+      {workspace.latest ? <div className="submission-version"><div className="submission-version-heading"><h3>{workspace.latest.title}</h3><span className="field-hint">{workTypeLabels[workspace.latest.workType]}，V{workspace.latest.versionNumber}</span></div><VersionContents version={workspace.latest} compact /></div> : null}
+      <details key={latestId ?? 'first-submission'} className="submission-editor" open={!workspace.latest}>
+        <summary>{workspace.latest ? '提交修订版' : '提交完整作品'}{workspace.latest && files.length ? <span className="field-hint">已有 {files.length} 个暂存文件</span> : null}</summary>
+        <div className="submission-editor-body"><p className="field-hint">每次提交完整的一套文件，暂不设硬性截止；预计赶不上排期请联系主催。</p>
         <WorkFilesSection data={{files,window:workspace.window}} loadError={null} onFilesChange={update => setFiles(update)} onBusyChange={setUploading} onUploadErrorChange={setUploadFailed} disabled={busy} />
         {uploadFailed ? <Notice tone="warning">本次仍有文件未上传完成，请重新上传未完成的文件后再提交完整作品。</Notice> : null}
         {workspace.window.isOpen ? <form onSubmit={event => void submit(event)} className="submission-form">
           <label>作品标题<input className="field-input" required maxLength={120} value={title} disabled={busy} onChange={e => setTitle(e.target.value)} /></label>
           <label>作品类型<select className="field-input" value={workType} disabled={busy} onChange={e => setWorkType(e.target.value as WorkType)}>{Object.entries(workTypeLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="submission-form-wide">作品简介<textarea className="field-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
-          <label className="submission-form-wide">版本说明（选填，仅本人和主催可见）<textarea className="field-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
-          <div className="submission-form-wide"><p className="field-hint">本次将提交上方 {files.length} 个暂存文件。提交后保留该版本，文件不能再删除。</p><Button appearance="framed" className="button--accent" type="submit" disabled={busy || uploading || uploadFailed || !files.length} aria-busy={busy}>{busy ? '提交中…' : workspace.latest ? '提交新版本' : '提交完整作品'}</Button></div>
+          <label className="submission-form-wide">作品简介<textarea className="field-input submission-summary-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
+          <label className="submission-form-wide">版本说明（选填，仅本人和主催可见）<textarea className="field-input submission-version-note-input" maxLength={2000} rows={2} value={note} disabled={busy} placeholder="可以说明查看顺序或本次修改内容。" onChange={e => setNote(e.target.value)} /></label>
+          <div className="submission-form-wide submission-submit-row"><p className="field-hint">本次提交 {files.length} 个文件，提交后保留该版本。</p><Button appearance="framed" className="button--accent" type="submit" disabled={busy || uploading || uploadFailed || !files.length} aria-busy={busy}>{busy ? '提交中…' : workspace.latest ? '提交新版本' : '提交完整作品'}</Button></div>
         </form> : null}
-      </div>
+        </div>
+      </details>
       {workspace.versions.length ? <details className="submission-history"><summary>历史版本与意见（{workspace.versions.length} 版）</summary>
         <div className="workspace-actions">{workspace.versions.map(version => <Button key={version.id} appearance="industrial" variant="secondary" disabled={loadingHistory} onClick={() => void viewVersion(version.id)}>V{version.versionNumber}{workspace.firstApprovedSubmission?.id === version.id ? '（首次通过版）' : ''}</Button>)}</div>
         {loadingHistory ? <p>正在读取版本。</p> : history ? <div><h3>V{history.versionNumber}：{history.title}</h3><VersionContents version={history} /></div> : null}
@@ -76,7 +79,11 @@ export function WorkSubmissionSection({ workspace, loadError, onRefresh, initial
   </section>;
 }
 
-function VersionContents({version}: {version:WorkSubmissionDetail}) {
+function VersionContents({version, compact = false}: {version:WorkSubmissionDetail; compact?:boolean}) {
+  if (compact) return <>
+    <ul className="work-file-list">{version.files.map(file => <li key={file.id}><a href={`/api/portal/project/files/${file.id}/download`} download={file.filename}>{file.filename}</a><span>{formatWorkFileSize(file.size)}</span></li>)}</ul>
+    <details className="submission-version-notes"><summary>查看简介与版本说明</summary><p className="submission-note">{version.summary}</p>{version.versionNote ? <p className="submission-note">版本说明：{version.versionNote}</p> : null}</details>
+  </>;
   return <><p className="submission-note">{version.summary}</p><p className="field-hint">{workTypeLabels[version.workType]}，{formatDateTime(version.submittedAt)}</p>
     {version.versionNote ? <p className="submission-note">版本说明：{version.versionNote}</p> : null}
     <ul className="work-file-list">{version.files.map(file => <li key={file.id}><a href={`/api/portal/project/files/${file.id}/download`} download={file.filename}>{file.filename}</a></li>)}</ul>

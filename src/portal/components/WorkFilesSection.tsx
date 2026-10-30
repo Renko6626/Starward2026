@@ -93,7 +93,7 @@ export function WorkFilesSection({ data, loadError, onFilesChange, onBusyChange,
       <a href={`${endpoint}/${file.id}/download`} download={file.filename}>{file.filename}</a>
       <div className="work-file-meta"><span>{formatWorkFileSize(file.size)}</span>
       {data.window.isOpen ? <Button appearance="industrial" variant="secondary" disabled={busy || disabled} aria-label={`删除 ${file.filename}`} onClick={() => void remove(file)}>删除</Button> : null}</div>
-    </li>)}</ul> : data ? <p className="workspace-empty">尚未上传作品文件。</p> : null}
+    </li>)}</ul> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error || loadError ? <Notice tone="error">{error || loadError}</Notice> : null}
   </section>;

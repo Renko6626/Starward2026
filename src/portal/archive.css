@@ -208,23 +208,49 @@
 }
 @media (prefers-reduced-motion: reduce) { .author-archive .archive-result { animation: none; } }
 
-/* Submission and review stays visible above the personal archive. */
-.submission-panel { margin: 1.5rem 0 2rem; padding: clamp(1rem,3vw,2rem); border: 2px solid var(--color-primary, #b26034); background: var(--color-surface-container-low, #f2eee3); scroll-margin-top: 6rem; }
-.submission-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-.submission-heading h2 { font-size:clamp(1.4rem,3vw,2rem); margin:.2rem 0; }
-.submission-panel h3 { font-size:1.1rem; font-weight:700; margin-bottom:.6rem; }
-.submission-meta { margin:1rem 0; }
-.submission-status { padding:.4rem .8rem; border:1px solid currentColor; }
-.submission-status--changes_requested,.submission-status--rejected { color:#a02e21; }
-.submission-status--approved { color:#2f6545; }
-.submission-feedback { margin:1.25rem 0; padding:1rem; border-left:4px solid var(--color-primary,#b26034); background:var(--color-surface,#fffaf0); }
-.submission-feedback--attention { border-color:#a02e21; }
-.submission-feedback p,.submission-note { white-space:pre-wrap; overflow-wrap:anywhere; }
-.submission-version,.submission-editor,.submission-history { padding-top:1.25rem; margin-top:1.25rem; border-top:1px solid currentColor; }
-.submission-editor>p { margin-bottom:1rem; }
-.submission-form { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
-.submission-form label { display:flex; flex-direction:column; gap:.5rem; min-width:0; }
-.submission-form-wide { grid-column:1/-1; }
-.submission-review-history>div { margin:.8rem 0; padding:.6rem 0; border-bottom:1px solid currentColor; }
-.submission-history summary { cursor:pointer; padding:.5rem 0; }
-@media(max-width:600px) { .submission-form { grid-template-columns:1fr; } .submission-panel { padding:1rem; } }
+/* A compact work surface above the personal archive. */
+.submission-panel { margin: 12px 0 24px; padding: 16px; border-bottom: 1px solid var(--color-outline-variant); background: var(--color-background); scroll-margin-top: 6rem; }
+.submission-heading,.submission-feedback-heading,.submission-version-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.submission-feedback-heading,.submission-version-heading { justify-content: flex-start; }
+.submission-heading h2 { font-size: 23px; font-weight: 500; line-height: 1.4; margin: 0; }
+.submission-panel h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.submission-meta { margin: 6px 0 12px; color: var(--color-on-surface-variant); font-size: 13px; }
+.submission-status { padding: 2px 8px; font-size: 13px; border: 1px solid var(--color-outline-variant); }
+.submission-status--changes_requested,.submission-status--rejected { color: #d69a85; }
+.submission-status--approved { color: #a3c2ad; }
+.submission-feedback { margin: 12px 0; padding: 8px 12px; border-left: 2px solid var(--color-primary); }
+.submission-feedback--attention { border-color: #d69a85; }
+.submission-feedback p,.submission-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.submission-feedback>p { margin-top: 4px; }
+.submission-version { margin-top: 12px; }
+.submission-editor { margin-top: 14px; }
+.submission-editor>summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; width: fit-content; padding: 6px 0; cursor: pointer; font-weight: 500; list-style: none; }
+.submission-editor>summary::-webkit-details-marker { display: none; }
+.submission-editor>summary::before { content: '+'; width: 14px; color: var(--color-on-surface-variant); }
+.submission-editor[open]>summary::before { content: '−'; }
+.submission-editor-body { padding-top: 6px; }
+.submission-editor-body>.field-hint { margin: 0 0 10px; }
+.submission-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px 20px; margin-top: 12px; }
+.submission-form label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 13px; }
+.submission-form-wide { grid-column: 1 / -1; }
+.author-archive .submission-panel textarea.field-input { min-height: 0; padding: 8px 0; line-height: 1.6; }
+.author-archive .submission-panel .submission-summary-input { height: 88px; }
+.author-archive .submission-panel .submission-version-note-input { height: 62px; }
+.author-archive .submission-panel .field-hint { background: transparent; line-height: 1.5; }
+.submission-panel .work-files { display: grid; gap: 6px; }
+.submission-panel .work-file-list { gap: 0; }
+.submission-panel .work-file-list li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 7px 0; border: 0; }
+.submission-panel .work-file-meta { margin-left: auto; gap: 12px; }
+.submission-submit-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.submission-version-notes { margin-top: 4px; }
+.submission-version-notes>summary,.submission-history>summary { padding: 5px 0; cursor: pointer; color: var(--color-on-surface-variant); font-size: 13px; }
+.submission-version-notes .submission-note { margin-top: 6px; }
+.submission-history { margin-top: 10px; }
+.submission-review-history>div { margin: 6px 0; padding: 6px 0; }
+@media(max-width:600px) {
+  .submission-form { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .submission-panel { padding: 12px; margin-bottom: 18px; }
+  .submission-heading h2 { font-size: 21px; }
+  .submission-feedback-heading { gap: 3px; }
+  .submission-submit-row .button { margin-left: auto; }
+}
