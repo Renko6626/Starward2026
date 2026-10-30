@@ -14,6 +14,7 @@ import { listAvailableSegments, getPortalSegmentState, getCurrentSegmentForParti
 import { listEventWindows } from "./event-windows";
 import { updatePortalProjectPreview } from "./project-drafts";
 import { confirmPortalProjectRelease } from "./relay-publication";
+import { createWorkSubmission, createWorkSubmissionReview } from "./work-submissions";
 import { adminTestSession } from "../test/admin-session";
 
 const fixtures: SqliteD1Fixture[] = [];
@@ -203,7 +204,16 @@ describe("timed seats and private relay", () => {
     const f = fixture();
     const participant = await approve(f, "u1");
     const id = await special(f, participant.id);
-    f.sqlite.exec("UPDATE project_drafts SET preview_title='特别作品',preview_summary='简介',work_type='text',preview_status='approved',review_status='approved'");
+    const draft = f.sqlite.prepare("SELECT id FROM project_drafts WHERE participant_id=?").get(participant.id)!;
+    f.sqlite.prepare(`INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at)
+      VALUES ('special-file',?,'special-key','special-upload','special.txt',3,'text/plain','2026-11-12','2026-11-12')`).run(draft.id);
+    const submission = await createWorkSubmission(f.db, participant.id, {
+      title: "特别作品", workType: "text", summary: "简介", fileIds: ["special-file"],
+    });
+    expect(submission.ok).toBe(true);
+    if (!submission.ok) throw new Error(submission.message);
+    expect(await createWorkSubmissionReview(f.db, String(draft.id), submission.workspace.latest!.id,
+      { decision: "approved" }, "admin")).toMatchObject({ ok: true });
     expect(await confirmPortalProjectRelease(f.db, { participant, workUrl: "https://example.com/special" })).toMatchObject({ ok: true });
     expect((await listPublicWorks(f.db)).map(w => w.previewTitle)).toContain("特别作品");
     expect((await listPublicSchedule(f.db, await listPublicWorks(f.db))).map(s => s.id)).not.toContain(id);
