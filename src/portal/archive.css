@@ -212,6 +212,8 @@
 .submission-panel { margin: 12px 0 24px; padding: 16px; border-bottom: 1px solid var(--color-outline-variant); background: var(--color-background); scroll-margin-top: 6rem; }
 .submission-heading,.submission-feedback-heading,.submission-version-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .submission-feedback-heading,.submission-version-heading { justify-content: flex-start; }
+.submission-heading-actions { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.submission-notice-trigger { min-height: 32px; cursor: pointer; }
 .submission-heading h2 { font-size: 23px; font-weight: 500; line-height: 1.4; margin: 0; }
 .submission-panel h3 { font-size: 15px; font-weight: 600; margin: 0; }
 .submission-meta { margin: 6px 0 12px; color: var(--color-on-surface-variant); font-size: 13px; }
@@ -248,6 +250,16 @@
 .submission-version-notes .submission-note { margin-top: 6px; }
 .submission-history { margin-top: 10px; }
 .submission-review-history>div { margin: 6px 0; padding: 6px 0; }
+.submission-status-dialog { width: min(560px, calc(100% - 32px)); }
+.submission-status-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 0; }
+.submission-status-dialog-body { display: grid; gap: 12px; padding: 12px 20px 20px; font-size: 15px; line-height: 1.7; }
+.submission-status-dialog-body h2 { font-size: 23px; font-weight: 600; line-height: 1.4; }
+.submission-status-dialog-body>p,.submission-status-dialog-body li { color: var(--color-on-surface-variant); }
+.submission-status-dialog-body ol { list-style: decimal; padding-left: 22px; display: grid; gap: 8px; }
+.submission-status-dialog-feedback { border-left: 2px solid #d69a85; padding-left: 12px; }
+.submission-status-dialog-feedback h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.submission-status-dialog-feedback p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.submission-status-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--color-outline-variant); }
 @media(max-width:600px) {
   .submission-form { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .submission-form-heading { grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -256,4 +268,5 @@
   .submission-heading h2 { font-size: 21px; }
   .submission-feedback-heading { gap: 3px; }
   .submission-submit-row .button { margin-left: auto; }
+  .submission-status-dialog-body h2 { font-size: 21px; }
 }

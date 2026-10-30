@@ -110,7 +110,7 @@ export function PortalOverviewPage() {
   }
   return <div className="page-content creator-workspace author-archive">
     <PageHeading title={firstRegistration ? "开始报名" : "作者档案"} meta={<ActivityIdentity />}><PortalAccount />{!firstRegistration ? <div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div> : null}</PageHeading>
-    {approved ? <WorkSubmissionSection key={dashboard.user.id} workspace={workFiles} loadError={workFilesError} onRefresh={refresh} initialSummary={application.application?.introText ?? ""} /> : null}
+    {approved ? <WorkSubmissionSection key={dashboard.user.id} userId={dashboard.user.id} workspace={workFiles} loadError={workFilesError} onRefresh={refresh} initialSummary={application.application?.introText ?? ""} /> : null}
     {firstRegistration ? <section className="registration-onboarding" aria-label="报名说明">
       <p>填写基本信息和创作意向，提交后等待审核。发布时间可不选，由主催安排。</p>
       <ol aria-label="报名步骤"><li>基本信息</li><li>创作意向</li><li>提交报名</li></ol>

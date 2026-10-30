@@ -6,10 +6,11 @@ import { workTypeLabels, type WorkType } from '../../shared/works';
 import { workReviewStatusLabels, type WorkSubmissionDetail, type WorkSubmissionWorkspace, type WorkSubmissionMutationResult } from '../../shared/work-submissions';
 import { WorkFilesSection } from './WorkFilesSection';
 import { formatWorkFileSize } from '../../shared/work-files';
+import { SubmissionStatusNotice } from './SubmissionStatusNotice';
 
 const endpoint = '/api/portal/project/submissions';
-export function WorkSubmissionSection({ workspace, loadError, onRefresh, initialSummary = '' }: {
-  workspace: WorkSubmissionWorkspace | null; loadError: string | null; onRefresh: () => Promise<void>; initialSummary?: string;
+export function WorkSubmissionSection({ userId, workspace, loadError, onRefresh, initialSummary = '' }: {
+  userId: string; workspace: WorkSubmissionWorkspace | null; loadError: string | null; onRefresh: () => Promise<void>; initialSummary?: string;
 }) {
   const [title,setTitle] = useState(''), [summary,setSummary] = useState(''), [workType,setWorkType] = useState<WorkType>('other');
   const [uploadFailed,setUploadFailed] = useState(false);
@@ -44,8 +45,9 @@ export function WorkSubmissionSection({ workspace, loadError, onRefresh, initial
   }
   const review = workspace?.review, feedback = workspace?.latestFeedback;
   return <section id="work-submission" className="submission-panel" aria-labelledby="submission-heading">
-    <div className="submission-heading"><h2 id="submission-heading">作品提交与审核</h2>
-      {review ? <strong className={`submission-status submission-status--${review.status}`}>{workReviewStatusLabels[review.status]}</strong> : null}</div>
+    <div className="submission-heading"><h2 id="submission-heading" tabIndex={-1}>作品提交与审核</h2>
+      <div className="submission-heading-actions">{review ? <strong className={`submission-status submission-status--${review.status}`}>{workReviewStatusLabels[review.status]}</strong> : null}
+        {workspace ? <SubmissionStatusNotice userId={userId} workspace={workspace} /> : null}</div></div>
     {workspace ? <>
       <p className="submission-meta">{workspace.latest ? `最新提交 V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '上传完整作品并提交后，主催即可审核。'}
         {review?.decisionVersionNumber ? `　审核结论依据 V${review.decisionVersionNumber}` : ''}</p>

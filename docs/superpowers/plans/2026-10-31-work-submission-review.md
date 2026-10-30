@@ -236,3 +236,9 @@ type CreateWorkSubmissionReviewInput = {
 用户确认减少空白和重复装饰：移除投稿区英文装饰标题与大外框，保留阅读底色；桌面端简介与版本说明左右两列等高 88px，标题和类型在左侧紧凑排列、整组最大宽度 36rem；手机端改为单列，版本说明初始高度 62px；已交稿默认展示状态、最新意见和文件，简介与版本说明按需展开，点击「提交修订版」才展开编辑区。折叠保留表单节点和输入，正式提交完成形成新版本后恢复收起。完整审稿记录保留在历史版本，避免在首屏重复显示最新意见。管理员详情采用 16px 区块间距和内边距，去掉与页面 gap 重复叠加的外边距，保留双栏及移动端布局。
 
 此轮仅调整页面呈现及本地展开，不改接口、审核规则和存储。验证采用 `npm run check`、`npm run build` 及桌面／手机截图；不新增永久布局测试，不执行浏览器自动交互。截图位于 `/tmp/sunyunbo/submission-and-review/compact-preview/`。
+
+### 后续调整：按交稿阶段说明流程的状态弹窗
+
+用户确认：未交稿、未通过及首次通过的作者需要醒目流程说明；按账号在浏览器记忆已读，接受换设备再次提醒，不增加服务端通知数据。新增 `src/portal/lib/submission-notice.ts` 负责状态到说明及稳定通知标识的映射，`SubmissionStatusNotice.tsx` 复用原生 dialog、既有动效、关闭和工作区定位；作者工作区提供主动重看入口。
+
+核心行为由 `src/portal/lib/submission-notice.test.ts` 的 5 个精简用例覆盖：暂存与正式提交区别、新版本待审、负面决定及意见对应、首次通过后修订不重复、账号与作品隔离。实际运行 `npm test -- src/portal/lib/submission-notice.test.ts src/shared/work-submissions.test.ts`，7 项通过；`npm run check`、`npm run build` 通过。只读增量审阅未发现重要问题。桌面／手机分别截图查看未交稿、待审、需修改、首次通过及预置已读状态，只导航和读取，没有点击或填表测试。截图 `/tmp/sunyunbo/submission-and-review/notice-preview/`；未部署。
