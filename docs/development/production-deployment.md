@@ -267,3 +267,12 @@ See [Google's privacy policy verification guidance](https://support.google.com/c
 Include migration `0025_work_submissions.sql`. It preserves existing objects and published works, adds submission/review records, and clears only the work upload window closing time. Keep the existing private `WORK_FILES` R2 binding. The admin window now controls manual enablement and an optional opening time, without a cutoff; do not restore an automatic closing time from old instructions above.
 
 Authors use the prominent submission/review panel in `/portal/`. Uploads remain pending until the author submits a complete version. Submitted files cannot be deleted through the author interface. Old preview/review writes return 410. Admin reviews use version-specific endpoints and their text is immediately visible to that author. Existing old file uploads and feedback are retained without inventing a historical content approval. A production release, migrations and real R2 upload acceptance must be recorded separately; local tests and screenshots do not establish those production results.
+
+### Production release evidence (2026-10-31, Asia/Shanghai)
+
+- Released `v1.4.0-prod` from commit `3bba2546093c5c0cc1590858f160b5cc86b19329` on `feat/submission-and-review`; this release does not merge that branch into `main`.
+- [Deploy production run 41119878623](https://github.com/Renko6626/Starward2026/actions/runs/41119878623) succeeded. The remote migration step applied `0025_work_submissions.sql` to `starward2026-prod` successfully.
+- Cloudflare Worker version: `f053ff64-390b-4066-9e17-c35a95ea5d81`, serving `https://hifuu.moe`.
+- Local `npm test` passed all 334 tests, `npm run test:deploy` passed all 11 checks, and `npm run check:production` and `CLOUDFLARE_ENV=production npm run build` passed. CI also passed application tests, station asset tests, the production build, public/API smoke checks and administrator authentication boundary checks.
+- Post-release HTTP reads returned 200 for `/` and `/portal/`, healthy JSON from `/api/health`, and 401 for anonymous `/api/admin/session`. The served creator workspace asset contains the new DDL notice and planning-team wording.
+- No authenticated production upload, submission or review was performed. The existing upload-window manual switch and opening time were preserved; the migration removed its closing time. The separate author release-confirmation component remains unmounted in the workspace.
