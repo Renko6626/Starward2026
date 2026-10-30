@@ -1,10 +1,10 @@
+import { createWorkSubmission, createWorkSubmissionReview } from './work-submissions';
 import { adminTestSession } from '../test/admin-session';
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildLocalSeedSql } from "../../scripts/lib/local-dev-bootstrap.mjs";
 import { getPublicWork, listPublicWorks, setWorkPublication } from "./works";
-import { updateAdminProjectDraftReview, updatePortalProjectPreview } from "./project-drafts";
 import { getParticipantByUserId } from "./participants";
 import { appendActiveScheduleSegments, updateActiveScheduleSegment } from "./admin";
 import { claimParticipantSegment, getCurrentSegmentForParticipant, listAvailableSegments } from './segments';
@@ -43,7 +43,13 @@ const actor = "admin@example.com";
 function openWindow() {
   database.sqlite.exec("UPDATE event_windows SET is_enabled = 1, opens_at = NULL, closes_at = NULL WHERE key = 'public_release_open'");
 }
+function contentApproval(id = draftId) {
+  database.sqlite.prepare(`INSERT INTO work_submissions (id,draft_id,version_number,title,work_type,summary,submitted_at)
+    SELECT 'version_'||id,id,1,COALESCE(preview_title,'作品'),'text',COALESCE(preview_summary,'简介'),'2026-10-31' FROM project_drafts WHERE id=?`).run(id);
+  database.sqlite.prepare("INSERT INTO work_submission_reviews (submission_id,decision,reviewed_by,created_at) VALUES (?,'approved','host','2026-10-31')").run('version_'+id);
+}
 function readyDraft() {
+  contentApproval();
   database.sqlite.exec(`UPDATE project_drafts SET preview_status = 'approved', review_status = 'approved',
     work_type = 'text', work_url = 'https://example.com/story' WHERE id = '${draftId}'`);
 }
@@ -79,23 +85,19 @@ describe("public work publication", () => {
     expect(events.map(event => event.event_type)).toEqual(["work_published", "work_unpublished"]);
   });
 
-  it("allows approved public edits and requires withdrawal before changing review status", async () => {
-    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
-    const change = { previewStatus: "changes_requested" as const, reviewStatus: "approved" as const };
-    expect(await updateAdminProjectDraftReview(db, draftId, change, actor)).toMatchObject({ ok: false, code: "work_published" });
-    const participant = (await getParticipantByUserId(db, "usr_seed_active"))!;
-    expect(await updatePortalProjectPreview(db, { participant, data: {
-      previewTitle: "changed", previewSummary: "updated summary", formatLabel: "小说", workType: "text",
-    } })).toMatchObject({ ok: true, draft: { previewStatus: "approved" } });
-    expect(await getPublicWork(db, draftId)).toMatchObject({ work: { previewTitle: "changed", workUrl: "https://example.com/story" } });
-    await setWorkPublication(db, draftId, false, actor);
-    expect(await updateAdminProjectDraftReview(db, draftId, change, actor)).toMatchObject({ ok: true });
-    database.sqlite.prepare("UPDATE schedule_segments SET scheduled_at = ? WHERE current_participant_id = 'part_seed_active'").run(new Date().toISOString());
-    const saved = await updatePortalProjectPreview(db, { participant, data: {
-      previewTitle: "新的观测", previewSummary: "简介", workType: "illustration", workUrl: "https://example.com/new",
-      coverUrl: "https://example.com/cover.webp", coverAlt: "夜空", formatLabel: "插画", publicTags: ["秘封"],
-    } });
-    expect(saved).toMatchObject({ ok: true, draft: { workType: "illustration", coverAlt: "夜空", workUrl: "https://example.com/new", publishedAt: null } });
+  it("keeps unreviewed revisions private and requires withdrawal before a negative review", async () => {
+    openWindow(); readyDraft(); await setWorkPublication(db,draftId,true,actor);
+    database.sqlite.exec("UPDATE event_windows SET is_enabled=1,opens_at=NULL WHERE key='work_upload_open'");
+    database.sqlite.exec("INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at) VALUES ('revision-file','draft_seed_active','object','upload','secret.txt',3,'text/plain','2026-10-31','2026-10-31')");
+    const submitted = await createWorkSubmission(db,'part_seed_active',{title:'未复审标题',summary:'私有简介',workType:'text',fileIds:['revision-file'],versionNote:'仅主催可见'});
+    expect(submitted.ok).toBe(true); if (!submitted.ok) throw new Error(submitted.message);
+    const version = submitted.workspace.latest!;
+    expect(await getPublicWork(db,draftId)).toMatchObject({work:{previewTitle:'结界观测预告'}});
+    expect(JSON.stringify(await getPublicWork(db,draftId))).not.toContain('secret.txt');
+    expect(JSON.stringify(await getPublicWork(db,draftId))).not.toContain('私有简介');
+    expect(await createWorkSubmissionReview(db,draftId,version.id,{decision:'changes_requested',feedback:'修改正文'},actor)).toMatchObject({ok:false,code:'work_published'});
+    await setWorkPublication(db,draftId,false,actor);
+    expect(await createWorkSubmissionReview(db,draftId,version.id,{decision:'changes_requested',feedback:'修改正文'},actor)).toMatchObject({ok:true});
     expect(await listPublicWorks(db)).toEqual([]);
   });
 
@@ -124,6 +126,7 @@ describe("public work publication", () => {
     database.sqlite.exec(`INSERT INTO project_drafts (id,participant_id,segment_id,preview_title,preview_summary,work_type,work_url,preview_status,review_status,created_at,updated_at)
       VALUES ('draft_pending','part_seed_pending','seg_seed_101','另一份观测','简介','music','https://example.com/music','approved','approved','2026-09-30','2026-09-30')
       ON CONFLICT(participant_id) DO UPDATE SET id = excluded.id, segment_id = excluded.segment_id, preview_title = excluded.preview_title, preview_summary = excluded.preview_summary, work_type = excluded.work_type, work_url = excluded.work_url, preview_status = excluded.preview_status, review_status = excluded.review_status`);
+    contentApproval("draft_pending");
     await setWorkPublication(db, "draft_pending", true, actor);
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual(["draft_pending", draftId]);
     expect(await getPublicWork(db, draftId)).toMatchObject({ previous: { id: "draft_pending" }, next: null });

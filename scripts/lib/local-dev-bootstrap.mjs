@@ -626,3 +626,21 @@ function toSqlLiteral(value) {
 
   return `'${String(value).replaceAll("'", "''")}'`;
 }
+
+/** Screenshot fixtures for the new work panel; apply only to a disposable seeded local DB.
+ * File rows illustrate layout and do not provision R2 bytes. */
+export function buildWorkSubmissionSeedSql(scenario = 'not_submitted') {
+  if (!['not_submitted', 'pending', 'changes_requested', 'updated'].includes(scenario)) throw new Error('Unknown work submission fixture');
+  const sql = ["UPDATE event_windows SET is_enabled=1,opens_at=NULL,closes_at=NULL WHERE key='work_upload_open'"];
+  if (scenario === 'not_submitted') return sql.join(';') + ';';
+  sql.push("INSERT INTO work_submissions (id,draft_id,version_number,title,work_type,summary,version_note,submitted_at) VALUES ('demo-v1','draft_seed_active',1,'边界以外的旅行','text','莲子与梅莉在旅途中记录了一次关于星空的观测。','正文和插图均已完成，请按文件顺序阅读。','2026-10-31T10:00:00Z')");
+  sql.push("INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at,submission_id) VALUES ('demo-file-v1','draft_seed_active','demo/v1','demo','旅行正文与插图.pdf',102400,'application/pdf','2026-10-31','2026-10-31','demo-v1')");
+  if (scenario === 'changes_requested') sql.push("INSERT INTO work_submission_reviews (submission_id,feedback,decision,reviewed_by,created_at) VALUES ('demo-v1','作品主题符合活动要求。请调整结尾的一段说明，让正文和插图中的时间对应起来。修改后上传完整版本即可，原稿会保留。','changes_requested','local-host','2026-10-31T11:00:00Z')");
+  if (scenario === 'updated') {
+    sql.push("INSERT INTO work_submission_reviews (submission_id,feedback,decision,reviewed_by,created_at) VALUES ('demo-v1','完整作品审核通过。后续小幅修订可以继续补交，请在版本说明中写明修改内容。','approved','local-host','2026-10-31T11:00:00Z')");
+    sql.push("UPDATE project_drafts SET preview_status='approved',review_status='approved',preview_title='边界以外的旅行',preview_summary='莲子与梅莉在旅途中记录了一次关于星空的观测。',work_type='text' WHERE id='draft_seed_active'");
+    sql.push("INSERT INTO work_submissions (id,draft_id,version_number,title,work_type,summary,version_note,submitted_at) VALUES ('demo-v2','draft_seed_active',2,'边界以外的旅行','text','莲子与梅莉在旅途中记录了一次关于星空的观测。','修正错别字，调整插图排版，正文内容保持原意。','2026-11-01T10:00:00Z')");
+    sql.push("INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at,submission_id) VALUES ('demo-file-v2','draft_seed_active','demo/v2','demo','旅行正文与插图_修订稿.pdf',103400,'application/pdf','2026-11-01','2026-11-01','demo-v2')");
+  }
+  return sql.join(';\n') + ';';
+}

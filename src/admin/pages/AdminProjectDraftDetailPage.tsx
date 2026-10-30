@@ -1,441 +1,76 @@
-import { WorkPresentation } from "../../app/components/WorkPresentation";
-import { AdminWorkFiles } from "../components/AdminWorkFiles";
-import { getWorkPublicationIssues } from "../../shared/works";
-import { eventWindowStateLabels } from "../../shared/windows";
-import { Link, getRouteApi, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  XCircle,
-} from "../../app/components/icons";
-import {
-  ReadError,
-  DetailBlock,
-  DetailItem,
-  Field as FormField,
-  PageHeading,
-  Notice as SidebarNotice,
-} from "../../app/components/ui";
-import { requestJson } from "../../app/lib/api";
-import { cn } from "../../app/lib/cn";
-import { formatDateTime } from "../../app/lib/format";
-import {
-  adminParticipantStatusLabels,
-  adminProjectDraftStatusLabels,
-  type AdminProjectDraftDetailResponse,
-  type AdminProjectDraftMutationResponse,
-  type UpdateProjectDraftInput,
-} from "../../shared/admin";
+import { Link, getRouteApi, useSearch } from '@tanstack/react-router';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Button, Notice, PageHeading, ReadError } from '../../app/components/ui';
+import { requestJson } from '../../app/lib/api';
+import { formatDateTime } from '../../app/lib/format';
+import { WorkPresentation } from '../../app/components/WorkPresentation';
+import { getWorkPublicationIssues, workTypeLabels } from '../../shared/works';
+import { workReviewStatusLabels, type WorkSubmissionDetail, type WorkSubmissionWorkspace, type WorkSubmissionMutationResult, type WorkReviewDecision } from '../../shared/work-submissions';
+import type { AdminProjectDraftDetailResponse, AdminProjectDraftMutationResponse } from '../../shared/admin';
+import { AdminWorkFiles } from '../components/AdminWorkFiles';
+import type { SubmissionScope } from './AdminProjectDraftsPage';
 
-const draftRouteApi = getRouteApi("/portal_/admin/project-drafts/$draftId");
-
-const initialForm: UpdateProjectDraftInput = {
-  previewStatus: "not_started",
-  reviewStatus: "not_started",
-  adminFeedback: "",
-};
-
-type DetailState =
-  | { status: "loading" }
-  | { status: "ready"; payload: AdminProjectDraftDetailResponse }
-  | { status: "error"; message: string };
-
+const route = getRouteApi('/portal_/admin/project-drafts/$draftId');
 export function AdminProjectDraftDetailPage() {
-  const { draftId } = draftRouteApi.useParams();
-  const listSearch = useSearch({ strict: false }) as { scope?: "pending" | "all" | "has-files"; q?: string };
-  const [state, setState] = useState<DetailState>({ status: "loading" });
-  const [form, setForm] = useState<UpdateProjectDraftInput>(initialForm);
-  const [saving, setSaving] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const reducedMotion = useReducedMotion();
-  const previewTrigger = useRef<HTMLButtonElement>(null);
-  const previewPanel = useRef<HTMLElement>(null);
-  const previewWasOpen = useRef(false);
-
+  const {draftId} = route.useParams();
+  const search = useSearch({strict:false}) as {scope?:SubmissionScope;q?:string};
+  const [data,setData] = useState<AdminProjectDraftDetailResponse | null>(null), [workspace,setWorkspace] = useState<WorkSubmissionWorkspace | null>(null);
+  const [version,setVersion] = useState<WorkSubmissionDetail | null>(null), [feedback,setFeedback] = useState('');
+  const [decision,setDecision] = useState<WorkReviewDecision | ''>(''), [busy,setBusy] = useState(false);
+  const [error,setError] = useState<string | null>(null), [message,setMessage] = useState<string | null>(null);
+  const [preview,setPreview] = useState(false); const previewPanel = useRef<HTMLElement>(null),previewTrigger=useRef<HTMLButtonElement>(null);
+  const endpoint = `/api/admin/project-drafts/${draftId}`;
   useEffect(() => {
-    void loadDetail();
-  }, [draftId]);
-
-  useEffect(() => {
-    if (previewOpen) {
-      previewWasOpen.current = true;
-      previewPanel.current?.scrollIntoView({
-        behavior: reducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
-      previewPanel.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (previewWasOpen.current) {
-      previewWasOpen.current = false;
-      previewTrigger.current?.focus({ preventScroll: true });
-    }
-  }, [previewOpen, reducedMotion]);
-
-  async function loadDetail() {
-    setState({ status: "loading" });
-
+    let cancelled = false; setData(null);setWorkspace(null);setVersion(null);setError(null);setMessage(null);setFeedback('');setDecision('');setPreview(false);
+    void Promise.all([requestJson<AdminProjectDraftDetailResponse>(endpoint),requestJson<WorkSubmissionWorkspace>(`${endpoint}/submissions`)]).then(([detail,work]) => {if (!cancelled) {setData(detail);setWorkspace(work);setVersion(work.latest);}}).catch(err => {if (!cancelled) setError(err.message);});
+    return () => {cancelled=true;};
+  },[endpoint]);
+  async function choose(id:string) {
+    setBusy(true);setError(null);
+    try {setVersion(await requestJson<WorkSubmissionDetail>(`${endpoint}/submissions/${id}`));setFeedback('');setDecision('');}
+    catch (err) {setError(err instanceof Error ? err.message : '无法读取版本。');} finally {setBusy(false);}
+  }
+  async function review(event:FormEvent) {
+    event.preventDefault(); if (!version) return; setBusy(true);setError(null);setMessage(null);
     try {
-      const payload = await requestJson<AdminProjectDraftDetailResponse>(
-        `/api/admin/project-drafts/${draftId}`,
-      );
-      setState({ status: "ready", payload });
-      setForm({
-        previewStatus: payload.draft.previewStatus,
-        reviewStatus: payload.draft.reviewStatus,
-        adminFeedback: payload.draft.adminFeedback ?? "",
-      });
-    } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : "无法读取资料详情。",
-      });
-    }
+      const result = await requestJson<WorkSubmissionMutationResult>(`${endpoint}/submissions/${version.id}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedback,decision:decision || undefined})});
+      if (!result.ok) throw new Error(result.message);
+      setWorkspace(result.workspace);setFeedback('');setDecision('');setMessage(result.message);
+      setVersion(version.id === result.workspace.latest?.id ? result.workspace.latest : await requestJson<WorkSubmissionDetail>(`${endpoint}/submissions/${version.id}`));
+      setData(await requestJson<AdminProjectDraftDetailResponse>(endpoint));
+    } catch (err) {setError(err instanceof Error ? err.message : '保存失败。');} finally {setBusy(false);}
   }
-
-  async function handleSave() {
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const payload = await requestJson<AdminProjectDraftMutationResponse>(
-        `/api/admin/project-drafts/${draftId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            previewStatus: form.previewStatus,
-            reviewStatus: form.reviewStatus,
-            adminFeedback: form.adminFeedback?.trim() || null,
-          } satisfies UpdateProjectDraftInput),
-        },
-      );
-
-      setState(current => current.status === "ready" ? {
-        status: "ready", payload: { ...current.payload, draft: payload.draft },
-      } : current);
-      setForm({
-        previewStatus: payload.draft.previewStatus,
-        reviewStatus: payload.draft.reviewStatus,
-        adminFeedback: payload.draft.adminFeedback ?? "",
-      });
-      setMessage(payload.message);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存资料审核失败。");
-    } finally {
-      setSaving(false);
-    }
+  async function publication() {
+    if (!data) return;setBusy(true);setError(null);
+    try { const result = await requestJson<AdminProjectDraftMutationResponse>(`${endpoint}/${data.draft.publishedAt ? 'unpublish' : 'publish'}`,{method:'POST'});setData({...data,draft:result.draft});setMessage(result.message); }
+    catch (err) {setError(err instanceof Error ? err.message : '操作失败。');} finally {setBusy(false);}
   }
-
-  async function handlePublication(publish: boolean) {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const result = await requestJson<AdminProjectDraftMutationResponse>(`/api/admin/project-drafts/${draftId}/${publish ? "publish" : "unpublish"}`, { method: "POST" });
-      setState(current => current.status === "ready" ? { status: "ready", payload: { ...current.payload, draft: result.draft } } : current);
-      setMessage(result.message);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "作品发布操作失败。");
-    } finally { setSaving(false); }
-  }
-
-  if (state.status === "loading") {
-    return <DraftDetailShell description="正在读取资料详情。" />;
-  }
-
-  if (state.status === "error") {
-    return (
-      <div className="page-content">
-        <PageHeading title="作品审核详情" />
-        <ReadError message={state.message} />
-      </div>
-    );
-  }
-
-  const draft = state.payload.draft;
-  const publicationIssues = getWorkPublicationIssues(draft);
-
-  return (
-    <div className="page-content">
-      <div className="mb-4">
-        <Link
-          className="text-base font-mono text-on-surface-variant hover:text-primary transition-colors flex min-h-11 items-center gap-2 mb-4"
-          to="/portal/admin/project-drafts"
-          search={listSearch}
-        >
-          <ArrowRight className="w-4 h-4 rotate-180" /> 返回草案库
-        </Link>
-        <PageHeading
-          title={<>作品审核详情</>}
-          description={<>ID: {draft.id}</>}
-        >
-          <div className="flex flex-wrap gap-2 justify-end">
-            <DraftStatusBadge status={draft.previewStatus} label="预告" />
-            <DraftStatusBadge status={draft.reviewStatus} label="审查" />
-          </div>
-        </PageHeading>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          <AdminWorkFiles draftId={draftId} />
-          <section className="panel space-y-6">
-            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
-              参与者与关联信息
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-base">
-              <DetailItem label="参与者" value={draft.participantName} />
-              <DetailItem
-                label="联系邮箱"
-                value={draft.participantInviteEmail ?? "未设置登录邮箱"}
-              />
-              <DetailItem
-                label="参与状态"
-                value={adminParticipantStatusLabels[draft.participantStatus]}
-              />
-              <DetailItem
-                label="联系方式备注"
-                value={draft.participantContactHandle ?? "未填写"}
-              />
-              <DetailItem
-                label="当前时间段"
-                value={
-                  draft.segmentCode
-                    ? `${draft.segmentCode} · ${draft.segmentName ?? "未命名"}`
-                    : "暂无"
-                }
-              />
-              <DetailItem
-                label="最近更新"
-                value={formatDateTime(draft.updatedAt)}
-              />
-            </div>
-            <Link
-              className="inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 bg-surface-variant border border-outline-variant rounded-md hover:bg-surface-bright transition-colors font-medium"
-              params={{ participantId: draft.participantId }}
-              to="/portal/admin/participants/$participantId"
-            >
-              查看参与者详情
-            </Link>
-          </section>
-
-          <section className="panel space-y-6">
-            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
-              预告信息
-            </h2>
-            <div className="space-y-4">
-              <DetailBlock
-                title="标题"
-                value={draft.previewTitle ?? "未填写"}
-              />
-              <DetailBlock
-                title="对外署名"
-                value={draft.publicAuthorName ?? "未填写"}
-              />
-              <DetailBlock
-                title="作品形式"
-                value={draft.formatLabel ?? "未填写"}
-              />
-              <DetailBlock
-                title="标签"
-                value={
-                  draft.publicTags.length > 0
-                    ? draft.publicTags.join(" / ")
-                    : "未填写"
-                }
-              />
-              <DetailBlock
-                title="提交时间"
-                value={formatDateTime(draft.previewSubmittedAt)}
-              />
-              <DetailBlock
-                title="预告简介"
-                value={draft.previewSummary ?? "未填写"}
-              />
-            </div>
-          </section>
-
-          <section className="panel space-y-6">
-            <h2 className="text-base font-mono text-on-surface-variant uppercase border-b border-outline-variant pb-2">
-              审查说明
-            </h2>
-            <div className="space-y-4">
-              <DetailBlock
-                title="提交时间"
-                value={formatDateTime(draft.reviewSubmittedAt)}
-              />
-              <DetailBlock
-                title="内容概述"
-                value={draft.contentNote ?? "未填写"}
-              />
-              <DetailBlock
-                title="内容提醒"
-                value={draft.contentWarnings ?? "未填写"}
-              />
-              <DetailBlock
-                title="补充说明"
-                value={draft.reviewNote ?? "未填写"}
-              />
-            </div>
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <section className="panel space-y-4">
-            <h2 className="panel-title">公开展示</h2>
-            <p>{draft.publishedAt ? `已发布 · ${formatDateTime(draft.publishedAt)}` : "尚未发布"}</p>
-            <p className="text-sm text-on-surface-variant">新增发布窗口：{eventWindowStateLabels[state.payload.publicationWindow.state]}</p>
-            {!draft.publishedAt && publicationIssues.length > 0 && <ul className="publication-issues">{publicationIssues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
-            <button ref={previewTrigger} className="button button--secondary w-full" type="button" aria-expanded={previewOpen} aria-controls="public-work-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? "收起公开预览" : "预览公开效果"}</button>
-            {previewOpen && <section ref={previewPanel} className="panel" id="public-work-preview" aria-label="公开作品预览" tabIndex={-1}><p className="eyebrow">公开页面预览</p><div className="work-admin-preview"><WorkPresentation work={draft} /></div></section>}
-            <button className="button button--primary w-full" type="button" disabled={saving || (!draft.publishedAt && (publicationIssues.length > 0 || !state.payload.publicationWindow.isOpen))}
-              onClick={() => void handlePublication(!draft.publishedAt)}>{saving ? "处理中…" : draft.publishedAt ? "撤下作品" : "发布到观测集"}</button>
-            {draft.publishedAt && <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开页面</Link>}
-          </section>
-          <section className="panel">
-            <h2 className="text-base font-mono text-on-surface-variant uppercase mb-4">
-              审核设置
-            </h2>
-            <div className="space-y-4">
-              <FormField label="预告审核状态">
-                <select
-                  className="field-input"
-                  disabled={saving || Boolean(draft.publishedAt)}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      previewStatus: event.target
-                        .value as UpdateProjectDraftInput["previewStatus"],
-                    }))
-                  }
-                  value={form.previewStatus}
-                >
-                  {Object.entries(adminProjectDraftStatusLabels).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </FormField>
-
-              <FormField label="审查状态">
-                <select
-                  className="field-input"
-                  disabled={saving || Boolean(draft.publishedAt)}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      reviewStatus: event.target
-                        .value as UpdateProjectDraftInput["reviewStatus"],
-                    }))
-                  }
-                  value={form.reviewStatus}
-                >
-                  {Object.entries(adminProjectDraftStatusLabels).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </FormField>
-
-              <FormField label="管理员反馈">
-                <textarea
-                  className="field-input"
-                  disabled={saving || Boolean(draft.publishedAt)}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      adminFeedback: event.target.value,
-                    }))
-                  }
-                  rows={6}
-                  value={form.adminFeedback ?? ""}
-                />
-              </FormField>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-outline-variant space-y-3">
-              {message ? (
-                <SidebarNotice>{message}</SidebarNotice>
-              ) : null}
-              {!draft.publishedAt && <button
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={saving}
-                onClick={() => void handleSave()}
-                type="button"
-              >
-                {saving ? "保存中..." : "保存审核结果"}
-              </button>}
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DraftDetailShell({ description }: { description: string }) {
-  return (
-    <div className="page-content">
-      <PageHeading
-        title={<>作品审核详情</>}
-        description={<>{description}</>}
-      ></PageHeading>
-    </div>
-  );
-}
-
-function DraftStatusBadge({
-  status,
-  label,
-}: {
-  status: UpdateProjectDraftInput["previewStatus"];
-  label: string;
-}) {
-  const tone = getStatusTone(status);
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-sm font-medium",
-        tone === "success" && "bg-tertiary/10 text-tertiary border-tertiary/20",
-        tone === "warn" && "bg-error/10 text-error border-error/20",
-        tone === "info" && "bg-primary/10 text-primary border-primary/20",
-      )}
-    >
-      {tone === "success" ? (
-        <CheckCircle2 className="w-3.5 h-3.5" />
-      ) : tone === "warn" ? (
-        <XCircle className="w-3.5 h-3.5" />
-      ) : (
-        <Clock className="w-3.5 h-3.5" />
-      )}
-      {label} {adminProjectDraftStatusLabels[status]}
-    </span>
-  );
-}
-
-function getStatusTone(
-  status: UpdateProjectDraftInput["previewStatus"],
-): "info" | "warn" | "success" {
-  if (status === "approved") {
-    return "success";
-  }
-
-  if (status === "changes_requested") {
-    return "warn";
-  }
-
-  return "info";
+  const issues = data ? getWorkPublicationIssues(data.draft,workspace?.review.status) : [];
+  const latest = version?.id === workspace?.latest?.id;
+  return <div className="page-content"><Link className="text-link" to="/portal/admin/project-drafts" search={search}>返回作品列表</Link><PageHeading title={data ? `${data.draft.participantName}的作品审核` : '作品审核详情'} />
+    {error ? <ReadError message={error} /> : null}{message ? <Notice tone="success">{message}</Notice> : null}
+    {!data || !workspace ? !error ? <p>正在读取作品。</p> : null : <>
+      <section className="panel space-y-4"><h2>{workReviewStatusLabels[workspace.review.status]}</h2><p>最新提交：{workspace.latest ? `V${workspace.latest.versionNumber}，${formatDateTime(workspace.latest.submittedAt)}` : '尚未正式提交'}{workspace.review.decisionVersionNumber ? `；结论依据 V${workspace.review.decisionVersionNumber}` : ''}</p>
+        {workspace.review.hasUpdatesAfterReview ? <Notice tone="warning">审核后有更新，当前通过结论不代表最新版本已复审。</Notice> : null}
+        {workspace.versions.length ? <label>查看作品版本<select className="field-input" value={version?.id ?? ''} disabled={busy} onChange={e => void choose(e.target.value)}>{workspace.versions.map(v => <option key={v.id} value={v.id}>V{v.versionNumber}：{v.title}{workspace.firstApprovedSubmission?.id === v.id ? '（首次通过版）' : ''}</option>)}</select></label> : <p>作者尚未正式交稿。上传暂存文件不计为提交。</p>}
+      </section>
+      {version ? <div className="grid gap-6 lg:grid-cols-2 mt-6"><section className="panel space-y-4"><h2>V{version.versionNumber}：{version.title}</h2><p>{workTypeLabels[version.workType]}，{formatDateTime(version.submittedAt)}</p><p className="submission-note">{version.summary}</p>{version.versionNote ? <p className="submission-note">版本说明：{version.versionNote}</p> : null}
+        <AdminWorkFiles draftId={draftId} files={version.files} />
+        <h3>此版本审稿记录</h3>{version.reviews.length ? version.reviews.map(item => <div key={item.id} className="submission-feedback"><p className="field-hint">{formatDateTime(item.createdAt)}{item.decision ? `，${workReviewStatusLabels[item.decision]}` : ''}</p><p className="submission-note">{item.feedback || '审核通过。'}</p></div>) : <p>尚无审稿记录。</p>}
+      </section><section className="panel space-y-4"><h2>针对 V{version.versionNumber} 写审稿意见</h2><p>保存后作者立即可见。</p><form className="space-y-4" onSubmit={e => void review(e)}>
+        <label className="block">审稿意见<textarea className="field-input" rows={6} maxLength={2000} value={feedback} disabled={busy} onChange={e => setFeedback(e.target.value)} required={decision !== 'approved'} /></label>
+        <label className="block">审核结论<select className="field-input" disabled={busy || !latest} value={decision} onChange={e => setDecision(e.target.value as WorkReviewDecision | '')}><option value="">仅保存意见，不改变结论</option><option value="approved">已通过</option><option value="changes_requested" disabled={Boolean(data.draft.publishedAt)}>需修改</option><option value="rejected" disabled={Boolean(data.draft.publishedAt)}>未通过</option></select></label>
+        {data.draft.publishedAt ? <p>意见可继续保存；需修改或未通过请先撤下公开作品。</p> : null}
+        {!latest ? <p>历史版本可追加意见，请切换到最新版本修改当前结论。</p> : null}
+        <Button appearance="industrial" type="submit" disabled={busy}>{busy ? '保存中…' : '保存审稿意见'}</Button>
+      </form></section></div> : null}
+      {workspace.legacyFeedback ? <details className="panel mt-6"><summary>历史资料审核意见</summary><p className="submission-note">{workspace.legacyFeedback}</p></details> : null}
+      <section className="panel mt-6 space-y-4"><h2>站内公开</h2><p>{data.draft.publishedAt ? `已公开：${formatDateTime(data.draft.publishedAt)}` : '尚未公开'}</p><p>作品内容审核、作者按排期发布和站内公开分别记录。</p>
+        {!data.draft.publishedAt && issues.length ? <ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul> : null}
+        <button ref={previewTrigger} className="button button--secondary" type="button" aria-controls="public-work-preview" aria-expanded={preview} onClick={() => {if (preview) {setPreview(false);previewTrigger.current?.focus();} else {setPreview(true);requestAnimationFrame(() => {previewPanel.current?.scrollIntoView({block:'start'});previewPanel.current?.focus({preventScroll:true});});}}}>{preview ? '收起公开预览' : '预览公开效果'}</button>
+        {preview ? <section ref={previewPanel} id="public-work-preview" aria-label="公开作品预览" tabIndex={-1}><WorkPresentation work={data.draft} /></section> : null}
+        <Button appearance="industrial" disabled={busy || !data.draft.publishedAt && (issues.length > 0 || !data.publicationWindow.isOpen)} onClick={() => void publication()}>{data.draft.publishedAt ? '撤下作品' : '发布到观测集'}</Button>
+        {data.draft.publishedAt ? <Link className="text-link" to="/works/$workId" params={{workId:draftId}}>查看公开页面</Link> : null}
+      </section></>}
+  </div>;
 }

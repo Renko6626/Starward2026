@@ -1,3 +1,4 @@
+import { summarizeWorkReview, type WorkSubmissionSummary, type WorkReviewDecision } from '../../src/shared/work-submissions';
 import { reorderSchedule } from "../lib/schedule-order";
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
@@ -62,7 +63,7 @@ type ParticipantSegmentAssignmentRow = {
 };
 
 type ProjectDraftRow = {
-  id: string;
+  id: string | null;
   participant_id: string;
   participant_name: string;
   segment_code: string | null;
@@ -847,49 +848,36 @@ export async function updateActiveScheduleSegment(
   };
 }
 
-export async function listProjectDrafts(
-  db: D1Database,
-): Promise<AdminProjectDraftListItem[]> {
-  const result = await db
-    .prepare(
-      `SELECT
-        project_drafts.id,
-        project_drafts.participant_id,
-        COALESCE(portal_profiles.credit_name, '未填写署名') AS participant_name,
-        schedule_segments.code AS segment_code,
-        project_drafts.preview_status,
-        project_drafts.review_status,
-        project_drafts.preview_title,
-        CASE WHEN portal_profiles.is_anonymous = 1 THEN '匿名' ELSE portal_profiles.credit_name END AS public_author_name,
-        COALESCE(work_file_summary.work_file_count, 0) AS work_file_count,
-        work_file_summary.latest_work_file_at,
-        project_drafts.updated_at
-      FROM project_drafts
-      INNER JOIN participants ON participants.id = project_drafts.participant_id
-      LEFT JOIN portal_profiles ON portal_profiles.user_id = participants.user_id
-      LEFT JOIN schedule_segments ON schedule_segments.id = project_drafts.segment_id
-      LEFT JOIN (
-        SELECT draft_id, COUNT(*) AS work_file_count, MAX(completed_at) AS latest_work_file_at
-        FROM work_files
-        WHERE completed_at IS NOT NULL
-        GROUP BY draft_id
-      ) AS work_file_summary ON work_file_summary.draft_id = project_drafts.id
-      ORDER BY project_drafts.updated_at DESC`,
-    )
-    .all<ProjectDraftRow>();
-
-  return (result.results ?? []).map((row) => ({
-    id: row.id,
-    participantId: row.participant_id,
-    participantName: row.participant_name,
-    segmentCode: row.segment_code,
-    previewStatus: row.preview_status,
-    reviewStatus: row.review_status,
-    previewTitle: row.preview_title,
-    publicAuthorName: row.public_author_name,
-    workFileCount: row.work_file_count,
-    latestWorkFileAt: row.latest_work_file_at,
-    updatedAt: row.updated_at,
+export async function listProjectDrafts(db: D1Database): Promise<AdminProjectDraftListItem[]> {
+  type Row = ProjectDraftRow & { participant_status: ParticipantPortalStatus;
+    latest_id: string | null; version_number: number | null; title: string | null; work_type: WorkSubmissionSummary['workType'] | null;
+    summary: string | null; version_note: string | null; submitted_at: string | null; file_count: number;
+    decision_submission_id: string | null; decision_version: number | null; decision: WorkReviewDecision | null };
+  const { results } = await db.prepare(`SELECT d.id,p.id AS participant_id,p.status AS participant_status,
+    COALESCE(pp.credit_name,'未填写署名') AS participant_name,ss.code AS segment_code,
+    COALESCE(d.preview_status,'not_started') AS preview_status,COALESCE(d.review_status,'not_started') AS review_status,
+    d.preview_title,CASE WHEN pp.is_anonymous=1 THEN '匿名' ELSE pp.credit_name END AS public_author_name,
+    COALESCE(d.updated_at,p.updated_at) AS updated_at,
+    (SELECT COUNT(*) FROM work_files f WHERE f.draft_id=d.id AND f.completed_at IS NOT NULL) AS work_file_count,
+    (SELECT MAX(f.completed_at) FROM work_files f WHERE f.draft_id=d.id) AS latest_work_file_at,
+    s.id AS latest_id,s.version_number,s.title,s.work_type,s.summary,s.version_note,s.submitted_at,
+    (SELECT COUNT(*) FROM work_files f WHERE f.submission_id=s.id) AS file_count,
+    r.submission_id AS decision_submission_id,rs.version_number AS decision_version,r.decision
+    FROM participants p LEFT JOIN project_drafts d ON d.participant_id=p.id
+    LEFT JOIN portal_profiles pp ON pp.user_id=p.user_id
+    LEFT JOIN schedule_segments ss ON ss.id=d.segment_id
+    LEFT JOIN work_submissions s ON s.id=(SELECT id FROM work_submissions WHERE draft_id=d.id ORDER BY version_number DESC LIMIT 1)
+    LEFT JOIN work_submission_reviews r ON r.id=(SELECT r2.id FROM work_submission_reviews r2
+      JOIN work_submissions s2 ON s2.id=r2.submission_id WHERE s2.draft_id=d.id AND r2.decision IS NOT NULL ORDER BY r2.id DESC LIMIT 1)
+    LEFT JOIN work_submissions rs ON rs.id=r.submission_id
+    ORDER BY s.submitted_at DESC,p.updated_at DESC,p.id`).all<Row>();
+  return results.map(row => ({
+    id:row.id,participantId:row.participant_id,participantName:row.participant_name,participantStatus:row.participant_status,
+    segmentCode:row.segment_code,previewStatus:row.preview_status,reviewStatus:row.review_status,previewTitle:row.preview_title,
+    publicAuthorName:row.public_author_name,updatedAt:row.updated_at,workFileCount:row.work_file_count,latestWorkFileAt:row.latest_work_file_at,
+    latestSubmission: row.latest_id ? { id:row.latest_id,versionNumber:row.version_number!,title:row.title!,workType:row.work_type!,
+      summary:row.summary!,versionNote:row.version_note,submittedAt:row.submitted_at!,fileCount:row.file_count } : null,
+    review:summarizeWorkReview(row.version_number,row.decision ? {submissionId:row.decision_submission_id!,versionNumber:row.decision_version!,decision:row.decision} : null),
   }));
 }
 

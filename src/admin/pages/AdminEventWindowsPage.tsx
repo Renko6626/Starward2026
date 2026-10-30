@@ -99,7 +99,7 @@ export function AdminEventWindowsPage() {
           body: JSON.stringify({
             isEnabled: draft.isEnabled,
             opensAt: toIsoDateTimeOrNull(draft.opensAt),
-            closesAt: toIsoDateTimeOrNull(draft.closesAt),
+            closesAt: key === 'work_upload_open' ? null : toIsoDateTimeOrNull(draft.closesAt),
           }),
         },
       );
@@ -159,7 +159,7 @@ export function AdminEventWindowsPage() {
 
       {state.status === "ready" ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          {state.payload.items.map((item) => {
+          {state.payload.items.filter(item => !['preview_submit_open','review_submit_open'].includes(item.key)).map((item) => {
             const draft = drafts[item.key] ?? buildDraft(item);
             const itemFeedback = feedback[item.key];
 
@@ -189,7 +189,7 @@ export function AdminEventWindowsPage() {
                   <MetaCard
                     icon={<Clock3 className="w-4 h-4" />}
                     label="当前结束"
-                    value={formatDateTime(item.closesAt)}
+                    value={item.key === 'work_upload_open' ? '暂不设截止' : formatDateTime(item.closesAt)}
                   />
                 </div>
 
@@ -216,7 +216,7 @@ export function AdminEventWindowsPage() {
                         value={draft.opensAt}
                       />
                     </FormField>
-                    <FormField label="结束时间">
+                    {item.key !== 'work_upload_open' ? <FormField label="结束时间">
                       <input
                         className="field-input"
                         aria-invalid={Boolean(itemFeedback?.closesAtError)}
@@ -227,12 +227,12 @@ export function AdminEventWindowsPage() {
                         value={draft.closesAt}
                       />
                       {itemFeedback?.closesAtError ? <span id={`${item.key}-closes-at-error`} className="field-error" role="alert">{itemFeedback.closesAtError}</span> : null}
-                    </FormField>
+                    </FormField> : <p className="field-hint">作品投稿不设置结束时间，可用启用开关手动暂停。</p>}
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-outline-variant space-y-3">
-                  <StateNotice message="请按当前浏览器时区填写开始和结束时间。" />
+                  <StateNotice message={item.key === 'work_upload_open' ? '启用后可投稿，可选开始时间，暂不设置截止。' : '请按当前浏览器时区填写开始和结束时间。'} />
                   {itemFeedback && !itemFeedback.closesAtError ? (
                     <StateNotice
                       message={itemFeedback.message}

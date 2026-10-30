@@ -1,3 +1,4 @@
+import { workSubmissionsApi } from './work-submissions';
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import { workFilesApi } from "./work-files";
 import { Hono } from "hono";
@@ -29,14 +30,11 @@ import type {
   PortalMeResponse,
   PortalProfileMutationResponse,
   PortalProfileResponse,
-  PortalProjectMutationResponse,
   PortalProjectResponse,
 } from "../../src/shared/portal";
 import {
   segmentMutationInputSchema,
   updatePortalProfileInputSchema,
-  updatePortalProjectPreviewInputSchema,
-  updatePortalProjectReviewInputSchema,
 } from "../../src/shared/portal";
 import {
   getPortalApplicationByUserId,
@@ -57,10 +55,6 @@ import {
 } from "../data/portal-profiles";
 import {
   getPortalProjectDraftDetail,
-  submitPortalProjectPreview,
-  submitPortalProjectReview,
-  updatePortalProjectPreview,
-  updatePortalProjectReview,
 } from "../data/project-drafts";
 import {
   changeParticipantSegment,
@@ -86,6 +80,7 @@ import { getWindowOrFallback } from "../lib/windows";
 
 const portalApi = new Hono<AppRouteConfig>();
 portalApi.route("/project/files", workFilesApi);
+portalApi.route("/project/submissions", workSubmissionsApi);
 
 type PortalSessionState = NonNullable<
   Awaited<ReturnType<typeof requireParticipantSession>>
@@ -767,131 +762,16 @@ portalApi.post("/project/release", async (c) => {
   return c.json(result);
 });
 
-portalApi.patch("/project/preview", async (c) => {
-  const access = await getProjectWorkspaceAccess(c);
-
-  if ("response" in access) {
-    return access.response;
-  }
-
-  const body = await c.req.json().catch(() => null);
-  const parsed = updatePortalProjectPreviewInputSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return jsonError(
-      c,
-      422,
-      "invalid_request",
-      "预告信息参数不正确。",
-      parsed.error.flatten(),
-    );
-  }
-
-  const result = await updatePortalProjectPreview(access.db, {
-    participant: access.participant,
-    data: parsed.data,
+for (const section of ['preview','review']) {
+  portalApi.patch(`/project/${section}`, async c => {
+    const access = await getProjectWorkspaceAccess(c);
+    return 'response' in access ? access.response : jsonError(c,410,'legacy_submission_retired','请在作者工作台提交完整作品并查看审核意见。');
   });
-
-  if (!result.ok) {
-    return jsonError(c, result.status, result.code, result.message);
-  }
-
-  const response: PortalProjectMutationResponse = {
-    ok: true,
-    message: result.message,
-    draft: result.draft,
-  };
-
-  return c.json(response);
-});
-
-portalApi.post("/project/preview/submit", async (c) => {
-  const access = await getProjectWorkspaceAccess(c);
-
-  if ("response" in access) {
-    return access.response;
-  }
-
-  const result = await submitPortalProjectPreview(access.db, {
-    participant: access.participant,
-    windows: await listEventWindows(access.db),
+  portalApi.post(`/project/${section}/submit`, async c => {
+    const access = await getProjectWorkspaceAccess(c);
+    return 'response' in access ? access.response : jsonError(c,410,'legacy_submission_retired','请在作者工作台提交完整作品。');
   });
-
-  if (!result.ok) {
-    return jsonError(c, result.status, result.code, result.message);
-  }
-
-  const response: PortalProjectMutationResponse = {
-    ok: true,
-    message: result.message,
-    draft: result.draft,
-  };
-
-  return c.json(response);
-});
-
-portalApi.patch("/project/review", async (c) => {
-  const access = await getProjectWorkspaceAccess(c);
-
-  if ("response" in access) {
-    return access.response;
-  }
-
-  const body = await c.req.json().catch(() => null);
-  const parsed = updatePortalProjectReviewInputSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return jsonError(
-      c,
-      422,
-      "invalid_request",
-      "审查说明参数不正确。",
-      parsed.error.flatten(),
-    );
-  }
-
-  const result = await updatePortalProjectReview(access.db, {
-    participant: access.participant,
-    data: parsed.data,
-  });
-
-  if (!result.ok) {
-    return jsonError(c, result.status, result.code, result.message);
-  }
-
-  const response: PortalProjectMutationResponse = {
-    ok: true,
-    message: result.message,
-    draft: result.draft,
-  };
-
-  return c.json(response);
-});
-
-portalApi.post("/project/review/submit", async (c) => {
-  const access = await getProjectWorkspaceAccess(c);
-
-  if ("response" in access) {
-    return access.response;
-  }
-
-  const result = await submitPortalProjectReview(access.db, {
-    participant: access.participant,
-    windows: await listEventWindows(access.db),
-  });
-
-  if (!result.ok) {
-    return jsonError(c, result.status, result.code, result.message);
-  }
-
-  const response: PortalProjectMutationResponse = {
-    ok: true,
-    message: result.message,
-    draft: result.draft,
-  };
-
-  return c.json(response);
-});
+}
 
 portalApi.get("/history", async (c) => {
   const access = await getPortalSessionAccess(c);

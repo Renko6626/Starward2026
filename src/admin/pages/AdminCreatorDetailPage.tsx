@@ -1,15 +1,16 @@
+import { workReviewStatusLabels } from '../../shared/work-submissions';
 import { Link, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Button, DetailBlock, DetailItem, Field, Notice, PageHeading, ReadError, StatusBadge } from "../../app/components/ui";
 import { requestJson } from "../../app/lib/api";
 import { formatDateTime, formatScheduledTime } from "../../app/lib/format";
-import { adminParticipantStatusLabels, adminProjectDraftStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminProjectDraftItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type AdminSegmentMutationResponse, type UpdateParticipantInput } from "../../shared/admin";
+import { adminParticipantStatusLabels, type AdminParticipantDetail, type AdminParticipantDetailResponse, type AdminProjectDraftListItem, type AdminProjectDraftListResponse, type AdminSegmentItem, type AdminSegmentListResponse, type AdminSegmentMutationResponse, type UpdateParticipantInput } from "../../shared/admin";
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationDetailResponse, type ApplicationDetail, type UpdateApplicationReviewInput } from "../../shared/applications";
 import { getReviewNoteTemplates } from "../lib/review-note";
 import { listAvailableApplicationReviewStatuses } from "../lib/application-review";
 import { validateCreatorSearch } from "../lib/creator-list";
 
-type Detail = { participant: AdminParticipantDetail | null; application: ApplicationDetail | null; segment: AdminSegmentItem | null; draft: AdminProjectDraftItem | null };
+type Detail = { participant: AdminParticipantDetail | null; application: ApplicationDetail | null; segment: AdminSegmentItem | null; draft: (AdminProjectDraftListItem & {id:string}) | null };
 type State = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; detail: Detail };
 const actionLabels = { approved: "批准报名", rejected: "拒绝报名", withdrawn: "标记撤回" } as const;
 
@@ -39,7 +40,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
       requestJson<AdminProjectDraftListResponse>("/api/admin/project-drafts"),
     ]);
     setSeats(segments.items);
-    return { participant, application, segment: segments.items.find(item => item.currentParticipantId === participant.id) ?? null, draft: drafts.items.find(item => item.participantId === participant.id) ?? null };
+    return { participant, application, segment: segments.items.find(item => item.currentParticipantId === participant.id) ?? null, draft: (() => { const item = drafts.items.find(item => item.participantId === participant.id); return item?.id ? { ...item, id:item.id } : null; })() };
   }, [participantId, applicationId]);
   function applyDetail(detail: Detail, sync: { adminNote?: boolean; participantForm?: boolean } = {}) {
     const previous = state.status === "ready" ? state.detail : null;
@@ -132,7 +133,7 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
             {application.messageToHosts ? <DetailBlock title="给主催的话" value={application.messageToHosts} /> : null}
           </> : <p className="text-on-surface-variant">该账号尚未提交报名。</p>}
         </section>
-        {draft ? <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">作品资料</h2><Link className="text-link" to="/portal/admin/project-drafts/$draftId" params={{ draftId: draft.id }}>查看作品审核</Link></div><p>{draft.previewTitle ?? "尚未填写标题"}</p><p className="text-on-surface-variant">预告：{adminProjectDraftStatusLabels[draft.previewStatus]}；正式审查：{adminProjectDraftStatusLabels[draft.reviewStatus]}</p></section> : null}
+        {draft ? <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">作品资料</h2><Link className="text-link" to="/portal/admin/project-drafts/$draftId" params={{ draftId: draft.id }}>查看作品审核</Link></div><p>{draft.latestSubmission?.title ?? "尚未正式交稿"}</p><p className="text-on-surface-variant">内容审核：{workReviewStatusLabels[draft.review.status]}{draft.review.hasUpdatesAfterReview ? "，审核后有更新" : ""}</p></section> : null}
         <details className="panel admin-disclosure"><summary>账号与审核记录</summary><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <DetailItem label="报名 ID" value={application?.id ?? "未提交"} />
           <DetailItem label="参与者 ID" value={participant?.id ?? "未关联"} />

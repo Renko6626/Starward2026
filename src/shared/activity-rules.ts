@@ -1,9 +1,8 @@
-export const ACTIVITY_RULES_VERSION = "2026-10-12-v14";
-export const ACTIVITY_RULES_UPDATED_AT = "2026-10-12";
+export const ACTIVITY_RULES_VERSION = "2026-10-31-v15";
+export const ACTIVITY_RULES_UPDATED_AT = "2026-10-31";
 export const ACTIVITY_RULES_ACCEPTANCE_HEADER = "x-starward-rules-version";
 export const NEW_ACCOUNT_RESPONSE_HEADER = "x-starward-account-created";
 export const ACTIVITY_RULES_TITLE = "逐星巡礼活动规则";
-export const WORK_SUBMISSION_DEADLINE = "2026-11-11T23:00:00+08:00";
 export const ACTIVITY_RULES_CONSENT_NOTICE = "知悉纪念册出版及相关作品使用授权将在正式投稿后另行讨论、单独确认。";
 export const ACTIVITY_RULES_CONSENT_TEXT = `我已阅读并同意《逐星巡礼活动规则》，${ACTIVITY_RULES_CONSENT_NOTICE}`;
 
@@ -52,19 +51,19 @@ export const activityRulesSections = [
     ],
   },
   {
-    id: "deadline", title: "六、作品完成、提交与补救安排",
+    id: "deadline", title: "六、作品完成、提交与修订",
     paragraphs: [
       "参与流程为报名、作品提交和资料登记。报名时填写基本信息与创作意向，并预留接力时点；作品完成后，须正式提交作品内容并登记作品资料，供组委会进行内容审核和最终确认。报名资料不代替正式作品提交，活动不另设作品预告阶段。",
-      "作品须在 2026 年 11 月 11 日 23:00（北京时间）前完成并提交。原则上应在截止前补齐全部作品信息。",
-      "作品提交入口预计在接力活动开始前两周开放。入口开放后，完成的作品可提前提交；具体提交方式和审核安排将在作者页面及活动 QQ 群内通知。",
-      "若截止时作品已接近完成，仍需在 2026 年 11 月 12 日继续创作，且能在本人接力发布时间前至少 3 小时完成并提交，可在活动 QQ 群内联系组委会申请补救。较早发布时段的作者可能无法同时满足这两个条件，具体安排须经组委会确认。",
+      "正式投稿须提供完整作品及资料，暂不设置首交或修订的硬性截止时间。请根据本人接力排期尽早交稿，为内容审核与修改留出时间。",
+      "作品上传、完整版本提交、审核状态及审稿意见均在作者工作台查看。上传文件后需点击提交，才算正式交稿；每次修订也须提交完整版本。",
+      "预计无法按接力排期完成或发布的作者，请尽早在活动 QQ 群内联系组委会协商安排。投稿入口是否开放由主催手动管理，不因旧截止日期自动关闭。",
     ],
   },
   {
     id: "review", title: "七、作品审核",
     paragraphs: [
       "组委会将对正式提交的作品内容陆续审核，结合活动主题、内容要求、生成式 AI 内容限制及公开展示需要进行判断，并进行最终确认。报名资料审核通过或接力时点已预留，不代表作品内容已通过审核。",
-      "对不符合要求的作品，组委会可要求修改、驳回投稿或要求撤回，并向作者说明理由。",
+      "对不符合要求的作品，组委会可要求修改、驳回投稿或要求撤回，并向作者说明理由。审稿意见保存后作者可在工作台直接查看，意见会注明对应的作品版本。首次审核通过的完整版本作为审核基准；后续小幅修订可补交并沿用通过结论，较大内容变更由组委会决定是否复审。",
       "组委会负责说明和解释本活动规则。纪念册发行、收入处理及作品使用范围等事项，按本规则约定与参与者协商。",
     ],
   },

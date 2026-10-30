@@ -75,7 +75,7 @@ export const eventWindowLabels: Record<EventWindowKey, string> = {
   segment_change_open: "发布时点变更 / 释放开放",
   preview_submit_open: "预告资料提交开放",
   review_submit_open: "审查说明提交开放",
-  work_upload_open: "作品文件上传开放",
+  work_upload_open: "作品投稿开放",
   public_release_open: "公开发布开放",
 };
 

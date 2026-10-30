@@ -1,184 +1,43 @@
-import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import {
-  Search,
-  CheckCircle2,
-  Clock,
-  FileText,
-  XCircle,
-} from "../../app/components/icons";
-import { ReadError, PageHeading, StateNotice } from "../../app/components/ui";
-import { requestJson } from "../../app/lib/api";
-import { formatDateTime } from "../../app/lib/format";
-import { summarizeProjectProgress } from "../lib/project-progress";
-import {
-  adminProjectDraftStatusLabels,
-  type AdminProjectDraftListResponse,
-} from "../../shared/admin";
+import { Link, getRouteApi } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { Button, ReadError, PageHeading, StateNotice } from '../../app/components/ui';
+import { requestJson } from '../../app/lib/api';
+import { formatDateTime } from '../../app/lib/format';
+import { workTypeLabels } from '../../shared/works';
+import { workReviewStatusLabels } from '../../shared/work-submissions';
+import { participantPortalStatusLabels } from '../../shared/portal';
+import type { AdminProjectDraftListItem, AdminProjectDraftListResponse } from '../../shared/admin';
+import { summarizeProjectProgress } from '../lib/project-progress';
 
+export const submissionScopes = { all:'全部作品', 'not-submitted':'未提交', pending:'待审核', 'changes-requested':'需修改', approved:'已通过', rejected:'未通过', updated:'审核后更新' } as const;
+export type SubmissionScope = keyof typeof submissionScopes;
 export function AdminProjectDraftsPage() {
-  const route = getRouteApi("/portal_/admin/project-drafts/");
-  const { scope = "pending", q: query = "" } = route.useSearch();
+  const route = getRouteApi('/portal_/admin/project-drafts/');
+  const { scope = 'all',q = '' } = route.useSearch();
   const navigate = route.useNavigate();
-  const listSearch = { scope, q: query || undefined };
-  const [state, setState] = useState<
-    | { status: "loading" }
-    | { status: "ready"; payload: AdminProjectDraftListResponse }
-    | { status: "error"; message: string }
-  >({ status: "loading" });
-
-  useEffect(() => {
-    void requestJson<AdminProjectDraftListResponse>("/api/admin/project-drafts")
-      .then((payload) => setState({ status: "ready", payload }))
-      .catch((error: Error) =>
-        setState({
-          status: "error",
-          message: error.message || "无法读取资料列表。",
-        }),
-      );
-  }, []);
-
-  const progress = summarizeProjectProgress(
-    state.status === "ready" ? state.payload.items : [],
-  );
-
-  const items = state.status === "ready" ? state.payload.items.filter(item =>
-    (scope === "all" || (scope === "pending"
-      ? item.previewStatus === "submitted" || item.reviewStatus === "submitted"
-      : item.workFileCount > 0)) &&
-    [item.participantName, item.previewTitle, item.segmentCode].join("\n").toLowerCase().includes(query.trim().toLowerCase()),
-  ) : [];
-
-  return (
-    <div className="page-content">
-      <PageHeading
-        title={<>作品审核</>}
-      >
-        {state.status === "ready" ? (
-          <div className="text-sm font-mono text-on-surface-variant">
-            草稿中 {progress.drafts} 份；已有正式提交 {progress.submitted}/{state.payload.items.length} 份
-          </div>
-        ) : null}
-      </PageHeading>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm">作品范围
-          <select className="field-input" aria-label="作品范围" value={scope} onChange={event => void navigate({ search: { ...listSearch, scope: event.target.value as typeof scope }, replace: true, resetScroll: false })}>
-            <option value="pending">待审核</option>
-            <option value="all">全部作品</option>
-            <option value="has-files">有作品文件</option>
-          </select>
-        </label>
-        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" /><input className="field-input search-input" aria-label="搜索作品" placeholder="搜索创作者、标题或时点" type="search" value={query} onChange={event => void navigate({ search: { ...listSearch, q: event.target.value || undefined }, replace: true, resetScroll: false })} /></div>
-      </div>
-      {state.status === "ready" && state.payload.items.length > 0 && !items.length ? <StateNotice message="当前筛选下没有作品。可调整作品范围或搜索词。" /> : null}
-
-      {state.status === "loading" ? (
-        <StateNotice message="正在读取资料列表。" />
-      ) : null}
-      {state.status === "error" ? (
-        <ReadError message={state.message} />
-      ) : null}
-      {state.status === "ready" && state.payload.items.length === 0 ? (
-        <StateNotice message="还没有作品资料记录。审核通过后，创作者可以在这里填写作品资料。" />
-      ) : null}
-
-      {state.status === "ready" && items.length > 0 ? (
-        <div className="table-frame">
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-label="数据列表"
-          >
-            <table className="data-table admin-compact-table admin-projects-table">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 font-medium">参与者</th>
-                  <th className="px-4 py-3 font-medium">预告状态</th>
-                  <th className="px-4 py-3 font-medium">审查状态</th>
-                  <th className="px-4 py-3 font-medium">当前标题</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/50">
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-surface-variant/30 transition-colors group"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-on-surface">
-                        {item.participantName}
-                      </div>
-                      <div className="text-sm text-on-surface-variant">
-                        {item.segmentCode
-                          ? `当前时间段 ${item.segmentCode}`
-                          : "尚未分配时间段"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="mobile-field-label">预告</span>
-                      <DraftStatusBadge status={item.previewStatus} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="mobile-field-label">审查</span>
-                      <DraftStatusBadge status={item.reviewStatus} />
-                    </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      <div>{item.previewTitle ?? "尚无标题"}</div>
-                      {item.workFileCount > 0 ? <div className="mt-1 text-sm text-primary">
-                        作品文件 {item.workFileCount} 个 · 最近上传 {formatDateTime(item.latestWorkFileAt)}
-                      </div> : <div className="mt-1 text-sm text-on-surface-variant">暂无作品文件</div>}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        className="inline-flex min-h-10 items-center justify-center gap-2 px-3 py-1.5 bg-surface-variant border border-outline-variant rounded-md text-base hover:bg-surface-bright transition-colors"
-                        params={{ draftId: item.id }}
-                        to="/portal/admin/project-drafts/$draftId"
-                        search={listSearch}
-                      >
-                        <FileText className="w-4 h-4" />
-                        查看详情
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function DraftStatusBadge({
-  status,
-}: {
-  status: AdminProjectDraftListResponse["items"][number]["previewStatus"];
-}) {
-  if (status === "approved") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20 text-sm font-medium">
-        <CheckCircle2 className="w-3.5 h-3.5" />{" "}
-        {adminProjectDraftStatusLabels[status]}
-      </span>
-    );
+  const [data,setData] = useState<AdminProjectDraftListResponse | null>(null), [error,setError] = useState<string | null>(null);
+  const [opening,setOpening] = useState<string | null>(null);
+  useEffect(() => { let cancelled = false; void requestJson<AdminProjectDraftListResponse>('/api/admin/project-drafts').then(value => {if (!cancelled) setData(value);}).catch(err => {if (!cancelled) setError(err.message);}); return () => {cancelled=true;}; }, []);
+  const items = data?.items.filter(item => (scope === 'all' || (scope === 'updated' ? item.review.hasUpdatesAfterReview : item.review.status === scope.replaceAll('-','_'))) &&
+    [item.participantName,item.latestSubmission?.title,item.segmentCode].join(' ').toLowerCase().includes(q.toLowerCase())) ?? [];
+  const progress = summarizeProjectProgress(data?.items ?? []);
+  async function open(item: AdminProjectDraftListItem) {
+    setOpening(item.participantId); setError(null);
+    try {
+      const id = item.id ?? (await requestJson<{draftId:string}>(`/api/admin/participants/${item.participantId}/project-draft`)).draftId;
+      await navigate({to:'/portal/admin/project-drafts/$draftId',params:{draftId:id},search:{scope,q}});
+    } catch (err) { setError(err instanceof Error ? err.message : '无法打开作品。'); }
+    finally { setOpening(null); }
   }
-
-  if (status === "changes_requested") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20 text-sm font-medium">
-        <XCircle className="w-3.5 h-3.5" />{" "}
-        {adminProjectDraftStatusLabels[status]}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-sm font-medium">
-      <Clock className="w-3.5 h-3.5" /> {adminProjectDraftStatusLabels[status]}
-    </span>
-  );
+  return <div className="page-content"><PageHeading title="作品审核" description="查看每位作者的交稿情况、最新完整版本及审核结论。">
+    <p>已提交 {progress.submitted} 份，未提交 {progress.drafts} 位</p></PageHeading>
+    <div className="flex flex-wrap gap-3 mb-6"><label>作品范围<select className="field-input" aria-label="作品范围" value={scope} onChange={e => void navigate({search:{scope:e.target.value as SubmissionScope,q},replace:true})}>{Object.entries(submissionScopes).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>搜索作品<input className="field-input" type="search" aria-label="搜索作品" placeholder="作者、标题或时点" value={q} onChange={e => void navigate({search:{scope,q:e.target.value},replace:true})} /></label></div>
+    {error ? <ReadError message={error} /> : null}{!data ? <StateNotice message="正在读取作品。" /> : !items.length ? <StateNotice message="当前筛选下没有作品。" /> :
+      <div className="table-frame"><div className="table-scroll" tabIndex={0} role="region" aria-label="作品列表"><table className="data-table admin-compact-table"><thead><tr><th>作者与排期</th><th>最新作品</th><th>审核状态</th><th>操作</th></tr></thead><tbody>
+        {items.map(item => <tr key={item.participantId}><td><strong>{item.participantName}</strong><div>{item.segmentCode ?? '尚未分配时点'}</div><small>参与资格：{participantPortalStatusLabels[item.participantStatus]}</small></td>
+          <td>{item.latestSubmission ? <><strong>{item.latestSubmission.title}</strong><div>{workTypeLabels[item.latestSubmission.workType]}，V{item.latestSubmission.versionNumber}</div><small>{formatDateTime(item.latestSubmission.submittedAt)}</small></> : <span>尚未正式提交{item.workFileCount ? '（有暂存文件）' : ''}</span>}</td>
+          <td><strong>{workReviewStatusLabels[item.review.status]}</strong>{item.review.decisionVersionNumber ? <div>结论依据 V{item.review.decisionVersionNumber}</div> : null}{item.review.hasUpdatesAfterReview ? <div className="text-primary">审核后有更新</div> : null}</td>
+          <td>{['approved','completed'].includes(item.participantStatus) ? <Button appearance="industrial" disabled={opening !== null} onClick={() => void open(item)}>{opening === item.participantId ? '读取中…' : '查看作品'}</Button> : <Link className="text-link" to="/portal/admin/participants/$participantId" params={{participantId:item.participantId}}>查看参与资料</Link>}</td></tr>)}
+      </tbody></table></div></div>}</div>;
 }

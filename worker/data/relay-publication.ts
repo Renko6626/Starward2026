@@ -1,7 +1,7 @@
+import { getWorkReviewSummary } from './work-submissions';
 import { getRelayPublicationState, type RelayPublicationState } from "../../src/shared/relay-publication";
 import { publicHttpsUrlSchema, getWorkPublicationIssues } from "../../src/shared/works";
 import type { UpdatePortalProjectPreviewInput } from "../../src/shared/portal";
-import { resolvePortalProjectDraftSaveStatus } from "../lib/project-draft-portal";
 import { createPrefixedId } from "../lib/ids";
 import { nowIso } from "../lib/time";
 import type { ParticipantAuthRow } from "./participants";
@@ -32,22 +32,11 @@ export async function confirmPortalProjectRelease(
   const release = await getPortalReleaseState(db, input.participant.id);
   if (!existing.releaseConfirmedAt && !release.canConfirm)
     return fail("release_not_today", "首次确认发布仅在约定的北京时间发布当天开放。请查看排期，或联系主催。");
-  const data = input.preview;
-  const candidate = data ? {
-    ...existing,
-    previewTitle: data.previewTitle?.trim() || null,
-    previewSummary: data.previewSummary?.trim() || null,
-    formatLabel: data.formatLabel?.trim() || null,
-    workType: data.workType ?? null,
-    coverUrl: data.coverUrl?.trim() || null,
-    coverAlt: data.coverAlt?.trim() || null,
-    publicTags: [...new Set(data.publicTags ?? [])],
-    previewStatus: resolvePortalProjectDraftSaveStatus(existing.previewStatus),
-    workUrl: url.data,
-  } : { ...existing, workUrl: url.data };
+  if (input.preview) return fail("legacy_submission_retired", "请在作者工作台提交完整作品版本。", 410);
+  const candidate = { ...existing, workUrl: url.data };
   const now = nowIso();
   const first = !existing.releaseConfirmedAt;
-  const publish = first && getWorkPublicationIssues(candidate).length === 0;
+  const publish = first && getWorkPublicationIssues(candidate, (await getWorkReviewSummary(db,existing.id)).status).length === 0;
   const results = await db.batch([
     db.prepare(`UPDATE project_drafts SET
       work_url = ?, release_confirmed_at = COALESCE(release_confirmed_at, ?),
@@ -91,7 +80,7 @@ export async function publishConfirmedProjectIfReady(db: D1Database, draftId: st
     .bind(draftId).first<{ participant_id: string }>();
   if (!row) return;
   const draft = await getPortalProjectDraftDetail(db, row.participant_id);
-  if (!draft || !draft.releaseConfirmedAt || draft.publishedAt || getWorkPublicationIssues(draft).length) return;
+  if (!draft || !draft.releaseConfirmedAt || draft.publishedAt || getWorkPublicationIssues(draft, (await getWorkReviewSummary(db,draftId)).status).length) return;
   const now = nowIso();
   await db.batch([
     db.prepare(`UPDATE project_drafts SET published_at = ?, updated_at = ?

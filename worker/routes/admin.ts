@@ -1,3 +1,6 @@
+import { createWorkSubmissionReviewSchema } from '../../src/shared/work-submissions';
+import { createWorkSubmissionReview, getWorkSubmissionDetail, getWorkSubmissionWorkspace } from '../data/work-submissions';
+import { getPortalProjectDraftDetail } from '../data/project-drafts';
 import { setWorkPublication } from "../data/works";
 import { downloadWorkFile, getWorkFile, listWorkFiles } from "../data/work-files";
 import { getWindowOrFallback } from "../lib/windows";
@@ -13,7 +16,6 @@ import type {
   AdminParticipantListResponse,
   AdminProjectDraftDetailResponse,
   AdminProjectDraftListResponse,
-  AdminProjectDraftMutationResponse,
   AdminSegmentBootstrapResponse,
   AdminSegmentListResponse,
   AdminSegmentMutationResponse,
@@ -23,7 +25,6 @@ import {
   bootstrapSegmentsInputSchema,
   createSegmentInputSchema,
   appendSegmentsInputSchema,
-  updateProjectDraftInputSchema,
   updateSegmentInputSchema,
   updateParticipantInputSchema,
 } from "../../src/shared/admin";
@@ -46,7 +47,7 @@ import {
 } from "../data/applications";
 import { listEventWindows, updateEventWindow } from "../data/event-windows";
 
-import { getAdminProjectDraftDetail, updateAdminProjectDraftReview } from "../data/project-drafts";
+import { getAdminProjectDraftDetail } from "../data/project-drafts";
 import { getAdminIdentity, requireAdminAccess, requireAdminOwner } from "../lib/admin";
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import { adminAssistedAccessInputSchema } from "../../src/shared/admin-access";
@@ -59,6 +60,33 @@ const adminApi = new Hono<AppRouteConfig>();
 adminApi.use("*", async (c, next) => {
   await requireAdminAccess(c);
   await next();
+});
+
+adminApi.get('/participants/:participantId/project-draft', async c => {
+  const db = getRequiredDb(c);
+  const participant = await db.prepare('SELECT status FROM participants WHERE id=?').bind(c.req.param('participantId')).first<{status:string}>();
+  if (!participant || !['approved','completed'].includes(participant.status)) return jsonError(c,403,'submission_ineligible','参与资格通过后才有作品工作区。');
+  const draft = await getPortalProjectDraftDetail(db,c.req.param('participantId'));
+  return draft ? c.json({ draftId: draft.id }) : jsonError(c,404,'not_found','未找到作品。');
+});
+adminApi.get('/project-drafts/:draftId/submissions', async c => {
+  const db = getRequiredDb(c);
+  if (!await db.prepare('SELECT id FROM project_drafts WHERE id=?').bind(c.req.param('draftId')).first()) return jsonError(c,404,'not_found','未找到作品。');
+  c.header('Cache-Control','private, no-store');
+  return c.json(await getWorkSubmissionWorkspace(db,c.req.param('draftId')));
+});
+adminApi.get('/project-drafts/:draftId/submissions/:submissionId', async c => {
+  const detail = await getWorkSubmissionDetail(getRequiredDb(c),c.req.param('draftId'),c.req.param('submissionId'));
+  c.header('Cache-Control','private, no-store');
+  return detail ? c.json(detail) : jsonError(c,404,'submission_missing','未找到作品版本。');
+});
+adminApi.post('/project-drafts/:draftId/submissions/:submissionId/reviews', async c => {
+  if (c.req.header('Origin') && c.req.header('Origin') !== new URL(c.req.url).origin) return jsonError(c,403,'invalid_origin','请求来源不正确。');
+  const parsed = createWorkSubmissionReviewSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return jsonError(c,422,'invalid_review',parsed.error.issues[0].message);
+  const result = await createWorkSubmissionReview(getRequiredDb(c),c.req.param('draftId'),c.req.param('submissionId'),parsed.data,getAdminIdentity(c));
+  c.header('Cache-Control','private, no-store');
+  return result.ok ? c.json(result) : jsonError(c,result.status,result.code,result.message);
 });
 
 adminApi.get('/session', c => c.json({ email: getAdminIdentity(c), role: c.get('adminRole') }));
@@ -361,33 +389,7 @@ adminApi.get("/project-drafts/:draftId", async (c) => {
   return c.json(response);
 });
 
-adminApi.patch("/project-drafts/:draftId", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const parsed = updateProjectDraftInputSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return jsonError(c, 422, "invalid_request", "资料审核更新参数不正确。", parsed.error.flatten());
-  }
-
-  const result = await updateAdminProjectDraftReview(
-    getRequiredDb(c),
-    c.req.param("draftId"),
-    parsed.data,
-    getAdminIdentity(c),
-  );
-
-  if (!result.ok) {
-    return jsonError(c, result.status, result.code, result.message);
-  }
-
-  const response: AdminProjectDraftMutationResponse = {
-    ok: true,
-    message: result.message,
-    draft: result.draft,
-  };
-
-  return c.json(response);
-});
+adminApi.patch('/project-drafts/:draftId', c => jsonError(c,410,'legacy_review_retired','请在具体作品版本下保存审稿意见与结论。'));
 
 for (const action of ["publish", "unpublish"] as const) {
   adminApi.post(`/project-drafts/:draftId/${action}`, async (c) => {
@@ -419,6 +421,7 @@ adminApi.patch("/event-windows/:key", async (c) => {
     return jsonError(c, 422, "invalid_request", "开放窗口更新参数不正确。", parsed.error.flatten());
   }
 
+  if (parsedKey.data === 'work_upload_open' && parsed.data.closesAt) return jsonError(c,422,'submission_cutoff_disabled','作品投稿暂不设置结束时间。');
   const item = await updateEventWindow(getRequiredDb(c), parsedKey.data, parsed.data);
 
   if (!item) {

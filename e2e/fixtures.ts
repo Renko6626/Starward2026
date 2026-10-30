@@ -45,6 +45,8 @@ export const test = base.extend<{
     expect(mailboxReset.ok).toBe(true);
     await seed(`DELETE FROM work_file_parts;
       DELETE FROM work_files;
+      DELETE FROM work_submission_reviews;
+      DELETE FROM work_submissions;
       UPDATE event_windows SET is_enabled = 0, opens_at = NULL, closes_at = NULL WHERE key = 'work_upload_open';
       DELETE FROM segment_swap_requests;
       DELETE FROM collaboration_guards;

@@ -1,10 +1,9 @@
 import { test, expect, openPortal } from "./fixtures";
 
-// The preview/review editors are temporarily closed. Their retained backend
-// save/submit rules remain covered in worker/data/project-drafts.test.ts.
-test("已通过作者暂不显示作品资料，旧入口返回工作台", async ({ approvedPage }) => {
+// Formal submission and version review are covered by the Worker route tests.
+test("已通过作者在工作台看到作品主面板，旧入口返回工作台", async ({ approvedPage }) => {
   await openPortal(approvedPage);
-  await expect(approvedPage.getByRole("region", { name: "作品资料" })).toHaveCount(0);
+  await expect(approvedPage.getByRole("region", { name: "作品提交与审核" })).toBeVisible();
   await expect(approvedPage.getByRole("link", { name: "填写作品资料", exact: true })).toHaveCount(0);
   await expect(approvedPage.getByRole("navigation", { name: "档案目录" })).toContainText("基本信息");
   await expect(approvedPage.getByRole("navigation", { name: "档案目录" })).toContainText("创作意向");

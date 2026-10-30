@@ -52,6 +52,10 @@ export function buildPortalEventLabel(input: BuildPortalEventLabelInput) {
       return `主催为你分配了时间段 ${formatSegment(payload.segmentCode, payload.segmentName)}。`;
     case "segment_admin_released":
       return `主催释放了你当前的时间段 ${formatSegment(payload.segmentCode, payload.segmentName)}。`;
+    case "work_submission_created":
+      return "已提交完整作品新版本。";
+    case "work_submission_reviewed":
+      return "主催已更新作品审稿意见，请在作品提交与审核区域查看。";
     case "preview_saved":
       return "已保存作品预告。";
     case "preview_submitted":

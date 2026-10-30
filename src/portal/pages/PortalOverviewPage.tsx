@@ -1,6 +1,6 @@
 import { ArchiveChapter } from "../components/ArchiveChapter";
-import type { WorkFile, WorkFilesResponse } from "../../shared/work-files";
-import { WorkFilesSection } from "../components/WorkFilesSection";
+import type { WorkSubmissionWorkspace } from "../../shared/work-submissions";
+import { WorkSubmissionSection } from "../components/WorkSubmissionSection";
 import { ArrowUpRight } from "lucide-react";
 import "../archive.css";
 import { PortalAccount } from "../../app/layouts/WorkspaceLayout";
@@ -9,7 +9,6 @@ import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Notice, PageHeading, ReadError } from "../../app/components/ui";
 import { ActivityIdentity } from "../../app/components/ActivityIdentity";
-import { MissionCountdown } from "../../app/components/MissionCountdown";
 import { ApiError, requestJson } from "../../app/lib/api";
 import type { CollaborationResponse } from "../../shared/collaboration";
 import { type PortalApplicationResponse, type PortalDashboardResponse } from "../../shared/portal";
@@ -21,7 +20,7 @@ import { SwapRequests } from "../components/SwapRequests";
 import { authClient } from "../lib/auth-client";
 import { PortalHistoryPage } from "./PortalHistoryPage";
 
-type WorkspaceState = { dashboard: PortalDashboardResponse; application: PortalApplicationResponse; collaboration: CollaborationResponse; workFiles: WorkFilesResponse | null; workFilesError: string | null };
+type WorkspaceState = { dashboard: PortalDashboardResponse; application: PortalApplicationResponse; collaboration: CollaborationResponse; workFiles: WorkSubmissionWorkspace | null; workFilesError: string | null };
 export function PortalOverviewPage() {
   const navigate = useNavigate();
   const { segment } = getRouteApi("/portal/").useSearch();
@@ -59,10 +58,10 @@ export function PortalOverviewPage() {
       requestJson<PortalApplicationResponse>("/api/portal/application"),
       requestJson<CollaborationResponse>("/api/portal/collaboration"),
     ]);
-    let workFiles: WorkFilesResponse | null = null;
+    let workFiles: WorkSubmissionWorkspace | null = null;
     let workFilesError: string | null = null;
     if (dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed") {
-      try { workFiles = await requestJson<WorkFilesResponse>("/api/portal/project/files"); }
+      try { workFiles = await requestJson<WorkSubmissionWorkspace>("/api/portal/project/submissions"); }
       catch (caught) { workFilesError = caught instanceof Error ? caught.message : "无法读取作品文件。"; }
     }
     if (sequence !== refreshSequence.current) return;
@@ -93,10 +92,6 @@ export function PortalOverviewPage() {
   }
   if (!state || state.dashboard.user.id !== session.data?.user.id) return <div className="page-content creator-workspace author-archive"><PageHeading title="作者页面" meta={<ActivityIdentity />}>{session.data ? <PortalAccount /> : null}</PageHeading>{error ? <ReadError message={error} /> : <p>正在读取报名和作品信息。</p>}</div>;
   const { dashboard, application, collaboration, workFiles, workFilesError } = state;
-  const showWorkFiles = Boolean(workFilesError || workFiles && (workFiles.window.isEnabled || workFiles.files.length));
-  function updateWorkFiles(update: (files: WorkFile[]) => WorkFile[]) {
-    setState(current => current?.workFiles ? { ...current, workFiles: { ...current.workFiles, files: update(current.workFiles.files) } } : current);
-  }
   const approved = dashboard.participant?.status === "approved" || dashboard.participant?.status === "completed";
   const current = collaboration.segments.find(segment => segment.participantId === collaboration.participantId);
   const registration = application.application;
@@ -114,8 +109,8 @@ export function PortalOverviewPage() {
     finally { setRefreshing(false); }
   }
   return <div className="page-content creator-workspace author-archive">
-    {dashboard.participant?.status === "approved" ? <MissionCountdown target="submission" /> : null}
     <PageHeading title={firstRegistration ? "开始报名" : "作者档案"} meta={<ActivityIdentity />}><PortalAccount />{!firstRegistration ? <div className="archive-control"><span className="archive-control-label" aria-hidden="true">STATUS / SYNC</span><Button appearance="industrial" variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshStatus()}>{refreshing ? "刷新中…" : "刷新状态"}</Button></div> : null}</PageHeading>
+    {approved ? <WorkSubmissionSection key={dashboard.user.id} workspace={workFiles} loadError={workFilesError} onRefresh={refresh} initialSummary={application.application?.introText ?? ""} /> : null}
     {firstRegistration ? <section className="registration-onboarding" aria-label="报名说明">
       <p>填写基本信息和创作意向，提交后等待审核。发布时间可不选，由主催安排。</p>
       <ol aria-label="报名步骤"><li>基本信息</li><li>创作意向</li><li>提交报名</li></ol>
@@ -123,7 +118,7 @@ export function PortalOverviewPage() {
       onWithdraw={() => setConfirmWithdraw(true)} withdrawing={withdrawing}
       withdrawalConfirmation={confirmWithdraw ? <Notice tone="warning"><p>撤回后将释放预留的发布时间。再次报名需重新提交审核。确认撤回？</p><div className="workspace-actions"><Button appearance="industrial" variant="danger" disabled={withdrawing} onClick={() => void withdraw()}>{withdrawing ? "撤回中…" : "确认撤回"}</Button><Button appearance="industrial" variant="secondary" disabled={withdrawing} onClick={() => setConfirmWithdraw(false)}>保留报名</Button></div></Notice> : null}
     />}
-    {!firstRegistration ? <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}{approved && showWorkFiles ? <a href="#work-files"><span>04</span>作品文件</a> : null}</nav> : null}
+    {!firstRegistration ? <nav className="archive-index" aria-label="档案目录"><span>目录</span><a href="#profile"><span>01</span>基本信息</a><a href="#plan"><span>02</span>创作意向</a>{approved ? <a href="#relay"><span>03</span>接力安排</a> : null}{approved ? <a href="#work-submission">作品提交与审核</a> : null}</nav> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}{error ? <Notice tone="error">{error}</Notice> : null}
     {hasFeedback ? <section className="compact-feedback" id="tasks" aria-labelledby="portal-feedback-title">
       <h2 className="creator-card-title" id="portal-feedback-title">待办与反馈</h2>
@@ -135,14 +130,12 @@ export function PortalOverviewPage() {
       {collaboration.requests.length ? <SwapRequests collaboration={collaboration} onSaved={refresh} /> : null}
     </section> : null}
     <RegistrationSection key={application.user.id} compact application={application} collaboration={collaboration} onSaved={registrationSaved} />
-    {/* 作品预告与审查说明暂时关闭，编辑器保留在 PortalProjectPage 中供后续恢复。 */}
     {approved ? <ArchiveChapter id="relay" number="03" title="接力安排" defaultOpen state={current ? `${current.code} / ${current.status === "confirmed" ? "已确认" : "已预留"}` : "由主催安排"}>
       <p>约定发布时间：{current ? `${current.code} ${formatScheduledTime(current.scheduledAt)}` : "由主催安排"}</p>
       {current ? <ScheduleSection collaboration={collaboration} selectedSegmentId={current.id} revision={revision} onSaved={refresh} /> : null}
       <NeighborSlots revision={revision} collaboration={collaboration} onSaved={refresh} />
       <Link className="button button--primary button--industrial button--accent relay-schedule-action" to="/works" search={{ q: "", type: "all", view: "gallery" }}>调整或申请换期 <ArrowUpRight size={18} aria-hidden="true" /></Link>
     </ArchiveChapter> : null}
-    {approved && showWorkFiles ? <WorkFilesSection data={workFiles} loadError={workFilesError} onFilesChange={updateWorkFiles} /> : null}
     {!firstRegistration ? <details id="history" className="portal-operation-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}>
       <summary>查看操作记录</summary>
       {historyOpen ? dashboard.participant ? <PortalHistoryPage key={dashboard.user.id} embedded revision={revision} /> : <p className="workspace-empty">提交报名后，可在这里查看报名及后续操作记录。</p> : null}

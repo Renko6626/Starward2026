@@ -63,9 +63,9 @@ export type PublicWorkDetailResponse = {
   next: PublicWork | null;
 };
 
-export function getWorkPublicationIssues(work: WorkPresentation & { previewStatus: string; reviewStatus: string }) {
+export function getWorkPublicationIssues(work: WorkPresentation & { previewStatus: string; reviewStatus: string }, contentReviewStatus?: string) {
   const issues: string[] = [];
-  if (work.previewStatus !== "approved" || work.reviewStatus !== "approved") issues.push("预告与审查均需通过审核");
+  if (contentReviewStatus !== "approved") issues.push("完整作品内容需通过审核");
   if (!work.previewTitle?.trim()) issues.push("填写作品标题");
   if (!work.previewSummary?.trim()) issues.push("填写作品简介");
   if (!work.publicAuthorName?.trim()) issues.push("完善个人档案署名");

@@ -261,3 +261,9 @@ See [Google's privacy policy verification guidance](https://support.google.com/c
 - `.env.production` follows Vite's build mode, not the Wrangler environment. A staging production-mode build must override `VITE_TURNSTILE_SITE_KEY` with a widget key valid for its staging hostname if Turnstile is enabled there.
 - Resend sending uses the verified `resend._domainkey` TXT record and DNS-only `send` / `rsend` CNAME records. Receiving remains disabled.
 - Local credential files (`*.pem`, `cloudflare.env`) and `.cloudflare-deploy/` are ignored by Git.
+
+## Versioned submission review rollout (2026-10-31)
+
+Include migration `0025_work_submissions.sql`. It preserves existing objects and published works, adds submission/review records, and clears only the work upload window closing time. Keep the existing private `WORK_FILES` R2 binding. The admin window now controls manual enablement and an optional opening time, without a cutoff; do not restore an automatic closing time from old instructions above.
+
+Authors use the prominent submission/review panel in `/portal/`. Uploads remain pending until the author submits a complete version. Submitted files cannot be deleted through the author interface. Old preview/review writes return 410. Admin reviews use version-specific endpoints and their text is immediately visible to that author. Existing old file uploads and feedback are retained without inventing a historical content approval. A production release, migrations and real R2 upload acceptance must be recorded separately; local tests and screenshots do not establish those production results.

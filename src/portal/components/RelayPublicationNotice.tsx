@@ -70,7 +70,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
       : release.phase === "today" ? <p>请按约定时刻发布作品，再于今天填写公开链接，点击“确认已发布”。</p>
       : release.phase === "overdue" ? <p>已错过当天确认，请联系主催协调。</p>
       : release.phase === "unconfigured" ? <p>请联系主催安排发布时间。</p>
-      : <p>按截止时间完成并提交作品。发布当天再填写公开链接并确认。</p>}
+      : <p>按接力排期尽早完成并提交作品。发布当天再填写公开链接并确认。</p>}
     {release.canEditLink ? <form className="relay-publication-form" onSubmit={event => void save(event)}>
       <Field label="作品链接">
         <input className="field-input" type="url" required maxLength={2048} value={workUrl} disabled={busy}
@@ -80,7 +80,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
     </form> : null}
     {release.confirmedAt ? draft.publishedAt
       ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>
-      : <p className="field-hint">已确认发布。作品预告和审查说明通过审核、公开资料齐全后，会在站内展示；如主催已撤下作品，请联系主催。</p> : null}
+      : <p className="field-hint">已确认发布。完整作品内容通过审核、公开资料齐全后，会在站内展示；如主催已撤下作品，请联系主催。</p> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error ? <Notice tone="error">{error}</Notice> : null}
   </section>;

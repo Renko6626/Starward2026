@@ -1,3 +1,4 @@
+import { getWorkReviewSummary } from './work-submissions';
 import { getWorkPublicationIssues, type PublicWork, type PublicScheduleEntry, type PublicWorkDetailResponse } from "../../src/shared/works";
 import type { UpdateAdminProjectDraftResult } from "./project-drafts";
 import { getAdminProjectDraftDetail } from "./project-drafts";
@@ -45,7 +46,7 @@ export async function setWorkPublication(
   if (publish) {
     const window = getWindowOrFallback(await listEventWindows(db), "public_release_open");
     if (!window.isOpen) return { ok: false, status: 409, code: "release_closed", message: "公开发布窗口尚未开放或已结束。" };
-    const issues = getWorkPublicationIssues(existing);
+    const issues = getWorkPublicationIssues(existing, (await getWorkReviewSummary(db,id)).status);
     if (issues.length) return { ok: false, status: 409, code: "work_incomplete", message: issues.join("；") + "。" };
   }
   const now = nowIso();

@@ -10,11 +10,12 @@ export type WorkFileRow = {
   content_type: string;
   created_at: string;
   completed_at: string | null;
+  submission_id: string | null;
 };
 
-export async function listWorkFiles(db: D1Database, draftId: string): Promise<WorkFile[]> {
+export async function listWorkFiles(db: D1Database, draftId: string, pendingOnly = false): Promise<WorkFile[]> {
   const { results } = await db.prepare(`SELECT id, filename, size, content_type AS contentType, created_at AS createdAt
-    FROM work_files WHERE draft_id = ? AND completed_at IS NOT NULL ORDER BY created_at, id`)
+    FROM work_files WHERE draft_id = ? AND completed_at IS NOT NULL ${pendingOnly ? "AND submission_id IS NULL" : ""} ORDER BY created_at, id`)
     .bind(draftId).all<WorkFile>();
   return results;
 }

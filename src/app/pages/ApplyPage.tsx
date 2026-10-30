@@ -65,7 +65,7 @@ export function ApplyPage() {
           <div className="participation-section-heading"><h2 id="participation-next-title">后续事项</h2></div>
           <dl className="participation-followup">
             <div><dt>安心创作</dt><dd>报名通过后，参与资格正式确认，未安排的发布时间由主催后续分配。继续创作，请尽量提前完成，避免当DDL战神。</dd></div>
-            <div><dt>完成并提交</dt><dd><strong>11 月 11 日 23:00 前（北京时间）</strong>完成作品、补齐资料并提交。作品内容提交方式日后开放。</dd></div>
+            <div><dt>完成并提交</dt><dd>完成后在作者工作台提交完整作品和资料。暂不设硬性截止，请按接力排期尽早交稿。</dd></div>
             <div><dt>发布和确认</dt><dd>按约定时刻在B站平台发布，发布成功后回作者页面填写作品链接，并点击“确认已发布”（我们会帮忙进行确认，有问题会通知，请尽量保持联系畅通）。</dd></div>
           </dl>
         </section>

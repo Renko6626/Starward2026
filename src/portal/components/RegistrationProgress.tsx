@@ -62,7 +62,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
       <div className="registration-progress-time"><h3>发布时间（北京时间）</h3><p>{time ? formatScheduledTime(time.scheduledAt) : "由主催安排"}</p>{time ? <span>{timeStatus}</span> : null}</div>
     </div>
     <div className="registration-progress-actions">
-      {approved && uploadWindow?.isOpen ? <a className="button button--primary" href="#work-files">上传作品</a> : null}
+      {approved && uploadWindow?.isOpen ? <a className="button button--primary" href="#work-submission">上传作品</a> : null}
       {completed ? <a className="button button--secondary" href="#history">查看操作记录</a>
         : approved ? <Link className="button button--secondary" to="/portal" hash="relay">查看接力安排</Link>
         : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? "查看或修改报名" : "查看报名资料"}</a>{!frozen ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>撤回报名</button> : null}</>

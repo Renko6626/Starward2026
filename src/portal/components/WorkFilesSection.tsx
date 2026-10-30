@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { requestJson } from "../../app/lib/api";
 import { Button, Notice } from "../../app/components/ui";
-import { ArchiveChapter } from "./ArchiveChapter";
 import { createWorkFileSchema, formatWorkFileSize, type WorkFile, type WorkFilesResponse, type WorkFileUpload } from "../../shared/work-files";
 
 const endpoint = "/api/portal/project/files";
 
-export function WorkFilesSection({ data, loadError, onFilesChange }: {
+export function WorkFilesSection({ data, loadError, onFilesChange, onBusyChange, onUploadErrorChange, disabled = false }: {
+  onBusyChange?: (busy: boolean) => void;
+  onUploadErrorChange?: (failed: boolean) => void;
+  disabled?: boolean;
   data: WorkFilesResponse | null;
   loadError: string | null;
   onFilesChange: (update: (files: WorkFile[]) => WorkFile[]) => void;
@@ -24,11 +26,11 @@ export function WorkFilesSection({ data, loadError, onFilesChange }: {
     setError(null); setMessage(null);
     for (const file of files) {
       const parsed = createWorkFileSchema.safeParse({ filename: file.name, size: file.size, contentType: file.type });
-      if (!parsed.success) { setError(`${file.name}：${parsed.error.issues[0]!.message}`); return; }
+      if (!parsed.success) { onUploadErrorChange?.(true); setError(`${file.name}：${parsed.error.issues[0]!.message}`); return; }
     }
     const abort = new AbortController();
     controller.current = abort;
-    setBusy(true);
+    setBusy(true); onBusyChange?.(true);
     let active: string | null = null;
     try {
       for (const file of files) {
@@ -50,8 +52,10 @@ export function WorkFilesSection({ data, loadError, onFilesChange }: {
         active = null;
         onFilesChange(() => completed.files);
       }
-      setMessage("作品文件已上传。");
+      onUploadErrorChange?.(false);
+      setMessage("文件已上传，点击下方“提交完整作品”或“提交新版本”后才算正式交稿。");
     } catch (error) {
+      onUploadErrorChange?.(true);
       if (abort.signal.aborted) setMessage("已取消当前上传。");
       else setError(error instanceof Error ? error.message : "文件上传失败。");
       if (active) {
@@ -59,40 +63,40 @@ export function WorkFilesSection({ data, loadError, onFilesChange }: {
         catch { /* Incomplete files never appear in the author's submitted file list. */ }
       }
     } finally {
-      setBusy(false); setProgress(null); controller.current = null;
+      setBusy(false); onBusyChange?.(false); setProgress(null); controller.current = null;
       if (input.current) input.current.value = "";
     }
   }
 
   async function remove(file: WorkFile) {
-    setBusy(true); setError(null); setMessage(null);
+    setBusy(true); onBusyChange?.(true); setError(null); setMessage(null);
     try {
       await requestJson(`${endpoint}/${file.id}`, { method: "DELETE" });
       onFilesChange(files => files.filter(item => item.id !== file.id));
     } catch (error) { setError(error instanceof Error ? error.message : "删除失败。"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   }
 
-  return <ArchiveChapter id="work-files" number="04" title="作品文件" state={data?.files.length ? `已上传 ${data.files.length} 个文件` : undefined} defaultOpen><section className="work-files" aria-label="作品文件">
+  return <section className="work-files" aria-label="作品文件">
     {data?.window.isOpen ? <>
-      <Button className="work-file-upload" appearance="industrial" disabled={busy} aria-describedby="work-file-hint" onClick={() => input.current?.click()}>上传作品文件</Button>
+      <Button className="work-file-upload" appearance="industrial" disabled={busy || disabled} aria-describedby="work-file-hint" onClick={() => input.current?.click()}>上传作品文件</Button>
       <p id="work-file-hint" className="field-hint">支持多文件，单个文件不超过 500 MB。文件仅作者本人和主催可下载。</p>
-      <input ref={input} id="work-file-input" hidden aria-label="选择作品文件" type="file" multiple disabled={busy}
+      <input ref={input} id="work-file-input" hidden aria-label="选择作品文件" type="file" multiple disabled={busy || disabled}
         aria-describedby="work-file-hint" onChange={event => void upload(Array.from(event.target.files ?? []))} />
-    </> : data ? <p>{data.window.state === "ended" ? "作品文件上传已结束。" : "作品文件上传暂未开放。"}</p> : null}
+    </> : data ? <p>{data.window.state === "ended" ? "作品投稿暂未开放。" : "作品投稿暂未开放。"}</p> : null}
     {progress ? <div className="work-file-progress" aria-live="polite">
-      <p>{progress.filename} · {formatWorkFileSize(progress.sent)} / {formatWorkFileSize(progress.total)}</p>
+      <p>{progress.filename}，{formatWorkFileSize(progress.sent)} / {formatWorkFileSize(progress.total)}</p>
       <progress aria-label="文件上传进度" value={progress.sent} max={progress.total} />
       <Button appearance="industrial" variant="secondary" onClick={() => controller.current?.abort()}>取消上传</Button>
     </div> : null}
     {data?.files.length ? <ul className="work-file-list" aria-label="已上传文件">{data.files.map(file => <li key={file.id}>
       <a href={`${endpoint}/${file.id}/download`} download={file.filename}>{file.filename}</a>
       <div className="work-file-meta"><span>{formatWorkFileSize(file.size)}</span>
-      {data.window.isOpen ? <Button appearance="industrial" variant="secondary" disabled={busy} aria-label={`删除 ${file.filename}`} onClick={() => void remove(file)}>删除</Button> : null}</div>
+      {data.window.isOpen ? <Button appearance="industrial" variant="secondary" disabled={busy || disabled} aria-label={`删除 ${file.filename}`} onClick={() => void remove(file)}>删除</Button> : null}</div>
     </li>)}</ul> : data ? <p className="workspace-empty">尚未上传作品文件。</p> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error || loadError ? <Notice tone="error">{error || loadError}</Notice> : null}
-  </section></ArchiveChapter>;
+  </section>;
 }
 
 function uploadPart(url: string, body: Blob, signal: AbortSignal, onProgress: (sent: number) => void) {

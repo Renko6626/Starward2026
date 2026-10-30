@@ -5,6 +5,7 @@ import { test, expect, openPortal, seed, rows } from "./fixtures";
 test("作者确认发布后公开作品可访问，修改链接保留首次确认时间", async ({ approvedPage, page }) => {
   await seed(`UPDATE schedule_segments SET scheduled_at = '${new Date().toISOString()}' WHERE id = 'seg_seed_102';
     UPDATE project_drafts SET preview_status = 'approved', review_status = 'approved', work_type = 'text' WHERE id = 'draft_seed_active';`);
+  await seed("INSERT INTO work_submissions (id,draft_id,version_number,title,work_type,summary,submitted_at) VALUES ('version_e2e','draft_seed_active',1,'结界观测预告','text','简介','2026-10-31'); INSERT INTO work_submission_reviews (submission_id,decision,reviewed_by,created_at) VALUES ('version_e2e','approved','host','2026-10-31')");
   await openPortal(approvedPage);
   const before = await page.request.get("/api/works/draft_seed_active");
   expect(before.status()).toBe(404);

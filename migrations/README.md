@@ -1,3 +1,7 @@
+## 完整作品投稿与审核（0025）
+
+`0025_work_submissions.sql` 新增完整投稿版本和审稿记录，将私有文件关联到具体版本。既有文件保留为暂存材料，不自动认定为正式投稿；旧反馈、已公开作品和对象 key 保留。迁移清空作品投稿窗口的结束时间，保留手动启用和开始时间。本迁移不执行 R2 对象复制或删除。
+
 # Migrations
 
 `0024_work_files.sql` adds private work-file metadata and multipart part receipts.

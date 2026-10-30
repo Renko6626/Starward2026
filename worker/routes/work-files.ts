@@ -42,7 +42,7 @@ workFilesApi.use("*", async (c, next) => {
 
 workFilesApi.get("/", async c => {
   const { db, draftId, window } = await access(c);
-  return c.json({ files: await listWorkFiles(db, draftId), window });
+  return c.json({ files: await listWorkFiles(db, draftId, true), window });
 });
 
 workFilesApi.post("/", async c => {
@@ -105,7 +105,7 @@ workFilesApi.post("/:id/complete", async c => {
       db.prepare("DELETE FROM work_file_parts WHERE file_id = ?").bind(file.id),
     ]);
   }
-  return c.json({ ok: true, files: await listWorkFiles(db, draftId) });
+  return c.json({ ok: true, files: await listWorkFiles(db, draftId, true) });
 });
 
 workFilesApi.get("/:id/download", async c => {
@@ -119,6 +119,7 @@ workFilesApi.delete("/:id", async c => {
   const { db, draftId, window } = await access(c);
   const file = await getWorkFile(db, c.req.param("id"), draftId);
   if (!file) return jsonError(c, 404, "file_missing", "未找到文件。");
+  if (file.submission_id) return jsonError(c, 409, "submitted_file_locked", "已提交版本的文件需要保留，请上传完整新版本。归档文件不能删除。");
   // Incomplete uploads can still be cancelled after the window closes.
   if (file.completed_at && !window.isOpen) return jsonError(c, 403, "upload_closed", "作品文件上传暂未开放。");
   const storage = bucket(c);

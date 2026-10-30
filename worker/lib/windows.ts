@@ -23,7 +23,7 @@ export function mapEventWindowRow(row: EventWindowRow): EventWindowSummary | nul
   }
 
   const key = parsedKey.data;
-  const state = computeWindowState(row.is_enabled, row.opens_at, row.closes_at);
+  const state = computeWindowState(row.is_enabled, row.opens_at, key === "work_upload_open" ? null : row.closes_at);
 
   return {
     key,
@@ -32,7 +32,7 @@ export function mapEventWindowRow(row: EventWindowRow): EventWindowSummary | nul
     isOpen: state === "open",
     state,
     opensAt: row.opens_at,
-    closesAt: row.closes_at,
+    closesAt: key === "work_upload_open" ? null : row.closes_at,
     updatedAt: row.updated_at,
   };
 }

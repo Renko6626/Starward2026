@@ -1,3 +1,5 @@
+import { SqliteD1Fixture } from '../test/sqlite-d1';
+import { buildLocalSeedSql } from '../../scripts/lib/local-dev-bootstrap.mjs';
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { listProjectDrafts, updateActiveScheduleSegment, updateParticipant } from "./admin";
@@ -320,26 +322,19 @@ describe("updateParticipant", () => {
 });
 
 describe("listProjectDrafts", () => {
-  it("summarizes completed work files and ignores unfinished uploads", async () => {
-    const db = new SqliteD1Database();
-    seedParticipant(db, "part_files");
-    db.sqlite.prepare(`INSERT INTO project_drafts
-      (id, participant_id, segment_id, preview_status, review_status, created_at, updated_at)
-      VALUES ('draft_files', 'part_files', NULL, 'approved', 'approved', ?, ?)`)
-      .run(TS, TS);
-    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, ?)")
-      .run("file_old", "draft_files", "2026-04-10T10:00:00.000Z");
-    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, ?)")
-      .run("file_new", "draft_files", "2026-04-11T10:00:00.000Z");
-    db.sqlite.prepare("INSERT INTO work_files (id, draft_id, completed_at) VALUES (?, ?, NULL)")
-      .run("file_pending", "draft_files");
-
-    const item = (await listProjectDrafts(db as unknown as D1Database))[0];
-
-    expect(item).toMatchObject({
-      id: "draft_files",
-      workFileCount: 2,
-      latestWorkFileAt: "2026-04-11T10:00:00.000Z",
-    });
+  it("summarizes completed files, excludes incomplete uploads, and includes authors with no draft", async () => {
+    const f = new SqliteD1Fixture();
+    try {
+      f.sqlite.exec(buildLocalSeedSql());
+      f.sqlite.prepare(`INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at)
+        VALUES ('file_old','draft_seed_active','key1','u1','one.txt',3,'text/plain',?,?),
+        ('file_new','draft_seed_active','key2','u2','two.txt',3,'text/plain',?,?),
+        ('file_pending','draft_seed_active','key3','u3','three.txt',3,'text/plain',?,NULL)`)
+        .run(TS,'2026-04-10T10:00:00.000Z',TS,'2026-04-11T10:00:00.000Z',TS);
+      f.sqlite.prepare("INSERT INTO participants (id,status,created_at,updated_at) VALUES ('without-draft','approved',?,?)").run(TS,TS);
+      const items = await listProjectDrafts(f.db);
+      expect(items.find(item => item.id === 'draft_seed_active')).toMatchObject({workFileCount:2,latestWorkFileAt:'2026-04-11T10:00:00.000Z',review:{status:'not_submitted'}});
+      expect(items.find(item => item.participantId === 'without-draft')).toMatchObject({id:null,review:{status:'not_submitted'}});
+    } finally { f.sqlite.close(); }
   });
 });

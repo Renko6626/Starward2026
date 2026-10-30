@@ -33,7 +33,7 @@ test("新作者注册报名，审核通过后上传、下载并删除作品文�
   await page.getByLabel("选择作品文件", { exact: true }).setInputFiles({
     name: "报名作品.txt", mimeType: "text/plain", buffer: content,
   });
-  await expect(page.getByText("作品文件已上传。", { exact: true })).toBeVisible();
+  await expect(page.getByText("文件已上传，点击下方“提交完整作品”或“提交新版本”后才算正式交稿。", { exact: true })).toBeVisible();
   const files = await rows(`SELECT work_files.id, work_files.draft_id, work_files.filename,
     work_files.size, project_drafts.segment_id, "user".email
     FROM work_files JOIN project_drafts ON project_drafts.id = work_files.draft_id
@@ -53,10 +53,9 @@ test("新作者注册报名，审核通过后上传、下载并删除作品文�
   expect(await readFile((await download.path())!)).toEqual(content);
 
   await adminPage.goto(`/portal/admin/project-drafts/${file.draft_id}`);
-  const adminDownloading = adminPage.waitForEvent("download");
-  await adminPage.getByRole("region", { name: "作品文件" }).getByRole("link", { name: "报名作品.txt", exact: true }).click();
-  const adminDownload = await adminDownloading;
-  expect(await readFile((await adminDownload.path())!)).toEqual(content);
+  // Pending uploads are downloadable to the host, but are not a submitted version.
+  expect(await (await adminPage.request.get(`/api/admin/project-drafts/${file.draft_id}/files/${file.id}/download`)).body()).toEqual(content);
+  await expect(adminPage.getByText("作者尚未正式交稿。上传暂存文件不计为提交。")).toBeVisible();
 
   await page.getByRole("button", { name: "删除 报名作品.txt", exact: true }).click();
   await expect(page.getByRole("link", { name: "报名作品.txt", exact: true })).toHaveCount(0);
@@ -71,7 +70,7 @@ test("新作者注册报名，审核通过后上传、下载并删除作品文�
 
 test("作者上传多个作品文件，刷新后可下载，主催能读取文件，关闭入口后保留下载", async ({ approvedPage, pendingPage, adminPage, page }) => {
   await openPortal(approvedPage);
-  await expect(approvedPage.locator("#work-files")).toHaveCount(0);
+  await expect(approvedPage.locator("#work-submission")).toBeVisible();
   await expect(approvedPage.getByRole("region", { name: "报名进度" })).toContainText("作品上传暂未开放。");
   const opened = await adminPage.request.patch("/api/admin/event-windows/work_upload_open", {
     data: { isEnabled: true, opensAt: null, closesAt: null },
@@ -83,8 +82,7 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
   await expect(progress).toContainText("作品上传已开放。");
   await expect(progress).not.toContainText("另行通知");
   await expect(progress.getByRole("link", { name: "上传作品", exact: true })).toBeVisible();
-  await approvedPage.locator("#work-files > summary").click();
-  await approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "04 作品文件" }).click();
+  await approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "作品提交与审核" }).click();
   await expect(approvedPage.getByRole("button", { name: "上传作品文件", exact: true })).toBeVisible();
   const bytes = Buffer.alloc(WORK_FILE_PART_SIZE + 17, 42);
   const choosing = approvedPage.waitForEvent("filechooser");
@@ -93,7 +91,7 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
     { name: "作品视频.mp4", mimeType: "video/mp4", buffer: bytes },
     { name: "小说.txt", mimeType: "text/plain", buffer: Buffer.from("一篇完整的小说。") },
   ]);
-  await expect(approvedPage.getByText("作品文件已上传。", { exact: true })).toBeVisible();
+  await expect(approvedPage.getByText("文件已上传，点击下方“提交完整作品”或“提交新版本”后才算正式交稿。", { exact: true })).toBeVisible();
   await approvedPage.reload();
   await expect(approvedPage.getByRole("link", { name: "作品视频.mp4", exact: true })).toBeVisible();
   const files = await rows("SELECT id, filename, size FROM work_files WHERE completed_at IS NOT NULL ORDER BY filename");
@@ -104,15 +102,15 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
   expect((await page.request.get(path)).status()).toBe(401);
   expect((await pendingPage.request.get(path)).status()).toBe(403);
   await adminPage.goto("/portal/admin/project-drafts/draft_seed_active");
-  await expect(adminPage.getByRole("region", { name: "作品文件" }).getByRole("link", { name: "作品视频.mp4" })).toBeVisible();
+  await expect(adminPage.getByText("作者尚未正式交稿。上传暂存文件不计为提交。")).toBeVisible();
   expect(await (await adminPage.request.get(`/api/admin/project-drafts/draft_seed_active/files/${video.id}/download`)).body()).toEqual(bytes);
   await seed("UPDATE project_drafts SET preview_status = 'approved', review_status = 'approved' WHERE id = 'draft_seed_active'");
   await adminPage.goto("/portal/admin/project-drafts");
-  await expect(adminPage.getByRole("row").filter({ hasText: "结界观测者" })).toHaveCount(0);
-  await adminPage.getByLabel("作品范围").selectOption("has-files");
+  await expect(adminPage.getByRole("row").filter({ hasText: "结界观测者" })).toBeVisible();
+  await adminPage.getByLabel("作品范围").selectOption("not-submitted");
   const fileRow = adminPage.getByRole("row").filter({ hasText: "结界观测者" });
-  await expect(fileRow).toContainText("作品文件 2 个");
-  await expect(fileRow).toContainText("最近上传");
+  await expect(fileRow).toContainText("有暂存文件");
+  await expect(fileRow).toContainText("未提交");
   const novel = files.find(file => file.filename === "小说.txt")!;
   expect((await approvedPage.request.delete(`/api/portal/project/files/${novel.id}`)).ok()).toBe(true);
   await approvedPage.getByRole("button", { name: "刷新状态", exact: true }).click();
@@ -121,7 +119,7 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
   await approvedPage.getByRole("button", { name: "刷新状态", exact: true }).click();
   await expect(progress).toContainText("作品上传暂未开放。");
   await expect(progress.getByRole("link", { name: "上传作品", exact: true })).toHaveCount(0);
-  await expect(approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "04 作品文件" })).toBeVisible();
+  await expect(approvedPage.getByRole("navigation", { name: "档案目录" }).getByRole("link", { name: "作品提交与审核" })).toBeVisible();
   await expect(approvedPage.getByLabel("选择作品文件", { exact: true })).toHaveCount(0);
   await expect(approvedPage.getByRole("link", { name: "作品视频.mp4", exact: true })).toBeVisible();
 });
@@ -129,13 +127,16 @@ test("作者上传多个作品文件，刷新后可下载，主催能读取文�
 test("上传失败后清理未完成任务，可以重新选文件上传", async ({ approvedPage, adminPage }) => {
   await adminPage.request.patch("/api/admin/event-windows/work_upload_open", { data: { isEnabled: true }, headers: { origin: "http://127.0.0.1:21262" } });
   await openPortal(approvedPage);
+  await approvedPage.getByLabel("选择作品文件", { exact: true }).setInputFiles({ name: 'ready.txt', mimeType: 'text/plain', buffer: Buffer.from('已完成的附件') });
+  await expect(approvedPage.getByRole('link', { name: 'ready.txt', exact: true })).toBeVisible();
   await approvedPage.route("**/api/portal/project/files/*/parts/*", route => route.fulfill({
     status: 503, contentType: "application/json", body: JSON.stringify({ error: { message: "测试上传中断" } }),
   }));
   const file = { name: "retry.txt", mimeType: "text/plain", buffer: Buffer.from("作品正文") };
   await approvedPage.getByLabel("选择作品文件", { exact: true }).setInputFiles(file);
   await expect(approvedPage.getByText("测试上传中断", { exact: true })).toBeVisible();
-  await expect.poll(() => rows("SELECT id FROM work_files")).toEqual([]);
+  await expect.poll(() => rows("SELECT filename FROM work_files ORDER BY filename")).toEqual([{ filename: 'ready.txt' }]);
+  await expect(approvedPage.getByRole('button', { name: '提交完整作品', exact: true })).toBeDisabled();
   await approvedPage.unroute("**/api/portal/project/files/*/parts/*");
   await approvedPage.getByLabel("选择作品文件", { exact: true }).setInputFiles(file);
   await expect(approvedPage.getByRole("link", { name: "retry.txt", exact: true })).toBeVisible();

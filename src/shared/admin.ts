@@ -1,3 +1,4 @@
+import type { WorkReviewSummary, WorkSubmissionSummary } from './work-submissions';
 import { z } from "zod";
 import type { ScheduleSegmentKind, WorkPublicationFields } from "./works";
 import {
@@ -173,7 +174,11 @@ export type AdminProjectDraftItem = {
   updatedAt: string;
 };
 
-export type AdminProjectDraftListItem = AdminProjectDraftItem & {
+export type AdminProjectDraftListItem = Omit<AdminProjectDraftItem, "id"> & {
+  id: string | null;
+  participantStatus: ParticipantPortalStatus;
+  review: WorkReviewSummary;
+  latestSubmission: WorkSubmissionSummary | null;
   workFileCount: number;
   latestWorkFileAt: string | null;
 };
