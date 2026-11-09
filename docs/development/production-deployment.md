@@ -281,8 +281,8 @@ Authors use the prominent submission/review panel in `/portal/`. Uploads remain 
 
 ## Showcase release preparation (2026-11-10)
 
-The release candidate is on `feat/showcase`; the next planned release tag is
-`v1.5.0-prod`. Push that new tag only when starting the production release.
+The release was prepared on `feat/showcase` and published as `v1.5.0-prod`;
+the verified release evidence is recorded below.
 The existing tag workflow handles installation, tests, production build,
 the migration preflight, `0026_work_presentations.sql`, deployment and HTTP checks.
 No separate deployment service or browser interaction workflow is added.
@@ -297,3 +297,24 @@ This release does not enable the schedule freeze or publish any new work.
 After deployment the organizer can enter showcase mode from the schedule page,
 and curate and manually publish individual presentations from work review.
 The planned standalone artwork/gallery design remains outside this release.
+
+### Production release evidence (2026-11-10, Asia/Shanghai)
+
+- Released `v1.5.0-prod` from commit `e5efd2d9553e6fc8aea4e5d70d4f99119472a0c7`
+  on `feat/showcase`; the branch has not been merged into `main`.
+- [Deploy production run 42675302304](https://github.com/Renko6626/Starward2026/actions/runs/42675302304)
+  completed successfully. CI passed all 339 application tests, 11 deployment
+  checks, 6 station asset tests and the production build.
+- The production D1 association preflight passed, the recovery bookmark was
+  recorded in the run summary, and `0026_work_presentations.sql` applied
+  successfully to `starward2026-prod`.
+- Worker version `2bab1338-0327-44b1-90d6-f3348fbb7808` serves `https://hifuu.moe`.
+  The workflow's public/API and admin authentication checks passed.
+- Post-release public HTTP reads using curl returned 200 for `/`, healthy JSON
+  from `/api/health`, and 200 from `/api/works` with the new `isFrozen` field.
+  `/api/admin/session` and `/api/admin/schedule/freeze` returned 401 with
+  `Cache-Control: no-store` for anonymous requests.
+- `/api/works` reported `isFrozen: false`, 54 visible schedule slots and zero
+  published works. No production schedule freeze, work publication, authenticated
+  upload, browser interaction or other business write was performed as part of
+  deployment verification.
