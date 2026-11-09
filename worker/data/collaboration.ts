@@ -1,3 +1,4 @@
+import { getScheduleFreeze, requireMutableSchedule } from './schedule-freeze';
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   CollaborationResponse,
@@ -57,6 +58,7 @@ export async function saveWorkspaceApplication(
   authEmail: string | null,
   input: WorkspaceApplicationInput,
 ) {
+  await requireMutableSchedule(db);
   const application = await db
     .prepare(
       "SELECT id, status, updated_at FROM applications WHERE user_id = ? LIMIT 1",
@@ -385,6 +387,7 @@ export async function getCollaboration(
     .prepare(`SELECT ${windowOpen("segment_change_open")} AS isOpen`)
     .bind(now, now)
     .first<{ isOpen: number }>();
+  const {isFrozen}=await getScheduleFreeze(db);
   return {
     participantId: participant?.id ?? "",
     segments: segments.results.map((s) => ({
@@ -408,7 +411,8 @@ export async function getCollaboration(
             : "unavailable",
     })),
     requests: requests.results,
-    canSwap:
+    isFrozen,
+    canSwap: !isFrozen &&
       participant?.status === "approved" &&
       !!open?.isOpen &&
       segments.results.some(
@@ -423,6 +427,7 @@ export async function createSwap(
   segmentId: string,
   message?: string,
 ) {
+  await requireMutableSchedule(db);
   await expirePastCutoffRequests(db);
   const pair = await db
     .prepare(
@@ -502,6 +507,7 @@ export async function respondSwap(
   requestId: string,
   action: "accept" | "reject" | "cancel",
 ) {
+  if (action === 'accept') await requireMutableSchedule(db);
   await expirePastCutoffRequests(db);
   const r = await db
     .prepare("SELECT * FROM segment_swap_requests WHERE id=?")
@@ -633,6 +639,7 @@ function event(
 }
 
 export async function withdrawApplication(db: D1Database, userId: string) {
+  await requireMutableSchedule(db);
   const now = nowIso();
   const op = createPrefixedId("op");
   // Resolve every related row inside the batch, so a participant initialized

@@ -80,7 +80,7 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
     </form> : null}
     {release.confirmedAt ? draft.publishedAt
       ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>
-      : <p className="field-hint">已确认发布。完整作品内容通过审核、公开资料齐全后，会在站内展示；如主催已撤下作品，请联系主催。</p> : null}
+      : <p className="field-hint">已确认发布。站内展示由管理员根据最终版本整理后手动公开。</p> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error ? <Notice tone="error">{error}</Notice> : null}
   </section>;

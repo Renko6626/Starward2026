@@ -65,7 +65,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
       {approved && uploadWindow?.isOpen ? <a className="button button--primary" href="#work-submission">上传作品</a> : null}
       {completed ? <a className="button button--secondary" href="#history">查看操作记录</a>
         : approved ? <Link className="button button--secondary" to="/portal" hash="relay">查看接力安排</Link>
-        : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? "查看或修改报名" : "查看报名资料"}</a>{!frozen ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>撤回报名</button> : null}</>
+        : pending ? <><a className="button button--secondary" href="#plan">{application.editable ? "查看或修改报名" : "查看报名资料"}</a>{!frozen && onWithdraw ? <button className="text-link" type="button" disabled={withdrawing} onClick={onWithdraw}>撤回报名</button> : null}</>
         : application.editable ? <a className="button button--primary" href={withdrawn || rejected ? "#plan" : "#profile"}>{withdrawn || rejected ? "修改资料并重新报名" : "填写报名资料"}</a>
         : <Link className="button button--secondary" to="/apply">查看参与指南</Link>}
     </div>

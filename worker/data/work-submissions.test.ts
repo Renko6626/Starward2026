@@ -73,6 +73,7 @@ describe('complete work versions', () => {
   });
   it('retains a published legacy snapshot on submission and requires withdrawal before a negative decision', async () => {
     fixture.sqlite.exec("UPDATE project_drafts SET preview_status='approved', review_status='approved', published_at='2026-10-20' WHERE id='draft_seed_active'");
+    fixture.sqlite.exec("INSERT INTO work_presentations (segment_id,draft_id,title,summary,published_at,created_at,updated_at) VALUES ('seg_seed_102','draft_seed_active','历史作品','历史简介','2026-10-20','2026-10-20','2026-10-20')");
     const version = await submit('complete');
     expect((await createWorkSubmissionReview(fixture.db, 'draft_seed_active', version.id, { decision: 'rejected', feedback: '需撤下' }, 'host')).ok).toBe(false);
     expect(fixture.sqlite.prepare("SELECT published_at FROM project_drafts WHERE id='draft_seed_active'").get()).toEqual({ published_at: '2026-10-20' });

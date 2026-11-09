@@ -79,3 +79,6 @@ playwright-logs/
 # Isolated Cloudflare deployment snapshot
 .cloudflare-deploy/
 cloudflare.env
+
+# Local implementation ledger
+.superpowers/

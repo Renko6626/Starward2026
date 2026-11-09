@@ -10,7 +10,7 @@ import type {
   UpdatePortalProjectPreviewInput,
   UpdatePortalProjectReviewInput,
 } from "../../src/shared/portal";
-import { confirmPortalProjectRelease, publishConfirmedProjectIfReady } from "./relay-publication";
+import { confirmPortalProjectRelease } from "./relay-publication";
 import type { EventWindowSummary } from "../../src/shared/windows";
 import { resolveAdminProjectDraftReviewUpdate } from "../lib/project-draft-admin";
 import {
@@ -130,7 +130,6 @@ export async function updateAdminProjectDraftReview(
   });
 
   if (!resolved.hasChanges) {
-    await publishConfirmedProjectIfReady(db, draftId);
     return {
       ok: true,
       draft: (await getAdminProjectDraftDetail(db, draftId))!,
@@ -192,7 +191,7 @@ export async function updateAdminProjectDraftReview(
   ]);
 
   if (results[0].meta.changes !== 1) return { ok: false, status: 409, code: "project_changed", message: "作品资料已变化，请刷新后重新审核。" };
-  await publishConfirmedProjectIfReady(db, draftId);
+
   const draft = await getAdminProjectDraftDetail(db, draftId);
 
   if (!draft) {
@@ -272,7 +271,6 @@ export async function updatePortalProjectPreview(
     existing.preview_status !== nextPreviewStatus;
 
   if (!hasChanges) {
-    await publishConfirmedProjectIfReady(db, existing.id);
     return {
       ok: true,
       draft: (await getPortalProjectDraftDetail(db, input.participant.id))!,
@@ -320,7 +318,7 @@ export async function updatePortalProjectPreview(
   ]);
 
   if (results[0].meta.changes !== 1) return projectDraftMutationError(409, "project_changed", "作品资料已变化，请刷新后重试。你的填写内容仍保留在页面上。");
-  await publishConfirmedProjectIfReady(db, existing.id);
+
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
@@ -471,7 +469,6 @@ export async function updatePortalProjectReview(
     existing.review_status !== nextReviewStatus;
 
   if (!hasChanges) {
-    await publishConfirmedProjectIfReady(db, existing.id);
     return {
       ok: true,
       draft: (await getPortalProjectDraftDetail(db, input.participant.id))!,
@@ -515,7 +512,7 @@ export async function updatePortalProjectReview(
   ]);
 
   if (results[0].meta.changes !== 1) return projectDraftMutationError(409, "project_changed", "作品资料已变化，请刷新后重试。你的填写内容仍保留在页面上。");
-  await publishConfirmedProjectIfReady(db, existing.id);
+
   const draft = await getPortalProjectDraftDetail(db, input.participant.id);
 
   if (!draft) {
@@ -861,7 +858,7 @@ const projectDraftSelectSql = `SELECT
   project_drafts.cover_url,
   project_drafts.cover_alt,
   project_drafts.work_url,
-  project_drafts.published_at,
+  (SELECT published_at FROM work_presentations WHERE draft_id=project_drafts.id) AS published_at,
   project_drafts.release_confirmed_at,
   project_drafts.preview_title,
   project_drafts.preview_summary,

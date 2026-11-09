@@ -53,6 +53,7 @@ class SqliteD1Database {
   }
   constructor() {
     this.sqlite.exec(`
+      CREATE TABLE schedule_versions (id TEXT PRIMARY KEY,status TEXT,is_frozen INTEGER DEFAULT 0);
       CREATE TABLE "user" (
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL

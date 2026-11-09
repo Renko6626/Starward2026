@@ -1,3 +1,4 @@
+import { requireMutableSchedule, requireMutableAssignedParticipant } from './schedule-freeze';
 import { summarizeWorkReview, type WorkSubmissionSummary, type WorkReviewDecision } from '../../src/shared/work-submissions';
 import { reorderSchedule } from "../lib/schedule-order";
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
@@ -228,6 +229,7 @@ export async function updateParticipant(
 
   const nextContactHandle = normalizeOptionalText(input.contactHandle);
   const nextStatus = input.status;
+  if (existing.status !== nextStatus) await requireMutableAssignedParticipant(db,participantId);
 
   const hasChanges =
     existing.contact_handle !== nextContactHandle ||
@@ -364,6 +366,7 @@ export async function bootstrapActiveScheduleSegments(
   db: D1Database,
   input: BootstrapSegmentsInput,
 ): Promise<BootstrapActiveScheduleSegmentsResult> {
+  await requireMutableSchedule(db);
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
   if (!scheduleVersionId) {
@@ -437,6 +440,7 @@ export async function bootstrapActiveScheduleSegments(
 }
 
 export async function createActiveScheduleSegment(db: D1Database, input: CreateSegmentInput): Promise<BootstrapActiveScheduleSegmentsResult> {
+  await requireMutableSchedule(db);
   const versionId = await getActiveScheduleVersionId(db);
   if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有生效排期。" };
   const now = nowIso();
@@ -458,6 +462,7 @@ export async function appendActiveScheduleSegments(
   db: D1Database,
   input: AppendSegmentsInput,
 ): Promise<BootstrapActiveScheduleSegmentsResult> {
+  await requireMutableSchedule(db);
   const versionId = await getActiveScheduleVersionId(db);
   if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有可追加坑位的生效排期。" };
   const now = nowIso();
@@ -484,6 +489,7 @@ export async function updateActiveScheduleSegment(
   input: UpdateSegmentInput,
   updatedBy: string,
 ): Promise<UpdateActiveScheduleSegmentResult> {
+  await requireMutableSchedule(db);
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
   if (!scheduleVersionId) {
@@ -849,7 +855,7 @@ export async function updateActiveScheduleSegment(
 }
 
 export async function listProjectDrafts(db: D1Database): Promise<AdminProjectDraftListItem[]> {
-  type Row = ProjectDraftRow & { participant_status: ParticipantPortalStatus;
+  type Row = ProjectDraftRow & { presentation_title:string|null; presentation_published_at:string|null; presentation_content:string|null; participant_status: ParticipantPortalStatus;
     latest_id: string | null; version_number: number | null; title: string | null; work_type: WorkSubmissionSummary['workType'] | null;
     summary: string | null; version_note: string | null; submitted_at: string | null; file_count: number;
     decision_submission_id: string | null; decision_version: number | null; decision: WorkReviewDecision | null };
@@ -862,16 +868,19 @@ export async function listProjectDrafts(db: D1Database): Promise<AdminProjectDra
     (SELECT MAX(f.completed_at) FROM work_files f WHERE f.draft_id=d.id) AS latest_work_file_at,
     s.id AS latest_id,s.version_number,s.title,s.work_type,s.summary,s.version_note,s.submitted_at,
     (SELECT COUNT(*) FROM work_files f WHERE f.submission_id=s.id) AS file_count,
+    w.title AS presentation_title,w.published_at AS presentation_published_at,w.content_json AS presentation_content,
     r.submission_id AS decision_submission_id,rs.version_number AS decision_version,r.decision
     FROM participants p LEFT JOIN project_drafts d ON d.participant_id=p.id
     LEFT JOIN portal_profiles pp ON pp.user_id=p.user_id
     LEFT JOIN schedule_segments ss ON ss.id=d.segment_id
+    LEFT JOIN work_presentations w ON w.draft_id=d.id AND w.segment_id=d.segment_id
     LEFT JOIN work_submissions s ON s.id=(SELECT id FROM work_submissions WHERE draft_id=d.id ORDER BY version_number DESC LIMIT 1)
     LEFT JOIN work_submission_reviews r ON r.id=(SELECT r2.id FROM work_submission_reviews r2
       JOIN work_submissions s2 ON s2.id=r2.submission_id WHERE s2.draft_id=d.id AND r2.decision IS NOT NULL ORDER BY r2.id DESC LIMIT 1)
     LEFT JOIN work_submissions rs ON rs.id=r.submission_id
     ORDER BY s.submitted_at DESC,p.updated_at DESC,p.id`).all<Row>();
   return results.map(row => ({
+    presentationTitle:row.presentation_title,presentationPublishedAt:row.presentation_published_at,presentationReady:Boolean(row.presentation_content),
     id:row.id,participantId:row.participant_id,participantName:row.participant_name,participantStatus:row.participant_status,
     segmentCode:row.segment_code,previewStatus:row.preview_status,reviewStatus:row.review_status,previewTitle:row.preview_title,
     publicAuthorName:row.public_author_name,updatedAt:row.updated_at,workFileCount:row.work_file_count,latestWorkFileAt:row.latest_work_file_at,

@@ -10,7 +10,6 @@ import { listEventWindows } from './event-windows';
 import { getWindowOrFallback } from '../lib/windows';
 import { createPrefixedId } from '../lib/ids';
 import { nowIso } from '../lib/time';
-import { publishConfirmedProjectIfReady } from './relay-publication';
 
 const summarySql = `SELECT s.id, s.version_number AS versionNumber, s.title, s.work_type AS workType,
   s.summary, s.version_note AS versionNote, s.submitted_at AS submittedAt,
@@ -92,7 +91,7 @@ export async function createWorkSubmissionReview(db: D1Database, draftId: string
   if (!parsed.success) return fail(422, 'invalid_review', parsed.error.issues[0].message);
   const version = await getWorkSubmissionDetail(db,draftId,submissionId);
   if (!version) return fail(404,'submission_missing','未找到对应作品版本。');
-  const draft = await db.prepare('SELECT participant_id,published_at FROM project_drafts WHERE id=?')
+  const draft = await db.prepare('SELECT participant_id,(SELECT published_at FROM work_presentations WHERE draft_id=project_drafts.id) AS published_at FROM project_drafts WHERE id=?')
     .bind(draftId).first<{ participant_id: string; published_at: string | null }>();
   if (!draft) return fail(404,'project_draft_missing','未找到作品记录。');
   const data = parsed.data, now = nowIso();
@@ -102,18 +101,16 @@ export async function createWorkSubmissionReview(db: D1Database, draftId: string
     .bind(submissionId,data.feedback || null,data.decision ?? null,reviewedBy,now,data.decision ?? null,draftId,version.versionNumber)];
   if (data.decision) {
     const approved = data.decision === 'approved';
-    statements.push(db.prepare(`UPDATE project_drafts SET preview_status=?,review_status=?,
-      preview_title=CASE WHEN ? THEN ? ELSE preview_title END, preview_summary=CASE WHEN ? THEN ? ELSE preview_summary END,
-      work_type=CASE WHEN ? THEN ? ELSE work_type END,reviewed_at=?,reviewed_by=?,updated_at=?
+    statements.push(db.prepare(`UPDATE project_drafts SET preview_status=CASE WHEN published_at IS NULL THEN ? ELSE preview_status END,
+      review_status=CASE WHEN published_at IS NULL THEN ? ELSE review_status END,reviewed_at=?,reviewed_by=?,updated_at=?
       WHERE id=? AND changes()=1`)
       .bind(approved ? 'approved' : 'changes_requested',approved ? 'approved' : 'changes_requested',
-        approved ? 1 : 0,version.title,approved ? 1 : 0,version.summary,approved ? 1 : 0,version.workType,now,reviewedBy,now,draftId));
+        now,reviewedBy,now,draftId));
   }
   statements.push(db.prepare(`INSERT INTO participant_events (id,participant_id,actor_type,actor_id,event_type,target_type,target_id,payload_json,created_at)
     SELECT ?,?,'admin',?,'work_submission_reviewed','project_draft',?,'{}',? WHERE changes()=1`)
     .bind(createPrefixedId('pevt'),draft.participant_id,reviewedBy,draftId,now));
   const results = await db.batch(statements);
   if (results[0].meta.changes !== 1) return fail(409,'submission_changed','作者已提交新版本，请刷新后再审核。');
-  if (data.decision === 'approved') await publishConfirmedProjectIfReady(db,draftId);
   return { ok: true,workspace: await getWorkSubmissionWorkspace(db,draftId),message: '审稿意见已保存，作者现在可以查看。' };
 }

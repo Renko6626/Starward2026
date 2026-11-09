@@ -1,3 +1,4 @@
+import { requireMutableSchedule, requireMutableAssignedParticipant } from './schedule-freeze';
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import type {
   ApplicationDetail,
@@ -200,6 +201,7 @@ export async function upsertPortalApplication(
     data: UpsertPortalApplicationInput;
   },
 ) {
+  await requireMutableSchedule(db);
   const authUser = await db.prepare('SELECT emailVerified FROM "user" WHERE id = ?').bind(input.userId).first<{ emailVerified: number }>();
   if (input.authEmail && authUser?.emailVerified) await claimUnlinkedApplicationByEmail(db, input.userId, input.authEmail);
   const existing = await getPortalApplicationByUserId(db, input.userId);
@@ -465,6 +467,10 @@ export async function reviewApplication(
   if (!existing) {
     return null;
   }
+
+  const assigned = await db.prepare(`SELECT p.id,a.status FROM participants p JOIN applications a ON a.id=p.application_id OR a.user_id=p.user_id
+    WHERE a.id=?`).bind(applicationId).first<{id:string;status:string}>();
+  if (assigned && assigned.status !== input.status) await requireMutableAssignedParticipant(db,assigned.id);
 
   const reviewedAt = nowIso();
   const participantPlan =

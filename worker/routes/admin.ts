@@ -1,7 +1,9 @@
+import { adminPresentationsApi } from './work-presentations';
 import { createWorkSubmissionReviewSchema } from '../../src/shared/work-submissions';
 import { createWorkSubmissionReview, getWorkSubmissionDetail, getWorkSubmissionWorkspace } from '../data/work-submissions';
 import { getPortalProjectDraftDetail } from '../data/project-drafts';
 import { setWorkPublication } from "../data/works";
+import { getScheduleFreeze, setScheduleFreeze } from '../data/schedule-freeze';
 import { downloadWorkFile, getWorkFile, listWorkFiles } from "../data/work-files";
 import { getWindowOrFallback } from "../lib/windows";
 import { Hono } from "hono";
@@ -61,6 +63,8 @@ adminApi.use("*", async (c, next) => {
   await requireAdminAccess(c);
   await next();
 });
+
+adminApi.route('/',adminPresentationsApi);
 
 adminApi.get('/participants/:participantId/project-draft', async c => {
   const db = getRequiredDb(c);
@@ -294,6 +298,13 @@ const listSegmentsHandler = async (c: any) => {
 
 adminApi.get("/segments", listSegmentsHandler);
 
+adminApi.get('/schedule/freeze', async c => c.json(await getScheduleFreeze(getRequiredDb(c))));
+adminApi.put('/schedule/freeze', async c => {
+  const body = await c.req.json().catch(() => null);
+  if (typeof body?.isFrozen !== 'boolean') return jsonError(c,422,'invalid_request','请选择是否冻结排期。');
+  return c.json(await setScheduleFreeze(getRequiredDb(c),body.isFrozen));
+});
+
 const bootstrapSegmentsHandler = async (c: any) => {
   const body = await c.req.json().catch(() => null);
   const parsed = bootstrapSegmentsInputSchema.safeParse(body);
@@ -381,7 +392,9 @@ adminApi.get("/project-drafts/:draftId", async (c) => {
     return jsonError(c, 404, "not_found", "未找到对应资料。");
   }
 
+  const presentationSlot = await getRequiredDb(c).prepare('SELECT segment_id FROM project_drafts WHERE id=?').bind(draft.id).first<{segment_id:string|null}>();
   const response: AdminProjectDraftDetailResponse = {
+    presentationSegmentId: presentationSlot?.segment_id ?? null,
     publicationWindow: getWindowOrFallback(await listEventWindows(getRequiredDb(c)), "public_release_open"),
     draft,
   };

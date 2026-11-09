@@ -71,6 +71,7 @@ export function ScheduleSection({ collaboration, onSaved, revision, selectedSegm
   }
 
   function actions(segment: CollaborationSegment, close: () => void) {
+    if (collaboration.isFrozen) return <p>排期已冻结，当前仅供查看。作品仍可在作者页面提交修订。</p>;
     if (!schedule) return <p>正在读取排期操作权限。</p>;
     const operationSucceeded = Boolean(selectedSegmentId && notice && !notice.error);
     const action = getScheduleAction(segment, collaboration.participantId, operationSucceeded);

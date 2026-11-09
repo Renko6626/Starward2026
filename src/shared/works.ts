@@ -1,3 +1,4 @@
+import type { PublicPresentationContent } from './work-presentations';
 import { z } from "zod";
 import type { ApplicationInterestFormat } from "./applications";
 
@@ -38,6 +39,7 @@ export type WorkPresentation = WorkPublicationFields & {
 };
 export type PublicWork = WorkPresentation & {
   id: string;
+  content?: PublicPresentationContent | null;
   observationNumber: number;
   segmentCode: string | null;
   segmentName: string | null;
@@ -56,7 +58,7 @@ export type PublicScheduleEntry = {
   preview: Pick<WorkPresentation, "previewTitle" | "previewSummary" | "workType" | "coverUrl" | "coverAlt"> | null;
   workId: string | null;
 };
-export type PublicWorksResponse = { items: PublicWork[]; schedule: PublicScheduleEntry[] };
+export type PublicWorksResponse = { items: PublicWork[]; schedule: PublicScheduleEntry[]; isFrozen?: boolean };
 export type PublicWorkDetailResponse = {
   work: PublicWork;
   previous: PublicWork | null;

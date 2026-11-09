@@ -157,3 +157,24 @@ Back up before upgrading an existing database, apply the migration before the ne
 application, and run `foreign_key_check` afterwards. Never edit past migrations
 or reset a populated database for this upgrade. Rolling back application code
 alone is unsafe because the previous version assumes non-null email fields.
+
+
+## Showcase presentations and frozen schedules
+
+`0026_work_presentations.sql` adds `schedule_versions.is_frozen` (default off)
+and the independent `work_presentations` table with one row per schedule slot.
+Private work files and submission versions remain unchanged. Existing published
+works with slot associations keep their IDs, metadata, links and publication
+instants. The application reads publication state from the new table and no
+longer publishes on author confirmation or content approval.
+
+Before a production rollout, check `SELECT id FROM project_drafts WHERE
+published_at IS NOT NULL AND segment_id IS NULL` and resolve any results manually;
+do not guess a slot or discard an existing public work. A public API preflight
+on 2026-11-10 found no published works; recheck actual D1 data before deployment.
+Apply the migration before the new application. It neither freezes schedules nor
+publishes new works. After rollout, the organizer explicitly freezes the schedule
+in the admin schedule page and curates/publishes work presentations individually.
+Old `project_drafts.published_at` values remain historical and must not be used
+as the new public-state source. Reverting application code can reinstate old
+publication behavior; rollback needs a separately reviewed plan.

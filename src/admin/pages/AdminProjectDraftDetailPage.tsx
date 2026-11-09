@@ -1,12 +1,12 @@
 import { Link, getRouteApi, useSearch } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button, Notice, PageHeading, ReadError } from '../../app/components/ui';
 import { requestJson } from '../../app/lib/api';
 import { formatDateTime } from '../../app/lib/format';
-import { WorkPresentation } from '../../app/components/WorkPresentation';
-import { getWorkPublicationIssues, workTypeLabels } from '../../shared/works';
+import { AdminWorkPresentation } from '../components/AdminWorkPresentation';
+import { workTypeLabels } from '../../shared/works';
 import { workReviewStatusLabels, type WorkSubmissionDetail, type WorkSubmissionWorkspace, type WorkSubmissionMutationResult, type WorkReviewDecision } from '../../shared/work-submissions';
-import type { AdminProjectDraftDetailResponse, AdminProjectDraftMutationResponse } from '../../shared/admin';
+import type { AdminProjectDraftDetailResponse } from '../../shared/admin';
 import { AdminWorkFiles } from '../components/AdminWorkFiles';
 import type { SubmissionScope } from './AdminProjectDraftsPage';
 
@@ -18,10 +18,9 @@ export function AdminProjectDraftDetailPage() {
   const [version,setVersion] = useState<WorkSubmissionDetail | null>(null), [feedback,setFeedback] = useState('');
   const [decision,setDecision] = useState<WorkReviewDecision | ''>(''), [busy,setBusy] = useState(false);
   const [error,setError] = useState<string | null>(null), [message,setMessage] = useState<string | null>(null);
-  const [preview,setPreview] = useState(false); const previewPanel = useRef<HTMLElement>(null),previewTrigger=useRef<HTMLButtonElement>(null);
   const endpoint = `/api/admin/project-drafts/${draftId}`;
   useEffect(() => {
-    let cancelled = false; setData(null);setWorkspace(null);setVersion(null);setError(null);setMessage(null);setFeedback('');setDecision('');setPreview(false);
+    let cancelled = false; setData(null);setWorkspace(null);setVersion(null);setError(null);setMessage(null);setFeedback('');setDecision('');
     void Promise.all([requestJson<AdminProjectDraftDetailResponse>(endpoint),requestJson<WorkSubmissionWorkspace>(`${endpoint}/submissions`)]).then(([detail,work]) => {if (!cancelled) {setData(detail);setWorkspace(work);setVersion(work.latest);}}).catch(err => {if (!cancelled) setError(err.message);});
     return () => {cancelled=true;};
   },[endpoint]);
@@ -40,12 +39,6 @@ export function AdminProjectDraftDetailPage() {
       setData(await requestJson<AdminProjectDraftDetailResponse>(endpoint));
     } catch (err) {setError(err instanceof Error ? err.message : '保存失败。');} finally {setBusy(false);}
   }
-  async function publication() {
-    if (!data) return;setBusy(true);setError(null);
-    try { const result = await requestJson<AdminProjectDraftMutationResponse>(`${endpoint}/${data.draft.publishedAt ? 'unpublish' : 'publish'}`,{method:'POST'});setData({...data,draft:result.draft});setMessage(result.message); }
-    catch (err) {setError(err instanceof Error ? err.message : '操作失败。');} finally {setBusy(false);}
-  }
-  const issues = data ? getWorkPublicationIssues(data.draft,workspace?.review.status) : [];
   const latest = version?.id === workspace?.latest?.id;
   return <div className="page-content submission-admin-detail"><Link className="text-link" to="/portal/admin/project-drafts" search={search}>返回作品列表</Link><PageHeading title={data ? `${data.draft.participantName}的作品审核` : '作品审核详情'} />
     {error ? <ReadError message={error} /> : null}{message ? <Notice tone="success">{message}</Notice> : null}
@@ -65,12 +58,11 @@ export function AdminProjectDraftDetailPage() {
         <Button appearance="industrial" type="submit" disabled={busy}>{busy ? '保存中…' : '保存审稿意见'}</Button>
       </form></section></div> : null}
       {workspace.legacyFeedback ? <details className="panel"><summary>历史资料审核意见</summary><p className="submission-note">{workspace.legacyFeedback}</p></details> : null}
-      <section className="panel space-y-3"><h2>站内公开</h2><p>{data.draft.publishedAt ? `已公开：${formatDateTime(data.draft.publishedAt)}` : '尚未公开'}</p><p>作品内容审核、作者按排期发布和站内公开分别记录。</p>
-        {!data.draft.publishedAt && issues.length ? <ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul> : null}
-        <button ref={previewTrigger} className="button button--secondary" type="button" aria-controls="public-work-preview" aria-expanded={preview} onClick={() => {if (preview) {setPreview(false);previewTrigger.current?.focus();} else {setPreview(true);requestAnimationFrame(() => {previewPanel.current?.scrollIntoView({block:'start'});previewPanel.current?.focus({preventScroll:true});});}}}>{preview ? '收起公开预览' : '预览公开效果'}</button>
-        {preview ? <section ref={previewPanel} id="public-work-preview" aria-label="公开作品预览" tabIndex={-1}><WorkPresentation work={data.draft} /></section> : null}
-        <Button appearance="industrial" disabled={busy || !data.draft.publishedAt && (issues.length > 0 || !data.publicationWindow.isOpen)} onClick={() => void publication()}>{data.draft.publishedAt ? '撤下作品' : '发布到观测集'}</Button>
-        {data.draft.publishedAt ? <Link className="text-link" to="/works/$workId" params={{workId:draftId}}>查看公开页面</Link> : null}
-      </section></>}
+      {data.presentationSegmentId ? <AdminWorkPresentation key={data.presentationSegmentId} segmentId={data.presentationSegmentId}
+        initialTitle={workspace.latest?.title ?? data.draft.previewTitle ?? ''} initialSummary={workspace.latest?.summary ?? data.draft.previewSummary ?? ''}
+        authorName={data.draft.publicAuthorName ?? data.draft.participantName}
+        onSaved={async()=>{setData(await requestJson<AdminProjectDraftDetailResponse>(endpoint));}}/>
+        : <section className="panel"><h2>展示资料</h2><p>请先在排期中为作者安排坑位，再准备展示资料。</p></section>}
+    </>}
   </div>;
 }

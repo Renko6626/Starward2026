@@ -179,9 +179,9 @@ export function ScheduleBoard({ day, missionStart, selectedId, mineId, ownName, 
   </section>;
 }
 
-export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedIn, ended, detailId, onClose, actions }: {
+export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedIn, ended, detailId, onClose, actions, frozen = false }: {
   entry: PublicScheduleEntry; missionStart: number | null; mine: boolean; ownName: string | null; signedIn: boolean; ended: boolean; detailId: string; onClose?: () => void;
-  actions?: ReactNode;
+  actions?: ReactNode; frozen?: boolean;
 }) {
   const workType = scheduleWorkType(entry);
   return <section className="ops-detail" id={detailId} aria-label="选中时段详情">
@@ -190,17 +190,17 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
     <Crossfade valueKey={entry.id}><div className="ops-detail-copy">
       <div className="ops-detail-heading"><h2>{scheduleAuthor(entry, mine ? ownName : null)}</h2><ScheduleStatus status={entry.status} />{onClose && <button type="button" className="ops-close" onClick={onClose}>关闭</button>}</div>
       {entry.status === "confirmed" ? <>
-        <div className="ops-detail-work">{workType && <WorkTypeMark type={workType} />}<h3>创作意向</h3></div>
-        <p className="ops-detail-description">{entry.introText?.trim() || "作者暂未填写创作意向。"}</p>
-      </> : <p className="ops-detail-description">{entry.status === "available" ? "在报名时选择这个发布时刻，提交后预留，审核通过后确认。"
-        : entry.status === "reserved" ? "这个时段已被预留，正在等待报名审核。" : "这个时段暂不可认领。"}</p>}
+        <div className="ops-detail-work">{workType && <WorkTypeMark type={workType} />}<h3>{entry.preview?.previewTitle || "创作意向"}</h3></div>
+        <p className="ops-detail-description">{entry.preview?.previewSummary?.trim() || entry.introText?.trim() || "作者暂未填写创作意向。"}</p>
+      </> : <p className="ops-detail-description">{entry.status === "available" ? frozen ? "这个坑位尚未安排作品。" : "在报名时选择这个发布时刻，提交后预留，审核通过后确认。"
+        : entry.status === "reserved" ? "这个时段已被预留，正在等待主催确认。" : "这个时段暂不可认领。"}</p>}
       {entry.preview?.coverUrl && <img className="ops-detail-cover" src={entry.preview.coverUrl} alt={entry.preview.coverAlt || `${entry.preview.previewTitle ?? "作品"}预览`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
     </div>
     </Crossfade>
     <div className="ops-detail-actions">
       {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link> : null}
       {actions !== undefined ? actions : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} search={{ segment: mine ? "" : entry.id }} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "选择这个时点并报名"}</Link> : null}
-      {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作者确认发布且资料审核通过后，作品详情会在这里开放。"}</p>}
+      {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作品由管理员整理后在这里公开。"}</p>}
     </div>
   </section>;
 }

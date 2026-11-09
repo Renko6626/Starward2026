@@ -39,6 +39,7 @@ export type SwapRequest = {
   createdAt: string;
 };
 export type CollaborationResponse = {
+  isFrozen?: boolean;
   participantId: string;
   segments: CollaborationSegment[];
   requests: SwapRequest[];

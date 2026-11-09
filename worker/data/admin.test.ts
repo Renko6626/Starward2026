@@ -48,6 +48,7 @@ class SqliteD1Database {
     this.sqlite.exec(`
       CREATE TABLE portal_profiles (user_id TEXT PRIMARY KEY, credit_name TEXT NOT NULL, bilibili_uid TEXT, is_anonymous INTEGER NOT NULL);
       CREATE TABLE schedule_versions (
+        is_frozen INTEGER NOT NULL DEFAULT 0,
         id TEXT PRIMARY KEY,
         status TEXT NOT NULL,
         updated_at TEXT NOT NULL

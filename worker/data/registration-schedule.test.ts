@@ -1,3 +1,4 @@
+import { saveWorkPresentation, setPresentationPublication } from './work-presentations';
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
@@ -215,6 +216,9 @@ describe("timed seats and private relay", () => {
     expect(await createWorkSubmissionReview(f.db, String(draft.id), submission.workspace.latest!.id,
       { decision: "approved" }, "admin")).toMatchObject({ ok: true });
     expect(await confirmPortalProjectRelease(f.db, { participant, workUrl: "https://example.com/special" })).toMatchObject({ ok: true });
+    expect(await listPublicWorks(f.db)).toEqual([]);
+    await saveWorkPresentation(f.db,id,{title:'特别作品',summary:'特别作品简介',workType:'text',thumbnailId:null,thumbnailAlt:'',sourceUrl:'https://example.com/special',content:{kind:'markdown',markdown:'特别作品正文'}});
+    expect(await setPresentationPublication(f.db,id,true,'admin')).toMatchObject({ok:true});
     expect((await listPublicWorks(f.db)).map(w => w.previewTitle)).toContain("特别作品");
     expect((await listPublicSchedule(f.db, await listPublicWorks(f.db))).map(s => s.id)).not.toContain(id);
     expect(await releaseParticipantSegment(f.db, { participant, windows: await listEventWindows(f.db) })).toMatchObject({ ok: true });
@@ -299,6 +303,7 @@ describe("preserved assignments and transaction safety", () => {
     expect(f.sqlite.prepare("SELECT segment_id AS segmentId FROM project_drafts WHERE participant_id=?").get(two.id)).toMatchObject({ segmentId: "s2" });
     f.sqlite.exec(readFileSync("migrations/0023_schedule_slot_visibility.sql", "utf8"));
     expect(f.sqlite.prepare("SELECT * FROM schedule_segments ORDER BY id").all()).toEqual(seats.map(seat => ({ ...seat, is_visible: 1 })));
+    f.sqlite.exec(readFileSync("migrations/0026_work_presentations.sql", "utf8"));
     await updateActiveScheduleSegment(f.db, "s2", { status: "held", scheduledAt: "2026-11-12T11:30:00+08:00" }, "admin");
     expect(f.sqlite.prepare("SELECT status FROM segment_swap_requests WHERE id=?").get(request.id)).toMatchObject({ status: "expired" });
   });

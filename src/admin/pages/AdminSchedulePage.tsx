@@ -27,6 +27,7 @@ import { summarizeSchedule } from "../lib/creator-list";
 import { QuickSchedule } from "../components/QuickSchedule";
 
 type SchedulePayload = {
+  isFrozen:boolean;
   participants: AdminParticipantListResponse["items"];
   segments: AdminSegmentItem[];
 };
@@ -56,6 +57,7 @@ type SegmentSaveState =
   | { status: "error"; message: string };
 
 export function AdminSchedulePage() {
+  const [freezing,setFreezing]=useState(false),[freezeError,setFreezeError]=useState<string|null>(null);
   const [state, setState] = useState<ScheduleState>({ status: "loading" });
   const [drafts, setDrafts] = useState<Record<string, SegmentDraft>>({});
   const [saveStates, setSaveStates] = useState<
@@ -101,9 +103,10 @@ export function AdminSchedulePage() {
     setState({ status: "loading" });
 
     try {
-      const [segmentPayload, participantPayload] = await Promise.all([
+      const [segmentPayload, participantPayload, freezePayload] = await Promise.all([
         requestJson<AdminSegmentListResponse>("/api/admin/segments"),
         requestJson<AdminParticipantListResponse>("/api/admin/participants"),
+        requestJson<{isFrozen:boolean}>("/api/admin/schedule/freeze"),
       ]);
 
       setDrafts(buildDraftMap(segmentPayload.items));
@@ -111,6 +114,7 @@ export function AdminSchedulePage() {
       setState({
         status: "ready",
         payload: {
+          isFrozen:freezePayload.isFrozen,
           participants: participantPayload.items,
           segments: segmentPayload.items,
         },
@@ -307,6 +311,17 @@ export function AdminSchedulePage() {
     setSaveStates({});
   }
 
+  const frozen=state.status==='ready' && state.payload.isFrozen;
+  async function toggleFreeze(){
+    if(state.status!=='ready')return;
+    if(hasUnsavedDrafts){setFreezeError('请先保存排期修改，再切换展示模式。');return;}
+    setFreezing(true);setFreezeError(null);
+    try{
+      const next=await requestJson<{isFrozen:boolean}>('/api/admin/schedule/freeze',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isFrozen:!frozen})});
+      setState(current=>current.status==='ready'?{...current,payload:{...current.payload,isFrozen:next.isFrozen}}:current);
+    }catch(e){setFreezeError(e instanceof Error?e.message:'切换失败。');}finally{setFreezing(false);}
+  }
+
   return (
     <div className="page-content">
       <PageHeading
@@ -318,6 +333,8 @@ export function AdminSchedulePage() {
           </div>
         ) : null}
       </PageHeading>
+      {state.status==='ready' && <section className="panel space-y-3"><h2>{frozen?'展示模式，排期已冻结':'排期可调整'}</h2><p>{frozen?'坑位、作者和发布时间保持固定。作品展示资料及投稿审核仍可维护。':'进入展示模式后，作者与管理员均不能增减坑位、换人或改期。'}</p><Button appearance="industrial" disabled={freezing||scheduleBusy} onClick={()=>void toggleFreeze()}>{freezing?'处理中…':frozen?'解除排期冻结':'进入展示模式并冻结排期'}</Button>{freezeError&&<ReadError message={freezeError}/>}</section>}
+      <fieldset disabled={frozen||freezing} className="min-w-0 space-y-4">
 
       {segmentMetrics ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -552,6 +569,7 @@ export function AdminSchedulePage() {
           </fieldset>
         </section>
       ) : null}
+      </fieldset>
     </div>
   );
 }

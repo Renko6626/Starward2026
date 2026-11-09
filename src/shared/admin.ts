@@ -175,6 +175,9 @@ export type AdminProjectDraftItem = {
 };
 
 export type AdminProjectDraftListItem = Omit<AdminProjectDraftItem, "id"> & {
+  presentationTitle?: string | null;
+  presentationPublishedAt?: string | null;
+  presentationReady?: boolean;
   id: string | null;
   participantStatus: ParticipantPortalStatus;
   review: WorkReviewSummary;
@@ -207,6 +210,7 @@ export type AdminProjectDraftDetail = AdminProjectDraftItem & WorkPublicationFie
 };
 
 export type AdminProjectDraftDetailResponse = {
+  presentationSegmentId?: string | null;
   publicationWindow: EventWindowSummary;
   draft: AdminProjectDraftDetail;
 };

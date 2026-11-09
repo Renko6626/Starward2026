@@ -1,3 +1,4 @@
+import { getScheduleFreeze } from '../data/schedule-freeze';
 import { workSubmissionsApi } from './work-submissions';
 import { getRealAuthEmail } from "../../src/shared/auth-identity";
 import { workFilesApi } from "./work-files";
@@ -370,6 +371,7 @@ portalApi.get("/application", async (c) => {
     profile ? { userId: access.session.user.id } : null,
   );
 
+  const frozen=(await getScheduleFreeze(access.db)).isFrozen;
   const response: PortalApplicationResponse = {
     window: applicationWindow,
     user: mapPortalAuthUser(access.session.user),
@@ -378,9 +380,9 @@ portalApi.get("/application", async (c) => {
       : null,
     profile,
     application,
-    editable: mutation.editable,
+    editable: mutation.editable && !frozen,
     editState: mutation.mode,
-    message: !profileRequirement.ok
+    message: frozen ? "排期已冻结，报名与排期调整已停止。" : !profileRequirement.ok
       ? profileRequirement.message
       : (mutation.message ?? null),
   };

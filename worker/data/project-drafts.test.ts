@@ -37,6 +37,7 @@ class SqliteD1Database {
   readonly sqlite = new DatabaseSync(":memory:");
   constructor() {
     this.sqlite.exec(`
+      CREATE TABLE work_presentations (draft_id TEXT PRIMARY KEY,published_at TEXT);
       CREATE TABLE portal_profiles (user_id TEXT PRIMARY KEY, credit_name TEXT NOT NULL, bilibili_uid TEXT, is_anonymous INTEGER NOT NULL);
       CREATE TABLE schedule_versions (
         id TEXT PRIMARY KEY,

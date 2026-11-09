@@ -1,3 +1,4 @@
+import { saveWorkPresentation } from './work-presentations';
 import { createWorkSubmission, createWorkSubmissionReview } from './work-submissions';
 import { adminTestSession } from '../test/admin-session';
 import { readFileSync, readdirSync } from "node:fs";
@@ -48,10 +49,11 @@ function contentApproval(id = draftId) {
     SELECT 'version_'||id,id,1,COALESCE(preview_title,'作品'),'text',COALESCE(preview_summary,'简介'),'2026-10-31' FROM project_drafts WHERE id=?`).run(id);
   database.sqlite.prepare("INSERT INTO work_submission_reviews (submission_id,decision,reviewed_by,created_at) VALUES (?,'approved','host','2026-10-31')").run('version_'+id);
 }
-function readyDraft() {
+async function readyDraft() {
   contentApproval();
   database.sqlite.exec(`UPDATE project_drafts SET preview_status = 'approved', review_status = 'approved',
     work_type = 'text', work_url = 'https://example.com/story' WHERE id = '${draftId}'`);
+  await saveWorkPresentation(db,'seg_seed_102',{title:'结界观测预告',summary:'展示简介',workType:'text',thumbnailId:null,thumbnailAlt:'',sourceUrl:'https://example.com/story',content:{kind:'markdown',markdown:'正式公开正文'}});
 }
 
 beforeEach(() => {
@@ -68,13 +70,13 @@ describe("public work publication", () => {
     expect(await setWorkPublication(db, draftId, true, actor)).toMatchObject({ ok: false, code: "release_closed" });
     openWindow();
     expect(await setWorkPublication(db, draftId, true, actor)).toMatchObject({ ok: false, code: "work_incomplete" });
-    readyDraft();
+    await readyDraft();
     expect(await setWorkPublication(db, draftId, true, actor)).toMatchObject({ ok: true });
     expect(await listPublicWorks(db)).toHaveLength(1);
   });
 
   it("keeps the archive visible after the window closes and permits withdrawal at any time", async () => {
-    openWindow(); readyDraft();
+    openWindow(); await readyDraft();
     await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec("UPDATE event_windows SET is_enabled = 0 WHERE key = 'public_release_open'");
     expect(await getPublicWork(db, draftId)).not.toBeNull();
@@ -86,7 +88,7 @@ describe("public work publication", () => {
   });
 
   it("keeps unreviewed revisions private and requires withdrawal before a negative review", async () => {
-    openWindow(); readyDraft(); await setWorkPublication(db,draftId,true,actor);
+    openWindow(); await readyDraft(); await setWorkPublication(db,draftId,true,actor);
     database.sqlite.exec("UPDATE event_windows SET is_enabled=1,opens_at=NULL WHERE key='work_upload_open'");
     database.sqlite.exec("INSERT INTO work_files (id,draft_id,object_key,upload_id,filename,size,content_type,created_at,completed_at) VALUES ('revision-file','draft_seed_active','object','upload','secret.txt',3,'text/plain','2026-10-31','2026-10-31')");
     const submitted = await createWorkSubmission(db,'part_seed_active',{title:'未复审标题',summary:'私有简介',workType:'text',fileIds:['revision-file'],versionNote:'仅主催可见'});
@@ -102,7 +104,7 @@ describe("public work publication", () => {
   });
 
   it("uses anonymous public credit and never exposes contact or review details in list or direct responses", async () => {
-    openWindow(); readyDraft();
+    openWindow(); await readyDraft();
     database.sqlite.exec("UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active'");
     await setWorkPublication(db, draftId, true, actor);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
@@ -114,30 +116,32 @@ describe("public work publication", () => {
       expect(work.publicAuthorName).toBe("匿名");
       expect(Object.keys(work).sort()).toEqual([
         "id", "previewTitle", "previewSummary", "publicAuthorName", "workType", "formatLabel", "publicTags",
-        "coverUrl", "coverAlt", "workUrl", "publishedAt", "segmentCode", "segmentName", "observationNumber",
+        "coverUrl", "coverAlt", "workUrl", "publishedAt", "segmentCode", "segmentName", "observationNumber", "content",
       ].sort());
     }
     await setWorkPublication(db, draftId, false, actor);
     expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(404);
   });
 
-  it("orders by relay slot, keeps unassigned work last and skips unpublished neighbors", async () => {
-    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
+  it("orders by relay slot, keeps untimed slots last and skips unpublished neighbors", async () => {
+    openWindow(); await readyDraft(); await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec(`INSERT INTO project_drafts (id,participant_id,segment_id,preview_title,preview_summary,work_type,work_url,preview_status,review_status,created_at,updated_at)
       VALUES ('draft_pending','part_seed_pending','seg_seed_101','另一份观测','简介','music','https://example.com/music','approved','approved','2026-09-30','2026-09-30')
       ON CONFLICT(participant_id) DO UPDATE SET id = excluded.id, segment_id = excluded.segment_id, preview_title = excluded.preview_title, preview_summary = excluded.preview_summary, work_type = excluded.work_type, work_url = excluded.work_url, preview_status = excluded.preview_status, review_status = excluded.review_status`);
+    database.sqlite.exec("UPDATE participants SET status='approved' WHERE id='part_seed_pending'; UPDATE schedule_segments SET status='held',current_participant_id='part_seed_pending' WHERE id='seg_seed_101'");
     contentApproval("draft_pending");
+    await saveWorkPresentation(db,'seg_seed_101',{title:'另一份观测',summary:'简介',workType:'music',thumbnailId:null,thumbnailAlt:'',sourceUrl:'https://example.com/music',content:{kind:'markdown',markdown:'另一份正文'}});
     await setWorkPublication(db, "draft_pending", true, actor);
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual(["draft_pending", draftId]);
     expect(await getPublicWork(db, draftId)).toMatchObject({ previous: { id: "draft_pending" }, next: null });
-    database.sqlite.exec("UPDATE project_drafts SET segment_id = NULL WHERE id = 'draft_pending'");
+    database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE id = 'seg_seed_101'");
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual([draftId, "draft_pending"]);
     await setWorkPublication(db, "draft_pending", false, actor);
     expect(await getPublicWork(db, draftId)).toMatchObject({ previous: null, next: null });
   });
 
   it("requires admin access and supports publish/unpublish through the actual routes", async () => {
-    openWindow(); readyDraft();
+    openWindow(); await readyDraft();
     const app = new Hono<AppRouteConfig>().route("/api/admin", adminApi);
     const url = `http://localhost/api/admin/project-drafts/${draftId}`;
     const { env, headers } = await adminTestSession(db);
@@ -182,6 +186,7 @@ describe("public relay timetable", () => {
     database.sqlite.exec(`UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active';
       UPDATE project_drafts SET preview_status = 'approved', work_url = 'https://example.com/private' WHERE id = 'draft_seed_active';
       UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
+    await saveWorkPresentation(db,'seg_seed_102',{title:'管理员展示标题',summary:'展示简介',workType:'text',thumbnailId:null,thumbnailAlt:'',sourceUrl:'https://example.com/private',content:{kind:'markdown',markdown:'私有正文'}});
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
     const response = await app.request("http://localhost/api/works", {}, { DB: db });
     const body = await response.json() as any;
@@ -194,7 +199,8 @@ describe("public relay timetable", () => {
     expect(Object.keys(slot).sort()).toEqual(["id", "kind", "code", "name", "scheduledAt", "status", "publicAuthorName", "interestFormat", "introText", "preview", "workId"].sort());
     database.sqlite.exec("UPDATE project_drafts SET preview_status = 'submitted' WHERE id = 'draft_seed_active'");
     const pending = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
-    expect(pending.schedule.every((entry: any) => entry.preview === null)).toBe(true);
+    expect(pending.schedule.find((entry: any)=>entry.id==='seg_seed_102').preview.previewTitle).toBe('管理员展示标题');
+    expect(JSON.stringify(pending)).not.toContain('私有正文');
   });
 
   it("distinguishes open, reserved, confirmed and closed slots without publishing pending identities", async () => {
@@ -214,7 +220,7 @@ describe("public relay timetable", () => {
   });
 
   it("exposes published details during the relay and retains chronological slots afterwards", async () => {
-    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
+    openWindow(); await readyDraft(); await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec(`UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00.000Z';
       UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
@@ -316,7 +322,7 @@ describe('additional schedule slots', () => {
   });
 
   it('keeps approved published works accessible with unconfigured and extra slots present', async () => {
-    openWindow(); readyDraft(); await setWorkPublication(db, draftId, true, actor);
+    openWindow(); await readyDraft(); await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00Z' WHERE id = 'seg_seed_101'");
     await appendActiveScheduleSegments(db, { count: 2 });
     expect(await getPublicWork(db, draftId)).not.toBeNull();

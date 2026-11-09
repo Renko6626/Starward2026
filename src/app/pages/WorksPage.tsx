@@ -86,6 +86,7 @@ export function WorksPage() {
   }, []);
 
   const schedule = data?.schedule ?? [];
+  const frozen = Boolean(data?.isFrozen);
   const days = groupSchedule(schedule);
   const missionStart = scheduleMissionStart(schedule);
   const identity = own && own.userId === userId && own.revision === revision ? own : null;
@@ -138,13 +139,13 @@ export function WorksPage() {
       detailTrigger.current?.focus({ preventScroll: true });
     });
   }
-  const actions = selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
+  const actions = frozen ? <p>排期已冻结，作者和发布时间保持不变。</p> : selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
     : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
     : identity.status === "completed" ? <Link to="/portal">查看我的参与记录</Link>
     : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash={selected.id === mineId ? "plan" : "profile"}
       onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
   const detail = selected ? <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null}
-    signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={actions} /> : null;
+    frozen={frozen} signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={actions} /> : null;
 
   return <div className="works-page works-page--schedule">
     <ObservatoryBackdrop />
@@ -152,12 +153,12 @@ export function WorksPage() {
       <div><h1>接力时间表</h1><ActivityIdentity /></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
-    {identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。</Notice> : null}
+    {!frozen && identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。</Notice> : null}
     {error && <ReadError message={error} />}
     {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
       <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
-      <p className="ops-interaction-hint">{mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
+      <p className="ops-interaction-hint">{frozen ? "点击时段查看作者与作品。" : mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
       {days.map(day => <Fragment key={day.key}>
         <ScheduleBoard missionStart={missionStart} day={day} selectedId={selected?.id ?? null} mineId={mineId} ownName={identity?.author ?? null} currentId={currentId} now={now} active={phase === "active"} onSelect={select} />
         {selectedKey === day.key && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label="时段详情与操作"
@@ -171,7 +172,7 @@ export function WorksPage() {
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot"><Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>不选时间，直接报名</Link><p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。提交后预留，审核通过后确认。由作者按约定时段发布作品，并回到作者页面填写链接、确认已发布。作者确认发布且资料审核通过后，作品详情会在站内公开。</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
+      <div className="ops-page-foot">{!frozen&&<Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>不选时间，直接报名</Link>}<p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。{frozen?"排期已冻结，作品由管理员整理后陆续公开。":"提交后预留，审核通过后确认。作者按约定时段发布作品，站内展示由管理员整理后手动公开。"}</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
     </>}
   </div>;
 }

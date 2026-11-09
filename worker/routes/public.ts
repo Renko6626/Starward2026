@@ -1,3 +1,5 @@
+import { presentationImagesApi } from './work-presentations';
+import { getScheduleFreeze } from '../data/schedule-freeze';
 import { isQqEnabled } from "../lib/qq-oauth";
 import { getPublicWork, listPublicWorks, listPublicSchedule } from "../data/works";
 import { getRequiredDb, jsonError } from "../lib/http";
@@ -13,6 +15,8 @@ import { getParticipationStatistics } from "../data/participation";
 import { getTurnstileSecret } from '../lib/turnstile';
 
 const publicApi = new Hono<AppRouteConfig>();
+
+publicApi.route('/',presentationImagesApi);
 
 publicApi.get("/auth/providers", c => c.json({qq:{enabled:isQqEnabled(c.env)},turnstile:{enabled:Boolean(getTurnstileSecret(c.env))}}, 200, {"Cache-Control":"no-store"}));
 
@@ -68,7 +72,7 @@ publicApi.get("/works", async (c) => {
   c.header("Cache-Control", "no-store");
   const db = getRequiredDb(c);
   const items = await listPublicWorks(db);
-  return c.json({ items, schedule: await listPublicSchedule(db, items) });
+  return c.json({ items, schedule: await listPublicSchedule(db, items), ...await getScheduleFreeze(db) });
 });
 
 publicApi.get("/works/:workId", async (c) => {

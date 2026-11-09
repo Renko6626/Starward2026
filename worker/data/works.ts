@@ -1,31 +1,26 @@
-import { getWorkReviewSummary } from './work-submissions';
-import { getWorkPublicationIssues, type PublicWork, type PublicScheduleEntry, type PublicWorkDetailResponse } from "../../src/shared/works";
-import type { UpdateAdminProjectDraftResult } from "./project-drafts";
-import { getAdminProjectDraftDetail } from "./project-drafts";
-import { listEventWindows } from "./event-windows";
-import { getWindowOrFallback } from "../lib/windows";
-import { nowIso } from "../lib/time";
-import { createPrefixedId } from "../lib/ids";
+import type { PublicWork, PublicScheduleEntry, PublicWorkDetailResponse } from '../../src/shared/works';
+import type { UpdateAdminProjectDraftResult } from './project-drafts';
+import { getAdminProjectDraftDetail } from './project-drafts';
+import { presentationFromRow, publicPresentationContent, setPresentationPublication, type PresentationRow } from './work-presentations';
 
-type PublicWorkRow = Omit<PublicWork, "publicTags" | "observationNumber"> & { tagsJson: string | null };
-
-// Public reads deliberately select only display fields, never review or contact details.
+// Public reads explicitly select display metadata and never submission archives.
 export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
-  const { results } = await db.prepare(`SELECT
-    d.id, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
-    CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
-    d.work_type AS workType, d.format_label AS formatLabel, d.public_tags_json AS tagsJson,
-    d.cover_url AS coverUrl, d.cover_alt AS coverAlt, d.work_url AS workUrl,
-    d.published_at AS publishedAt, s.code AS segmentCode, s.name AS segmentName
-    FROM project_drafts d
-    INNER JOIN participants participant ON participant.id = d.participant_id
-    INNER JOIN portal_profiles p ON p.user_id = participant.user_id
-    LEFT JOIN schedule_segments s ON s.id = d.segment_id
-    WHERE d.published_at IS NOT NULL
-    ORDER BY s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order IS NULL, s.sort_order, d.published_at, d.id`).all<PublicWorkRow>();
-  return results.map(({ tagsJson, ...work }, index) => ({
-    ...work, publicTags: tagsJson ? JSON.parse(tagsJson) as string[] : [], observationNumber: index + 1,
-  }));
+  const { results } = await db.prepare(`SELECT w.*,s.code AS segmentCode,s.name AS segmentName,
+    CASE WHEN pp.is_anonymous=1 THEN '匿名' ELSE pp.credit_name END AS publicAuthorName
+    FROM work_presentations w JOIN project_drafts d ON d.id=w.draft_id
+    JOIN participants p ON p.id=d.participant_id
+    JOIN schedule_segments s ON s.id=w.segment_id AND s.current_participant_id=p.id
+    LEFT JOIN portal_profiles pp ON pp.user_id=p.user_id
+    WHERE w.published_at IS NOT NULL
+    ORDER BY s.scheduled_at IS NULL,julianday(s.scheduled_at),s.sort_order,w.published_at,d.id`)
+    .all<PresentationRow & {segmentCode:string;segmentName:string;publicAuthorName:string|null}>();
+  return results.map((row,index) => {
+    const p = presentationFromRow(row);
+    return {id:p.draftId,previewTitle:p.title,previewSummary:p.summary,publicAuthorName:row.publicAuthorName,
+      workType:p.workType,formatLabel:null,publicTags:[],coverUrl:p.thumbnailUrl,coverAlt:p.thumbnailAlt,
+      workUrl:p.sourceUrl || null,publishedAt:p.publishedAt,segmentCode:row.segmentCode,segmentName:row.segmentName,
+      observationNumber:index+1,content:publicPresentationContent(p)};
+  });
 }
 
 export async function getPublicWork(db: D1Database, id: string): Promise<PublicWorkDetailResponse | null> {
@@ -38,32 +33,13 @@ export async function getPublicWork(db: D1Database, id: string): Promise<PublicW
 export async function setWorkPublication(
   db: D1Database, id: string, publish: boolean, actorId: string,
 ): Promise<UpdateAdminProjectDraftResult> {
-  const existing = await getAdminProjectDraftDetail(db, id);
-  if (!existing) return { ok: false, status: 404, code: "not_found", message: "未找到对应作品。" };
-  if (Boolean(existing.publishedAt) === publish) {
-    return { ok: true, draft: existing, message: publish ? "作品已发布。" : "作品已撤下。" };
-  }
-  if (publish) {
-    const window = getWindowOrFallback(await listEventWindows(db), "public_release_open");
-    if (!window.isOpen) return { ok: false, status: 409, code: "release_closed", message: "公开发布窗口尚未开放或已结束。" };
-    const issues = getWorkPublicationIssues(existing, (await getWorkReviewSummary(db,id)).status);
-    if (issues.length) return { ok: false, status: 409, code: "work_incomplete", message: issues.join("；") + "。" };
-  }
-  const now = nowIso();
-  const results = await db.batch([
-    db.prepare(`UPDATE project_drafts SET published_at = ?, updated_at = ?
-      WHERE id = ? AND updated_at = ?`).bind(publish ? now : null, now, id, existing.updatedAt),
-    db.prepare(`INSERT INTO participant_events
-      (id, participant_id, actor_type, actor_id, event_type, target_type, target_id, payload_json, created_at)
-      SELECT ?, ?, 'admin', ?, ?, 'project_draft', ?, '{}', ? WHERE changes() = 1`)
-      .bind(createPrefixedId("pevt"), existing.participantId, actorId,
-        publish ? "work_published" : "work_unpublished", id, now),
-  ]);
-  if (results[0].meta.changes !== 1) {
-    return { ok: false, status: 409, code: "work_changed", message: "作品资料已更新，请重新加载后操作。" };
-  }
-  const draft = await getAdminProjectDraftDetail(db, id);
-  return { ok: true, draft: draft!, message: publish ? "作品已加入公开观测集。" : "作品已从公开观测集撤下。" };
+  const existing = await getAdminProjectDraftDetail(db,id);
+  if (!existing) return {ok:false,status:404,code:'not_found',message:'未找到对应作品。'};
+  const row = await db.prepare('SELECT segment_id FROM project_drafts WHERE id=?').bind(id).first<{segment_id:string|null}>();
+  if (!row?.segment_id) return {ok:false,status:409,code:'work_incomplete',message:'请先安排作品对应的坑位。'};
+  const result = await setPresentationPublication(db,row.segment_id,publish,actorId);
+  if (!result.ok) return result;
+  return {ok:true,draft:(await getAdminProjectDraftDetail(db,id))!,message:result.message};
 }
 
 // Public previews contain approved display fields only, never formal work URLs.
@@ -82,14 +58,17 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
     CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.intro_text ELSE NULL END AS introText,
-    d.id AS draftId, d.preview_title AS previewTitle, d.preview_summary AS previewSummary,
-    d.work_type AS workType, d.cover_url AS coverUrl, d.cover_alt AS coverAlt
+    w.draft_id AS draftId, w.title AS previewTitle, w.summary AS previewSummary,
+    w.work_type AS workType,
+    CASE WHEN w.thumbnail_id IS NOT NULL THEN '/api/presentations/' || s.id || '/images/' || w.thumbnail_id ELSE w.legacy_thumbnail_url END AS coverUrl,
+    w.thumbnail_alt AS coverAlt
     FROM schedule_segments s
     JOIN schedule_versions v ON v.id = s.schedule_version_id AND v.status = 'active'
     LEFT JOIN participants participant ON participant.id = s.current_participant_id AND participant.status IN ('approved', 'completed')
     LEFT JOIN portal_profiles p ON p.user_id = participant.user_id
     LEFT JOIN applications a ON a.user_id = participant.user_id AND a.status = 'approved'
-    LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id AND d.preview_status = 'approved'
+    LEFT JOIN project_drafts d ON d.participant_id = participant.id AND d.segment_id = s.id
+    LEFT JOIN work_presentations w ON w.draft_id=d.id AND w.segment_id=s.id
     WHERE s.is_visible = 1 AND s.kind <> 'special'
     ORDER BY s.kind = 'extra', s.scheduled_at IS NULL, julianday(s.scheduled_at), s.sort_order, s.id`).all<Row>();
   return results.map(({ draftId, previewTitle, previewSummary, workType, coverUrl, coverAlt, ...entry }) => ({

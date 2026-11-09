@@ -62,6 +62,7 @@ class SqliteD1Database {
   constructor() {
     this.sqlite.exec(`
       CREATE TABLE schedule_versions (
+        is_frozen INTEGER NOT NULL DEFAULT 0,
         id TEXT PRIMARY KEY,
         status TEXT NOT NULL,
         updated_at TEXT NOT NULL

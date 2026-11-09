@@ -1,3 +1,4 @@
+import { getScheduleFreeze, requireMutableSchedule } from './schedule-freeze';
 import type {
   PortalAvailableSegmentSummary,
   PortalSegmentMutationResponse,
@@ -156,7 +157,7 @@ export async function getPortalSegmentState(
     windows: input.windows,
   });
 
-  if (!canParticipantManageSegments(input.participant.status)) {
+  if ((await getScheduleFreeze(db)).isFrozen || !canParticipantManageSegments(input.participant.status)) {
     const hint = "当前参与资格不可调整席位，请联系主催。";
     Object.assign(actions, { canClaim: false, canChange: false, canRelease: false, claimHint: hint, changeHint: hint, releaseHint: hint });
   }
@@ -175,6 +176,7 @@ export async function claimParticipantSegment(
     segmentId: string;
   },
 ): Promise<SegmentMutationResult> {
+  await requireMutableSchedule(db);
   const window = getWindowOrFallback(input.windows, "segment_claim_open");
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
@@ -186,7 +188,7 @@ export async function claimParticipantSegment(
     return segmentMutationError(409, "schedule_missing_active", "当前还没有可认领的生效排期。");
   }
 
-  if (!canParticipantManageSegments(input.participant.status)) {
+  if ((await getScheduleFreeze(db)).isFrozen || !canParticipantManageSegments(input.participant.status)) {
     return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点认领。");
   }
 
@@ -323,6 +325,7 @@ export async function changeParticipantSegment(
     segmentId: string;
   },
 ): Promise<SegmentMutationResult> {
+  await requireMutableSchedule(db);
   const window = getWindowOrFallback(input.windows, "segment_change_open");
   const scheduleVersionId = await getActiveScheduleVersionId(db);
 
@@ -334,7 +337,7 @@ export async function changeParticipantSegment(
     return segmentMutationError(409, "schedule_missing_active", "当前还没有可调整的生效排期。");
   }
 
-  if (!canParticipantManageSegments(input.participant.status)) {
+  if ((await getScheduleFreeze(db)).isFrozen || !canParticipantManageSegments(input.participant.status)) {
     return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点变更。");
   }
 
@@ -499,13 +502,14 @@ export async function releaseParticipantSegment(
     windows: EventWindowSummary[];
   },
 ): Promise<SegmentMutationResult> {
+  await requireMutableSchedule(db);
   const window = getWindowOrFallback(input.windows, "segment_change_open");
 
   if (!window.isOpen) {
     return segmentMutationError(403, "segment_release_closed", "当前还没有开放发布时点变更或释放。");
   }
 
-  if (!canParticipantManageSegments(input.participant.status)) {
+  if ((await getScheduleFreeze(db)).isFrozen || !canParticipantManageSegments(input.participant.status)) {
     return segmentMutationError(403, "segment_participant_locked", "当前参与者状态不可再执行发布时点释放。");
   }
 
