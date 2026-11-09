@@ -106,7 +106,19 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         # Explicit source config avoids the Vite-generated deployment config.
-        run: npx --no-install wrangler d1 migrations apply DB --remote --env production --config wrangler.jsonc
+        run: |
+          # Only the first showcase migration needs the legacy association check.
+          npx --no-install wrangler d1 execute DB --remote --env production --config wrangler.jsonc --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('project_drafts','work_presentations')" > showcase-schema.json
+          showcase_check=$(node --input-type=module -e 'import {readFileSync} from "node:fs"; const response=JSON.parse(readFileSync("showcase-schema.json","utf8")); if(!Array.isArray(response)||!response.length||response.some(r=>r.success===false||!Array.isArray(r.results))) throw new Error("Could not inspect production schema."); const rows=response.flatMap(r=>r.results); console.log(rows.some(r=>r.name==="project_drafts")&&!rows.some(r=>r.name==="work_presentations")?"required":"skip");')
+          if [ "$showcase_check" = required ]; then
+            npx --no-install wrangler d1 execute DB --remote --env production --config wrangler.jsonc --json --command "SELECT COUNT(*) AS orphaned FROM project_drafts WHERE published_at IS NOT NULL AND segment_id IS NULL" > showcase-associations.json
+            node --input-type=module -e 'import {readFileSync} from "node:fs"; const count=JSON.parse(readFileSync("showcase-associations.json","utf8"))[0]?.results?.[0]?.orphaned; if(count!==0) throw new Error("Showcase migration stopped: published works without slots must be reviewed manually (count="+count+")."); console.log("Published work slot associations are ready.");'
+          fi
+          npx --no-install wrangler d1 time-travel info DB --env production --config wrangler.jsonc --json > d1-recovery.json
+          printf '\nD1 recovery bookmark before migrations:\n\n' >> "$GITHUB_STEP_SUMMARY"
+          cat d1-recovery.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n' >> "$GITHUB_STEP_SUMMARY"
+          npx --no-install wrangler d1 migrations apply DB --remote --env production --config wrangler.jsonc
 
       - name: Deploy frontend and Worker
         env:
