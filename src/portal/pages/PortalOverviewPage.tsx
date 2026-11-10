@@ -25,6 +25,8 @@ export function PortalOverviewPage() {
   const navigate = useNavigate();
   const { segment } = getRouteApi("/portal/").useSearch();
   const session = authClient.useSession();
+  // Session objects are replaced on tab focus, even for the same account.
+  const sessionUserId = session.data?.user.id;
   const [state, setState] = useState<WorkspaceState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -70,8 +72,8 @@ export function PortalOverviewPage() {
     setError(null);
   }, []);
   useEffect(() => {
-    if (!session.isPending && !session.data) { void navigate({ to: "/portal/login", search: { segment } }); return; }
-    if (!session.data) return;
+    if (!session.isPending && !sessionUserId) { void navigate({ to: "/portal/login", search: { segment } }); return; }
+    if (!sessionUserId) return;
     let cancelled = false;
     void refresh().catch(caught => {
       if (cancelled) return;
@@ -79,7 +81,7 @@ export function PortalOverviewPage() {
       setError(caught instanceof Error ? caught.message : "无法读取作者页面。");
     });
     return () => { cancelled = true; refreshSequence.current += 1; };
-  }, [navigate, session.data, session.isPending, refresh, segment]);
+  }, [navigate, sessionUserId, session.isPending, refresh, segment]);
   async function withdraw() {
     setWithdrawing(true); setError(null);
     try {

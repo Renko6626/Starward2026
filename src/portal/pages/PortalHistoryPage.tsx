@@ -14,20 +14,21 @@ type HistoryPageState =
 export function PortalHistoryPage({ embedded = false, revision = 0 }: { embedded?: boolean; revision?: number } = {}) {
   const navigate = useNavigate();
   const sessionQuery = authClient.useSession();
+  const sessionUserId = sessionQuery.data?.user.id;
   const [state, setState] = useState<HistoryPageState>({ status: "loading" });
 
   useEffect(() => {
-    if (!sessionQuery.isPending && !sessionQuery.data) {
+    if (!sessionQuery.isPending && !sessionUserId) {
       void navigate({ to: "/portal/login" });
       return;
     }
 
-    if (!sessionQuery.data) {
+    if (!sessionUserId) {
       return;
     }
 
     void loadHistoryPage();
-  }, [navigate, sessionQuery.data, sessionQuery.isPending, revision]);
+  }, [navigate, sessionUserId, sessionQuery.isPending, revision]);
 
   async function loadHistoryPage() {
     setState({ status: "loading" });

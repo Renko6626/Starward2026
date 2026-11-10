@@ -8,6 +8,7 @@ import { adminParticipantStatusLabels, type AdminParticipantListResponse, type A
 import { applicationInterestFormatLabels, applicationStatusLabels, type AdminApplicationListResponse } from "../../shared/applications";
 import { buildCreatorRows, filterCreatorRows } from "../lib/creator-list";
 import { AdminAssistedAccessForm } from "../components/AdminAssistedAccessForm";
+import { matchesProjectScope } from "../lib/project-progress";
 
 type Payload = { participants: AdminParticipantListResponse["items"]; applications: AdminApplicationListResponse["items"]; segments: AdminSegmentListResponse["items"]; drafts: AdminProjectDraftListResponse["items"] };
 
@@ -32,7 +33,7 @@ export function AdminParticipantsPage() {
   const rows = state.status === "ready" ? buildCreatorRows(state.payload.participants, state.payload.applications) : [];
   const pending = rows.filter(row => row.application?.status === "pending").length;
   const items = filterCreatorRows(rows, view, query);
-  const reviewCount = state.status === "ready" ? state.payload.drafts.filter(item => item.previewStatus === "submitted" || item.reviewStatus === "submitted").length : 0;
+  const reviewCount = state.status === "ready" ? state.payload.drafts.filter(item => matchesProjectScope(item, "unapproved")).length : 0;
   return <div className="page-content">
     <PageHeading title="参与者管理">
       <input className="field-input search-input" type="search" aria-label="搜索参与者" placeholder="搜索姓名、邮箱、联系方式或时点" value={query} onChange={event => void navigate({ search: { ...listSearch, q: event.target.value || undefined }, replace: true, resetScroll: false })} />

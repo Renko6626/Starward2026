@@ -15,7 +15,9 @@ export async function requestJson<T>(input: RequestInfo | URL, init?: RequestIni
   const payload = text ? safeParseJson(text) : null;
 
   if (!response.ok) {
-    if (typeof window !== 'undefined' && typeof input === 'string' && input.startsWith('/api/admin/') && [401, 403].includes(response.status)) {
+    // Business endpoints also return 403; only the session check proves access was lost.
+    if (typeof window !== 'undefined' && typeof input === 'string' && input.startsWith('/api/admin/')
+      && (response.status === 401 || (response.status === 403 && input === '/api/admin/session'))) {
       window.dispatchEvent(new CustomEvent('admin-access-lost', { detail: response.status }));
     }
     const errorPayload =
