@@ -63,7 +63,7 @@ export function WorkSubmissionSection({ userId, workspace, loadError, onRefresh,
         {uploadFailed ? <Notice tone="warning">本次仍有文件未上传完成，请重新上传未完成的文件后再提交完整作品。</Notice> : null}
         {workspace.window.isOpen ? <form onSubmit={event => void submit(event)} className="submission-form">
           <div className="submission-form-heading submission-form-wide">
-          <label>作品标题<input className="field-input" required maxLength={120} value={title} disabled={busy} onChange={e => setTitle(e.target.value)} /></label>
+          <label>作品标题<input type="text" name="workTitle" className="field-input" required maxLength={120} value={title} disabled={busy} onInput={e => setTitle(e.currentTarget.value)} onChange={e => setTitle(e.currentTarget.value)} /></label>
           <label>作品类型<select className="field-input" value={workType} disabled={busy} onChange={e => setWorkType(e.target.value as WorkType)}>{Object.entries(workTypeLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div>
           <label>作品简介<textarea className="field-input submission-summary-input" required maxLength={1600} rows={3} value={summary} disabled={busy} onChange={e => setSummary(e.target.value)} /></label>
