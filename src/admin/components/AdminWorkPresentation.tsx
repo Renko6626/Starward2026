@@ -75,7 +75,7 @@ export function AdminWorkPresentation({segmentId,initialTitle,initialSummary,aut
   }
   const content=draft.content?.kind==='gallery'?{kind:'gallery' as const,images:draft.content.images.map(i=>({url:presentationImageUrl(segmentId,i.id,true),alt:i.alt}))}:draft.content;
   const work:WorkData & {content:typeof content}={previewTitle:draft.title,previewSummary:draft.summary,publicAuthorName:authorName,
-    workType:draft.workType,formatLabel:null,publicTags:[],coverUrl:null,coverAlt:draft.thumbnailAlt,workUrl:draft.sourceUrl||null,publishedAt:saved?.publishedAt??null,content};
+    workType:draft.workType,formatLabel:null,publicTags:[],coverUrl:draft.thumbnailId?presentationImageUrl(segmentId,draft.thumbnailId,true):saved?.legacyThumbnailUrl??null,coverAlt:draft.thumbnailAlt,workUrl:draft.sourceUrl||null,publishedAt:saved?.publishedAt??null,content};
   return <section className="panel showcase-editor" aria-labelledby="showcase-editor-title">
     <div><h2 id="showcase-editor-title">展示资料</h2><p>{saved?.publishedAt?'作品已公开，保存修改会直接更新公开页面。':'作品尚未公开，准备好后由管理员手动公开。'}</p>
       <p className="field-hint">标题、简介和预览图保存后可显示在时间表；正文须手动公开。投稿文件继续用于审核和归档。</p></div>

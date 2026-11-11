@@ -78,6 +78,9 @@
 .work-byline span { color: var(--color-on-surface-variant); }
 .work-reading { max-width: 660px; margin: 40px auto 0; }
 .work-presentation--article .work-reading { max-width: 860px; }
+.work-source-link { margin-bottom: 24px; }
+.work-preview-cover { margin-block: 24px 28px; }
+.work-preview-cover .work-cover img { max-height: 420px; object-fit: contain; }
 .work-description { font-size: var(--site-body-size); line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; margin: 20px 0 24px; color: #c5cbd5; }
 .work-tags { list-style: none; padding: 0; display: flex; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 32px; color: #bda9d0; font-size: 13px; }
 .work-tags li::before { content: "# "; opacity: .6; }

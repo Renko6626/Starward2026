@@ -43,13 +43,13 @@ export function WorkPresentation({ work }: { work: WorkData & {content?:PublicPr
       <h1>{work.previewTitle || "尚未填写标题"}</h1>
       <p className="work-byline">{work.publicAuthorName || "尚未填写署名"}{work.formatLabel && <span> / {work.formatLabel}</span>}</p>
     </header>
-    {!work.content && work.coverUrl && <WorkCover work={work} full />}
     <div className="work-reading">
       <span className="eyebrow">ABOUT THIS OBSERVATION</span>
       <p className="work-description">{work.previewSummary || "尚未填写简介"}</p>
       {work.publicTags.length > 0 && <ul className="work-tags" aria-label="作品标签">{work.publicTags.map(tag => <li key={tag}>{tag}</li>)}</ul>}
+      {work.workUrl && <a className="button button--primary button--industrial work-source-link" href={work.workUrl} target="_blank" rel="noopener noreferrer">{work.workUrl.includes("bilibili.com/") ? "前往 B 站查看原作" : "查看原作品"} <ArrowUpRight size={16} aria-hidden="true" /><span className="sr-only">（在新标签页打开）</span></a>}
+      {work.coverUrl && <div className="work-preview-cover"><WorkCover work={work} full /></div>}
       <PresentationBody content={work.content} />
-      {work.workUrl && <a className="button button--primary button--industrial" href={work.workUrl} target="_blank" rel="noopener noreferrer">{work.workUrl.includes("bilibili.com/") ? "前往 B 站观看原作" : "查看原作品"} <ArrowUpRight size={16} aria-hidden="true" /><span className="sr-only">（在新标签页打开）</span></a>}
     </div>
   </div>;
 }
