@@ -109,6 +109,10 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DetailItem label="署名" value={name} />
             <DetailItem label="对外署名" value={(profile?.isAnonymous ?? participant?.isAnonymous) ? "匿名" : profile?.creditName ?? name} />
+            <div className="detail-item">
+              <p>B 站主页</p>
+              <div>{participant?.bilibiliUid ? <a className="text-link break-all" href={`https://space.bilibili.com/${encodeURIComponent(participant.bilibiliUid)}`} target="_blank" rel="noopener noreferrer">https://space.bilibili.com/{participant.bilibiliUid}</a> : "未填写"}</div>
+            </div>
             <DetailItem label="联系邮箱" value={profile?.contactEmail ?? participant?.inviteEmail ?? application?.contactEmail ?? "未填写"} />
             <DetailItem label="联系方式" value={profile ? `${profile.primaryContactChannel}: ${profile.primaryContactHandle}` : participant?.contactHandle ?? application?.contactHandle ?? "未填写"} />
             {profile?.backupContact ? <DetailItem label="备用联系" value={profile.backupContact} /> : null}

@@ -173,6 +173,7 @@ export async function getParticipantDetail(
       `SELECT
         participants.id,
         participants.user_id,
+        portal_profiles.bilibili_uid,
         COALESCE(portal_profiles.credit_name, '未填写署名') AS display_name,
         portal_profiles.is_anonymous,
         participants.invite_email,
@@ -199,7 +200,7 @@ export async function getParticipantDetail(
       LIMIT 1`,
     )
     .bind(participantId)
-    .first<ParticipantRow>();
+    .first<ParticipantRow & { bilibili_uid: string | null }>();
 
   return row ? mapAdminParticipantDetail(row) : null;
 }
@@ -973,11 +974,12 @@ function mapAdminParticipantItem(row: ParticipantRow): AdminParticipantItem {
 }
 
 function mapAdminParticipantDetail(
-  row: ParticipantRow,
+  row: ParticipantRow & { bilibili_uid: string | null },
 ): AdminParticipantDetail {
   return {
     ...mapAdminParticipantItem(row),
     userId: row.user_id,
+    bilibiliUid: row.bilibili_uid,
     currentSegmentName: row.current_segment_name,
     invitedAt: row.invited_at,
     activatedAt: row.activated_at,

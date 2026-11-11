@@ -53,6 +53,7 @@ export type AdminParticipantListResponse = {
 
 export type AdminParticipantDetail = AdminParticipantItem & {
   userId: string | null;
+  bilibiliUid: string | null;
   currentSegmentName: string | null;
   invitedAt: string | null;
   activatedAt: string | null;

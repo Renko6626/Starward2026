@@ -37,7 +37,7 @@ export function WorkCover({ work, full = false }: { work: WorkData; full?: boole
 
 // Admin preview and public detail share only the public presentation contract.
 export function WorkPresentation({ work }: { work: WorkData & {content?:PublicPresentationContent|null} }) {
-  return <div className="work-presentation">
+  return <div className={`work-presentation${work.content?.kind === 'markdown' ? ' work-presentation--article' : ''}`}>
     <header className="work-heading">
       <WorkTypeMark type={work.workType} />
       <h1>{work.previewTitle || "尚未填写标题"}</h1>

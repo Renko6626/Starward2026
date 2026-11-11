@@ -2,7 +2,7 @@ import { SqliteD1Fixture } from '../test/sqlite-d1';
 import { buildLocalSeedSql } from '../../scripts/lib/local-dev-bootstrap.mjs';
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { listProjectDrafts, updateActiveScheduleSegment, updateParticipant } from "./admin";
+import { getParticipantDetail, listProjectDrafts, updateActiveScheduleSegment, updateParticipant } from "./admin";
 type BatchResult = {
   success: boolean;
   meta: {
@@ -296,6 +296,19 @@ describe("updateActiveScheduleSegment", () => {
     });
   });
 });
+describe("getParticipantDetail", () => {
+  it("includes the author's saved Bilibili UID and reports a missing UID as null", async () => {
+    const f = new SqliteD1Fixture();
+    try {
+      f.sqlite.exec(buildLocalSeedSql());
+      f.sqlite.exec("UPDATE portal_profiles SET bilibili_uid='123456789' WHERE user_id='usr_seed_active'");
+      expect(await getParticipantDetail(f.db, 'part_seed_active')).toMatchObject({ bilibiliUid: '123456789' });
+      f.sqlite.exec("UPDATE portal_profiles SET bilibili_uid=NULL WHERE user_id='usr_seed_active'");
+      expect(await getParticipantDetail(f.db, 'part_seed_active')).toMatchObject({ bilibiliUid: null });
+    } finally { f.sqlite.close(); }
+  });
+});
+
 describe("updateParticipant", () => {
   it("releases the held segment when an approved participant is downgraded to withdrawn", async () => {
     const db = new SqliteD1Database();
