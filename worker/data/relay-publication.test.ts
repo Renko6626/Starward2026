@@ -30,7 +30,7 @@ describe("author release confirmation", () => {
     expect(await confirm()).toMatchObject({ ok: true, draft: { workUrl: initialLink, releaseConfirmedAt: firstTime, publishedAt: null } });
     // Another participant's future slot must not hide this released work.
     f.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00Z' WHERE id = 'seg_seed_101'");
-    expect(await getPublicWork(f.db, draftId)).toBeNull();
+    expect(await getPublicWork(f.db, '02')).toBeNull();
     await confirm();
     expect(f.sqlite.prepare("SELECT COUNT(*) AS count FROM participant_events WHERE event_type = 'work_release_confirmed'").get())
       .toMatchObject({ count: 1 });
@@ -49,16 +49,16 @@ describe("author release confirmation", () => {
     expect(await confirm("https://example.com/corrected"))
       .toMatchObject({ ok: true, draft: { workUrl: "https://example.com/corrected", releaseConfirmedAt: firstTime, publishedAt: null } });
     expect(await confirm("" )).toMatchObject({ ok: false, code: "invalid_work_url" });
-    expect(await getPublicWork(f.db, draftId)).toBeNull();
+    expect(await getPublicWork(f.db, '02')).toBeNull();
   });
   it("records confirmation while content review is pending and still waits for manual publication after approval", async () => {
     f.sqlite.exec("DELETE FROM work_submission_reviews; UPDATE project_drafts SET review_status = 'submitted' WHERE id = 'draft_seed_active'");
     expect(await confirm()).toMatchObject({ ok: true, draft: { releaseConfirmedAt: firstTime, publishedAt: null } });
-    expect(await getPublicWork(f.db, draftId)).toBeNull();
+    expect(await getPublicWork(f.db, '02')).toBeNull();
     vi.setSystemTime(new Date("2026-11-13T00:00:00Z"));
     expect(await createWorkSubmissionReview(f.db,draftId,"version_seed",{decision:"approved"},"admin")).toMatchObject({ok:true});
     expect(await getPortalProjectDraftDetail(f.db,"part_seed_active")).toMatchObject({publishedAt:null});
-    expect(await getPublicWork(f.db, draftId)).toBeNull();
+    expect(await getPublicWork(f.db, '02')).toBeNull();
   });
   it("rechecks ownership and date in the transaction when a concurrent admin changes the slot", async () => {
     f.beforeBatch = () => f.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2026-11-20T00:00:00Z' WHERE current_participant_id = 'part_seed_active'");
@@ -83,7 +83,7 @@ describe("author release confirmation", () => {
     await setWorkPublication(f.db, draftId, false, "admin");
     expect(await confirm("https://example.com/updated"))
       .toMatchObject({ ok: true, draft: { releaseConfirmedAt: firstTime, publishedAt: null } });
-    expect(await getPublicWork(f.db, draftId)).toBeNull();
+    expect(await getPublicWork(f.db, '02')).toBeNull();
   });
   it("does not let stale preview saves erase a concurrently confirmed link", async () => {
     f.beforeBatch = () => f.sqlite.prepare(`UPDATE project_drafts SET work_url = ?, release_confirmed_at = ?, published_at = ? WHERE id = ?`)

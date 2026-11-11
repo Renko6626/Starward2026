@@ -15,18 +15,18 @@ beforeEach(() => {
 afterEach(() => f.sqlite.close());
 it('keeps a separate presentation and publishes only by an explicit admin action', async () => {
   await saveWorkPresentation(f.db,'seg_seed_102',article);
-  expect(await getPublicWork(f.db,'draft_seed_active')).toBeNull();
+  expect(await getPublicWork(f.db,'02')).toBeNull();
   expect(await setPresentationPublication(f.db,'seg_seed_102',true,'host')).toMatchObject({ok:false});
   await createWorkSubmissionReview(f.db,'draft_seed_active','v1',{decision:'approved'},'host');
   expect((await getWorkPresentation(f.db,'seg_seed_102'))?.title).toBe('正式作品');
   expect(await listPublicWorks(f.db)).toEqual([]);
   expect(await setPresentationPublication(f.db,'seg_seed_102',true,'host')).toMatchObject({ok:true});
-  expect(await getPublicWork(f.db,'draft_seed_active')).toMatchObject({work:{previewTitle:'正式作品',content:{kind:'markdown',markdown:article.content.markdown}}});
+  expect(await getPublicWork(f.db,'02')).toMatchObject({work:{previewTitle:'正式作品',content:{kind:'markdown',markdown:article.content.markdown}}});
   await saveWorkPresentation(f.db,'seg_seed_102',{...article,title:'修正标题'});
-  expect((await getPublicWork(f.db,'draft_seed_active'))?.work.previewTitle).toBe('修正标题');
+  expect((await getPublicWork(f.db,'02'))?.work.previewTitle).toBe('修正标题');
   expect(await saveWorkPresentation(f.db,'seg_seed_102',{...article,content:null})).toMatchObject({ok:false});
   await setPresentationPublication(f.db,'seg_seed_102',false,'host');
-  expect(await getPublicWork(f.db,'draft_seed_active')).toBeNull();
+  expect(await getPublicWork(f.db,'02')).toBeNull();
 });
 it('publishes preview fields without leaking article text, and stores just one row per slot', async () => {
   await saveWorkPresentation(f.db,'seg_seed_102',article);
@@ -43,5 +43,5 @@ it('publishes a Bilibili player only when its source video and page match',async
   expect(await setPresentationPublication(f.db,'seg_seed_102',true,'host')).toMatchObject({ok:false,code:'work_incomplete'});
   await saveWorkPresentation(f.db,'seg_seed_102',{...video,content:{...video.content,page:2}});
   expect(await setPresentationPublication(f.db,'seg_seed_102',true,'host')).toMatchObject({ok:true});
-  expect((await getPublicWork(f.db,'draft_seed_active'))?.work.content).toEqual({kind:'bilibili',bvid:'BV1B7411m7LV',page:2});
+  expect((await getPublicWork(f.db,'02'))?.work.content).toEqual({kind:'bilibili',bvid:'BV1B7411m7LV',page:2});
 });

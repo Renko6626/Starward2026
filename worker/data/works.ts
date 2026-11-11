@@ -23,9 +23,9 @@ export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
   });
 }
 
-export async function getPublicWork(db: D1Database, id: string): Promise<PublicWorkDetailResponse | null> {
+export async function getPublicWork(db: D1Database, routeId: string): Promise<PublicWorkDetailResponse | null> {
   const works = await listPublicWorks(db);
-  const index = works.findIndex((work) => work.id === id);
+  const index = works.findIndex((work) => work.segmentCode === routeId);
   if (index === -1) return null;
   return { work: works[index], previous: works[index - 1] ?? null, next: works[index + 1] ?? null };
 }

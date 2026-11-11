@@ -34,8 +34,8 @@ export function WorkDetailPage() {
         <div className="work-detail-index"><span>OBS. {String(state.data.work.observationNumber).padStart(2, "0")}</span><span>{formatSegmentName(state.data.work.segmentName || "自由观测")}</span></div>
         <WorkPresentation work={state.data.work} />
         <nav className="work-neighbors" aria-label="查看相邻作品">
-          {state.data.previous ? <Link to="/works/$workId" params={{ workId: state.data.previous.id }}><span><ArrowLeft size={15} />上一件作品</span><strong>{state.data.previous.previewTitle}</strong></Link> : <div />}
-          {state.data.next ? <Link to="/works/$workId" params={{ workId: state.data.next.id }}><span>下一件作品<ArrowRight size={15} /></span><strong>{state.data.next.previewTitle}</strong></Link> : <Link to="/works" search={{ view: "gallery", type: "all", q: "" }}><strong>返回时间表</strong></Link>}
+          {state.data.previous ? <Link to="/works/$workId" params={{ workId: state.data.previous.segmentCode }}><span><ArrowLeft size={15} />上一件作品</span><strong>{state.data.previous.previewTitle}</strong></Link> : <div />}
+          {state.data.next ? <Link to="/works/$workId" params={{ workId: state.data.next.segmentCode }}><span>下一件作品<ArrowRight size={15} /></span><strong>{state.data.next.previewTitle}</strong></Link> : <Link to="/works" search={{ view: "gallery", type: "all", q: "" }}><strong>返回时间表</strong></Link>}
         </nav>
       </>}
   </div>;

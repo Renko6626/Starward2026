@@ -41,7 +41,7 @@ export type PublicWork = WorkPresentation & {
   id: string;
   content?: PublicPresentationContent | null;
   observationNumber: number;
-  segmentCode: string | null;
+  segmentCode: string;
   segmentName: string | null;
 };
 export type ScheduleSegmentKind = 'standard' | 'extra' | 'special';

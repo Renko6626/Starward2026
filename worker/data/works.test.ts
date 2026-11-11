@@ -66,7 +66,7 @@ afterEach(() => database.sqlite.close());
 describe("public work publication", () => {
   it("preserves existing drafts and requires an open release window, approvals and public metadata", async () => {
     expect(await listPublicWorks(db)).toEqual([]);
-    expect(await getPublicWork(db, draftId)).toBeNull();
+    expect(await getPublicWork(db, '02')).toBeNull();
     expect(await setWorkPublication(db, draftId, true, actor)).toMatchObject({ ok: false, code: "release_closed" });
     openWindow();
     expect(await setWorkPublication(db, draftId, true, actor)).toMatchObject({ ok: false, code: "work_incomplete" });
@@ -79,9 +79,9 @@ describe("public work publication", () => {
     openWindow(); await readyDraft();
     await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec("UPDATE event_windows SET is_enabled = 0 WHERE key = 'public_release_open'");
-    expect(await getPublicWork(db, draftId)).not.toBeNull();
+    expect(await getPublicWork(db, '02')).not.toBeNull();
     expect(await setWorkPublication(db, draftId, false, actor)).toMatchObject({ ok: true });
-    expect(await getPublicWork(db, draftId)).toBeNull();
+    expect(await getPublicWork(db, '02')).toBeNull();
     expect(await listPublicWorks(db)).toEqual([]);
     const events = database.sqlite.prepare("SELECT event_type FROM participant_events WHERE event_type LIKE 'work_%' ORDER BY rowid").all();
     expect(events.map(event => event.event_type)).toEqual(["work_published", "work_unpublished"]);
@@ -94,9 +94,9 @@ describe("public work publication", () => {
     const submitted = await createWorkSubmission(db,'part_seed_active',{title:'未复审标题',summary:'私有简介',workType:'text',fileIds:['revision-file'],versionNote:'仅主催可见'});
     expect(submitted.ok).toBe(true); if (!submitted.ok) throw new Error(submitted.message);
     const version = submitted.workspace.latest!;
-    expect(await getPublicWork(db,draftId)).toMatchObject({work:{previewTitle:'结界观测预告'}});
-    expect(JSON.stringify(await getPublicWork(db,draftId))).not.toContain('secret.txt');
-    expect(JSON.stringify(await getPublicWork(db,draftId))).not.toContain('私有简介');
+    expect(await getPublicWork(db,'02')).toMatchObject({work:{previewTitle:'结界观测预告'}});
+    expect(JSON.stringify(await getPublicWork(db,'02'))).not.toContain('secret.txt');
+    expect(JSON.stringify(await getPublicWork(db,'02'))).not.toContain('私有简介');
     expect(await createWorkSubmissionReview(db,draftId,version.id,{decision:'changes_requested',feedback:'修改正文'},actor)).toMatchObject({ok:false,code:'work_published'});
     await setWorkPublication(db,draftId,false,actor);
     expect(await createWorkSubmissionReview(db,draftId,version.id,{decision:'changes_requested',feedback:'修改正文'},actor)).toMatchObject({ok:true});
@@ -108,7 +108,7 @@ describe("public work publication", () => {
     database.sqlite.exec("UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active'");
     await setWorkPublication(db, draftId, true, actor);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
-    for (const path of ["/api/works", `/api/works/${draftId}`]) {
+    for (const path of ["/api/works", `/api/works/02`]) {
       const response = await app.request(`http://localhost${path}`, {}, { DB: db });
       expect(response.status).toBe(200);
       const body = await response.json() as any;
@@ -120,7 +120,7 @@ describe("public work publication", () => {
       ].sort());
     }
     await setWorkPublication(db, draftId, false, actor);
-    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(404);
+    expect((await app.request(`http://localhost/api/works/02`, {}, { DB: db })).status).toBe(404);
   });
 
   it("orders by relay slot, keeps untimed slots last and skips unpublished neighbors", async () => {
@@ -133,11 +133,11 @@ describe("public work publication", () => {
     await saveWorkPresentation(db,'seg_seed_101',{title:'另一份观测',summary:'简介',workType:'music',thumbnailId:null,thumbnailAlt:'',sourceUrl:'https://example.com/music',content:{kind:'markdown',markdown:'另一份正文'}});
     await setWorkPublication(db, "draft_pending", true, actor);
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual(["draft_pending", draftId]);
-    expect(await getPublicWork(db, draftId)).toMatchObject({ previous: { id: "draft_pending" }, next: null });
+    expect(await getPublicWork(db, '02')).toMatchObject({ previous: { id: "draft_pending" }, next: null });
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE id = 'seg_seed_101'");
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual([draftId, "draft_pending"]);
     await setWorkPublication(db, "draft_pending", false, actor);
-    expect(await getPublicWork(db, draftId)).toMatchObject({ previous: null, next: null });
+    expect(await getPublicWork(db, '02')).toMatchObject({ previous: null, next: null });
   });
 
   it("requires admin access and supports publish/unpublish through the actual routes", async () => {
@@ -225,13 +225,13 @@ describe("public relay timetable", () => {
       UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
     const app = new Hono<AppRouteConfig>().route("/api", publicApi);
     expect((await listPublicWorks(db)).map(work => work.id)).toEqual([draftId]);
-    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(200);
+    expect((await app.request(`http://localhost/api/works/02`, {}, { DB: db })).status).toBe(200);
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = NULL WHERE current_participant_id = 'part_seed_active'");
-    expect(await getPublicWork(db, draftId)).not.toBeNull();
+    expect(await getPublicWork(db, '02')).not.toBeNull();
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '1999-12-31T23:00:00.000Z' WHERE current_participant_id = 'part_seed_active'");
     const body = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(body.schedule[0]).toMatchObject({ scheduledAt: "1999-12-31T23:00:00.000Z", workId: draftId });
-    expect((await app.request(`http://localhost/api/works/${draftId}`, {}, { DB: db })).status).toBe(200);
+    expect((await app.request(`http://localhost/api/works/02`, {}, { DB: db })).status).toBe(200);
     await setWorkPublication(db, draftId, false, actor);
     const withdrawn = await (await app.request("http://localhost/api/works", {}, { DB: db })).json() as any;
     expect(withdrawn.schedule[0].workId).toBeNull();
@@ -277,6 +277,25 @@ it("migrates mixed types to other, permits cosplay and preserves existing approv
       .toMatchObject({ work_type: 'cosplay' });
     expect(() => legacy.exec("UPDATE applications SET interest_format = 'mixed'")).toThrow();
   } finally { legacy.close(); }
+});
+
+it('uses exact relay codes for public routes without normalization or legacy ID aliases', async () => {
+  openWindow(); await readyDraft(); await setWorkPublication(db, draftId, true, actor);
+  const app = new Hono<AppRouteConfig>().route('/api', publicApi);
+  const read = (routeId: string) => app.request(`http://localhost/api/works/${routeId}`, {}, { DB: db });
+  const regular = await read('02');
+  expect(regular.status).toBe(200);
+  expect((await regular.json() as any).work).toMatchObject({ id: 'draft_seed_active', segmentCode: '02' });
+  expect((await read('draft_seed_active')).status).toBe(404);
+  expect((await read('2')).status).toBe(404);
+  database.sqlite.exec("UPDATE schedule_segments SET code='EXTRA-01',kind='extra',scheduled_at=NULL WHERE id='seg_seed_102'");
+  const extra = await read('EXTRA-01');
+  expect(extra.status).toBe(200);
+  expect((await extra.json() as any).work).toMatchObject({ id: 'draft_seed_active', segmentCode: 'EXTRA-01' });
+  expect((await read('ex1')).status).toBe(404);
+  expect((await read('02')).status).toBe(404);
+  await setWorkPublication(db, draftId, false, actor);
+  expect((await read('EXTRA-01')).status).toBe(404);
 });
 
 describe('additional schedule slots', () => {
@@ -325,7 +344,7 @@ describe('additional schedule slots', () => {
     openWindow(); await readyDraft(); await setWorkPublication(db, draftId, true, actor);
     database.sqlite.exec("UPDATE schedule_segments SET scheduled_at = '2000-01-01T00:00:00Z' WHERE id = 'seg_seed_101'");
     await appendActiveScheduleSegments(db, { count: 2 });
-    expect(await getPublicWork(db, draftId)).not.toBeNull();
+    expect(await getPublicWork(db, '02')).not.toBeNull();
     const app = new Hono<AppRouteConfig>().route('/api', publicApi);
     const body = await (await app.request('http://localhost/api/works', {}, { DB: db })).json() as any;
     expect(body.schedule.filter((item: any) => item.kind === 'extra')).toHaveLength(2);

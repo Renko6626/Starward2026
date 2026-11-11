@@ -78,8 +78,8 @@ export function RelayPublicationNotice({ revision, onSaved }: { revision: number
       </Field>
       <div className="archive-control"><span className="archive-control-label" aria-hidden="true">RELEASE / {release.confirmedAt ? "SAVE" : "CONFIRM"}</span><Button appearance={release.confirmedAt ? "industrial" : "framed"} className={release.confirmedAt ? undefined : "button--accent"} type="submit" disabled={busy || !workUrl.trim()} aria-busy={busy}>{busy ? "提交中…" : release.confirmedAt ? "保存作品链接" : "确认已发布"}</Button></div>
     </form> : null}
-    {release.confirmedAt ? draft.publishedAt
-      ? <Link className="text-link" to="/works/$workId" params={{ workId: draft.id }}>查看公开作品</Link>
+    {release.confirmedAt ? draft.publishedAt && project.participant.currentSegmentCode
+      ? <Link className="text-link" to="/works/$workId" params={{ workId: project.participant.currentSegmentCode }}>查看公开作品</Link>
       : <p className="field-hint">已确认发布。站内展示由管理员根据最终版本整理后手动公开。</p> : null}
     {message ? <Notice tone="success">{message}</Notice> : null}
     {error ? <Notice tone="error">{error}</Notice> : null}

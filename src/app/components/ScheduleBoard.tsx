@@ -198,7 +198,7 @@ export function ScheduleTaskDetail({ entry, missionStart, mine, ownName, signedI
     </div>
     </Crossfade>
     <div className="ops-detail-actions">
-      {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.workId }}>查看作品 ↗</Link> : null}
+      {entry.workId ? <Link to="/works/$workId" params={{ workId: entry.code }}>查看作品 ↗</Link> : null}
       {actions !== undefined ? actions : entry.status === "available" || mine ? <Link to={signedIn ? "/portal" : "/portal/login"} search={{ segment: mine ? "" : entry.id }} hash={signedIn ? "plan" : undefined}>{mine ? "管理我的时段" : "选择这个时点并报名"}</Link> : null}
       {entry.status !== "available" && <p>{entry.workId ? "作品已公开。" : ended ? "作品尚未公开。" : "作品由管理员整理后在这里公开。"}</p>}
     </div>
