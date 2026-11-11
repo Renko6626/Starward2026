@@ -1,3 +1,4 @@
+import { formatSegmentName } from "../../app/lib/format";
 import { useEffect, useState, type FormEvent } from "react";
 import { Clock } from "../../app/components/icons";
 import {
@@ -200,7 +201,7 @@ export function AdminSchedulePage() {
     event.preventDefault();
     const count = Number(appendCount);
     if (!Number.isInteger(count) || count < 1 || count > 120) {
-      setAppend({ status: 'error', message: '追加数量必须是 1 到 120 之间的整数。' });
+      setAppend({ status: 'error', message: '添加数量必须是 1 到 120 之间的整数。' });
       return;
     }
     setAppend({ status: 'submitting' });
@@ -213,7 +214,7 @@ export function AdminSchedulePage() {
         ? { status: 'ready', payload: { ...current.payload, segments: payload.items } } : current);
       setAppend({ status: 'success', message: payload.message });
     } catch (error) {
-      setAppend({ status: 'error', message: error instanceof Error ? error.message : '追加坑位失败。' });
+      setAppend({ status: 'error', message: error instanceof Error ? error.message : '添加EX棒失败。' });
     }
   }
 
@@ -411,14 +412,14 @@ export function AdminSchedulePage() {
             disabled={hasUnsavedDrafts || visibilitySaving || creating || append.status === 'submitting' || Object.values(saveStates).some(value => value.status === 'submitting')} />
           <fieldset disabled={scheduleBusy} className="space-y-4 min-w-0">
           <details className="panel admin-disclosure">
-            <summary>追加坑位</summary>
+            <summary>EX棒</summary>
             <div className="pt-4">
-              <p className="mt-2 text-sm text-on-surface-variant">追加坑位显示在公开时间表底部，不占标准排程，沿用现有认领和审核流程。</p>
+              <p className="mt-2 text-sm text-on-surface-variant">EX棒显示在公开时间表底部，不占标准排程，沿用现有认领和审核流程。</p>
             </div>
             <form className="flex flex-wrap items-end gap-4" onSubmit={handleAppend}>
-              <FormField label="追加数量"><input className="field-input w-28" type="number" min={1} max={120} value={appendCount} onChange={event => setAppendCount(event.target.value)} /></FormField>
+              <FormField label="添加数量"><input className="field-input w-28" type="number" min={1} max={120} value={appendCount} onChange={event => setAppendCount(event.target.value)} /></FormField>
               <button type="submit" disabled={append.status === 'submitting'} className="min-h-10 px-4 py-2 bg-primary text-on-primary rounded-md disabled:opacity-60">
-                {append.status === 'submitting' ? '正在追加…' : '追加坑位'}
+                {append.status === 'submitting' ? '正在添加…' : '添加EX棒'}
               </button>
             </form>
             {append.status === 'success' || append.status === 'error' ? <StateNotice message={append.message} tone={append.status === 'success' ? 'success' : 'error'} /> : null}
@@ -452,7 +453,7 @@ export function AdminSchedulePage() {
               return (
                 <div key={segment.id} className="panel">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label={`选择 ${segment.code} ${segment.name}`} checked={selectedIds.includes(segment.id)}
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label={`选择 ${segment.code} ${formatSegmentName(segment.name)}`} checked={selectedIds.includes(segment.id)}
                       onChange={event => setSelectedIds(current => event.target.checked ? [...current, segment.id] : current.filter(id => id !== segment.id))} />选择此槽位</label>
                     <div className="flex items-center gap-3">
                       <StatusBadge tone={segment.isVisible ? 'success' : 'muted'}>{segment.isVisible ? '显示中' : '已隐藏'}</StatusBadge>
@@ -461,7 +462,7 @@ export function AdminSchedulePage() {
                   </div>
                 <details className="admin-disclosure admin-segment-row">
                   <summary>
-                    <span className="font-medium">{segment.code} {segment.name}{segment.kind === "special" ? "（特别席位）" : ""}</span>
+                    <span className="font-medium">{segment.code} {formatSegmentName(segment.name)}{segment.kind === "special" ? "（特别席位）" : ""}</span>
                     <span>{formatScheduledTime(segment.scheduledAt)}</span>
                     <span>{segment.currentParticipantName ?? "未分配"}</span>
                     <SegmentStatusBadge status={segment.status} />
@@ -469,7 +470,7 @@ export function AdminSchedulePage() {
                   <form className="space-y-4 pt-5" onSubmit={event => void handleSegmentSave(event, segment.id)}>
                   <p className="text-sm text-on-surface-variant">最近更新 {formatDateTime(segment.updatedAt)}；认领时间 {formatDateTime(segment.claimedAt)}；释放时间 {formatDateTime(segment.releasedAt)}</p>
                   <div className="space-y-4">
-                    {segment.kind === 'extra' ? <p className="text-sm text-on-surface-variant">追加坑位不设置计划发布时间。</p> : <FormField label="发布时间（北京时间）">
+                    {segment.kind === 'extra' ? <p className="text-sm text-on-surface-variant">EX棒不设置计划发布时间。</p> : <FormField label="发布时间（北京时间）">
                       <input className="field-input" type="datetime-local" required={segment.kind === "special"} value={draft.scheduledAt} onChange={event => updateDraft(segment.id, { scheduledAt: event.target.value })} />
                     </FormField>}
                     <FormField label="发布时点说明">

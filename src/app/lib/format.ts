@@ -13,3 +13,8 @@ export function formatScheduledTime(value: string | null | undefined) {
   if (!value) return "发布时间待定";
   return new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
 }
+
+// Display legacy default slot names using the current public terminology.
+export function formatSegmentName(name: string) {
+  return name.replace(/^追加坑位(?=\s|$)/, "EX棒");
+}

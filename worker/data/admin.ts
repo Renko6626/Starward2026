@@ -464,7 +464,7 @@ export async function appendActiveScheduleSegments(
 ): Promise<BootstrapActiveScheduleSegmentsResult> {
   await requireMutableSchedule(db);
   const versionId = await getActiveScheduleVersionId(db);
-  if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有可追加坑位的生效排期。" };
+  if (!versionId) return { ok: false, status: 409, code: "schedule_missing_active", message: "当前没有可添加EX棒的生效排期。" };
   const now = nowIso();
   // D1 executes this batch atomically. Each insert derives the next code and
   // sort position inside the transaction, so concurrent appends cannot reuse them.
@@ -476,11 +476,11 @@ export async function appendActiveScheduleSegments(
     )
     INSERT INTO schedule_segments
       (id, schedule_version_id, kind, code, name, description, scheduled_at, status, sort_order, created_at, updated_at)
-    SELECT ?, ?, 'extra', printf('EXTRA-%02d', ordinal), '追加坑位 ' || ordinal, NULL, NULL, 'open', position, ?, ?
+    SELECT ?, ?, 'extra', printf('EXTRA-%02d', ordinal), 'EX棒 ' || ordinal, NULL, NULL, 'open', position, ?, ?
     FROM next WHERE EXISTS (SELECT 1 FROM schedule_versions WHERE id = ? AND status = 'active')
   `).bind(versionId, createPrefixedId('seg'), versionId, now, now, versionId)));
-  if (!results[0]?.meta.changes) return { ok: false, status: 409, code: 'schedule_changed', message: '生效排期已变化，请刷新后追加。' };
-  return { ok: true, items: await listSegments(db), message: `已追加 ${input.count} 个坑位。` };
+  if (!results[0]?.meta.changes) return { ok: false, status: 409, code: 'schedule_changed', message: '生效排期已变化，请刷新后添加EX棒。' };
+  return { ok: true, items: await listSegments(db), message: `已添加 ${input.count} 个EX棒。` };
 }
 
 export async function updateActiveScheduleSegment(
@@ -528,7 +528,7 @@ export async function updateActiveScheduleSegment(
 
   if ('mode' in input && input.mode === 'fill-empty-time') {
     if (existingSegment.kind !== 'standard') {
-      return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
+      return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: 'EX棒不设置标准排程的发布时间。' };
     }
     // Check emptiness and active version in the write itself. Concurrent claims
     // may change any other column; this operation never writes those columns.
@@ -547,7 +547,7 @@ export async function updateActiveScheduleSegment(
 
   const nextScheduledAt = input.scheduledAt === undefined ? existingSegment.scheduled_at : input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null;
   if (existingSegment.kind === 'extra' && nextScheduledAt) {
-    return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: '追加坑位不设置标准排程的发布时间。' };
+    return { ok: false, status: 422, code: 'extra_slot_has_no_schedule', message: 'EX棒不设置标准排程的发布时间。' };
   }
   if (existingSegment.kind === "special" && !nextScheduledAt) {
     return { ok: false, status: 422, code: "special_slot_requires_time", message: "特别席位需要明确的发布时间。" };

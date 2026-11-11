@@ -6,7 +6,7 @@ import { presentationFromRow, publicPresentationContent, setPresentationPublicat
 // Public reads explicitly select display metadata and never submission archives.
 export async function listPublicWorks(db: D1Database): Promise<PublicWork[]> {
   const { results } = await db.prepare(`SELECT w.*,s.code AS segmentCode,s.name AS segmentName,
-    CASE WHEN pp.is_anonymous=1 THEN '匿名' ELSE pp.credit_name END AS publicAuthorName
+    pp.credit_name AS publicAuthorName
     FROM work_presentations w JOIN project_drafts d ON d.id=w.draft_id
     JOIN participants p ON p.id=d.participant_id
     JOIN schedule_segments s ON s.id=w.segment_id AND s.current_participant_id=p.id
@@ -55,7 +55,7 @@ export async function listPublicSchedule(db: D1Database, works: PublicWork[]): P
       WHEN s.current_participant_id IS NULL AND s.status IN ('open', 'released') THEN 'available'
       ELSE 'unavailable'
     END AS status,
-    CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE p.credit_name END AS publicAuthorName,
+    p.credit_name AS publicAuthorName,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.interest_format ELSE NULL END AS interestFormat,
     CASE WHEN s.status IN ('held', 'locked', 'completed') THEN a.intro_text ELSE NULL END AS introText,
     w.draft_id AS draftId, w.title AS previewTitle, w.summary AS previewSummary,

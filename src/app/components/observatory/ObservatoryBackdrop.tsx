@@ -14,6 +14,10 @@ export function ObservatoryBackdrop() {
     return () => { cancelled = true; dispose?.(); };
   }, []);
   return <div ref={root} className="schedule-observatory" aria-hidden="true">
+    <picture className="schedule-spacecraft">
+      <source media="(max-width: 640px)" srcSet="/station/mobile.jpg" />
+      <img src="/station/desktop.jpg" alt="" decoding="async" />
+    </picture>
     <div className="schedule-orbit" />
     <div className="schedule-antenna" />
   </div>;

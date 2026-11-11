@@ -1,7 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, requestJson } from "../lib/api";
-import { Notice, ReadError } from "../components/ui";
+import { ReadError } from "../components/ui";
 import { ObservationMark } from "../components/WorkPresentation";
 import { ActivityIdentity } from "../components/ActivityIdentity";
 import { ScheduleBoard, ScheduleStatus, ScheduleTaskDetail } from "../components/ScheduleBoard";
@@ -9,17 +8,13 @@ import { groupSchedule, scheduleDay, schedulePhase } from "../lib/schedule-layou
 import { authClient } from "../../portal/lib/auth-client";
 import type { PublicWorksResponse } from "../../shared/works";
 import type { PortalDashboardResponse } from "../../shared/portal";
-import type { CollaborationResponse } from "../../shared/collaboration";
 import { scheduleMissionStart } from "../lib/mission-time";
-import { ScheduleSection } from "../../portal/components/ScheduleSection";
-import { readScheduleIntent, saveScheduleIntent } from "../../portal/lib/schedule-selection";
 import { ObservatoryBackdrop } from "../components/observatory/ObservatoryBackdrop";
 import { useDialogMotion } from "../components/use-dialog-motion";
 import { PageSkeleton } from '../components/NavigationFeedback';
 
 const dateFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" });
-const timeFormat = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-type OwnSchedule = { userId: string; revision: number; segmentId: string | null; author: string | null; status: string | undefined; collaboration: CollaborationResponse };
+type OwnSchedule = { userId: string; segmentId: string | null; author: string | null };
 
 // Keep only public data between visits; each mount still refreshes it. Account
 // permissions and personal schedule state remain local to the current session.
@@ -32,8 +27,6 @@ export function WorksPage() {
   const [error, setError] = useState<string | null>(null);
   const [own, setOwn] = useState<OwnSchedule | null>(null);
   const [ownWarning, setOwnWarning] = useState<string | null>(null);
-  const [revision, setRevision] = useState(0);
-  const [operationMessage, setOperationMessage] = useState<{ userId: string; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [mobile, setMobile] = useState(false);
@@ -53,13 +46,9 @@ export function WorksPage() {
           }
         })
         .catch(caught => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : "暂时无法读取接力时间表。"); });
-      if (userId) void Promise.all([
-        requestJson<PortalDashboardResponse>("/api/portal/dashboard", { signal: controller.signal }),
-        requestJson<CollaborationResponse>("/api/portal/collaboration", { signal: controller.signal }),
-      ]).then(([response, collaboration]) => {
+      if (userId) void requestJson<PortalDashboardResponse>("/api/portal/dashboard", { signal: controller.signal }).then(response => {
           if (!controller.signal.aborted) {
-            setOwn({ userId, revision, segmentId: response.currentSegment?.id ?? null, status: response.participant?.status, collaboration, author: response.profile
-              ? response.profile.isAnonymous ? "匿名" : response.profile.creditName : null });
+            setOwn({ userId, segmentId: response.currentSegment?.id ?? null, author: response.profile?.creditName ?? null });
             setOwnWarning(null);
           }
         })
@@ -75,7 +64,7 @@ export function WorksPage() {
     const refreshTimer = window.setInterval(refresh, 60000);
     const clockTimer = window.setInterval(() => setNow(Date.now()), 15000);
     return () => { controller.abort(); window.clearInterval(refreshTimer); window.clearInterval(clockTimer); };
-  }, [userId, revision]);
+  }, [userId]);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 640px)");
@@ -86,17 +75,9 @@ export function WorksPage() {
   }, []);
 
   const schedule = data?.schedule ?? [];
-  const frozen = Boolean(data?.isFrozen);
   const days = groupSchedule(schedule);
   const missionStart = scheduleMissionStart(schedule);
-  const identity = own && own.userId === userId && own.revision === revision ? own : null;
-  useEffect(() => {
-    if (!userId || !identity || identity.status === "approved" || identity.status === "completed") return;
-    const intent = readScheduleIntent(userId);
-    if (intent && schedule.some(entry => entry.id === intent && entry.status === "available")) {
-      setSelectedId(current => current ?? intent);
-    }
-  }, [userId, identity, schedule]);
+  const identity = own?.userId === userId ? own : null;
   const mine = schedule.find(entry => entry.id === identity?.segmentId);
   const mineId = mine?.id ?? null;
   const { phase, currentId } = schedulePhase(schedule, now);
@@ -139,13 +120,8 @@ export function WorksPage() {
       detailTrigger.current?.focus({ preventScroll: true });
     });
   }
-  const actions = frozen ? <p>排期已冻结，作者和发布时间保持不变。</p> : selected && userId ? !identity ? <p>正在读取操作权限。{ownWarning}</p>
-    : identity.status === "approved" ? <ScheduleSection key={selected.id} collaboration={identity.collaboration} selectedSegmentId={selected.id} revision={revision} onResult={text => setOperationMessage({ userId, text })} onSaved={async () => { setRevision(value => value + 1); }} />
-    : identity.status === "completed" ? <Link to="/portal">查看我的参与记录</Link>
-    : selected.status === "available" || selected.id === mineId ? <Link to="/portal" search={{ segment: selected.id }} hash={selected.id === mineId ? "plan" : "profile"}
-      onClick={() => saveScheduleIntent(userId, selected.id)}>{selected.id === mineId ? "管理我的报名" : "选择这个时点并填写报名"}</Link> : null : undefined;
   const detail = selected ? <ScheduleTaskDetail missionStart={missionStart} entry={selected} mine={selected.id === mineId} ownName={selected.id === mineId ? identity?.author ?? null : null}
-    frozen={frozen} signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={actions} /> : null;
+    showcase signedIn={Boolean(userId)} ended={phase === "ended"} detailId={`ops-detail-${selectedKey}`} onClose={detailOpen ? closeDetail : undefined} actions={null} /> : null;
 
   return <div className="works-page works-page--schedule">
     <ObservatoryBackdrop />
@@ -153,26 +129,21 @@ export function WorksPage() {
       <div><h1>接力时间表</h1><ActivityIdentity /></div>
       <div className="ops-date-meta"><p>{firstDate ? <>{dateFormat.format(new Date(firstDate))}{lastDate && scheduleDay(firstDate) !== scheduleDay(lastDate) ? `—${dateFormat.format(new Date(lastDate))}` : ""}</> : "发布时间待定"}</p><span>UTC+8</span></div>
     </header>
-    {!frozen && identity && identity.status !== "approved" && identity.status !== "completed" ? <Notice>可选空闲时间报名，也可直接进入作者页面提交报名，由主催安排时间。</Notice> : null}
     {error && <ReadError message={error} />}
-    {operationMessage && operationMessage.userId === userId ? <Notice tone="success">{operationMessage.text} <Link to="/portal" hash="tasks">查看我的请求与反馈</Link></Notice> : null}
     {!data ? !error && <PageSkeleton label="正在读取接力时间表" schedule /> : schedule.length === 0 ?
       <section className="works-empty"><ObservationMark /><h2>排期正在准备中</h2><p>排期公布后，可以在这里查看作者、空位和作品预告。</p></section> : <>
-      <p className="ops-interaction-hint">{frozen ? "点击时段查看作者与作品。" : mobile ? "点击时段即可查看详情和报名操作。" : "点击时段查看详情，再点一次即可打开操作窗口。"}</p>
-      {days.map(day => <Fragment key={day.key}>
-        <ScheduleBoard missionStart={missionStart} day={day} selectedId={selected?.id ?? null} mineId={mineId} ownName={identity?.author ?? null} currentId={currentId} now={now} active={phase === "active"} onSelect={select} />
-        {selectedKey === day.key && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label="时段详情与操作"
+      <p className="ops-interaction-hint">{mobile ? "点击时段查看作者与作品。" : "选中详情显示在时间表下方，再次点击时段可展开完整简介。"}</p>
+      {days.map(day => <ScheduleBoard key={day.key} missionStart={missionStart} day={day} selectedId={selected?.id ?? null} mineId={mineId} ownName={identity?.author ?? null} currentId={currentId} now={now} active={phase === "active"} onSelect={select} />)}
+      {selected && <dialog ref={dialog} id="ops-slot-dialog" className={detailOpen ? "ops-detail-dialog" : "ops-inline-detail"} aria-label="时段详情"
           onCancel={event => { event.preventDefault(); closeDetail(); }} onClose={event => { if (!event.currentTarget.open) setDetailOpen(false); }}>
           {detail}
         </dialog>}
-      </Fragment>)}
       <div className="ops-summary" role="status"><strong>{phase === "ended" ? "标准排程已结束" : phase === "active" ? "接力进行中" : "排程已公布"}</strong>
         <span><b>{count("confirmed")}</b><ScheduleStatus status="confirmed" /></span><span><b>{count("reserved")}</b><ScheduleStatus status="reserved" /></span><span><b>{count("available")}</b><ScheduleStatus status="available" /></span>
         {count("unavailable") > 0 && <span><b>{count("unavailable")}</b><ScheduleStatus status="unavailable" /></span>}
         {mine && <span className="ops-legend-mine">我的时段</span>}
       </div>
       {userId && ownWarning && <p className="ops-read-warning" role="status">{ownWarning}</p>}
-      <div className="ops-page-foot">{!frozen&&<Link to={userId ? "/portal" : "/portal/login"} search={{ segment: "" }} onClick={() => { if (userId) saveScheduleIntent(userId, ""); }}>不选时间，直接报名</Link>}<p>{missionStart !== null && <>任务计时从首个发布时刻起算（{dateFormat.format(new Date(missionStart))} {timeFormat.format(new Date(missionStart))} UTC+8）。</>}共 {schedule.length} 棒。{frozen?"排期已冻结，作品由管理员整理后陆续公开。":"提交后预留，审核通过后确认。作者按约定时段发布作品，站内展示由管理员整理后手动公开。"}</p><Link to={userId ? "/portal" : "/portal/login"} hash={userId ? "plan" : undefined}>前往作者页面</Link></div>
     </>}
   </div>;
 }

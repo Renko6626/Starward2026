@@ -1,3 +1,4 @@
+import { formatSegmentName } from "../../app/lib/format";
 import { ArchiveChapter, revealArchiveTarget } from "./ArchiveChapter";
 import { ArchiveResult } from "./ArchiveResult";
 import { formatScheduledTime } from "../../app/lib/format";
@@ -210,7 +211,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
       {timeChangeConfirmation ? <>
         <h2 id="registration-time-dialog-title">确认更改发布时间？</h2>
         <dl className="registration-time-change">
-          <div><dt>原时间</dt><dd>{timeChangeConfirmation.from.scheduledAt ? formatScheduledTime(timeChangeConfirmation.from.scheduledAt) : timeChangeConfirmation.from.name}</dd></div>
+          <div><dt>原时间</dt><dd>{timeChangeConfirmation.from.scheduledAt ? formatScheduledTime(timeChangeConfirmation.from.scheduledAt) : formatSegmentName(timeChangeConfirmation.from.name)}</dd></div>
           <div><dt>新时间</dt><dd>{timeChangeConfirmation.to?.scheduledAt ? formatScheduledTime(timeChangeConfirmation.to.scheduledAt) : timeChangeConfirmation.to?.name ?? "由主催安排"}</dd></div>
         </dl>
         <p id="registration-time-dialog-description">{timeChangeConfirmation.to ? "以上时间均为北京时间。确认后将更新报名、释放原时间，并尝试预留新时间。如果新时间已被占用，原报名和时间保持不变。" : "确认后将释放原时间，保留报名，等待主催重新安排。"}</p>
@@ -259,7 +260,7 @@ export function RegistrationSection({ application, collaboration, onSaved, compa
           <option value="">由主催安排</option>
           {selectionUnavailable ? <option value={form.segmentId} disabled>{selectedSegment ? `${formatScheduledTime(selectedSegment.scheduledAt)}（已不可选）` : "原选时间已不可用"}</option> : null}
           {selectableSegments.map(item => <option key={item.id} value={item.id}>
-            {item.scheduledAt ? formatScheduledTime(item.scheduledAt) : item.name}{item.status === "reserved" ? "（已为你预留）" : ""}
+            {item.scheduledAt ? formatScheduledTime(item.scheduledAt) : formatSegmentName(item.name)}{item.status === "reserved" ? "（已为你预留）" : ""}
           </option>)}
         </select>
         {selectableSegments.length === 0 ? <p className="field-hint">当前没有可选时间，仍可提交报名，由主催安排。</p> : null}

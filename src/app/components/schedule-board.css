@@ -1,7 +1,7 @@
 /* Public schedule only; the work archive and creator controls keep their own styles. */
 /* The clock, axis and event annotation keep the same columns at every breakpoint. */
 .works-page--schedule {
-  --ops-clock-width: 92px;
+  --ops-clock-width: 84px;
   --ops-axis-width: 18px;
   --ops-row-gap: 8px;
   --ops-axis-position: calc(var(--ops-clock-width) + var(--ops-row-gap) + 5px);
@@ -91,7 +91,7 @@
   --task-ink: var(--color-on-surface);
   --task-meta: var(--color-on-surface-variant);
   display: grid; grid-template-columns: var(--ops-clock-width) var(--ops-axis-width) minmax(0, 1fr); gap: var(--ops-row-gap);
-  align-items: start; min-height: 84px; width: 100%; padding: 12px 8px 14px 0;
+  align-items: start; min-height: 108px; width: 100%; padding: 12px 8px 14px 0;
   border: 0; background: var(--task-bg); color: var(--task-ink);
   border-radius: 0; text-align: left; position: relative;
   isolation: isolate; box-shadow: inset 0 0 0 1px var(--task-edge);
@@ -140,12 +140,12 @@
 .ops-task-anchor--reserved::after { background: linear-gradient(to right, currentColor 50%, var(--color-background) 50%); }
 .ops-task-anchor--unavailable::after { background: linear-gradient(45deg, var(--color-background) 40%, currentColor 40%, currentColor 60%, var(--color-background) 60%); }
 .ops-task-copy { min-width: 0; }
-.ops-task-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.ops-task-heading { min-height: 1.6em; font-size: var(--ops-author-size); display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
 .ops-task-author { display: block; flex: 1 1 72px; min-width: 0; font-size: var(--ops-author-size); font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
 .ops-task-state { flex: 0 0 auto; margin-top: 5px; line-height: 1.6; }
 .ops-task-state .ops-status { color: #a3a89d; font-size: 12px; }
 .ops-task-state .ops-mark { width: 5px; height: 5px; }
-.ops-task-work { display: block; margin-top: 4px; font-size: var(--site-meta-size); line-height: 1.7; color: var(--task-meta); overflow-wrap: anywhere; transition: color 220ms ease-out; }
+.ops-task-work { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; height: 3.4em; margin-top: 4px; font-size: var(--site-meta-size); line-height: 1.7; color: var(--task-meta); white-space: normal; overflow-wrap: anywhere; overflow: hidden; transition: color 220ms ease-out; }
 .ops-task-action { font-size: var(--site-meta-size); color: #93988e; }
 .ops-task--available { --task-clock: #c3c6bb; --task-ink: #969b90; --task-edge: transparent; border-bottom: 1px solid #ffffff0a; }
 .ops-task--available .ops-task-author { font-size: 12px; font-weight: 400; line-height: 2.1; }
@@ -204,7 +204,7 @@
 
 /* Only the layout changes at breakpoints; small sizes remain readable. */
 @media (max-width: 950px) {
-  .works-page--schedule { --ops-clock-width: 94px; --ops-time-size: 18px; }
+  .works-page--schedule { --ops-clock-width: 86px; --ops-time-size: 18px; }
   .ops-board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 22px; }
   .ops-board--pending { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
   .ops-detail { grid-template-columns: 145px minmax(0, 1fr); gap: 20px; }
@@ -214,7 +214,7 @@
 @media (max-width: 640px) {
   .ops-quick-desktop { display: none; }
   .ops-quick-mobile { display: inline; }
-  .works-page--schedule { --ops-clock-width: 94px; --ops-time-size: 18px; padding-top: 27px; }
+  .works-page--schedule { --ops-clock-width: 86px; --ops-time-size: 18px; padding-top: 27px; }
   .ops-page-heading { align-items: flex-start; gap: 15px; margin-bottom: 12px; }
   .ops-date-meta { padding-top: 3px; }
   .ops-date-meta > span { font-size: var(--site-meta-size); }
@@ -247,9 +247,11 @@
 /* Shared observatory artwork; isolated below the existing schedule controls. */
 .works-page--schedule { position: relative; isolation: isolate; }
 .schedule-observatory { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.schedule-antenna { position: fixed; top: 220px; left: 0; width: 100vw; height: 780px; opacity: .24; mask-image: linear-gradient(180deg, #000 70%, transparent); }
+.schedule-spacecraft { position: absolute; top: 0; left: calc(50% - 50vw); width: 100vw; height: clamp(760px, 70vw, 1240px); opacity: .46; mask-image: linear-gradient(180deg, transparent, #000 12%, #000 65%, transparent); }
+.schedule-spacecraft img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.schedule-antenna { position: absolute; bottom: 80px; left: calc(50% - 50vw); width: 100vw; height: 1100px; opacity: .28; mask-image: linear-gradient(180deg, transparent, #000 18%, #000 76%, transparent); }
 .schedule-antenna canvas { display: block; width: 100%; height: 100%; }
-.schedule-orbit { position: fixed; top: 115px; left: 50%; transform: translateX(-50%); width: min(1300px, 100vw); height: 920px; opacity: .42; mask-image: linear-gradient(180deg, #000 72%, transparent); }
+.schedule-orbit { position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); width: min(1300px, 100vw); height: 1100px; opacity: .32; mask-image: linear-gradient(180deg, transparent, #000 18%, #000 72%, transparent); }
 .schedule-orbit svg { width: 100%; height: 100%; fill: none; stroke-width: 1; }
 .schedule-orbit .maneuver-secondary { stroke: #536f70; stroke-width: .8; fill: none; }
 .schedule-orbit .maneuver-primary { stroke: #a6b4a8; stroke-width: 1.15; fill: none; }
@@ -279,10 +281,11 @@
 .schedule-orbit .mission-craft, .schedule-orbit .mission-docked-vehicle { fill: none; stroke: #d7decd; stroke-width: .8; }
 .schedule-orbit #mission-vehicle-symbol > *, .schedule-orbit .mission-station-symbol > * { vector-effect: non-scaling-stroke; }
 .works-page--schedule .ops-task-copy, .works-page--schedule .ops-task-clock, .works-page--schedule .ops-shift-heading { text-shadow: 0 0 4px var(--color-background), 0 0 9px var(--color-background); }
-@media (max-width: 1100px) { .schedule-antenna { height: 760px; } }
+@media (max-width: 1100px) { .schedule-antenna { height: 900px; } }
 @media (max-width: 640px) {
-  .schedule-antenna { position: absolute; top: 220px; left: calc(50% - 50vw); height: 650px; opacity: .18; }
-  .schedule-orbit { position: absolute; top: 170px; height: 720px; opacity: .34; }
+  .schedule-spacecraft { height: 1000px; opacity: .38; }
+  .schedule-antenna { bottom: 80px; height: 850px; opacity: .22; }
+  .schedule-orbit { bottom: 120px; height: 850px; opacity: .28; }
   .schedule-orbit .mission-orbit { width: 100%; height: 430px; overflow: visible; }
   .schedule-orbit .mission-reference { display: none; }
   .schedule-orbit .mission-prediction--1, .schedule-orbit .mission-prediction--2 { display: none; }

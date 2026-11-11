@@ -1,3 +1,4 @@
+import { formatSegmentName } from "../../app/lib/format";
 import { workReviewStatusLabels } from '../../shared/work-submissions';
 import { Link, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
@@ -114,10 +115,10 @@ export function AdminCreatorDetailPage({ participantId, applicationId }: { parti
           </div>
         </section>
         <section className="panel space-y-4"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-medium">当前发布时点</h2><Link className="text-link" to="/portal/admin/schedule">管理排期</Link></div>
-          <p className="text-lg">{segment ? `${segment.code} ${segment.name}` : "待主催安排"}</p>
+          <p className="text-lg">{segment ? `${segment.code} ${formatSegmentName(segment.name)}` : "待主催安排"}</p>
           {segment ? <p>{formatScheduledTime(segment.scheduledAt)}<span className="ml-3 text-on-surface-variant">{application?.status === "pending" ? "待审核预留" : participant && ["approved", "completed"].includes(participant.status) ? "已确认" : "请核对参与资格"}</span></p> : null}
           {participant?.status === "approved" ? <div className="space-y-3">
-            <Field label="分配席位"><select className="field-input" value={assignment} onChange={event => setAssignment(event.target.value)} disabled={busy}><option value="">请选择席位</option>{seats.filter(item => (!item.currentParticipantId && ["open","released"].includes(item.status)) || item.currentParticipantId === participant.id).map(item => <option key={item.id} value={item.id}>{item.kind === "special" ? "特别席位 · " : ""}{item.code} {item.name} · {formatScheduledTime(item.scheduledAt)}</option>)}</select></Field>
+            <Field label="分配席位"><select className="field-input" value={assignment} onChange={event => setAssignment(event.target.value)} disabled={busy}><option value="">请选择席位</option>{seats.filter(item => (!item.currentParticipantId && ["open","released"].includes(item.status)) || item.currentParticipantId === participant.id).map(item => <option key={item.id} value={item.id}>{item.kind === "special" ? "特别席位 · " : ""}{item.code} {formatSegmentName(item.name)} · {formatScheduledTime(item.scheduledAt)}</option>)}</select></Field>
             <Button disabled={busy || !assignment} onClick={() => void mutate(async () => {
               const selected = seats.find(item => item.id === assignment)!;
               const response = await requestJson<AdminSegmentMutationResponse>(`/api/admin/segments/${selected.id}`, {method: "PATCH", headers: {"content-type":"application/json"}, body: JSON.stringify({status: "held", currentParticipantId: participant.id})});

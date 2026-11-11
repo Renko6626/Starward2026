@@ -103,7 +103,7 @@ describe("public work publication", () => {
     expect(await listPublicWorks(db)).toEqual([]);
   });
 
-  it("uses anonymous public credit and never exposes contact or review details in list or direct responses", async () => {
+  it("shows author names in showcase mode without exposing contact or review details", async () => {
     openWindow(); await readyDraft();
     database.sqlite.exec("UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active'");
     await setWorkPublication(db, draftId, true, actor);
@@ -113,7 +113,7 @@ describe("public work publication", () => {
       expect(response.status).toBe(200);
       const body = await response.json() as any;
       const work = body.work ?? body.items[0];
-      expect(work.publicAuthorName).toBe("匿名");
+      expect(work.publicAuthorName).toBe("结界观测者");
       expect(Object.keys(work).sort()).toEqual([
         "id", "previewTitle", "previewSummary", "publicAuthorName", "workType", "formatLabel", "publicTags",
         "coverUrl", "coverAlt", "workUrl", "publishedAt", "segmentCode", "segmentName", "observationNumber", "content",
@@ -182,7 +182,7 @@ describe("public relay timetable", () => {
       .toMatchObject({ interestFormat: 'novel', introText: '创作月面旅行的短篇小说。' });
   });
 
-  it("keeps slots and approved anonymous previews without leaking draft links", async () => {
+  it("keeps named schedule previews without leaking draft links", async () => {
     database.sqlite.exec(`UPDATE portal_profiles SET is_anonymous = 1 WHERE user_id = 'usr_seed_active';
       UPDATE project_drafts SET preview_status = 'approved', work_url = 'https://example.com/private' WHERE id = 'draft_seed_active';
       UPDATE schedule_segments SET scheduled_at = '2099-01-01T00:00:00.000Z' WHERE current_participant_id = 'part_seed_active'`);
@@ -192,7 +192,7 @@ describe("public relay timetable", () => {
     const body = await response.json() as any;
     const slot = body.schedule.find((entry: any) => entry.preview);
     expect(body.items).toEqual([]);
-    expect(slot).toMatchObject({ publicAuthorName: "匿名", scheduledAt: "2099-01-01T00:00:00.000Z", workId: null });
+    expect(slot).toMatchObject({ publicAuthorName: "结界观测者", scheduledAt: "2099-01-01T00:00:00.000Z", workId: null });
     expect(slot.preview.previewTitle).toBeTruthy();
     expect(body.schedule.some((entry: any) => entry.preview === null)).toBe(true);
     expect(JSON.stringify(body)).not.toContain("https://example.com/private");

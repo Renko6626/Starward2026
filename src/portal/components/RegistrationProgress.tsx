@@ -53,7 +53,7 @@ export function RegistrationProgress({ application, participantStatus, current, 
     <dl className="archive-register">
       <div><dt>作者</dt><dd>{application.profile?.creditName || application.user.name || "尚未填写署名"}</dd></div>
       <div><dt>发布时间 / 北京时间</dt><dd>{time ? formatScheduledTime(time.scheduledAt) : "由主催安排"}<small>{time ? timeStatus : null}</small></dd></div>
-      <div><dt>席位类型</dt><dd>{current?.kind === "special" ? "特别席位" : current?.kind === "extra" ? "追加坑位" : current ? "普通席位" : "待安排"}</dd></div>
+      <div><dt>席位类型</dt><dd>{current?.kind === "special" ? "特别席位" : current?.kind === "extra" ? "EX棒" : current ? "普通席位" : "待安排"}</dd></div>
       <div><dt>席位编号</dt><dd>{time?.code || "—"}</dd></div>
       <div><dt>报名</dt><dd>{label}</dd></div>
     </dl>

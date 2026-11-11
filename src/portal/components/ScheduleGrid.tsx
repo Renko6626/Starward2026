@@ -1,3 +1,4 @@
+import { formatSegmentName } from "../../app/lib/format";
 import { formatScheduledTime } from "../../app/lib/format";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Button, Notice, StatusBadge } from "../../app/components/ui";
@@ -74,7 +75,7 @@ export function ScheduleGrid({
 
   const detail = inspected ? <>
     <div className="schedule-detail-header">
-      <div><p className="field-hint">发布时点 {inspected.code}</p><h3 id={detailHeading}>{inspected.name}</h3><p>{formatScheduledTime(inspected.scheduledAt)}</p></div>
+      <div><p className="field-hint">发布时点 {inspected.code}</p><h3 id={detailHeading}>{formatSegmentName(inspected.name)}</h3><p>{formatScheduledTime(inspected.scheduledAt)}</p></div>
       <Button variant="secondary" onClick={close}>关闭详情</Button>
     </div>
     <StatusBadge tone={own(inspected) ? "success" : inspected.status === "reserved" ? "warning" : "muted"}>
@@ -99,7 +100,7 @@ export function ScheduleGrid({
       <Button variant="secondary" aria-pressed={filter === "mine"} onClick={() => changeFilter("mine")}>我的 {mine.length}</Button>
     </div>
     {onChoose ? <p className="schedule-selection-summary" role="status">
-      {selected ? `报名已选：${selected.name}` : "点击发布时点查看详情，再选择报名时间。"}
+      {selected ? `报名已选：${formatSegmentName(selected.name)}` : "点击发布时点查看详情，再选择报名时间。"}
     </p> : <p className="field-hint">点击发布时点查看详情，调整或交换需另行确认。</p>}
     {selected && !own(selected) && selected.status !== "available" && onChoose ? <Notice tone="warning">所选发布时点现在已不可选，请重新选择。</Notice> : null}
     <div className={`schedule-browser-content${inspected && !mobile ? " has-detail" : ""}`}>
