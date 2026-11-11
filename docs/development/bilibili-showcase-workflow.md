@@ -1,0 +1,153 @@
+# 根据 B 站链接录入并发布作品展示
+
+适用场景：主催给出棒号和 B 站链接，由维护者提取信息、补齐展示资料并公开。沿用现有管理员 API，不需要改代码或部署。本文是可重复执行的操作约定，不是已经实现的自动抓取功能。
+
+## 输入与执行范围
+
+主催可以直接说：
+
+> 按 B 站录入流程发布第 02 棒：https://www.bilibili.com/video/BV1SeWU62EYe
+
+也可以一次给多组棒号、链接和可选说明。逐项处理并分别回报结果。
+
+- 标准棒使用实际排期代码 `01`、`02`；口头的 ex1 对应 `EXTRA-01`。先查询实际代码，再定位作者。
+- “按此流程发布”包含保存展示资料和公开，无需再问一次是否公开；若明确要求只准备或只录入，则保存后停止。
+- 未给棒号时，可以利用链接作者 UID 与报名记录核对；无法唯一对应时，询问具体棒号，不按列表顺序猜测。
+- 正式投稿、内容审核、展示资料、站内公开分别处理。发布授权不自动变成代交稿或审核通过的授权。
+
+## 1. 读取现状
+
+使用本机已有管理员凭据或有效管理员会话。凭据、Cookie 和验证码只在私有文件或内存中使用，不写进文档、Git 或执行输出。结束后退出本次创建的会话。
+
+本机现有凭据位置为 `.admin-credentials/export-login.json`，会话登录接口为 `POST /api/auth/sign-in/email`。后续请求带管理员 Cookie；写入请求使用网站自身的 `Origin` 和正确的 `Content-Type`。
+
+| 请求 | 读取内容 |
+| --- | --- |
+| `GET /api/admin/session` | 确认管理员身份 |
+| `GET /api/admin/segments` | 用 `items[].code` 查目标坑位，取得 `id`、`currentParticipantId` |
+| `GET /api/admin/participants/:participantId` | 作者署名、状态及 `bilibiliUid` |
+| `GET /api/admin/participants/:participantId/project-draft` | 取得 `draftId` |
+| `GET /api/admin/project-drafts/:draftId/submissions` | 正式投稿、文件、审核结果及版本 |
+| `GET /api/admin/segments/:segmentId/presentation` | 已有展示资料，可能为 `null` |
+
+保存本次修改前的展示资料与投稿状态。已有合适的标题、简介、正文和图片应复用；先检查是否已经交过稿，避免重复提交。公开展示只使用公开署名，不复制邮箱、联系信息、私有版本说明或审稿意见。
+
+## 2. 从链接提取信息
+
+### 视频
+
+从 `/video/BV…` 取 BV 号，读取：
+
+```text
+GET https://api.bilibili.com/x/web-interface/view?bvid=<BV号>
+```
+
+检查 HTTP 结果和 JSON `code === 0`，并核对返回的 `data.bvid`。记录 `title`、`desc`、`pic`、`owner.mid`、`owner.name` 及 `pages`；用 `owner.mid` 与作者资料中的 B 站 UID 对照。联合投稿或账号不一致时，把实际差异交给主催确认。
+
+这是前几次视频录入实际使用过的接口，不能假定它始终无需登录或始终可用。通常每条链接先请求一次；失败时记录 HTTP 状态及业务错误码，不连续轮询，也不自动扫作者主页。
+
+保留链接指定的分 P（`p`，默认 1），确认该分 P 存在。规范链接使用 `https://www.bilibili.com/video/<BV号>/`，非第 1 P 加 `?p=N`；播放器的 BV 号和 page 必须与链接一致。站内根据这两个字段生成 iframe，不存一段任意 HTML。
+
+### 动态、图文、专栏
+
+`/opus/<ID>`、`/read/cv<ID>` 等按实际页面处理，不套用视频接口，也不生成视频 iframe。
+
+先尝试读取目标页面本身；若响应里有可解析的正文或结构化数据，提取标题、正文摘要、作者 UID、图片，并与页面内容对照。动态没有独立标题时，沿用作者已提交的作品标题。短链接先解析最终目标，再进入对应分支。
+
+目前视频接口有成功使用记录；前几次 opus 录入只补了原作链接，没有验证通用的 opus／专栏提取器。页面打不开、返回风控页或拿不到正文时，要明确记录“本次未取得”，优先使用网站已有的投稿及本地已收集文件，不宣称已经从 B 站提取成功。两边都缺失的必填信息才向主催补问。
+
+## 3. 准备公开字段
+
+明确指定的改动优先。没有新的修改要求时，保留已整理好的展示资料；缺项从正式投稿及本次取得的 B 站信息补齐。标题已有作者命名时保留；没有作品标题的视频可用 B 站视频标题。简介只整理实际取得的内容，去除无关宣传或链接堆叠，不编造作品介绍。
+
+| 字段 | 填写规则 |
+| --- | --- |
+| `title` | 非空，最多 120 字 |
+| `summary` | 非空，最多 1600 字；这是公开简介，不是私有版本备注 |
+| `workType` | 按作品本身选择，例如 `illustration`、`text`、`video`；opus 只是发布形式 |
+| `sourceUrl` | 本次核对过的 HTTPS 原作链接 |
+| `thumbnailId` | 目标坑位中上传或已有的图片 ID；文字作品通常为 `null` |
+| `thumbnailAlt` | 简短、准确的封面说明，最多 500 字 |
+| `content` | 下表中的一种正文结构 |
+
+| 作品 | 展示正文与预览图 |
+| --- | --- |
+| B 站视频 | `{ "kind": "bilibili", "bvid": "BV…", "page": 1 }`；优先下载本次视频封面制作预览图 |
+| 插画、漫画、摄影等图片作品 | `{ "kind": "gallery", "images": [{ "id": "图片UUID", "alt": "图片说明" }] }`；使用已整理的作品图片，或核实过的原作图片 |
+| 小说等文字作品 | `{ "kind": "markdown", "markdown": "正文" }`；优先使用已转写并核对的完整 Markdown，不用 B 站摘要替代全文 |
+| 其他类型 | 先报告作品实际内容及可展示形式；有现成合适正文时沿用，缺少正文则待补，不随意改成视频或图片作品 |
+
+小说不生成预览图，小说插图暂不展示。图文动态内的图片若属于小说插图，同样遵守这个约定。
+
+### 图片准备与上传
+
+展示图片统一输出 `.jpeg`，实际编码为 JPEG、`Content-Type: image/jpeg`，每张不超过 **1,000,000 字节**。保留私有原文件。处理方向信息、透明底和颜色模式后，先调整质量，仍超限再适当缩小尺寸；转换完成检查可解码性、尺寸和字节数。
+
+视频优先使用 B 站封面；拿不到封面但有本地视频时，按此前约定取第 60 帧，过短或画面不可用时取第 1 帧，并记录原因。这里是帧序号，不是第 60 秒。
+
+```text
+POST /api/admin/segments/:segmentId/presentation/images
+Content-Type: image/jpeg
+Body: JPEG 原始字节
+
+返回：{ "id": "图片UUID" }
+```
+
+通过 `GET /api/admin/presentations/:segmentId/images/:imageId` 下载回读，与本地 JPEG 比较字节或 SHA-256。同一张图片可以同时作为正文图片和缩略图，不必上传两次。已有合适图片时复用当前坑位的 ID。
+
+## 4. 保存展示资料
+
+向以下接口 PUT **完整字段**，不要只发本次修改的单个字段：
+
+```text
+PUT /api/admin/segments/:segmentId/presentation
+Content-Type: application/json
+```
+
+视频请求结构示例，执行时替换实际值：
+
+```json
+{
+  "title": "作品标题",
+  "summary": "核对后的作品简介",
+  "workType": "video",
+  "thumbnailId": "本次上传返回的图片UUID",
+  "thumbnailAlt": "作品视频封面",
+  "sourceUrl": "https://www.bilibili.com/video/BV1SeWU62EYe/",
+  "content": { "kind": "bilibili", "bvid": "BV1SeWU62EYe", "page": 1 }
+}
+```
+
+检查响应成功，再 GET 同一接口，核对上述字段。保存不会自动把未公开作品公开；**已经公开的展示资料保存后会立即对外生效**，所以应在 PUT 前准备完整内容。
+
+## 5. 检查审核并公开
+
+发布前确认：坑位和作者对应正确、作者参与资格为 `approved` 或 `completed`、公开署名完整、正式作品审核状态为 `approved`、公开窗口已开放、展示必填字段与正文齐全。
+
+未正式提交或尚未通过审核时，保存已准备的展示草稿，报告具体缺项。只有主催明确要求代提交／审核时才走对应步骤。以视频封面代正式投稿文件也需要明确指示，不能把某次 EX 棒的特殊处理套到所有作品上。已存在正式投稿时优先复用。
+
+具备条件后执行：
+
+```text
+POST /api/admin/segments/:segmentId/presentation/publish
+```
+
+检查响应成功且 `presentation.publishedAt` 非空。若已公开且字段一致，核对现状即可；字段有更新则按前一步保存并回读。遇到请求超时，先 GET 现状确认是否已经成功，再决定是否人工重试，不盲目重复上传、交稿或审核。
+
+## 6. 发布后回读与交接
+
+无管理员 Cookie 请求 `GET /api/works/:code`，例如 `/api/works/02`、`/api/works/EXTRA-01`，确认作品 ID、标题、简介、类型、`workUrl`、封面和正文匹配。视频额外核对 BV 号及分 P。实际网页为 `https://hifuu.moe/works/<code>`，严格使用排期原始代码的大小写及前导零。
+
+封面通过响应中的 `coverUrl` 回读。再从 `GET /api/works` 核对时间表中对应坑位的摘要。需要查看页面时只做截图检查；未明确要求时，不用浏览器自动点击或填写表单。
+
+本次原始来源数据、修改前后展示 JSON、JPEG、字节数／SHA-256、公开时间和回读结果放在 `.admin-credentials/` 下的私有工作目录，沿用已有收集目录时同步该棒的本地记录。私有资料不提交到 Git；无需为单次录入发布生产部署标签。
+
+向主催简短回报：棒号、作者、标题、已公开链接，以及仍需补充的实际事项。提取失败或只存为草稿时说明原因，不报成发布成功。
+
+## 实现依据
+
+- [展示字段及发布完整性检查](../../src/shared/work-presentations.ts)
+- [展示资料、图片和公开接口](../../worker/routes/work-presentations.ts)
+- [保存与发布条件](../../worker/data/work-presentations.ts)
+- [正式投稿字段与审核状态](../../src/shared/work-submissions.ts)
+- [管理员投稿与作者查询接口](../../worker/routes/admin.ts)
